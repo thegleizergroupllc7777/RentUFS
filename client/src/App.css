@@ -33,6 +33,15 @@
   font-size: 1.5rem;
   font-weight: bold;
   color: #10b981;
+  border: 2px solid #10b981;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.navbar-logo:hover {
+  background: #10b981;
+  color: white;
 }
 
 .navbar-links {
