@@ -1,6 +1,6 @@
 # RentUFS - Car Rental Marketplace
 
-A full-stack peer-to-peer car rental marketplace similar to Turo, connecting vehicle owners (hosts) with renters (drivers).
+A full-stack peer-to-peer car rental marketplace, connecting vehicle owners (hosts) with renters (drivers).
 
 ## Features
 
