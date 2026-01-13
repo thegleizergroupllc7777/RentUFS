@@ -6,7 +6,16 @@
 }
 
 .hero {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 60% 70%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 80% 10%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(2px 2px at 90% 60%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 33% 80%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(2px 2px at 15% 90%, rgba(255, 255, 255, 0.6), transparent),
+    linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background-size: 200% 200%;
   position: relative;
   color: white;
   padding: 6rem 0;
@@ -14,33 +23,40 @@
   overflow: hidden;
 }
 
-/* Road pattern overlay */
+/* City skyline silhouette at bottom */
 .hero::before {
   content: '';
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background-image:
+  height: 200px;
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, 0.25) 0%, transparent 100%),
     repeating-linear-gradient(
       90deg,
-      transparent,
-      transparent 50px,
-      rgba(255, 255, 255, 0.05) 50px,
-      rgba(255, 255, 255, 0.05) 100px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 50px,
-      rgba(255, 255, 255, 0.03) 50px,
-      rgba(255, 255, 255, 0.03) 100px
+      transparent 0px,
+      transparent 60px,
+      rgba(0, 0, 0, 0.2) 60px,
+      rgba(0, 0, 0, 0.2) 80px,
+      transparent 80px,
+      transparent 120px,
+      rgba(0, 0, 0, 0.2) 120px,
+      rgba(0, 0, 0, 0.2) 150px,
+      transparent 150px,
+      transparent 180px,
+      rgba(0, 0, 0, 0.2) 180px,
+      rgba(0, 0, 0, 0.2) 220px,
+      transparent 220px,
+      transparent 250px,
+      rgba(0, 0, 0, 0.2) 250px,
+      rgba(0, 0, 0, 0.2) 270px
     );
-  opacity: 0.3;
+  background-size: 300px 100%;
+  z-index: 0;
 }
 
-/* Animated road stripes */
+/* Animated road stripes - keeping your favorite feature! */
 .hero::after {
   content: '';
   position: absolute;
@@ -57,6 +73,7 @@
   );
   animation: roadMove 20s linear infinite;
   transform: translateY(-50%);
+  z-index: 1;
 }
 
 /* Road animation */
@@ -73,7 +90,7 @@
   max-width: 800px;
   margin: 0 auto;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .hero-title {
@@ -81,12 +98,14 @@
   font-weight: 800;
   margin-bottom: 1.5rem;
   line-height: 1.2;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .hero-subtitle {
   font-size: 1.25rem;
   margin-bottom: 2.5rem;
   opacity: 0.95;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .hero-buttons {
