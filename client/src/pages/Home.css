@@ -1,17 +1,79 @@
 .home-page {
   background: #f8f9fa;
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 50%);
 }
 
 .hero {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  position: relative;
   color: white;
   padding: 6rem 0;
   text-align: center;
+  overflow: hidden;
+}
+
+/* Road pattern overlay */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 50px,
+      rgba(255, 255, 255, 0.05) 50px,
+      rgba(255, 255, 255, 0.05) 100px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 50px,
+      rgba(255, 255, 255, 0.03) 50px,
+      rgba(255, 255, 255, 0.03) 100px
+    );
+  opacity: 0.3;
+}
+
+/* Animated road stripes */
+.hero::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -100%;
+  width: 200%;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.4) 0px,
+    rgba(255, 255, 255, 0.4) 40px,
+    transparent 40px,
+    transparent 80px
+  );
+  animation: roadMove 20s linear infinite;
+  transform: translateY(-50%);
+}
+
+/* Road animation */
+@keyframes roadMove {
+  0% {
+    transform: translateX(0) translateY(-50%);
+  }
+  100% {
+    transform: translateX(80px) translateY(-50%);
+  }
 }
 
 .hero-content {
   max-width: 800px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-title {
@@ -41,12 +103,22 @@
 
 .features {
   padding: 5rem 0;
-  background: white;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fffe 100%);
+  position: relative;
 }
 
 .feature-card {
   text-align: center;
   padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
 }
 
 .feature-icon {
@@ -68,7 +140,21 @@
 
 .cta-section {
   padding: 5rem 0;
-  background: #f3f4f6;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  position: relative;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 @media (max-width: 768px) {
