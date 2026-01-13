@@ -48,7 +48,7 @@ const Register = () => {
         <div className="auth-container">
           <div className="auth-card">
             <h1 className="auth-title">Create Account</h1>
-            <p className="auth-subtitle">Join the RentUFS community</p>
+            <p className="auth-subtitle">Join the <span style={{color: '#10b981', fontWeight: 'bold'}}>RentUFS</span> community</p>
 
             {error && <div className="error-message">{error}</div>}
 
