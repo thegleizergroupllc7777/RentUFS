@@ -1,0 +1,291 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
+import Navbar from '../../components/Navbar';
+import './Driver.css';
+
+const VehicleDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [vehicle, setVehicle] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [bookingData, setBookingData] = useState({
+    startDate: '',
+    endDate: '',
+    message: ''
+  });
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchVehicle();
+    fetchReviews();
+  }, [id]);
+
+  const fetchVehicle = async () => {
+    try {
+      const response = await axios.get(`/api/vehicles/${id}`);
+      setVehicle(response.data);
+    } catch (error) {
+      console.error('Error fetching vehicle:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const response = await axios.get(`/api/reviews/vehicle/${id}`);
+      setReviews(response.data);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    }
+  };
+
+  const handleBookingChange = (e) => {
+    setBookingData({
+      ...bookingData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const calculateTotal = () => {
+    if (!bookingData.startDate || !bookingData.endDate || !vehicle) return 0;
+
+    const start = new Date(bookingData.startDate);
+    const end = new Date(bookingData.endDate);
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+    return days > 0 ? days * vehicle.pricePerDay : 0;
+  };
+
+  const handleBooking = async (e) => {
+    e.preventDefault();
+
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    setError('');
+    setBookingLoading(true);
+
+    try {
+      await axios.post('/api/bookings', {
+        vehicleId: id,
+        ...bookingData
+      });
+
+      alert('Booking request sent successfully!');
+      navigate('/my-bookings');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create booking');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <Navbar />
+        <div className="container" style={{ padding: '4rem 20px' }}>
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  if (!vehicle) {
+    return (
+      <div>
+        <Navbar />
+        <div className="container" style={{ padding: '4rem 20px' }}>
+          Vehicle not found
+        </div>
+      </div>
+    );
+  }
+
+  const totalPrice = calculateTotal();
+
+  return (
+    <div>
+      <Navbar />
+      <div className="page">
+        <div className="container">
+          <div className="vehicle-detail">
+            <div className="vehicle-detail-main">
+              <h1 className="vehicle-detail-title">
+                {vehicle.year} {vehicle.make} {vehicle.model}
+              </h1>
+
+              <div className="vehicle-detail-header">
+                <div>
+                  {vehicle.rating > 0 && (
+                    <span className="vehicle-rating">
+                      ⭐ {vehicle.rating.toFixed(1)} ({vehicle.reviewCount} reviews)
+                    </span>
+                  )}
+                  {vehicle.location?.city && (
+                    <span className="vehicle-location">
+                      📍 {vehicle.location.city}, {vehicle.location.state}
+                    </span>
+                  )}
+                </div>
+                <div className="vehicle-detail-price">
+                  ${vehicle.pricePerDay}/day
+                </div>
+              </div>
+
+              <div className="vehicle-images">
+                {vehicle.images?.length > 0 ? (
+                  vehicle.images.map((img, index) => (
+                    <img key={index} src={img} alt={`${vehicle.make} ${vehicle.model}`} />
+                  ))
+                ) : (
+                  <div className="vehicle-placeholder-large">No Images Available</div>
+                )}
+              </div>
+
+              <div className="vehicle-specs">
+                <div className="spec-item">
+                  <strong>Type:</strong> {vehicle.type}
+                </div>
+                <div className="spec-item">
+                  <strong>Seats:</strong> {vehicle.seats}
+                </div>
+                <div className="spec-item">
+                  <strong>Transmission:</strong> {vehicle.transmission}
+                </div>
+                <div className="spec-item">
+                  <strong>Trips:</strong> {vehicle.tripCount}
+                </div>
+              </div>
+
+              <div className="vehicle-section">
+                <h2>Description</h2>
+                <p>{vehicle.description}</p>
+              </div>
+
+              {vehicle.features?.length > 0 && (
+                <div className="vehicle-section">
+                  <h2>Features</h2>
+                  <ul className="features-list">
+                    {vehicle.features.map((feature, index) => (
+                      <li key={index}>{feature}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="vehicle-section">
+                <h2>Hosted by {vehicle.host?.firstName} {vehicle.host?.lastName}</h2>
+                {vehicle.host?.rating > 0 && (
+                  <p>Host rating: ⭐ {vehicle.host.rating.toFixed(1)} ({vehicle.host.reviewCount} reviews)</p>
+                )}
+              </div>
+
+              {reviews.length > 0 && (
+                <div className="vehicle-section">
+                  <h2>Reviews</h2>
+                  <div className="reviews-list">
+                    {reviews.map(review => (
+                      <div key={review._id} className="review-item">
+                        <div className="review-header">
+                          <strong>{review.reviewer?.firstName}</strong>
+                          <span className="review-rating">⭐ {review.rating}</span>
+                        </div>
+                        <p>{review.comment}</p>
+                        <small className="text-gray">
+                          {new Date(review.createdAt).toLocaleDateString()}
+                        </small>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <aside className="booking-sidebar">
+              <div className="booking-card">
+                <h3>Book this car</h3>
+
+                {error && <div className="error-message">{error}</div>}
+
+                <form onSubmit={handleBooking}>
+                  <div className="form-group">
+                    <label className="form-label">Start Date</label>
+                    <input
+                      type="date"
+                      name="startDate"
+                      className="form-input"
+                      value={bookingData.startDate}
+                      onChange={handleBookingChange}
+                      min={new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">End Date</label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      className="form-input"
+                      value={bookingData.endDate}
+                      onChange={handleBookingChange}
+                      min={bookingData.startDate || new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Message to Host (optional)</label>
+                    <textarea
+                      name="message"
+                      className="form-textarea"
+                      value={bookingData.message}
+                      onChange={handleBookingChange}
+                      placeholder="Tell the host about your trip..."
+                    />
+                  </div>
+
+                  {totalPrice > 0 && (
+                    <div className="booking-summary">
+                      <div className="summary-row">
+                        <span>
+                          ${vehicle.pricePerDay} × {Math.ceil((new Date(bookingData.endDate) - new Date(bookingData.startDate)) / (1000 * 60 * 60 * 24))} days
+                        </span>
+                        <span>${totalPrice}</span>
+                      </div>
+                      <div className="summary-total">
+                        <strong>Total</strong>
+                        <strong>${totalPrice}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                    disabled={bookingLoading || !vehicle.availability}
+                  >
+                    {bookingLoading ? 'Processing...' : vehicle.availability ? 'Request to Book' : 'Not Available'}
+                  </button>
+                </form>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VehicleDetail;

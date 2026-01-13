@@ -1,0 +1,87 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+
+import Login from './pages/Auth/Login';
+import Register from './pages/Auth/Register';
+import Home from './pages/Home';
+
+// Driver pages
+import Marketplace from './pages/Driver/Marketplace';
+import VehicleDetail from './pages/Driver/VehicleDetail';
+import MyBookings from './pages/Driver/MyBookings';
+
+// Host pages
+import HostDashboard from './pages/Host/HostDashboard';
+import AddVehicle from './pages/Host/AddVehicle';
+import EditVehicle from './pages/Host/EditVehicle';
+import HostBookings from './pages/Host/HostBookings';
+
+import './App.css';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* Driver Routes */}
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/vehicle/:id" element={<VehicleDetail />} />
+            <Route
+              path="/my-bookings"
+              element={
+                <PrivateRoute>
+                  <MyBookings />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Host Routes */}
+            <Route
+              path="/host/dashboard"
+              element={
+                <PrivateRoute>
+                  <HostDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/host/add-vehicle"
+              element={
+                <PrivateRoute>
+                  <AddVehicle />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/host/edit-vehicle/:id"
+              element={
+                <PrivateRoute>
+                  <EditVehicle />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/host/bookings"
+              element={
+                <PrivateRoute>
+                  <HostBookings />
+                </PrivateRoute>
+              }
+            />
+
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;
