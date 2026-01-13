@@ -7,7 +7,9 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
     "axios": "^1.6.2",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1"
   },
   "scripts": {
     "start": "react-scripts start",

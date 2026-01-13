@@ -47,10 +47,7 @@ const vehicleSchema = new mongoose.Schema({
     city: String,
     state: String,
     zipCode: String,
-    coordinates: {
-      lat: Number,
-      lng: Number
-    }
+    coordinates: [Number] // [longitude, latitude] - GeoJSON format
   },
   pricePerDay: {
     type: Number,
