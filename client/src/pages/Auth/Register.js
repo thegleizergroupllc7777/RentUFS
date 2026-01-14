@@ -29,7 +29,11 @@ const Register = () => {
     state: '',
     zipCode: '',
     longitude: '',
-    latitude: ''
+    latitude: '',
+    image1: '',
+    image2: '',
+    image3: '',
+    image4: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,7 +85,14 @@ const Register = () => {
     try {
       const token = localStorage.getItem('token');
 
-      // Prepare vehicle data with coordinates
+      // Prepare vehicle data with coordinates and images
+      const images = [
+        vehicleData.image1,
+        vehicleData.image2,
+        vehicleData.image3,
+        vehicleData.image4
+      ].filter(img => img.trim() !== ''); // Only include non-empty image URLs
+
       const vehiclePayload = {
         make: vehicleData.make,
         model: vehicleData.model,
@@ -91,6 +102,7 @@ const Register = () => {
         seats: parseInt(vehicleData.seats),
         description: vehicleData.description,
         pricePerDay: parseFloat(vehicleData.pricePerDay),
+        images: images.length > 0 ? images : undefined,
         location: {
           address: vehicleData.address,
           city: vehicleData.city,
@@ -354,6 +366,51 @@ const Register = () => {
                       onChange={handleVehicleChange}
                       required
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                      Vehicle Photos (Add up to 4 images)
+                    </label>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.75rem' }}>
+                      📸 Paste image URLs below (e.g., from Imgur, Google Drive, or any image hosting service)
+                    </p>
+
+                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                      <input
+                        type="url"
+                        name="image1"
+                        className="form-input"
+                        placeholder="Image 1 URL (required)"
+                        value={vehicleData.image1}
+                        onChange={handleVehicleChange}
+                        required
+                      />
+                      <input
+                        type="url"
+                        name="image2"
+                        className="form-input"
+                        placeholder="Image 2 URL (optional)"
+                        value={vehicleData.image2}
+                        onChange={handleVehicleChange}
+                      />
+                      <input
+                        type="url"
+                        name="image3"
+                        className="form-input"
+                        placeholder="Image 3 URL (optional)"
+                        value={vehicleData.image3}
+                        onChange={handleVehicleChange}
+                      />
+                      <input
+                        type="url"
+                        name="image4"
+                        className="form-input"
+                        placeholder="Image 4 URL (optional)"
+                        value={vehicleData.image4}
+                        onChange={handleVehicleChange}
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">
