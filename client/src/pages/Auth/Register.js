@@ -14,7 +14,12 @@ const Register = () => {
     firstName: '',
     lastName: '',
     phone: '',
-    userType: 'driver'
+    userType: 'driver',
+    driverLicense: {
+      licenseNumber: '',
+      state: '',
+      expirationDate: ''
+    }
   });
   const [vehicleData, setVehicleData] = useState({
     make: '',
@@ -41,10 +46,23 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+
+    if (name.startsWith('driverLicense.')) {
+      const licenseField = name.split('.')[1];
+      setFormData({
+        ...formData,
+        driverLicense: {
+          ...formData.driverLicense,
+          [licenseField]: value
+        }
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   const handleVehicleChange = (e) => {
@@ -226,10 +244,67 @@ const Register = () => {
                     </select>
                   </div>
 
+                  {/* Driver License Information - Only for drivers and both */}
+                  {(formData.userType === 'driver' || formData.userType === 'both') && (
+                    <>
+                      <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#1f2937' }}>
+                          Driver's License Information
+                        </h3>
+
+                        <div className="form-group">
+                          <label className="form-label">License Number *</label>
+                          <input
+                            type="text"
+                            name="driverLicense.licenseNumber"
+                            className="form-input"
+                            value={formData.driverLicense.licenseNumber}
+                            onChange={handleChange}
+                            placeholder="e.g., D1234567"
+                            required
+                          />
+                        </div>
+
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label className="form-label">State *</label>
+                            <input
+                              type="text"
+                              name="driverLicense.state"
+                              className="form-input"
+                              value={formData.driverLicense.state}
+                              onChange={handleChange}
+                              placeholder="e.g., CA"
+                              maxLength="2"
+                              required
+                            />
+                          </div>
+
+                          <div className="form-group">
+                            <label className="form-label">Expiration Date *</label>
+                            <input
+                              type="date"
+                              name="driverLicense.expirationDate"
+                              className="form-input"
+                              value={formData.driverLicense.expirationDate}
+                              onChange={handleChange}
+                              min={new Date().toISOString().split('T')[0]}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                          ℹ️ Your license information is required to rent vehicles and will be verified for your safety.
+                        </p>
+                      </div>
+                    </>
+                  )}
+
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', marginTop: '1.5rem' }}
                     disabled={loading}
                   >
                     {loading ? 'Creating account...' : 'Sign Up'}

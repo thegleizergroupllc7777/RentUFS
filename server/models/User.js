@@ -32,6 +32,23 @@ const userSchema = new mongoose.Schema({
     enum: ['driver', 'host', 'both'],
     default: 'driver'
   },
+  driverLicense: {
+    licenseNumber: {
+      type: String,
+      trim: true
+    },
+    state: {
+      type: String,
+      trim: true
+    },
+    expirationDate: {
+      type: Date
+    },
+    verified: {
+      type: Boolean,
+      default: false
+    }
+  },
   profileImage: {
     type: String,
     default: ''

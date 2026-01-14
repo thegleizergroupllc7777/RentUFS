@@ -9,21 +9,32 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, userType } = req.body;
+    const { email, password, firstName, lastName, phone, userType, driverLicense } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const user = new User({
+    const userData = {
       email,
       password,
       firstName,
       lastName,
       phone,
       userType: userType || 'driver'
-    });
+    };
+
+    // Add driver license info if provided (for drivers and both)
+    if (driverLicense && (userType === 'driver' || userType === 'both')) {
+      userData.driverLicense = {
+        licenseNumber: driverLicense.licenseNumber,
+        state: driverLicense.state,
+        expirationDate: driverLicense.expirationDate ? new Date(driverLicense.expirationDate) : undefined
+      };
+    }
+
+    const user = new User(userData);
 
     await user.save();
 
