@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { sendWelcomeEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -31,6 +32,13 @@ router.post('/register', async (req, res) => {
       process.env.JWT_SECRET || 'your_jwt_secret_key',
       { expiresIn: '7d' }
     );
+
+    // Send welcome email (async, don't wait for it)
+    sendWelcomeEmail({
+      email: user.email,
+      firstName: user.firstName,
+      userType: user.userType
+    }).catch(err => console.error('Failed to send welcome email:', err));
 
     res.status(201).json({
       token,
