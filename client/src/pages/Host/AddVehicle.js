@@ -17,6 +17,8 @@ const AddVehicle = () => {
     description: '',
     features: '',
     pricePerDay: '',
+    pricePerWeek: '',
+    pricePerMonth: '',
     image1: '',
     image2: '',
     image3: '',
@@ -406,6 +408,9 @@ const AddVehicle = () => {
 
               <div className="form-section">
                 <h2 className="form-section-title">Pricing</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  💵 Set your rental rates - at least the daily rate is required
+                </p>
 
                 <div className="form-group">
                   <label className="form-label">Price Per Day ($) *</label>
@@ -416,8 +421,44 @@ const AddVehicle = () => {
                     value={formData.pricePerDay}
                     onChange={handleChange}
                     min="1"
+                    step="0.01"
+                    placeholder="e.g., 50"
                     required
                   />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Price Per Week ($)</label>
+                  <input
+                    type="number"
+                    name="pricePerWeek"
+                    className="form-input"
+                    value={formData.pricePerWeek}
+                    onChange={handleChange}
+                    min="1"
+                    step="0.01"
+                    placeholder="e.g., 300 (optional - usually discounted)"
+                  />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Leave blank if you don't offer weekly rentals
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Price Per Month ($)</label>
+                  <input
+                    type="number"
+                    name="pricePerMonth"
+                    className="form-input"
+                    value={formData.pricePerMonth}
+                    onChange={handleChange}
+                    min="1"
+                    step="0.01"
+                    placeholder="e.g., 1000 (optional - usually discounted)"
+                  />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Leave blank if you don't offer monthly rentals
+                  </p>
                 </div>
               </div>
 

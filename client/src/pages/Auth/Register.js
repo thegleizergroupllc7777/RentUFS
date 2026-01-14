@@ -31,6 +31,8 @@ const Register = () => {
     seats: '',
     description: '',
     pricePerDay: '',
+    pricePerWeek: '',
+    pricePerMonth: '',
     address: '',
     city: '',
     state: '',
@@ -157,6 +159,8 @@ const Register = () => {
         seats: parseInt(vehicleData.seats),
         description: vehicleData.description,
         pricePerDay: parseFloat(vehicleData.pricePerDay),
+        pricePerWeek: vehicleData.pricePerWeek ? parseFloat(vehicleData.pricePerWeek) : undefined,
+        pricePerMonth: vehicleData.pricePerMonth ? parseFloat(vehicleData.pricePerMonth) : undefined,
         images: images.length > 0 ? images : undefined,
         registrationImage: vehicleData.registrationImage,
         location: {
@@ -483,6 +487,40 @@ const Register = () => {
                       onChange={handleVehicleChange}
                       required
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Price Per Week ($)</label>
+                    <input
+                      type="number"
+                      name="pricePerWeek"
+                      className="form-input"
+                      placeholder="e.g., 300 (optional)"
+                      min="0"
+                      step="0.01"
+                      value={vehicleData.pricePerWeek}
+                      onChange={handleVehicleChange}
+                    />
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Leave blank if you don't offer weekly rentals
+                    </p>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Price Per Month ($)</label>
+                    <input
+                      type="number"
+                      name="pricePerMonth"
+                      className="form-input"
+                      placeholder="e.g., 1000 (optional)"
+                      min="0"
+                      step="0.01"
+                      value={vehicleData.pricePerMonth}
+                      onChange={handleVehicleChange}
+                    />
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Leave blank if you don't offer monthly rentals
+                    </p>
                   </div>
 
                   <div className="form-group">
