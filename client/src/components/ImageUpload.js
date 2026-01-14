@@ -57,6 +57,11 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       console.log('✓ Response data.success:', response.data.success, '(type:', typeof response.data.success, ')');
       console.log('🔗 Response data.imageUrl:', response.data.imageUrl);
 
+      // Check for authentication/authorization errors first
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Please log in to upload images. Your session may have expired.');
+      }
+
       // More flexible validation - check if response looks successful
       const hasSuccessField = response.data && (
         response.data.success === true ||
