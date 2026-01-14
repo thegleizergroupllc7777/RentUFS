@@ -17,6 +17,10 @@ const EditVehicle = () => {
     description: '',
     features: '',
     pricePerDay: '',
+    image1: '',
+    image2: '',
+    image3: '',
+    image4: '',
     location: {
       address: '',
       city: '',
@@ -47,6 +51,10 @@ const EditVehicle = () => {
         description: vehicle.description,
         features: vehicle.features?.join(', ') || '',
         pricePerDay: vehicle.pricePerDay,
+        image1: vehicle.images?.[0] || '',
+        image2: vehicle.images?.[1] || '',
+        image3: vehicle.images?.[2] || '',
+        image4: vehicle.images?.[3] || '',
         location: vehicle.location || {
           address: '',
           city: '',
@@ -88,10 +96,25 @@ const EditVehicle = () => {
     setSaving(true);
 
     try {
+      // Prepare images array from individual image fields
+      const images = [
+        formData.image1,
+        formData.image2,
+        formData.image3,
+        formData.image4
+      ].filter(img => img && img.trim() !== ''); // Only include non-empty image URLs
+
       const vehicleData = {
         ...formData,
-        features: formData.features.split(',').map(f => f.trim()).filter(f => f)
+        features: formData.features.split(',').map(f => f.trim()).filter(f => f),
+        images: images.length > 0 ? images : undefined
       };
+
+      // Remove image fields from formData before sending
+      delete vehicleData.image1;
+      delete vehicleData.image2;
+      delete vehicleData.image3;
+      delete vehicleData.image4;
 
       await axios.put(`/api/vehicles/${id}`, vehicleData);
       navigate('/host/dashboard');
@@ -240,6 +263,61 @@ const EditVehicle = () => {
                     value={formData.features}
                     onChange={handleChange}
                     placeholder="Bluetooth, Backup Camera, GPS, etc."
+                  />
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h2 className="form-section-title">Vehicle Photos</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  📸 Add up to 4 photos of your vehicle. Paste image URLs from Imgur, Google Drive, or any image hosting service.
+                </p>
+
+                <div className="form-group">
+                  <label className="form-label">Photo 1</label>
+                  <input
+                    type="url"
+                    name="image1"
+                    className="form-input"
+                    value={formData.image1}
+                    onChange={handleChange}
+                    placeholder="https://example.com/image1.jpg"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Photo 2</label>
+                  <input
+                    type="url"
+                    name="image2"
+                    className="form-input"
+                    value={formData.image2}
+                    onChange={handleChange}
+                    placeholder="https://example.com/image2.jpg (optional)"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Photo 3</label>
+                  <input
+                    type="url"
+                    name="image3"
+                    className="form-input"
+                    value={formData.image3}
+                    onChange={handleChange}
+                    placeholder="https://example.com/image3.jpg (optional)"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Photo 4</label>
+                  <input
+                    type="url"
+                    name="image4"
+                    className="form-input"
+                    value={formData.image4}
+                    onChange={handleChange}
+                    placeholder="https://example.com/image4.jpg (optional)"
                   />
                 </div>
               </div>
