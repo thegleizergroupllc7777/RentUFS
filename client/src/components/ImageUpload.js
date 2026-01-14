@@ -51,14 +51,28 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         }
       });
 
-      console.log('Full response object:', response);
-      console.log('Response status:', response.status);
-      console.log('Response data:', response.data);
-      console.log('Response data.success:', response.data.success);
-      console.log('Response data.imageUrl:', response.data.imageUrl);
+      console.log('📦 Full response object:', response);
+      console.log('📊 Response status:', response.status);
+      console.log('📄 Response data:', JSON.stringify(response.data));
+      console.log('✓ Response data.success:', response.data.success, '(type:', typeof response.data.success, ')');
+      console.log('🔗 Response data.imageUrl:', response.data.imageUrl);
 
-      // Check if we got a successful response
-      if (response.status === 200 && response.data && response.data.success === true && response.data.imageUrl) {
+      // More flexible validation - check if response looks successful
+      const hasSuccessField = response.data && (
+        response.data.success === true ||
+        response.data.success === 'true' ||
+        response.data.success === 1
+      );
+      const hasImageUrl = response.data && response.data.imageUrl;
+      const isStatusOk = response.status === 200 || response.status === 201;
+
+      console.log('🔍 Validation checks:');
+      console.log('  - Status OK (200/201)?', isStatusOk);
+      console.log('  - Has success field?', hasSuccessField);
+      console.log('  - Has imageUrl?', hasImageUrl);
+
+      // Accept if status is OK and we have an imageUrl (even if success field is missing/wrong type)
+      if (isStatusOk && hasImageUrl) {
         // Convert relative path to full URL
         const imageUrl = `${window.location.origin}${response.data.imageUrl}`;
         console.log(`✅ Image uploaded successfully for ${label}:`, imageUrl);
@@ -69,10 +83,15 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         if (cameraInputRef.current) cameraInputRef.current.value = '';
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
-        console.error('Response missing required fields. Full response:', response);
-        console.error('success field:', response.data?.success);
-        console.error('imageUrl field:', response.data?.imageUrl);
-        throw new Error(response.data?.message || 'Upload failed - server returned invalid response');
+        console.error('❌ Response validation failed!');
+        console.error('Full response:', JSON.stringify(response, null, 2));
+
+        const errorDetails = [];
+        if (!isStatusOk) errorDetails.push(`Status: ${response.status}`);
+        if (!hasSuccessField) errorDetails.push(`Success field invalid: ${response.data?.success}`);
+        if (!hasImageUrl) errorDetails.push('No imageUrl in response');
+
+        throw new Error(response.data?.message || `Upload failed: ${errorDetails.join(', ')}`);
       }
     } catch (error) {
       console.error('Upload error:', error);
