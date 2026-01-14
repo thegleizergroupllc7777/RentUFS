@@ -502,28 +502,28 @@ const Register = () => {
                   <ImageUpload
                     label="Photo 1"
                     value={vehicleData.image1}
-                    onChange={(url) => setVehicleData({ ...vehicleData, image1: url })}
+                    onChange={(url) => setVehicleData(prev => ({ ...prev, image1: url }))}
                     required={true}
                   />
 
                   <ImageUpload
                     label="Photo 2"
                     value={vehicleData.image2}
-                    onChange={(url) => setVehicleData({ ...vehicleData, image2: url })}
+                    onChange={(url) => setVehicleData(prev => ({ ...prev, image2: url }))}
                     required={false}
                   />
 
                   <ImageUpload
                     label="Photo 3"
                     value={vehicleData.image3}
-                    onChange={(url) => setVehicleData({ ...vehicleData, image3: url })}
+                    onChange={(url) => setVehicleData(prev => ({ ...prev, image3: url }))}
                     required={false}
                   />
 
                   <ImageUpload
                     label="Photo 4"
                     value={vehicleData.image4}
-                    onChange={(url) => setVehicleData({ ...vehicleData, image4: url })}
+                    onChange={(url) => setVehicleData(prev => ({ ...prev, image4: url }))}
                     required={false}
                   />
 
@@ -535,7 +535,7 @@ const Register = () => {
                   <ImageUpload
                     label="Registration Document"
                     value={vehicleData.registrationImage}
-                    onChange={(url) => setVehicleData({ ...vehicleData, registrationImage: url })}
+                    onChange={(url) => setVehicleData(prev => ({ ...prev, registrationImage: url }))}
                     required={true}
                   />
 

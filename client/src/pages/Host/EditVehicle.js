@@ -279,28 +279,28 @@ const EditVehicle = () => {
                 <ImageUpload
                   label="Photo 1"
                   value={formData.image1}
-                  onChange={(url) => setFormData({ ...formData, image1: url })}
+                  onChange={(url) => setFormData(prev => ({ ...prev, image1: url }))}
                   required={false}
                 />
 
                 <ImageUpload
                   label="Photo 2"
                   value={formData.image2}
-                  onChange={(url) => setFormData({ ...formData, image2: url })}
+                  onChange={(url) => setFormData(prev => ({ ...prev, image2: url }))}
                   required={false}
                 />
 
                 <ImageUpload
                   label="Photo 3"
                   value={formData.image3}
-                  onChange={(url) => setFormData({ ...formData, image3: url })}
+                  onChange={(url) => setFormData(prev => ({ ...prev, image3: url }))}
                   required={false}
                 />
 
                 <ImageUpload
                   label="Photo 4"
                   value={formData.image4}
-                  onChange={(url) => setFormData({ ...formData, image4: url })}
+                  onChange={(url) => setFormData(prev => ({ ...prev, image4: url }))}
                   required={false}
                 />
               </div>
@@ -314,7 +314,7 @@ const EditVehicle = () => {
                 <ImageUpload
                   label="Registration Document"
                   value={formData.registrationImage}
-                  onChange={(url) => setFormData({ ...formData, registrationImage: url })}
+                  onChange={(url) => setFormData(prev => ({ ...prev, registrationImage: url }))}
                   required={true}
                 />
               </div>

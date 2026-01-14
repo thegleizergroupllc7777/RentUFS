@@ -39,6 +39,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       if (response.data.success) {
         // Convert relative path to full URL
         const imageUrl = `${window.location.origin}${response.data.imageUrl}`;
+        console.log(`Image uploaded successfully for ${label}:`, imageUrl);
         onChange(imageUrl);
       }
     } catch (error) {
