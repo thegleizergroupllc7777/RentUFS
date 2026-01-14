@@ -116,8 +116,12 @@ const HostDashboard = () => {
 
                     <div className="host-vehicle-stats">
                       <div className="stat-item">
-                        <span className="stat-label">Price</span>
-                        <span className="stat-value">${vehicle.pricePerDay}/day</span>
+                        <span className="stat-label">Pricing</span>
+                        <span className="stat-value" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.9rem' }}>
+                          <div>${vehicle.pricePerDay}/day</div>
+                          {vehicle.pricePerWeek && <div style={{ fontSize: '0.85rem' }}>${vehicle.pricePerWeek}/week</div>}
+                          {vehicle.pricePerMonth && <div style={{ fontSize: '0.85rem' }}>${vehicle.pricePerMonth}/month</div>}
+                        </span>
                       </div>
                       <div className="stat-item">
                         <span className="stat-label">Trips</span>

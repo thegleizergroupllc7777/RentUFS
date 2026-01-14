@@ -138,7 +138,21 @@ const VehicleDetail = () => {
                   )}
                 </div>
                 <div className="vehicle-detail-price">
-                  ${vehicle.pricePerDay}/day
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>
+                      ${vehicle.pricePerDay}/day
+                    </div>
+                    {vehicle.pricePerWeek && (
+                      <div style={{ fontSize: '1rem', color: '#6b7280' }}>
+                        ${vehicle.pricePerWeek}/week
+                      </div>
+                    )}
+                    {vehicle.pricePerMonth && (
+                      <div style={{ fontSize: '1rem', color: '#6b7280' }}>
+                        ${vehicle.pricePerMonth}/month
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
