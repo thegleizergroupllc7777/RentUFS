@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import './ImageUpload.css';
 
-const ImageUpload = ({ label, value, onChange, required = false, placeholder }) => {
+const ImageUpload = ({ label, value, onChange, required = false, placeholder, showUrlOption = true }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState('file'); // 'file' or 'url'
   const [urlInput, setUrlInput] = useState(value || '');
@@ -71,25 +71,27 @@ const ImageUpload = ({ label, value, onChange, required = false, placeholder }) 
         {label} {required && <span style={{ color: '#ef4444' }}>*</span>}
       </label>
 
-      {/* Mode Toggle */}
-      <div className="upload-mode-toggle">
-        <button
-          type="button"
-          className={`mode-btn ${uploadMode === 'file' ? 'active' : ''}`}
-          onClick={() => setUploadMode('file')}
-        >
-          📁 Upload File
-        </button>
-        <button
-          type="button"
-          className={`mode-btn ${uploadMode === 'url' ? 'active' : ''}`}
-          onClick={() => setUploadMode('url')}
-        >
-          🔗 Use URL
-        </button>
-      </div>
+      {/* Mode Toggle - Only show if URL option is enabled */}
+      {showUrlOption && (
+        <div className="upload-mode-toggle">
+          <button
+            type="button"
+            className={`mode-btn ${uploadMode === 'file' ? 'active' : ''}`}
+            onClick={() => setUploadMode('file')}
+          >
+            📁 Upload File
+          </button>
+          <button
+            type="button"
+            className={`mode-btn ${uploadMode === 'url' ? 'active' : ''}`}
+            onClick={() => setUploadMode('url')}
+          >
+            🔗 Use URL
+          </button>
+        </div>
+      )}
 
-      {uploadMode === 'file' ? (
+      {(uploadMode === 'file' || !showUrlOption) ? (
         <div className="file-upload-section">
           <input
             ref={fileInputRef}

@@ -220,7 +220,7 @@ const AddVehicle = () => {
               <div className="form-section">
                 <h2 className="form-section-title">Vehicle Photos</h2>
                 <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-                  📸 Upload photos from your device or paste image URLs
+                  📸 Upload photos from your device
                 </p>
 
                 <ImageUpload
@@ -228,6 +228,7 @@ const AddVehicle = () => {
                   value={formData.image1}
                   onChange={(url) => setFormData({ ...formData, image1: url })}
                   required={true}
+                  showUrlOption={false}
                 />
 
                 <ImageUpload
@@ -235,6 +236,7 @@ const AddVehicle = () => {
                   value={formData.image2}
                   onChange={(url) => setFormData({ ...formData, image2: url })}
                   required={false}
+                  showUrlOption={false}
                 />
 
                 <ImageUpload
@@ -242,6 +244,7 @@ const AddVehicle = () => {
                   value={formData.image3}
                   onChange={(url) => setFormData({ ...formData, image3: url })}
                   required={false}
+                  showUrlOption={false}
                 />
 
                 <ImageUpload
@@ -249,6 +252,7 @@ const AddVehicle = () => {
                   value={formData.image4}
                   onChange={(url) => setFormData({ ...formData, image4: url })}
                   required={false}
+                  showUrlOption={false}
                 />
               </div>
 
