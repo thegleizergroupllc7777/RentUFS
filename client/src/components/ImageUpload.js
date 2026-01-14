@@ -5,6 +5,7 @@ import './ImageUpload.css';
 const ImageUpload = ({ label, value, onChange, required = false }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const handleFileSelect = async (e) => {
@@ -39,6 +40,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       }
 
       console.log(`Starting upload for ${label}...`);
+      console.log('File details:', { name: file.name, size: file.size, type: file.type });
 
       const formData = new FormData();
       formData.append('image', file);
@@ -49,20 +51,34 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         }
       });
 
-      console.log('Upload response:', response.data);
+      console.log('Full response object:', response);
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
+      console.log('Response data.success:', response.data.success);
+      console.log('Response data.imageUrl:', response.data.imageUrl);
 
-      if (response.data.success) {
+      // Check if we got a successful response
+      if (response.status === 200 && response.data && response.data.success === true && response.data.imageUrl) {
         // Convert relative path to full URL
         const imageUrl = `${window.location.origin}${response.data.imageUrl}`;
         console.log(`✅ Image uploaded successfully for ${label}:`, imageUrl);
         onChange(imageUrl);
         setUploadError('');
+
+        // Clear file inputs
+        if (cameraInputRef.current) cameraInputRef.current.value = '';
+        if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
-        console.error('Upload succeeded but success=false. Full response:', response);
-        throw new Error(response.data.message || 'Upload failed - no success response');
+        console.error('Response missing required fields. Full response:', response);
+        console.error('success field:', response.data?.success);
+        console.error('imageUrl field:', response.data?.imageUrl);
+        throw new Error(response.data?.message || 'Upload failed - server returned invalid response');
       }
     } catch (error) {
-      console.error('Upload error details:', error);
+      console.error('Upload error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+
       const errorMsg = error.response?.data?.message || error.message || 'Failed to upload image. Please try again.';
       setUploadError(errorMsg);
       alert(`Upload failed: ${errorMsg}`);
@@ -77,6 +93,9 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
   };
 
   return (
@@ -86,7 +105,18 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       </label>
 
       <div className="file-upload-section">
-        {/* Single file input that works for both camera and file selection */}
+        {/* Camera input for mobile devices */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+          id={`camera-input-${label}`}
+        />
+
+        {/* File browser input for computer */}
         <input
           ref={fileInputRef}
           type="file"
@@ -96,18 +126,30 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
           id={`file-input-${label}`}
         />
 
-        <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ width: '100%' }}>
-          {uploading ? (
-            <span>📤 Uploading...</span>
-          ) : value ? (
-            <span>✅ Change Photo</span>
-          ) : (
-            <span>📸 Choose Photo</span>
-          )}
-        </label>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <label htmlFor={`camera-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
+            {uploading ? (
+              <span>📤 Uploading...</span>
+            ) : value ? (
+              <span>📷 Take New Photo</span>
+            ) : (
+              <span>📷 Use Camera</span>
+            )}
+          </label>
+
+          <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
+            {uploading ? (
+              <span>📤 Uploading...</span>
+            ) : value ? (
+              <span>💻 Choose Different</span>
+            ) : (
+              <span>💻 Choose from Computer</span>
+            )}
+          </label>
+        </div>
 
         <p className="upload-hint">
-          Select a photo from your device or camera (Max 5MB)
+          Use camera or select from your computer (Max 5MB)
         </p>
 
         {uploadError && (
