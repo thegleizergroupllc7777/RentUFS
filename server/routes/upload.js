@@ -48,23 +48,39 @@ const upload = multer({
 });
 
 // Upload single image
-router.post('/image', auth, upload.single('image'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+router.post('/image', auth, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // Multer error
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File size too large. Maximum size is 5MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      // Other error
+      return res.status(400).json({ success: false, message: err.message });
     }
 
-    // Return the URL path to access the uploaded image
-    const imageUrl = `/uploads/${req.file.filename}`;
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+      }
 
-    res.json({
-      success: true,
-      imageUrl: imageUrl,
-      filename: req.file.filename
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Upload failed', error: error.message });
-  }
+      // Return the URL path to access the uploaded image
+      const imageUrl = `/uploads/${req.file.filename}`;
+
+      console.log(`Image uploaded successfully: ${req.file.filename}`);
+
+      res.json({
+        success: true,
+        imageUrl: imageUrl,
+        filename: req.file.filename
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
+    }
+  });
 });
 
 // Upload multiple images (up to 4)
