@@ -58,7 +58,8 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         onChange(imageUrl);
         setUploadError('');
       } else {
-        throw new Error('Upload failed - no success response');
+        console.error('Upload succeeded but success=false. Full response:', response);
+        throw new Error(response.data.message || 'Upload failed - no success response');
       }
     } catch (error) {
       console.error('Upload error details:', error);
