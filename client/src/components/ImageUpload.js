@@ -4,6 +4,7 @@ import './ImageUpload.css';
 
 const ImageUpload = ({ label, value, onChange, required = false }) => {
   const [uploading, setUploading] = useState(false);
+  const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const handleFileSelect = async (e) => {
@@ -53,6 +54,9 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
   };
 
   return (
@@ -62,6 +66,18 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       </label>
 
       <div className="file-upload-section">
+        {/* Camera input for mobile devices */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+          id={`camera-input-${label}`}
+        />
+
+        {/* File browser input for computer */}
         <input
           ref={fileInputRef}
           type="file"
@@ -70,17 +86,31 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
           style={{ display: 'none' }}
           id={`file-input-${label}`}
         />
-        <label htmlFor={`file-input-${label}`} className="file-upload-btn">
-          {uploading ? (
-            <span>📤 Uploading...</span>
-          ) : value ? (
-            <span>✅ Change Image</span>
-          ) : (
-            <span>📸 Choose from Device</span>
-          )}
-        </label>
+
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <label htmlFor={`camera-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
+            {uploading ? (
+              <span>📤 Uploading...</span>
+            ) : value ? (
+              <span>📷 Take New Photo</span>
+            ) : (
+              <span>📷 Take Photo</span>
+            )}
+          </label>
+
+          <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
+            {uploading ? (
+              <span>📤 Uploading...</span>
+            ) : value ? (
+              <span>💻 Choose Different</span>
+            ) : (
+              <span>💻 Choose File</span>
+            )}
+          </label>
+        </div>
+
         <p className="upload-hint">
-          Tap to select from camera or gallery (Max 5MB)
+          Take a photo with camera or choose from your device (Max 5MB)
         </p>
       </div>
 
