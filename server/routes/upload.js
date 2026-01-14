@@ -47,7 +47,45 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-// Upload single image
+// Public upload endpoint (no auth required) - TEMPORARY for development
+router.post('/image-public', (req, res) => {
+  console.log('📸 Public upload request received');
+
+  upload.single('image')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File size too large. Maximum size is 5MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      console.error('Upload error (not multer):', err);
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    try {
+      if (!req.file) {
+        console.error('No file in request');
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+      }
+
+      const imageUrl = `/uploads/${req.file.filename}`;
+      console.log(`✅ Image uploaded successfully: ${req.file.filename}`);
+      console.log(`📤 Returning: { success: true, imageUrl: ${imageUrl} }`);
+
+      return res.status(200).json({
+        success: true,
+        imageUrl: imageUrl,
+        filename: req.file.filename
+      });
+    } catch (error) {
+      console.error('Upload processing error:', error);
+      return res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
+    }
+  });
+});
+
+// Upload single image (with auth)
 router.post('/image', auth, (req, res) => {
   console.log('Upload request received from user:', req.user?._id);
 

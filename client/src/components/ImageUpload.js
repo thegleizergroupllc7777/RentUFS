@@ -45,11 +45,8 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await axios.post('/api/upload/image', formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Use public endpoint (no auth required) for now
+      const response = await axios.post('/api/upload/image-public', formData);
 
       console.log('📦 Full response object:', response);
       console.log('📊 Response status:', response.status);
