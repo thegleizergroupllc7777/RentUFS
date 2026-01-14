@@ -2,10 +2,8 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import './ImageUpload.css';
 
-const ImageUpload = ({ label, value, onChange, required = false, placeholder, showUrlOption = true }) => {
+const ImageUpload = ({ label, value, onChange, required = false }) => {
   const [uploading, setUploading] = useState(false);
-  const [uploadMode, setUploadMode] = useState('file'); // 'file' or 'url'
-  const [urlInput, setUrlInput] = useState(value || '');
   const fileInputRef = useRef(null);
 
   const handleFileSelect = async (e) => {
@@ -51,15 +49,8 @@ const ImageUpload = ({ label, value, onChange, required = false, placeholder, sh
     }
   };
 
-  const handleUrlSubmit = () => {
-    if (urlInput.trim()) {
-      onChange(urlInput.trim());
-    }
-  };
-
   const handleClear = () => {
     onChange('');
-    setUrlInput('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -71,64 +62,28 @@ const ImageUpload = ({ label, value, onChange, required = false, placeholder, sh
         {label} {required && <span style={{ color: '#ef4444' }}>*</span>}
       </label>
 
-      {/* Mode Toggle - Only show if URL option is enabled */}
-      {showUrlOption && (
-        <div className="upload-mode-toggle">
-          <button
-            type="button"
-            className={`mode-btn ${uploadMode === 'file' ? 'active' : ''}`}
-            onClick={() => setUploadMode('file')}
-          >
-            📁 Upload File
-          </button>
-          <button
-            type="button"
-            className={`mode-btn ${uploadMode === 'url' ? 'active' : ''}`}
-            onClick={() => setUploadMode('url')}
-          >
-            🔗 Use URL
-          </button>
-        </div>
-      )}
-
-      {(uploadMode === 'file' || !showUrlOption) ? (
-        <div className="file-upload-section">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-            id={`file-input-${label}`}
-          />
-          <label htmlFor={`file-input-${label}`} className="file-upload-btn">
-            {uploading ? (
-              <span>📤 Uploading...</span>
-            ) : value ? (
-              <span>✅ Change Image</span>
-            ) : (
-              <span>📸 Choose from Device</span>
-            )}
-          </label>
-          <p className="upload-hint">
-            Tap to select from camera or gallery (Max 5MB)
-          </p>
-        </div>
-      ) : (
-        <div className="url-upload-section">
-          <input
-            type="url"
-            className="form-input"
-            placeholder={placeholder || "https://example.com/image.jpg"}
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            onBlur={handleUrlSubmit}
-          />
-          <p className="upload-hint">
-            Paste an image URL from Imgur, Google Drive, etc.
-          </p>
-        </div>
-      )}
+      <div className="file-upload-section">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+          id={`file-input-${label}`}
+        />
+        <label htmlFor={`file-input-${label}`} className="file-upload-btn">
+          {uploading ? (
+            <span>📤 Uploading...</span>
+          ) : value ? (
+            <span>✅ Change Image</span>
+          ) : (
+            <span>📸 Choose from Device</span>
+          )}
+        </label>
+        <p className="upload-hint">
+          Tap to select from camera or gallery (Max 5MB)
+        </p>
+      </div>
 
       {/* Image Preview */}
       {value && (

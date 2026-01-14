@@ -279,7 +279,6 @@ const EditVehicle = () => {
                   value={formData.image1}
                   onChange={(url) => setFormData({ ...formData, image1: url })}
                   required={false}
-                  showUrlOption={false}
                 />
 
                 <ImageUpload
@@ -287,7 +286,6 @@ const EditVehicle = () => {
                   value={formData.image2}
                   onChange={(url) => setFormData({ ...formData, image2: url })}
                   required={false}
-                  showUrlOption={false}
                 />
 
                 <ImageUpload
@@ -295,7 +293,6 @@ const EditVehicle = () => {
                   value={formData.image3}
                   onChange={(url) => setFormData({ ...formData, image3: url })}
                   required={false}
-                  showUrlOption={false}
                 />
 
                 <ImageUpload
@@ -303,7 +300,6 @@ const EditVehicle = () => {
                   value={formData.image4}
                   onChange={(url) => setFormData({ ...formData, image4: url })}
                   required={false}
-                  showUrlOption={false}
                 />
               </div>
 

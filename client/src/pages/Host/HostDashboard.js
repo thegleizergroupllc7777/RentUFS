@@ -14,7 +14,10 @@ const HostDashboard = () => {
 
   const fetchVehicles = async () => {
     try {
-      const response = await axios.get('/api/vehicles/host/my-vehicles');
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/vehicles/host/my-vehicles', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setVehicles(response.data);
     } catch (error) {
       console.error('Error fetching vehicles:', error);
@@ -29,7 +32,10 @@ const HostDashboard = () => {
     }
 
     try {
-      await axios.delete(`/api/vehicles/${vehicleId}`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/vehicles/${vehicleId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       fetchVehicles();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
@@ -39,8 +45,11 @@ const HostDashboard = () => {
 
   const toggleAvailability = async (vehicleId, currentAvailability) => {
     try {
+      const token = localStorage.getItem('token');
       await axios.put(`/api/vehicles/${vehicleId}`, {
         availability: !currentAvailability
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       fetchVehicles();
     } catch (error) {
