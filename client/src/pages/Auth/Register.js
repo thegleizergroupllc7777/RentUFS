@@ -38,7 +38,8 @@ const Register = () => {
     image1: '',
     image2: '',
     image3: '',
-    image4: ''
+    image4: '',
+    registrationImage: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -128,6 +129,14 @@ const Register = () => {
       return;
     }
 
+    // Validate that registration image is uploaded
+    if (!vehicleData.registrationImage || vehicleData.registrationImage.trim() === '') {
+      setError('Vehicle registration photo is required');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
 
@@ -149,6 +158,7 @@ const Register = () => {
         description: vehicleData.description,
         pricePerDay: parseFloat(vehicleData.pricePerDay),
         images: images.length > 0 ? images : undefined,
+        registrationImage: vehicleData.registrationImage,
         location: {
           address: vehicleData.address,
           city: vehicleData.city,
@@ -515,6 +525,18 @@ const Register = () => {
                     value={vehicleData.image4}
                     onChange={(url) => setVehicleData({ ...vehicleData, image4: url })}
                     required={false}
+                  />
+
+                  <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', fontSize: '1.1rem' }}>Vehicle Registration</h3>
+                  <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                    📄 Upload a photo of your vehicle registration document for verification
+                  </p>
+
+                  <ImageUpload
+                    label="Registration Document"
+                    value={vehicleData.registrationImage}
+                    onChange={(url) => setVehicleData({ ...vehicleData, registrationImage: url })}
+                    required={true}
                   />
 
                   <div className="form-group">

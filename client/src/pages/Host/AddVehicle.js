@@ -21,6 +21,7 @@ const AddVehicle = () => {
     image2: '',
     image3: '',
     image4: '',
+    registrationImage: '',
     location: {
       address: '',
       city: '',
@@ -64,6 +65,14 @@ const AddVehicle = () => {
       return;
     }
 
+    // Validate that registration image is uploaded
+    if (!formData.registrationImage || formData.registrationImage.trim() === '') {
+      setError('Vehicle registration photo is required');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     try {
       // Prepare images array from individual image fields
       const images = [
@@ -76,7 +85,8 @@ const AddVehicle = () => {
       const vehicleData = {
         ...formData,
         features: formData.features.split(',').map(f => f.trim()).filter(f => f),
-        images: images.length > 0 ? images : undefined
+        images: images.length > 0 ? images : undefined,
+        registrationImage: formData.registrationImage
       };
 
       // Remove image fields from formData before sending
@@ -265,6 +275,20 @@ const AddVehicle = () => {
                   value={formData.image4}
                   onChange={(url) => setFormData({ ...formData, image4: url })}
                   required={false}
+                />
+              </div>
+
+              <div className="form-section">
+                <h2 className="form-section-title">Vehicle Registration</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  📄 Upload a photo of your vehicle registration document for verification
+                </p>
+
+                <ImageUpload
+                  label="Registration Document"
+                  value={formData.registrationImage}
+                  onChange={(url) => setFormData({ ...formData, registrationImage: url })}
+                  required={true}
                 />
               </div>
 

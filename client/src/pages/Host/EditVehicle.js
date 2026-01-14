@@ -22,6 +22,7 @@ const EditVehicle = () => {
     image2: '',
     image3: '',
     image4: '',
+    registrationImage: '',
     location: {
       address: '',
       city: '',
@@ -56,6 +57,7 @@ const EditVehicle = () => {
         image2: vehicle.images?.[1] || '',
         image3: vehicle.images?.[2] || '',
         image4: vehicle.images?.[3] || '',
+        registrationImage: vehicle.registrationImage || '',
         location: vehicle.location || {
           address: '',
           city: '',
@@ -300,6 +302,20 @@ const EditVehicle = () => {
                   value={formData.image4}
                   onChange={(url) => setFormData({ ...formData, image4: url })}
                   required={false}
+                />
+              </div>
+
+              <div className="form-section">
+                <h2 className="form-section-title">Vehicle Registration</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  📄 Upload a photo of your vehicle registration document for verification
+                </p>
+
+                <ImageUpload
+                  label="Registration Document"
+                  value={formData.registrationImage}
+                  onChange={(url) => setFormData({ ...formData, registrationImage: url })}
+                  required={true}
                 />
               </div>
 

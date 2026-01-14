@@ -57,6 +57,10 @@ const vehicleSchema = new mongoose.Schema({
   images: [{
     type: String
   }],
+  registrationImage: {
+    type: String,
+    required: true
+  },
   availability: {
     type: Boolean,
     default: true
