@@ -57,8 +57,18 @@ const AddVehicle = () => {
     setError('');
     setLoading(true);
 
+    // Debug: Log current form state
+    console.log('Form submission - Current state:', {
+      image1: formData.image1,
+      image2: formData.image2,
+      image3: formData.image3,
+      image4: formData.image4,
+      registrationImage: formData.registrationImage
+    });
+
     // Validate that at least Photo 1 is uploaded
     if (!formData.image1 || formData.image1.trim() === '') {
+      console.log('Validation failed: Photo 1 is missing');
       setError('Please upload at least one photo (Photo 1 is required)');
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -67,6 +77,7 @@ const AddVehicle = () => {
 
     // Validate that registration image is uploaded
     if (!formData.registrationImage || formData.registrationImage.trim() === '') {
+      console.log('Validation failed: Registration image is missing');
       setError('Vehicle registration photo is required');
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -252,30 +263,61 @@ const AddVehicle = () => {
                 <ImageUpload
                   label="Photo 1"
                   value={formData.image1}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image1: url }))}
+                  onChange={(url) => {
+                    console.log('Photo 1 onChange called with:', url);
+                    setFormData(prev => {
+                      const newState = { ...prev, image1: url };
+                      console.log('Photo 1 - New state:', newState);
+                      return newState;
+                    });
+                    setError(''); // Clear error when photo is uploaded
+                  }}
                   required={true}
                 />
 
                 <ImageUpload
                   label="Photo 2"
                   value={formData.image2}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image2: url }))}
+                  onChange={(url) => {
+                    setFormData(prev => ({ ...prev, image2: url }));
+                    setError('');
+                  }}
                   required={false}
                 />
 
                 <ImageUpload
                   label="Photo 3"
                   value={formData.image3}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image3: url }))}
+                  onChange={(url) => {
+                    setFormData(prev => ({ ...prev, image3: url }));
+                    setError('');
+                  }}
                   required={false}
                 />
 
                 <ImageUpload
                   label="Photo 4"
                   value={formData.image4}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image4: url }))}
+                  onChange={(url) => {
+                    setFormData(prev => ({ ...prev, image4: url }));
+                    setError('');
+                  }}
                   required={false}
                 />
+
+                {/* Photo upload status indicator */}
+                {formData.image1 && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#d1fae5',
+                    color: '#065f46',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #10b981'
+                  }}>
+                    ✅ Photo 1 uploaded successfully
+                  </div>
+                )}
               </div>
 
               <div className="form-section">
@@ -287,9 +329,27 @@ const AddVehicle = () => {
                 <ImageUpload
                   label="Registration Document"
                   value={formData.registrationImage}
-                  onChange={(url) => setFormData(prev => ({ ...prev, registrationImage: url }))}
+                  onChange={(url) => {
+                    console.log('Registration image onChange called with:', url);
+                    setFormData(prev => ({ ...prev, registrationImage: url }));
+                    setError('');
+                  }}
                   required={true}
                 />
+
+                {/* Registration upload status indicator */}
+                {formData.registrationImage && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#d1fae5',
+                    color: '#065f46',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #10b981'
+                  }}>
+                    ✅ Registration document uploaded successfully
+                  </div>
+                )}
               </div>
 
               <div className="form-section">
