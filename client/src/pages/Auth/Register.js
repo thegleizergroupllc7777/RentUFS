@@ -14,6 +14,7 @@ const Register = () => {
     firstName: '',
     lastName: '',
     phone: '',
+    dateOfBirth: '',
     userType: 'driver',
     driverLicense: {
       licenseNumber: '',
@@ -77,6 +78,25 @@ const Register = () => {
     setError('');
     setLoading(true);
 
+    // Validate age for drivers and both (must be at least 21)
+    if ((formData.userType === 'driver' || formData.userType === 'both') && formData.dateOfBirth) {
+      const birthDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+
+      // Calculate exact age
+      const exactAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+
+      if (exactAge < 21) {
+        setError('You must be at least 21 years old to register as a driver.');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
     try {
       await register(formData);
 
@@ -91,6 +111,7 @@ const Register = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register');
       setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -228,6 +249,24 @@ const Register = () => {
                       value={formData.phone}
                       onChange={handleChange}
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Date of Birth {(formData.userType === 'driver' || formData.userType === 'both') && '*'}</label>
+                    <input
+                      type="date"
+                      name="dateOfBirth"
+                      className="form-input"
+                      value={formData.dateOfBirth}
+                      onChange={handleChange}
+                      max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]}
+                      required={(formData.userType === 'driver' || formData.userType === 'both')}
+                    />
+                    {(formData.userType === 'driver' || formData.userType === 'both') && (
+                      <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        You must be at least 21 years old to rent vehicles
+                      </p>
+                    )}
                   </div>
 
                   <div className="form-group">

@@ -27,6 +27,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  dateOfBirth: {
+    type: Date
+  },
   userType: {
     type: String,
     enum: ['driver', 'host', 'both'],

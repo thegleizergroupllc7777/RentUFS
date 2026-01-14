@@ -9,11 +9,29 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, userType, driverLicense } = req.body;
+    const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Validate age for drivers and both (must be at least 21)
+    if ((userType === 'driver' || userType === 'both') && dateOfBirth) {
+      const birthDate = new Date(dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+
+      // Calculate exact age
+      const exactAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+
+      if (exactAge < 21) {
+        return res.status(400).json({
+          message: 'You must be at least 21 years old to register as a driver.'
+        });
+      }
     }
 
     const userData = {
@@ -22,6 +40,7 @@ router.post('/register', async (req, res) => {
       firstName,
       lastName,
       phone,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       userType: userType || 'driver'
     };
 
