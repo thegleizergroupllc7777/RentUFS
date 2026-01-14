@@ -81,6 +81,14 @@ const Register = () => {
     setError('');
     setLoading(true);
 
+    // Validate that at least Photo 1 is uploaded
+    if (!vehicleData.image1 || vehicleData.image1.trim() === '') {
+      setError('Please upload at least one photo (Photo 1 is required)');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
 
@@ -90,7 +98,7 @@ const Register = () => {
         vehicleData.image2,
         vehicleData.image3,
         vehicleData.image4
-      ].filter(img => img.trim() !== ''); // Only include non-empty image URLs
+      ].filter(img => img && img.trim() !== ''); // Only include non-empty image URLs
 
       const vehiclePayload = {
         make: vehicleData.make,
@@ -117,7 +125,8 @@ const Register = () => {
       // Navigate to host dashboard after adding vehicle
       navigate('/host/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create vehicle listing');
+      setError(err.response?.data?.message || 'Failed to create vehicle listing. Please try again.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }

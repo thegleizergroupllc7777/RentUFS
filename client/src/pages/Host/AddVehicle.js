@@ -56,6 +56,14 @@ const AddVehicle = () => {
     setError('');
     setLoading(true);
 
+    // Validate that at least Photo 1 is uploaded
+    if (!formData.image1 || formData.image1.trim() === '') {
+      setError('Please upload at least one photo (Photo 1 is required)');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     try {
       // Prepare images array from individual image fields
       const images = [
@@ -77,10 +85,18 @@ const AddVehicle = () => {
       delete vehicleData.image3;
       delete vehicleData.image4;
 
-      await axios.post('/api/vehicles', vehicleData);
+      const token = localStorage.getItem('token');
+      await axios.post('/api/vehicles', vehicleData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Success! Navigate to dashboard
       navigate('/host/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add vehicle');
+      setError(err.response?.data?.message || 'Failed to add vehicle. Please try again.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
