@@ -31,7 +31,6 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       const token = localStorage.getItem('token');
       const response = await axios.post('/api/upload/image', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
         }
       });
