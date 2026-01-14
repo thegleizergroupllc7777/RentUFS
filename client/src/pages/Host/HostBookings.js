@@ -7,6 +7,7 @@ import './Host.css';
 const HostBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('current'); // current, upcoming, past
 
   useEffect(() => {
     fetchBookings();
@@ -46,6 +47,46 @@ const HostBookings = () => {
     return colors[status] || '#6b7280';
   };
 
+  // Categorize bookings into current, upcoming, and past
+  const categorizeBookings = () => {
+    const now = new Date();
+
+    const current = bookings.filter(booking => {
+      const startDate = new Date(booking.startDate);
+      const endDate = new Date(booking.endDate);
+      return startDate <= now && endDate >= now && booking.status === 'active';
+    });
+
+    const upcoming = bookings.filter(booking => {
+      const startDate = new Date(booking.startDate);
+      return startDate > now && (booking.status === 'pending' || booking.status === 'confirmed');
+    });
+
+    const past = bookings.filter(booking => {
+      const endDate = new Date(booking.endDate);
+      return endDate < now || booking.status === 'completed' || booking.status === 'cancelled';
+    });
+
+    return { current, upcoming, past };
+  };
+
+  const { current, upcoming, past } = categorizeBookings();
+
+  const getActiveBookings = () => {
+    switch(activeTab) {
+      case 'current':
+        return current;
+      case 'upcoming':
+        return upcoming;
+      case 'past':
+        return past;
+      default:
+        return [];
+    }
+  };
+
+  const activeBookings = getActiveBookings();
+
   if (loading) {
     return (
       <div>
@@ -78,8 +119,72 @@ const HostBookings = () => {
               </Link>
             </div>
           ) : (
-            <div className="bookings-list">
-              {bookings.map(booking => (
+            <>
+              {/* Tabs */}
+              <div className="tabs" style={{
+                display: 'flex',
+                gap: '1rem',
+                marginBottom: '2rem',
+                borderBottom: '2px solid #e5e7eb'
+              }}>
+                <button
+                  onClick={() => setActiveTab('current')}
+                  className={activeTab === 'current' ? 'tab-active' : 'tab'}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: activeTab === 'current' ? '#10b981' : 'transparent',
+                    color: activeTab === 'current' ? 'white' : '#6b7280',
+                    border: 'none',
+                    borderRadius: '0.5rem 0.5rem 0 0',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '1rem'
+                  }}
+                >
+                  Current ({current.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('upcoming')}
+                  className={activeTab === 'upcoming' ? 'tab-active' : 'tab'}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: activeTab === 'upcoming' ? '#10b981' : 'transparent',
+                    color: activeTab === 'upcoming' ? 'white' : '#6b7280',
+                    border: 'none',
+                    borderRadius: '0.5rem 0.5rem 0 0',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '1rem'
+                  }}
+                >
+                  Upcoming ({upcoming.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('past')}
+                  className={activeTab === 'past' ? 'tab-active' : 'tab'}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: activeTab === 'past' ? '#10b981' : 'transparent',
+                    color: activeTab === 'past' ? 'white' : '#6b7280',
+                    border: 'none',
+                    borderRadius: '0.5rem 0.5rem 0 0',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '1rem'
+                  }}
+                >
+                  Past ({past.length})
+                </button>
+              </div>
+
+              {/* Booking List */}
+              {activeBookings.length === 0 ? (
+                <div className="empty-state">
+                  <p>No {activeTab} bookings.</p>
+                </div>
+              ) : (
+                <div className="bookings-list">
+                  {activeBookings.map(booking => (
                 <div key={booking._id} className="booking-card host-booking-card">
                   <div className="booking-header">
                     <div>
@@ -168,6 +273,8 @@ const HostBookings = () => {
                 </div>
               ))}
             </div>
+              )}
+            </>
           )}
         </div>
       </div>
