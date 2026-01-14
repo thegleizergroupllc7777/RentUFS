@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
+import { vehicleModels } from '../../data/vehicleModels';
 import './Auth.css';
 
 const Register = () => {
@@ -70,10 +71,21 @@ const Register = () => {
   };
 
   const handleVehicleChange = (e) => {
-    setVehicleData({
-      ...vehicleData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+
+    if (name === 'make') {
+      // Reset model when brand changes
+      setVehicleData({
+        ...vehicleData,
+        make: value,
+        model: ''
+      });
+    } else {
+      setVehicleData({
+        ...vehicleData,
+        [name]: value
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -436,15 +448,26 @@ const Register = () => {
 
                     <div className="form-group">
                       <label className="form-label">Model</label>
-                      <input
-                        type="text"
+                      <select
                         name="model"
-                        className="form-input"
-                        placeholder="e.g., Camry"
+                        className="form-select"
                         value={vehicleData.model}
                         onChange={handleVehicleChange}
                         required
-                      />
+                        disabled={!vehicleData.make}
+                      >
+                        <option value="">
+                          {vehicleData.make ? 'Select a model' : 'Select brand first'}
+                        </option>
+                        {vehicleData.make && vehicleModels[vehicleData.make]?.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                      {!vehicleData.make && (
+                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                          Please select a brand first
+                        </p>
+                      )}
                     </div>
                   </div>
 

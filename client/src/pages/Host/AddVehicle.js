@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
+import { vehicleModels } from '../../data/vehicleModels';
 import './Host.css';
 
 const AddVehicle = () => {
@@ -45,6 +46,13 @@ const AddVehicle = () => {
           ...formData.location,
           [locationField]: value
         }
+      });
+    } else if (name === 'make') {
+      // Reset model when brand changes
+      setFormData({
+        ...formData,
+        make: value,
+        model: ''
       });
     } else {
       setFormData({
@@ -196,14 +204,26 @@ const AddVehicle = () => {
 
                   <div className="form-group">
                     <label className="form-label">Model *</label>
-                    <input
-                      type="text"
+                    <select
                       name="model"
-                      className="form-input"
+                      className="form-select"
                       value={formData.model}
                       onChange={handleChange}
                       required
-                    />
+                      disabled={!formData.make}
+                    >
+                      <option value="">
+                        {formData.make ? 'Select a model' : 'Select brand first'}
+                      </option>
+                      {formData.make && vehicleModels[formData.make]?.map(model => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                    {!formData.make && (
+                      <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        Please select a brand first
+                      </p>
+                    )}
                   </div>
                 </div>
 
