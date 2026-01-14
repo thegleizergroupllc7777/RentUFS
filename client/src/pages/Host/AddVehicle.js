@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import ImageUpload from '../../components/ImageUpload';
 import './Host.css';
 
 const AddVehicle = () => {
@@ -219,57 +220,36 @@ const AddVehicle = () => {
               <div className="form-section">
                 <h2 className="form-section-title">Vehicle Photos</h2>
                 <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-                  📸 Add up to 4 photos of your vehicle. Paste image URLs from Imgur, Google Drive, or any image hosting service.
+                  📸 Upload photos from your device or paste image URLs
                 </p>
 
-                <div className="form-group">
-                  <label className="form-label">Photo 1 *</label>
-                  <input
-                    type="url"
-                    name="image1"
-                    className="form-input"
-                    value={formData.image1}
-                    onChange={handleChange}
-                    placeholder="https://example.com/image1.jpg"
-                    required
-                  />
-                </div>
+                <ImageUpload
+                  label="Photo 1"
+                  value={formData.image1}
+                  onChange={(url) => setFormData({ ...formData, image1: url })}
+                  required={true}
+                />
 
-                <div className="form-group">
-                  <label className="form-label">Photo 2</label>
-                  <input
-                    type="url"
-                    name="image2"
-                    className="form-input"
-                    value={formData.image2}
-                    onChange={handleChange}
-                    placeholder="https://example.com/image2.jpg (optional)"
-                  />
-                </div>
+                <ImageUpload
+                  label="Photo 2"
+                  value={formData.image2}
+                  onChange={(url) => setFormData({ ...formData, image2: url })}
+                  required={false}
+                />
 
-                <div className="form-group">
-                  <label className="form-label">Photo 3</label>
-                  <input
-                    type="url"
-                    name="image3"
-                    className="form-input"
-                    value={formData.image3}
-                    onChange={handleChange}
-                    placeholder="https://example.com/image3.jpg (optional)"
-                  />
-                </div>
+                <ImageUpload
+                  label="Photo 3"
+                  value={formData.image3}
+                  onChange={(url) => setFormData({ ...formData, image3: url })}
+                  required={false}
+                />
 
-                <div className="form-group">
-                  <label className="form-label">Photo 4</label>
-                  <input
-                    type="url"
-                    name="image4"
-                    className="form-input"
-                    value={formData.image4}
-                    onChange={handleChange}
-                    placeholder="https://example.com/image4.jpg (optional)"
-                  />
-                </div>
+                <ImageUpload
+                  label="Photo 4"
+                  value={formData.image4}
+                  onChange={(url) => setFormData({ ...formData, image4: url })}
+                  required={false}
+                />
               </div>
 
               <div className="form-section">

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import ImageUpload from '../../components/ImageUpload';
 import './Auth.css';
 
 const Register = () => {
@@ -28,8 +29,6 @@ const Register = () => {
     city: '',
     state: '',
     zipCode: '',
-    longitude: '',
-    latitude: '',
     image1: '',
     image2: '',
     image3: '',
@@ -107,10 +106,7 @@ const Register = () => {
           address: vehicleData.address,
           city: vehicleData.city,
           state: vehicleData.state,
-          zipCode: vehicleData.zipCode,
-          coordinates: vehicleData.longitude && vehicleData.latitude
-            ? [parseFloat(vehicleData.longitude), parseFloat(vehicleData.latitude)]
-            : undefined
+          zipCode: vehicleData.zipCode
         }
       };
 
@@ -368,50 +364,35 @@ const Register = () => {
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                      Vehicle Photos (Add up to 4 images)
-                    </label>
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.75rem' }}>
-                      📸 Paste image URLs below (e.g., from Imgur, Google Drive, or any image hosting service)
-                    </p>
+                  <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', fontSize: '1.1rem' }}>Vehicle Photos</h3>
 
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                      <input
-                        type="url"
-                        name="image1"
-                        className="form-input"
-                        placeholder="Image 1 URL (required)"
-                        value={vehicleData.image1}
-                        onChange={handleVehicleChange}
-                        required
-                      />
-                      <input
-                        type="url"
-                        name="image2"
-                        className="form-input"
-                        placeholder="Image 2 URL (optional)"
-                        value={vehicleData.image2}
-                        onChange={handleVehicleChange}
-                      />
-                      <input
-                        type="url"
-                        name="image3"
-                        className="form-input"
-                        placeholder="Image 3 URL (optional)"
-                        value={vehicleData.image3}
-                        onChange={handleVehicleChange}
-                      />
-                      <input
-                        type="url"
-                        name="image4"
-                        className="form-input"
-                        placeholder="Image 4 URL (optional)"
-                        value={vehicleData.image4}
-                        onChange={handleVehicleChange}
-                      />
-                    </div>
-                  </div>
+                  <ImageUpload
+                    label="Photo 1"
+                    value={vehicleData.image1}
+                    onChange={(url) => setVehicleData({ ...vehicleData, image1: url })}
+                    required={true}
+                  />
+
+                  <ImageUpload
+                    label="Photo 2"
+                    value={vehicleData.image2}
+                    onChange={(url) => setVehicleData({ ...vehicleData, image2: url })}
+                    required={false}
+                  />
+
+                  <ImageUpload
+                    label="Photo 3"
+                    value={vehicleData.image3}
+                    onChange={(url) => setVehicleData({ ...vehicleData, image3: url })}
+                    required={false}
+                  />
+
+                  <ImageUpload
+                    label="Photo 4"
+                    value={vehicleData.image4}
+                    onChange={(url) => setVehicleData({ ...vehicleData, image4: url })}
+                    required={false}
+                  />
 
                   <div className="form-group">
                     <label className="form-label">Address</label>
@@ -465,39 +446,7 @@ const Register = () => {
                     </div>
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Longitude (Optional)</label>
-                      <input
-                        type="number"
-                        name="longitude"
-                        className="form-input"
-                        placeholder="e.g., -122.4194"
-                        step="any"
-                        value={vehicleData.longitude}
-                        onChange={handleVehicleChange}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">Latitude (Optional)</label>
-                      <input
-                        type="number"
-                        name="latitude"
-                        className="form-input"
-                        placeholder="e.g., 37.7749"
-                        step="any"
-                        value={vehicleData.latitude}
-                        onChange={handleVehicleChange}
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-gray" style={{ marginBottom: '1rem' }}>
-                    💡 Tip: Get coordinates from <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" style={{ color: '#10b981' }}>LatLong.net</a> for map view
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                     <button
                       type="submit"
                       className="btn btn-primary"
