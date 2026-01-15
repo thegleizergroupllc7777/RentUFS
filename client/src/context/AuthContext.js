@@ -65,11 +65,29 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const forgotPassword = async (email) => {
+    const response = await axios.post('/api/auth/forgot-password', { email });
+    return response.data;
+  };
+
+  const verifyResetToken = async (token) => {
+    const response = await axios.get(`/api/auth/verify-reset-token/${token}`);
+    return response.data;
+  };
+
+  const resetPassword = async (token, password) => {
+    const response = await axios.post('/api/auth/reset-password', { token, password });
+    return response.data;
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
+    forgotPassword,
+    verifyResetToken,
+    resetPassword,
     loading,
     isAuthenticated: !!user
   };

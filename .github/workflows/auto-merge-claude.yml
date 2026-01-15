@@ -1,0 +1,47 @@
+name: Auto-merge Claude branches
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and Merge PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = context.ref.replace('refs/heads/', '');
+
+            // Create PR
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Auto-merge: ${branchName}`,
+              head: branchName,
+              base: 'main',
+              body: 'Automatically merging Claude branch to main for deployment.'
+            });
+
+            console.log(`Created PR #${pr.data.number}`);
+
+            // Merge PR immediately
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+              merge_method: 'squash'
+            });
+
+            console.log(`Merged PR #${pr.data.number}`);
