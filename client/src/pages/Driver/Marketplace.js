@@ -9,13 +9,17 @@ import './Driver.css';
 const Marketplace = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+  const [viewMode, setViewMode] = useState('map'); // 'list' or 'map' - default to map
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     location: '',
     radius: '25',
     startDate: '',
     endDate: ''
   });
+  const [searchLocation, setSearchLocation] = useState('');
+  const [resultsInfo, setResultsInfo] = useState({ showing: 0, total: 0 });
 
   useEffect(() => {
     fetchVehicles();
@@ -23,6 +27,7 @@ const Marketplace = () => {
 
   const fetchVehicles = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       Object.keys(filters).forEach(key => {
         if (filters[key]) params.append(key, filters[key]);
@@ -30,6 +35,10 @@ const Marketplace = () => {
 
       const response = await axios.get(`${API_URL}/api/vehicles?${params}`);
       setVehicles(response.data);
+      setResultsInfo({
+        showing: Math.min(12, response.data.length),
+        total: response.data.length
+      });
     } catch (error) {
       console.error('Error fetching vehicles:', error);
     } finally {
@@ -46,7 +55,13 @@ const Marketplace = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchVehicles();
+    setFilters(prev => ({ ...prev, location: searchLocation }));
+    setTimeout(fetchVehicles, 0);
+  };
+
+  const handleQuickSearch = () => {
+    setFilters(prev => ({ ...prev, location: searchLocation }));
+    setTimeout(fetchVehicles, 0);
   };
 
   const clearFilters = () => {
@@ -56,170 +71,258 @@ const Marketplace = () => {
       startDate: '',
       endDate: ''
     });
+    setSearchLocation('');
     setTimeout(fetchVehicles, 0);
   };
 
-  return (
-    <div>
-      <Navbar />
-      <div className="page">
-        <div className="container">
-          <div className="flex-between mb-3">
-            <h1 className="page-title" style={{ marginBottom: 0 }}>Browse Cars</h1>
+  const handleVehicleSelect = (vehicleId) => {
+    setSelectedVehicle(vehicleId);
+  };
 
-            <div className="view-toggle">
-              <button
-                className={`btn ${viewMode === 'list' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setViewMode('list')}
-                style={{ marginRight: '0.5rem' }}
+  // Get location display text
+  const getLocationText = () => {
+    if (filters.location) {
+      return `${filters.radius || 'Any'} miles of ${filters.location}`;
+    }
+    return 'All Locations';
+  };
+
+  return (
+    <div className="marketplace-fullscreen">
+      <Navbar />
+
+      {/* Top Search Bar */}
+      <div className="marketplace-search-bar">
+        <div className="search-container">
+          <div className="search-icon">🔍</div>
+          <input
+            type="text"
+            placeholder="Enter city or zip code..."
+            value={searchLocation}
+            onChange={(e) => setSearchLocation(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleQuickSearch()}
+            className="search-input-main"
+          />
+          <button onClick={handleQuickSearch} className="search-btn-main">
+            Search
+          </button>
+        </div>
+
+        {/* View Toggle */}
+        <div className="view-toggle-bar">
+          <button
+            className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+            onClick={() => setViewMode('list')}
+          >
+            📋 LIST
+          </button>
+          <button
+            className={`toggle-btn ${viewMode === 'map' ? 'active' : ''}`}
+            onClick={() => setViewMode('map')}
+          >
+            📍 MAP
+          </button>
+        </div>
+      </div>
+
+      {/* Results Info Bar */}
+      <div className="results-info-bar">
+        <div className="results-text">
+          <strong>{getLocationText()}</strong>
+          <span className="results-count">
+            Showing {resultsInfo.showing} of {resultsInfo.total} vehicles
+          </span>
+        </div>
+        <button
+          className="filters-toggle-btn"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          {showFilters ? 'Hide Filters' : 'More Filters'} ⚙️
+        </button>
+      </div>
+
+      {/* Expanded Filters Panel */}
+      {showFilters && (
+        <div className="filters-panel">
+          <div className="filters-grid">
+            <div className="filter-item">
+              <label>Location</label>
+              <input
+                type="text"
+                name="location"
+                placeholder="City or zip code"
+                value={filters.location}
+                onChange={handleFilterChange}
+              />
+            </div>
+            <div className="filter-item">
+              <label>Radius</label>
+              <select
+                name="radius"
+                value={filters.radius}
+                onChange={handleFilterChange}
               >
-                📋 List View
+                <option value="10">10 miles</option>
+                <option value="25">25 miles</option>
+                <option value="50">50 miles</option>
+                <option value="100">100 miles</option>
+                <option value="">Any distance</option>
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>Pick-up Date</label>
+              <input
+                type="date"
+                name="startDate"
+                value={filters.startDate}
+                onChange={handleFilterChange}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="filter-item">
+              <label>Return Date</label>
+              <input
+                type="date"
+                name="endDate"
+                value={filters.endDate}
+                onChange={handleFilterChange}
+                min={filters.startDate || new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="filter-actions">
+              <button onClick={fetchVehicles} className="btn btn-primary">
+                Apply Filters
               </button>
-              <button
-                className={`btn ${viewMode === 'map' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setViewMode('map')}
-              >
-                🗺️ Map View
+              <button onClick={clearFilters} className="btn btn-secondary">
+                Clear
               </button>
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="marketplace-container">
-            <aside className="filters-sidebar">
-              <h2 className="filter-title">Filters</h2>
+      {/* Main Content Area */}
+      <div className="marketplace-content">
+        {loading ? (
+          <div className="loading-overlay">
+            <div className="loading-spinner">Loading vehicles...</div>
+          </div>
+        ) : viewMode === 'map' ? (
+          /* Map View - Full Screen */
+          <div className="map-view-container">
+            <MapView
+              vehicles={vehicles}
+              selectedVehicle={selectedVehicle}
+              onVehicleSelect={handleVehicleSelect}
+              height="100%"
+            />
 
-              <form onSubmit={handleSearch}>
-                <div className="form-group">
-                  <label className="form-label">Location</label>
-                  <input
-                    type="text"
-                    name="location"
-                    className="form-input"
-                    placeholder="Enter city or zip code"
-                    value={filters.location}
-                    onChange={handleFilterChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Search Radius</label>
-                  <select
-                    name="radius"
-                    className="form-select"
-                    value={filters.radius}
-                    onChange={handleFilterChange}
-                  >
-                    <option value="10">10 miles</option>
-                    <option value="25">25 miles</option>
-                    <option value="50">50 miles</option>
-                    <option value="100">100 miles</option>
-                    <option value="">Any distance</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Pick-up Date</label>
-                  <input
-                    type="date"
-                    name="startDate"
-                    className="form-input"
-                    value={filters.startDate}
-                    onChange={handleFilterChange}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Return Date</label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    className="form-input"
-                    value={filters.endDate}
-                    onChange={handleFilterChange}
-                    min={filters.startDate || new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-
-                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                  Search Cars
-                </button>
-
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="btn btn-secondary mt-2"
-                  style={{ width: '100%' }}
-                >
-                  Clear Filters
-                </button>
-              </form>
-            </aside>
-
-            <main className="vehicles-grid">
-              {loading ? (
-                <p>Loading vehicles...</p>
-              ) : vehicles.length === 0 ? (
-                <p>No vehicles found. Try adjusting your filters.</p>
-              ) : viewMode === 'map' ? (
-                <MapView vehicles={vehicles} />
-              ) : (
-                <div className="grid grid-cols-3">
-                  {vehicles.map(vehicle => (
+            {/* Floating Vehicle Cards at Bottom */}
+            {vehicles.length > 0 && (
+              <div className="floating-cards-container">
+                <div className="floating-cards-scroll">
+                  {vehicles.slice(0, 12).map(vehicle => (
                     <Link
                       key={vehicle._id}
                       to={`/vehicle/${vehicle._id}`}
-                      className="vehicle-card"
+                      className={`floating-vehicle-card ${selectedVehicle === vehicle._id ? 'selected' : ''}`}
+                      onMouseEnter={() => setSelectedVehicle(vehicle._id)}
+                      onMouseLeave={() => setSelectedVehicle(null)}
                     >
-                      <div className="vehicle-image">
+                      <div className="floating-card-image">
                         {vehicle.images?.[0] ? (
                           <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
                         ) : (
-                          <div className="vehicle-placeholder">No Image</div>
+                          <div className="no-image">🚗</div>
                         )}
                       </div>
-
-                      <div className="vehicle-info">
-                        <h3 className="vehicle-title">
-                          {vehicle.year} {vehicle.make} {vehicle.model}
-                        </h3>
-
-                        <div className="vehicle-details">
-                          <span className="vehicle-type">{vehicle.type}</span>
-                          <span>{vehicle.seats} seats</span>
-                          <span>{vehicle.transmission}</span>
+                      <div className="floating-card-info">
+                        <h4>{vehicle.year} {vehicle.make} {vehicle.model}</h4>
+                        <div className="floating-card-price">
+                          ${vehicle.pricePerDay}<span>/day</span>
                         </div>
-
-                        {vehicle.location?.city && (
-                          <p className="vehicle-location">
-                            📍 {vehicle.location.city}, {vehicle.location.state}
-                          </p>
-                        )}
-
-                        <div className="vehicle-footer">
-                          <div className="vehicle-price">
-                            ${vehicle.pricePerDay}
-                            <span className="price-unit">/day</span>
+                        {vehicle.rating > 0 && (
+                          <div className="floating-card-rating">
+                            ⭐ {vehicle.rating.toFixed(1)}
                           </div>
-
-                          {vehicle.rating > 0 && (
-                            <div className="vehicle-rating">
-                              ⭐ {vehicle.rating.toFixed(1)} ({vehicle.reviewCount})
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="vehicle-host">
-                          Hosted by {vehicle.host?.firstName}
-                        </div>
+                        )}
                       </div>
                     </Link>
                   ))}
                 </div>
-              )}
-            </main>
+                {vehicles.length > 12 && (
+                  <button
+                    className="load-more-btn"
+                    onClick={() => setViewMode('list')}
+                  >
+                    View All {vehicles.length} Vehicles →
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          /* List View */
+          <div className="list-view-container">
+            <div className="vehicles-list-grid">
+              {vehicles.length === 0 ? (
+                <div className="no-results">
+                  <h3>No vehicles found</h3>
+                  <p>Try adjusting your search filters</p>
+                </div>
+              ) : (
+                vehicles.map(vehicle => (
+                  <Link
+                    key={vehicle._id}
+                    to={`/vehicle/${vehicle._id}`}
+                    className="vehicle-card-list"
+                  >
+                    <div className="vehicle-card-image">
+                      {vehicle.images?.[0] ? (
+                        <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
+                      ) : (
+                        <div className="vehicle-placeholder">No Image</div>
+                      )}
+                      {vehicle.rating > 0 && (
+                        <div className="vehicle-rating-badge">
+                          ⭐ {vehicle.rating.toFixed(1)}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="vehicle-card-content">
+                      <h3 className="vehicle-title">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </h3>
+
+                      <div className="vehicle-details">
+                        <span>{vehicle.type}</span>
+                        <span>{vehicle.seats} seats</span>
+                        <span>{vehicle.transmission}</span>
+                      </div>
+
+                      {vehicle.location?.city && (
+                        <p className="vehicle-location">
+                          📍 {vehicle.location.city}, {vehicle.location.state}
+                        </p>
+                      )}
+
+                      <div className="vehicle-card-footer">
+                        <div className="vehicle-price">
+                          <strong>${vehicle.pricePerDay}</strong>
+                          <span>/day</span>
+                        </div>
+                        <div className="vehicle-host">
+                          Hosted by {vehicle.host?.firstName}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
