@@ -1,6 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -27,7 +29,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get('/api/auth/me');
+      const response = await axios.get(`${API_URL}/api/auth/me`);
       setUser(response.data);
     } catch (error) {
       localStorage.removeItem('token');
@@ -38,7 +40,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const response = await axios.post('/api/auth/login', { email, password });
+    const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
     const { token, user } = response.data;
 
     localStorage.setItem('token', token);
@@ -49,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    const response = await axios.post('/api/auth/register', userData);
+    const response = await axios.post(`${API_URL}/api/auth/register`, userData);
     const { token, user } = response.data;
 
     localStorage.setItem('token', token);
@@ -66,17 +68,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   const forgotPassword = async (email) => {
-    const response = await axios.post('/api/auth/forgot-password', { email });
+    const response = await axios.post(`${API_URL}/api/auth/forgot-password`, { email });
     return response.data;
   };
 
   const verifyResetToken = async (token) => {
-    const response = await axios.get(`/api/auth/verify-reset-token/${token}`);
+    const response = await axios.get(`${API_URL}/api/auth/verify-reset-token/${token}`);
     return response.data;
   };
 
   const resetPassword = async (token, password) => {
-    const response = await axios.post('/api/auth/reset-password', { token, password });
+    const response = await axios.post(`${API_URL}/api/auth/reset-password`, { token, password });
     return response.data;
   };
 
