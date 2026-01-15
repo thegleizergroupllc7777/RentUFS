@@ -4,6 +4,8 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import './Payment.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('booking_id');
@@ -25,7 +27,7 @@ const PaymentSuccess = () => {
   const fetchBooking = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/bookings/${bookingId}`, {
+      const response = await axios.get(`${API_URL}/api/bookings/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

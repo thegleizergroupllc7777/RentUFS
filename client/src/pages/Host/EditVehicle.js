@@ -6,6 +6,8 @@ import ImageUpload from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
 import './Host.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const EditVehicle = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,7 +45,7 @@ const EditVehicle = () => {
 
   const fetchVehicle = async () => {
     try {
-      const response = await axios.get(`/api/vehicles/${id}`);
+      const response = await axios.get(`${API_URL}/api/vehicles/${id}`);
       const vehicle = response.data;
 
       setFormData({
@@ -131,7 +133,7 @@ const EditVehicle = () => {
       delete vehicleData.image3;
       delete vehicleData.image4;
 
-      await axios.put(`/api/vehicles/${id}`, vehicleData);
+      await axios.put(`${API_URL}/api/vehicles/${id}`, vehicleData);
       navigate('/host/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update vehicle');

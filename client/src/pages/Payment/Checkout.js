@@ -10,6 +10,8 @@ import './Payment.css';
 // Load Stripe with your publishable key
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_test_your_publishable_key_here');
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const Checkout = () => {
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('booking_id');
@@ -35,7 +37,7 @@ const Checkout = () => {
       const token = localStorage.getItem('token');
 
       // Create payment intent
-      const response = await axios.post('/api/payment/create-payment-intent',
+      const response = await axios.post(`${API_URL}/api/payment/create-payment-intent`,
         { bookingId },
         { headers: { Authorization: `Bearer ${token}` }}
       );
@@ -54,7 +56,7 @@ const Checkout = () => {
       const token = localStorage.getItem('token');
 
       // Confirm payment on server
-      await axios.post('/api/payment/confirm-payment',
+      await axios.post(`${API_URL}/api/payment/confirm-payment`,
         { paymentIntentId, bookingId },
         { headers: { Authorization: `Bearer ${token}` }}
       );

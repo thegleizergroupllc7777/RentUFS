@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import './Driver.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const VehicleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,7 +30,7 @@ const VehicleDetail = () => {
 
   const fetchVehicle = async () => {
     try {
-      const response = await axios.get(`/api/vehicles/${id}`);
+      const response = await axios.get(`${API_URL}/api/vehicles/${id}`);
       setVehicle(response.data);
     } catch (error) {
       console.error('Error fetching vehicle:', error);
@@ -39,7 +41,7 @@ const VehicleDetail = () => {
 
   const fetchReviews = async () => {
     try {
-      const response = await axios.get(`/api/reviews/vehicle/${id}`);
+      const response = await axios.get(`${API_URL}/api/reviews/vehicle/${id}`);
       setReviews(response.data);
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -75,7 +77,7 @@ const VehicleDetail = () => {
     setBookingLoading(true);
 
     try {
-      const response = await axios.post('/api/bookings', {
+      const response = await axios.post(`${API_URL}/api/bookings`, {
         vehicleId: id,
         ...bookingData
       });

@@ -7,6 +7,8 @@ import ImageUpload from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
 import './Auth.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const Register = () => {
   const [step, setStep] = useState(1); // 1 = user registration, 2 = vehicle details
   const [formData, setFormData] = useState({
@@ -183,7 +185,7 @@ const Register = () => {
         }
       };
 
-      await axios.post('/api/vehicles', vehiclePayload, {
+      await axios.post(`${API_URL}/api/vehicles`, vehiclePayload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -4,6 +4,8 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import './Host.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const HostBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,7 @@ const HostBookings = () => {
 
   const fetchBookings = async () => {
     try {
-      const response = await axios.get('/api/bookings/host-bookings');
+      const response = await axios.get(`${API_URL}/api/bookings/host-bookings`);
       setBookings(response.data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -26,7 +28,7 @@ const HostBookings = () => {
 
   const handleUpdateStatus = async (bookingId, newStatus) => {
     try {
-      await axios.patch(`/api/bookings/${bookingId}/status`, {
+      await axios.patch(`${API_URL}/api/bookings/${bookingId}/status`, {
         status: newStatus
       });
       fetchBookings();

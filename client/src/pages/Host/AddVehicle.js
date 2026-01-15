@@ -6,6 +6,8 @@ import ImageUpload from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
 import './Host.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const AddVehicle = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -117,7 +119,7 @@ const AddVehicle = () => {
       delete vehicleData.image4;
 
       const token = localStorage.getItem('token');
-      await axios.post('/api/vehicles', vehicleData, {
+      await axios.post(`${API_URL}/api/vehicles`, vehicleData, {
         headers: {
           Authorization: `Bearer ${token}`
         }

@@ -4,6 +4,8 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import './Host.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const HostDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,7 @@ const HostDashboard = () => {
   const fetchVehicles = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/vehicles/host/my-vehicles', {
+      const response = await axios.get(`${API_URL}/api/vehicles/host/my-vehicles`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setVehicles(response.data);
@@ -33,7 +35,7 @@ const HostDashboard = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/vehicles/${vehicleId}`, {
+      await axios.delete(`${API_URL}/api/vehicles/${vehicleId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchVehicles();
@@ -46,7 +48,7 @@ const HostDashboard = () => {
   const toggleAvailability = async (vehicleId, currentAvailability) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`/api/vehicles/${vehicleId}`, {
+      await axios.put(`${API_URL}/api/vehicles/${vehicleId}`, {
         availability: !currentAvailability
       }, {
         headers: { Authorization: `Bearer ${token}` }
