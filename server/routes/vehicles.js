@@ -27,6 +27,18 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get host's vehicles (MUST be before /:id route to avoid matching "host" as an id)
+router.get('/host/my-vehicles', auth, async (req, res) => {
+  try {
+    const vehicles = await Vehicle.find({ host: req.user._id })
+      .sort({ createdAt: -1 });
+
+    res.json(vehicles);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get vehicle by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -38,18 +50,6 @@ router.get('/:id', async (req, res) => {
     }
 
     res.json(vehicle);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get host's vehicles
-router.get('/host/my-vehicles', auth, async (req, res) => {
-  try {
-    const vehicles = await Vehicle.find({ host: req.user._id })
-      .sort({ createdAt: -1 });
-
-    res.json(vehicles);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
