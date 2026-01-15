@@ -75,13 +75,15 @@ const VehicleDetail = () => {
     setBookingLoading(true);
 
     try {
-      await axios.post('/api/bookings', {
+      const response = await axios.post('/api/bookings', {
         vehicleId: id,
         ...bookingData
       });
 
-      alert('Booking request sent successfully!');
-      navigate('/my-bookings');
+      const bookingId = response.data._id;
+
+      // Redirect to payment checkout page
+      navigate(`/payment/checkout?booking_id=${bookingId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create booking');
     } finally {
