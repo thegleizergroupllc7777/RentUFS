@@ -12,7 +12,7 @@ const Marketplace = () => {
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [filters, setFilters] = useState({
     type: '',
-    city: '',
+    location: '',
     minPrice: '',
     maxPrice: '',
     seats: ''
@@ -53,7 +53,7 @@ const Marketplace = () => {
   const clearFilters = () => {
     setFilters({
       type: '',
-      city: '',
+      location: '',
       minPrice: '',
       maxPrice: '',
       seats: ''
@@ -92,13 +92,13 @@ const Marketplace = () => {
 
               <form onSubmit={handleSearch}>
                 <div className="form-group">
-                  <label className="form-label">City</label>
+                  <label className="form-label">City or Zip Code</label>
                   <input
                     type="text"
-                    name="city"
+                    name="location"
                     className="form-input"
-                    placeholder="Enter city"
-                    value={filters.city}
+                    placeholder="Enter city or zip code"
+                    value={filters.location}
                     onChange={handleFilterChange}
                   />
                 </div>

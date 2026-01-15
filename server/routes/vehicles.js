@@ -8,11 +8,23 @@ const router = express.Router();
 // Get all vehicles (with filters)
 router.get('/', async (req, res) => {
   try {
-    const { type, city, minPrice, maxPrice, seats } = req.query;
+    const { type, location, city, minPrice, maxPrice, seats } = req.query;
     let query = { availability: true };
 
     if (type) query.type = type;
-    if (city) query['location.city'] = new RegExp(city, 'i');
+
+    // Handle location search (city or zip code)
+    const locationSearch = location || city; // Support both new 'location' and legacy 'city' param
+    if (locationSearch) {
+      // Check if it looks like a zip code (5 digits)
+      if (/^\d{5}$/.test(locationSearch.trim())) {
+        query['location.zipCode'] = locationSearch.trim();
+      } else {
+        // Search by city name (case insensitive)
+        query['location.city'] = new RegExp(locationSearch, 'i');
+      }
+    }
+
     if (minPrice) query.pricePerDay = { ...query.pricePerDay, $gte: Number(minPrice) };
     if (maxPrice) query.pricePerDay = { ...query.pricePerDay, $lte: Number(maxPrice) };
     if (seats) query.seats = { $gte: Number(seats) };
