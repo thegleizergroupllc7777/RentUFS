@@ -120,8 +120,8 @@ const Register = () => {
         setStep(2);
         setLoading(false);
       } else {
-        // If just a driver, go to marketplace
-        navigate('/marketplace');
+        // If just a driver, go to driver dashboard
+        navigate('/driver/my-bookings');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register');
@@ -198,7 +198,7 @@ const Register = () => {
   };
 
   const skipVehicle = () => {
-    navigate('/marketplace');
+    navigate('/host/dashboard');
   };
 
   return (

@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import axios from 'axios';
 import './ImageUpload.css';
 
 const ImageUpload = ({ label, value, onChange, required = false }) => {
@@ -8,11 +7,11 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setUploadError(''); // Clear previous errors
+    setUploadError('');
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -22,90 +21,43 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       return;
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      const errorMsg = 'Image size must be less than 5MB';
+    // Validate file size (2MB for base64 to avoid huge strings)
+    if (file.size > 2 * 1024 * 1024) {
+      const errorMsg = 'Image size must be less than 2MB';
       setUploadError(errorMsg);
       alert(errorMsg);
       return;
     }
 
     setUploading(true);
+    console.log(`Converting ${label} to base64...`);
 
-    try {
-      const token = localStorage.getItem('token');
+    // Convert image to base64 - this works WITHOUT any server!
+    const reader = new FileReader();
 
-      if (!token) {
-        throw new Error('You must be logged in to upload images. Please log in and try again.');
-      }
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      console.log(`✅ Image converted successfully for ${label}`);
 
-      console.log(`Starting upload for ${label}...`);
-      console.log('File details:', { name: file.name, size: file.size, type: file.type });
-
-      const formData = new FormData();
-      formData.append('image', file);
-
-      // Use public endpoint (no auth required) for now
-      const response = await axios.post('/api/upload/image-public', formData);
-
-      console.log('📦 Full response object:', response);
-      console.log('📊 Response status:', response.status);
-      console.log('📄 Response data:', JSON.stringify(response.data));
-      console.log('✓ Response data.success:', response.data.success, '(type:', typeof response.data.success, ')');
-      console.log('🔗 Response data.imageUrl:', response.data.imageUrl);
-
-      // Check for authentication/authorization errors first
-      if (response.status === 401 || response.status === 403) {
-        throw new Error('Please log in to upload images. Your session may have expired.');
-      }
-
-      // More flexible validation - check if response looks successful
-      const hasSuccessField = response.data && (
-        response.data.success === true ||
-        response.data.success === 'true' ||
-        response.data.success === 1
-      );
-      const hasImageUrl = response.data && response.data.imageUrl;
-      const isStatusOk = response.status === 200 || response.status === 201;
-
-      console.log('🔍 Validation checks:');
-      console.log('  - Status OK (200/201)?', isStatusOk);
-      console.log('  - Has success field?', hasSuccessField);
-      console.log('  - Has imageUrl?', hasImageUrl);
-
-      // Accept if status is OK and we have an imageUrl (even if success field is missing/wrong type)
-      if (isStatusOk && hasImageUrl) {
-        // Convert relative path to full URL
-        const imageUrl = `${window.location.origin}${response.data.imageUrl}`;
-        console.log(`✅ Image uploaded successfully for ${label}:`, imageUrl);
-        onChange(imageUrl);
-        setUploadError('');
-
-        // Clear file inputs
-        if (cameraInputRef.current) cameraInputRef.current.value = '';
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      } else {
-        console.error('❌ Response validation failed!');
-        console.error('Full response:', JSON.stringify(response, null, 2));
-
-        const errorDetails = [];
-        if (!isStatusOk) errorDetails.push(`Status: ${response.status}`);
-        if (!hasSuccessField) errorDetails.push(`Success field invalid: ${response.data?.success}`);
-        if (!hasImageUrl) errorDetails.push('No imageUrl in response');
-
-        throw new Error(response.data?.message || `Upload failed: ${errorDetails.join(', ')}`);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
-
-      const errorMsg = error.response?.data?.message || error.message || 'Failed to upload image. Please try again.';
-      setUploadError(errorMsg);
-      alert(`Upload failed: ${errorMsg}`);
-    } finally {
+      // Pass the base64 string directly
+      onChange(base64String);
+      setUploadError('');
       setUploading(false);
-    }
+
+      // Clear file inputs
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    reader.onerror = () => {
+      console.error('Failed to read file');
+      setUploadError('Failed to read image file');
+      alert('Failed to read image file. Please try again.');
+      setUploading(false);
+    };
+
+    // Start reading the file as base64
+    reader.readAsDataURL(file);
   };
 
   const handleClear = () => {
@@ -170,7 +122,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         </div>
 
         <p className="upload-hint">
-          Use camera or select from your computer (Max 5MB)
+          Use camera or select from your computer (Max 2MB)
         </p>
 
         {uploadError && (

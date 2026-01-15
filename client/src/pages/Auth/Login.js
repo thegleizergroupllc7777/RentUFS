@@ -28,8 +28,14 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/marketplace');
+      const userData = await login(formData.email, formData.password);
+
+      // Redirect based on user role
+      if (userData.role === 'host') {
+        navigate('/host/dashboard');
+      } else {
+        navigate('/driver/my-bookings');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to login');
     } finally {
