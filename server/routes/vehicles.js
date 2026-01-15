@@ -1,6 +1,7 @@
 const express = require('express');
 const Vehicle = require('../models/Vehicle');
 const auth = require('../middleware/auth');
+const { sendVehicleListedEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -63,6 +64,25 @@ router.post('/', auth, async (req, res) => {
     });
 
     await vehicle.save();
+
+    // Send vehicle listing confirmation email (async, don't wait for it)
+    sendVehicleListedEmail(
+      {
+        email: req.user.email,
+        firstName: req.user.firstName
+      },
+      {
+        year: vehicle.year,
+        make: vehicle.make,
+        model: vehicle.model,
+        type: vehicle.type,
+        transmission: vehicle.transmission,
+        seats: vehicle.seats,
+        pricePerDay: vehicle.pricePerDay,
+        location: vehicle.location
+      }
+    ).catch(err => console.error('Failed to send vehicle listing email:', err));
+
     res.status(201).json(vehicle);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

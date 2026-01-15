@@ -15,7 +15,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="container navbar-content">
         <Link to="/" className="navbar-logo">
-          RentUFS
+          🏎️ RentUFS
         </Link>
 
         <div className="navbar-links">

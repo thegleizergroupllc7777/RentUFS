@@ -20,6 +20,11 @@ import AddVehicle from './pages/Host/AddVehicle';
 import EditVehicle from './pages/Host/EditVehicle';
 import HostBookings from './pages/Host/HostBookings';
 
+// Payment pages
+import Checkout from './pages/Payment/Checkout';
+import PaymentSuccess from './pages/Payment/Success';
+import PaymentCancel from './pages/Payment/Cancel';
+
 import './App.css';
 
 function App() {
@@ -76,6 +81,33 @@ function App() {
               element={
                 <PrivateRoute>
                   <HostBookings />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Payment Routes */}
+            <Route
+              path="/payment/checkout"
+              element={
+                <PrivateRoute>
+                  <Checkout />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/payment/success"
+              element={
+                <PrivateRoute>
+                  <PaymentSuccess />
+                </PrivateRoute>
+              }
+            />
+            <Route path="/payment/cancel" element={<PaymentCancel />} />
+            <Route
+              path="/driver/my-bookings"
+              element={
+                <PrivateRoute>
+                  <MyBookings />
                 </PrivateRoute>
               }
             />

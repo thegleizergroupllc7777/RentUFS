@@ -15,7 +15,7 @@ const Home = () => {
               Rent the Perfect Car for Every Journey
             </h1>
             <p className="hero-subtitle">
-              Join thousands of drivers and hosts on RentUFS, the trusted peer-to-peer car rental marketplace.
+              Join thousands of drivers and hosts on <span style={{color: '#10b981', fontWeight: 'bold'}}>RentUFS</span>, the trusted peer-to-peer car rental marketplace.
             </p>
             <div className="hero-buttons">
               <Link to="/marketplace">

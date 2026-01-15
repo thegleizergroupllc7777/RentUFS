@@ -8,6 +8,8 @@ const vehicleRoutes = require('./routes/vehicles');
 const bookingRoutes = require('./routes/bookings');
 const reviewRoutes = require('./routes/reviews');
 const userRoutes = require('./routes/users');
+const uploadRoutes = require('./routes/upload');
+const paymentRoutes = require('./routes/payment');
 
 const app = express();
 
@@ -22,6 +24,8 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
@@ -34,6 +38,7 @@ app.get('/api/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚗 RentUFS server running on port ${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`🚗 RentUFS server running on http://${HOST}:${PORT}`);
 });

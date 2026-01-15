@@ -1,0 +1,127 @@
+.image-upload-container {
+  margin-bottom: 1.5rem;
+}
+
+.upload-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  transition: all 0.3s;
+}
+
+.mode-btn:hover {
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.mode-btn.active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.file-upload-section {
+  text-align: center;
+}
+
+.file-upload-btn {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background: #10b981;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  margin-bottom: 0.5rem;
+}
+
+.file-upload-btn:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.file-upload-btn:active {
+  transform: translateY(0);
+}
+
+.upload-hint {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+.url-upload-section {
+  margin-top: 0.5rem;
+}
+
+.image-preview-container {
+  margin-top: 1rem;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s;
+}
+
+.remove-image-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .upload-mode-toggle {
+    flex-direction: column;
+  }
+
+  .mode-btn {
+    width: 100%;
+  }
+
+  .file-upload-btn {
+    width: 100%;
+    padding: 1.25rem;
+  }
+}

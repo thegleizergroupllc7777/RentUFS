@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import ImageUpload from '../../components/ImageUpload';
+import { vehicleModels } from '../../data/vehicleModels';
 import './Host.css';
 
 const AddVehicle = () => {
@@ -16,6 +18,13 @@ const AddVehicle = () => {
     description: '',
     features: '',
     pricePerDay: '',
+    pricePerWeek: '',
+    pricePerMonth: '',
+    image1: '',
+    image2: '',
+    image3: '',
+    image4: '',
+    registrationImage: '',
     location: {
       address: '',
       city: '',
@@ -38,6 +47,13 @@ const AddVehicle = () => {
           [locationField]: value
         }
       });
+    } else if (name === 'make') {
+      // Reset model when brand changes
+      setFormData({
+        ...formData,
+        make: value,
+        model: ''
+      });
     } else {
       setFormData({
         ...formData,
@@ -51,16 +67,67 @@ const AddVehicle = () => {
     setError('');
     setLoading(true);
 
+    // Debug: Log current form state
+    console.log('Form submission - Current state:', {
+      image1: formData.image1,
+      image2: formData.image2,
+      image3: formData.image3,
+      image4: formData.image4,
+      registrationImage: formData.registrationImage
+    });
+
+    // Validate that at least Photo 1 is uploaded
+    if (!formData.image1 || formData.image1.trim() === '') {
+      console.log('Validation failed: Photo 1 is missing');
+      setError('Please upload at least one photo (Photo 1 is required)');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Validate that registration image is uploaded
+    if (!formData.registrationImage || formData.registrationImage.trim() === '') {
+      console.log('Validation failed: Registration image is missing');
+      setError('Vehicle registration photo is required');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     try {
+      // Prepare images array from individual image fields
+      const images = [
+        formData.image1,
+        formData.image2,
+        formData.image3,
+        formData.image4
+      ].filter(img => img && img.trim() !== ''); // Only include non-empty image URLs
+
       const vehicleData = {
         ...formData,
-        features: formData.features.split(',').map(f => f.trim()).filter(f => f)
+        features: formData.features.split(',').map(f => f.trim()).filter(f => f),
+        images: images.length > 0 ? images : undefined,
+        registrationImage: formData.registrationImage
       };
 
-      await axios.post('/api/vehicles', vehicleData);
+      // Remove image fields from formData before sending
+      delete vehicleData.image1;
+      delete vehicleData.image2;
+      delete vehicleData.image3;
+      delete vehicleData.image4;
+
+      const token = localStorage.getItem('token');
+      await axios.post('/api/vehicles', vehicleData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Success! Navigate to dashboard
       navigate('/host/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add vehicle');
+      setError(err.response?.data?.message || 'Failed to add vehicle. Please try again.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
@@ -83,26 +150,80 @@ const AddVehicle = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Make *</label>
-                    <input
-                      type="text"
+                    <select
                       name="make"
-                      className="form-input"
+                      className="form-select"
                       value={formData.make}
                       onChange={handleChange}
                       required
-                    />
+                    >
+                      <option value="">Select a brand</option>
+                      <option value="Acura">Acura</option>
+                      <option value="Alfa Romeo">Alfa Romeo</option>
+                      <option value="Audi">Audi</option>
+                      <option value="BMW">BMW</option>
+                      <option value="Buick">Buick</option>
+                      <option value="Cadillac">Cadillac</option>
+                      <option value="Chevrolet">Chevrolet</option>
+                      <option value="Chrysler">Chrysler</option>
+                      <option value="Dodge">Dodge</option>
+                      <option value="Ferrari">Ferrari</option>
+                      <option value="Fiat">Fiat</option>
+                      <option value="Ford">Ford</option>
+                      <option value="Genesis">Genesis</option>
+                      <option value="GMC">GMC</option>
+                      <option value="Honda">Honda</option>
+                      <option value="Hyundai">Hyundai</option>
+                      <option value="Infiniti">Infiniti</option>
+                      <option value="Jaguar">Jaguar</option>
+                      <option value="Jeep">Jeep</option>
+                      <option value="Kia">Kia</option>
+                      <option value="Lamborghini">Lamborghini</option>
+                      <option value="Land Rover">Land Rover</option>
+                      <option value="Lexus">Lexus</option>
+                      <option value="Lincoln">Lincoln</option>
+                      <option value="Maserati">Maserati</option>
+                      <option value="Mazda">Mazda</option>
+                      <option value="McLaren">McLaren</option>
+                      <option value="Mercedes-Benz">Mercedes-Benz</option>
+                      <option value="Mini">Mini</option>
+                      <option value="Mitsubishi">Mitsubishi</option>
+                      <option value="Nissan">Nissan</option>
+                      <option value="Porsche">Porsche</option>
+                      <option value="Ram">Ram</option>
+                      <option value="Rivian">Rivian</option>
+                      <option value="Rolls-Royce">Rolls-Royce</option>
+                      <option value="Subaru">Subaru</option>
+                      <option value="Tesla">Tesla</option>
+                      <option value="Toyota">Toyota</option>
+                      <option value="Volkswagen">Volkswagen</option>
+                      <option value="Volvo">Volvo</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Model *</label>
-                    <input
-                      type="text"
+                    <select
                       name="model"
-                      className="form-input"
+                      className="form-select"
                       value={formData.model}
                       onChange={handleChange}
                       required
-                    />
+                      disabled={!formData.make}
+                    >
+                      <option value="">
+                        {formData.make ? 'Select a model' : 'Select brand first'}
+                      </option>
+                      {formData.make && vehicleModels[formData.make]?.map(model => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                    {!formData.make && (
+                      <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        Please select a brand first
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -198,6 +319,104 @@ const AddVehicle = () => {
               </div>
 
               <div className="form-section">
+                <h2 className="form-section-title">Vehicle Photos</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  📸 Upload photos from your device
+                </p>
+
+                <ImageUpload
+                  label="Photo 1"
+                  value={formData.image1}
+                  onChange={(url) => {
+                    console.log('Photo 1 onChange called with:', url);
+                    setFormData(prev => {
+                      const newState = { ...prev, image1: url };
+                      console.log('Photo 1 - New state:', newState);
+                      return newState;
+                    });
+                    setError(''); // Clear error when photo is uploaded
+                  }}
+                  required={true}
+                />
+
+                <ImageUpload
+                  label="Photo 2"
+                  value={formData.image2}
+                  onChange={(url) => {
+                    setFormData(prev => ({ ...prev, image2: url }));
+                    setError('');
+                  }}
+                  required={false}
+                />
+
+                <ImageUpload
+                  label="Photo 3"
+                  value={formData.image3}
+                  onChange={(url) => {
+                    setFormData(prev => ({ ...prev, image3: url }));
+                    setError('');
+                  }}
+                  required={false}
+                />
+
+                <ImageUpload
+                  label="Photo 4"
+                  value={formData.image4}
+                  onChange={(url) => {
+                    setFormData(prev => ({ ...prev, image4: url }));
+                    setError('');
+                  }}
+                  required={false}
+                />
+
+                {/* Photo upload status indicator */}
+                {formData.image1 && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#d1fae5',
+                    color: '#065f46',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #10b981'
+                  }}>
+                    ✅ Photo 1 uploaded successfully
+                  </div>
+                )}
+              </div>
+
+              <div className="form-section">
+                <h2 className="form-section-title">Vehicle Registration</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  📄 Upload a photo of your vehicle registration document for verification
+                </p>
+
+                <ImageUpload
+                  label="Registration Document"
+                  value={formData.registrationImage}
+                  onChange={(url) => {
+                    console.log('Registration image onChange called with:', url);
+                    setFormData(prev => ({ ...prev, registrationImage: url }));
+                    setError('');
+                  }}
+                  required={true}
+                />
+
+                {/* Registration upload status indicator */}
+                {formData.registrationImage && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#d1fae5',
+                    color: '#065f46',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #10b981'
+                  }}>
+                    ✅ Registration document uploaded successfully
+                  </div>
+                )}
+              </div>
+
+              <div className="form-section">
                 <h2 className="form-section-title">Location</h2>
 
                 <div className="form-group">
@@ -251,6 +470,9 @@ const AddVehicle = () => {
 
               <div className="form-section">
                 <h2 className="form-section-title">Pricing</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  💵 Set your rental rates - at least the daily rate is required
+                </p>
 
                 <div className="form-group">
                   <label className="form-label">Price Per Day ($) *</label>
@@ -261,8 +483,44 @@ const AddVehicle = () => {
                     value={formData.pricePerDay}
                     onChange={handleChange}
                     min="1"
+                    step="0.01"
+                    placeholder="e.g., 50"
                     required
                   />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Price Per Week ($)</label>
+                  <input
+                    type="number"
+                    name="pricePerWeek"
+                    className="form-input"
+                    value={formData.pricePerWeek}
+                    onChange={handleChange}
+                    min="1"
+                    step="0.01"
+                    placeholder="e.g., 300 (optional - usually discounted)"
+                  />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Leave blank if you don't offer weekly rentals
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Price Per Month ($)</label>
+                  <input
+                    type="number"
+                    name="pricePerMonth"
+                    className="form-input"
+                    value={formData.pricePerMonth}
+                    onChange={handleChange}
+                    min="1"
+                    step="0.01"
+                    placeholder="e.g., 1000 (optional - usually discounted)"
+                  />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Leave blank if you don't offer monthly rentals
+                  </p>
                 </div>
               </div>
 

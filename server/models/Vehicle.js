@@ -47,19 +47,28 @@ const vehicleSchema = new mongoose.Schema({
     city: String,
     state: String,
     zipCode: String,
-    coordinates: {
-      lat: Number,
-      lng: Number
-    }
+    coordinates: [Number] // [longitude, latitude] - GeoJSON format
   },
   pricePerDay: {
     type: Number,
     required: true,
     min: 0
   },
+  pricePerWeek: {
+    type: Number,
+    min: 0
+  },
+  pricePerMonth: {
+    type: Number,
+    min: 0
+  },
   images: [{
     type: String
   }],
+  registrationImage: {
+    type: String,
+    required: true
+  },
   availability: {
     type: Boolean,
     default: true
