@@ -82,6 +82,12 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const updateUserType = async (userType) => {
+    const response = await axios.put(`${API_URL}/api/users/profile`, { userType });
+    setUser(response.data);
+    return response.data;
+  };
+
   const value = {
     user,
     login,
@@ -90,6 +96,7 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     verifyResetToken,
     resetPassword,
+    updateUserType,
     loading,
     isAuthenticated: !!user
   };
