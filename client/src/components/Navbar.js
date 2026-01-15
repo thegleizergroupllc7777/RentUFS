@@ -1,14 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserType } = useAuth();
   const navigate = useNavigate();
+  const [switching, setSwitching] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const handleBecomeHost = async () => {
+    setSwitching(true);
+    try {
+      await updateUserType('both');
+      navigate('/host/dashboard');
+    } catch (error) {
+      console.error('Failed to switch to host:', error);
+    } finally {
+      setSwitching(false);
+    }
   };
 
   return (
@@ -35,6 +48,17 @@ const Navbar = () => {
                 <Link to="/my-bookings" className="navbar-link">
                   My Bookings
                 </Link>
+              )}
+
+              {user.userType === 'driver' && (
+                <button
+                  onClick={handleBecomeHost}
+                  className="btn btn-secondary"
+                  disabled={switching}
+                  style={{ marginRight: '10px' }}
+                >
+                  {switching ? 'Switching...' : 'Become a Host'}
+                </button>
               )}
 
               <span className="navbar-link">
