@@ -4,6 +4,7 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
+import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import './Host.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -19,7 +20,7 @@ const EditVehicle = () => {
     transmission: 'automatic',
     seats: 5,
     description: '',
-    features: '',
+    features: [],
     pricePerDay: '',
     pricePerWeek: '',
     pricePerMonth: '',
@@ -56,7 +57,7 @@ const EditVehicle = () => {
         transmission: vehicle.transmission,
         seats: vehicle.seats,
         description: vehicle.description,
-        features: vehicle.features?.join(', ') || '',
+        features: vehicle.features || [],
         pricePerDay: vehicle.pricePerDay,
         pricePerWeek: vehicle.pricePerWeek || '',
         pricePerMonth: vehicle.pricePerMonth || '',
@@ -107,6 +108,17 @@ const EditVehicle = () => {
     }
   };
 
+  const handleFeatureToggle = (featureLabel) => {
+    setFormData(prev => {
+      const features = prev.features.includes(featureLabel)
+        ? prev.features.filter(f => f !== featureLabel)
+        : [...prev.features, featureLabel];
+      return { ...prev, features };
+    });
+  };
+
+  const featuresByCategory = getFeaturesByCategory();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -123,7 +135,7 @@ const EditVehicle = () => {
 
       const vehicleData = {
         ...formData,
-        features: formData.features.split(',').map(f => f.trim()).filter(f => f),
+        features: formData.features,
         images: images.length > 0 ? images : undefined
       };
 
@@ -325,17 +337,79 @@ const EditVehicle = () => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Features (comma-separated)</label>
-                  <input
-                    type="text"
-                    name="features"
-                    className="form-input"
-                    value={formData.features}
-                    onChange={handleChange}
-                    placeholder="Bluetooth, Backup Camera, GPS, etc."
-                  />
-                </div>
+              </div>
+
+              <div className="form-section">
+                <h2 className="form-section-title">Vehicle Features</h2>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  Select all features that apply to your vehicle
+                </p>
+
+                {Object.entries(featuresByCategory).map(([category, features]) => (
+                  <div key={category} style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.75rem',
+                      borderBottom: '1px solid #e5e7eb',
+                      paddingBottom: '0.5rem'
+                    }}>
+                      {category}
+                    </h3>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '0.5rem'
+                    }}>
+                      {features.map(feature => (
+                        <label
+                          key={feature.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.5rem',
+                            borderRadius: '0.375rem',
+                            cursor: 'pointer',
+                            backgroundColor: formData.features.includes(feature.label) ? '#d1fae5' : '#f9fafb',
+                            border: formData.features.includes(feature.label) ? '1px solid #10b981' : '1px solid #e5e7eb',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.features.includes(feature.label)}
+                            onChange={() => handleFeatureToggle(feature.label)}
+                            style={{
+                              width: '1rem',
+                              height: '1rem',
+                              accentColor: '#10b981'
+                            }}
+                          />
+                          <span style={{ fontSize: '0.9rem', color: '#374151' }}>
+                            {feature.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {formData.features.length > 0 && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #bbf7d0'
+                  }}>
+                    <strong style={{ color: '#166534' }}>Selected features ({formData.features.length}):</strong>
+                    <p style={{ marginTop: '0.5rem', color: '#15803d', fontSize: '0.9rem' }}>
+                      {formData.features.join(', ')}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="form-section">
