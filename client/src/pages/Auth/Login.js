@@ -28,8 +28,14 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/marketplace');
+      const userData = await login(formData.email, formData.password);
+
+      // Redirect based on user role
+      if (userData.role === 'host') {
+        navigate('/host/dashboard');
+      } else {
+        navigate('/driver/my-bookings');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to login');
     } finally {
@@ -44,7 +50,7 @@ const Login = () => {
         <div className="auth-container">
           <div className="auth-card">
             <h1 className="auth-title">Welcome Back</h1>
-            <p className="auth-subtitle">Login to your RentUFS account</p>
+            <p className="auth-subtitle">Login to your <span style={{color: '#10b981', fontWeight: 'bold'}}>RentUFS</span> account</p>
 
             {error && <div className="error-message">{error}</div>}
 

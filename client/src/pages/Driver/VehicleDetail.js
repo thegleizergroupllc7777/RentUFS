@@ -75,13 +75,15 @@ const VehicleDetail = () => {
     setBookingLoading(true);
 
     try {
-      await axios.post('/api/bookings', {
+      const response = await axios.post('/api/bookings', {
         vehicleId: id,
         ...bookingData
       });
 
-      alert('Booking request sent successfully!');
-      navigate('/my-bookings');
+      const bookingId = response.data._id;
+
+      // Redirect to payment checkout page
+      navigate(`/payment/checkout?booking_id=${bookingId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create booking');
     } finally {
@@ -138,7 +140,21 @@ const VehicleDetail = () => {
                   )}
                 </div>
                 <div className="vehicle-detail-price">
-                  ${vehicle.pricePerDay}/day
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>
+                      ${vehicle.pricePerDay}/day
+                    </div>
+                    {vehicle.pricePerWeek && (
+                      <div style={{ fontSize: '1rem', color: '#6b7280' }}>
+                        ${vehicle.pricePerWeek}/week
+                      </div>
+                    )}
+                    {vehicle.pricePerMonth && (
+                      <div style={{ fontSize: '1rem', color: '#6b7280' }}>
+                        ${vehicle.pricePerMonth}/month
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

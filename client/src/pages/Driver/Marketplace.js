@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import MapView from '../../components/MapView';
 import './Driver.css';
 
 const Marketplace = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [filters, setFilters] = useState({
     type: '',
     city: '',
@@ -63,7 +65,25 @@ const Marketplace = () => {
       <Navbar />
       <div className="page">
         <div className="container">
-          <h1 className="page-title">Browse Cars</h1>
+          <div className="flex-between mb-3">
+            <h1 className="page-title" style={{ marginBottom: 0 }}>Browse Cars</h1>
+
+            <div className="view-toggle">
+              <button
+                className={`btn ${viewMode === 'list' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setViewMode('list')}
+                style={{ marginRight: '0.5rem' }}
+              >
+                📋 List View
+              </button>
+              <button
+                className={`btn ${viewMode === 'map' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setViewMode('map')}
+              >
+                🗺️ Map View
+              </button>
+            </div>
+          </div>
 
           <div className="marketplace-container">
             <aside className="filters-sidebar">
@@ -157,6 +177,8 @@ const Marketplace = () => {
                 <p>Loading vehicles...</p>
               ) : vehicles.length === 0 ? (
                 <p>No vehicles found. Try adjusting your filters.</p>
+              ) : viewMode === 'map' ? (
+                <MapView vehicles={vehicles} />
               ) : (
                 <div className="grid grid-cols-3">
                   {vehicles.map(vehicle => (
