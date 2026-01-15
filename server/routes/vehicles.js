@@ -1,5 +1,6 @@
 const express = require('express');
 const Vehicle = require('../models/Vehicle');
+const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
 const { sendVehicleListedEmail } = require('../utils/emailService');
 
@@ -8,30 +9,48 @@ const router = express.Router();
 // Get all vehicles (with filters)
 router.get('/', async (req, res) => {
   try {
-    const { type, location, city, minPrice, maxPrice, seats } = req.query;
+    const { location, startDate, endDate } = req.query;
     let query = { availability: true };
 
-    if (type) query.type = type;
-
     // Handle location search (city or zip code)
-    const locationSearch = location || city; // Support both new 'location' and legacy 'city' param
-    if (locationSearch) {
+    if (location) {
       // Check if it looks like a zip code (5 digits)
-      if (/^\d{5}$/.test(locationSearch.trim())) {
-        query['location.zipCode'] = locationSearch.trim();
+      if (/^\d{5}$/.test(location.trim())) {
+        query['location.zipCode'] = location.trim();
       } else {
         // Search by city name (case insensitive)
-        query['location.city'] = new RegExp(locationSearch, 'i');
+        query['location.city'] = new RegExp(location, 'i');
       }
     }
 
-    if (minPrice) query.pricePerDay = { ...query.pricePerDay, $gte: Number(minPrice) };
-    if (maxPrice) query.pricePerDay = { ...query.pricePerDay, $lte: Number(maxPrice) };
-    if (seats) query.seats = { $gte: Number(seats) };
-
-    const vehicles = await Vehicle.find(query)
+    let vehicles = await Vehicle.find(query)
       .populate('host', 'firstName lastName rating reviewCount')
       .sort({ createdAt: -1 });
+
+    // Filter by date availability if dates are provided
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      // Find all bookings that overlap with the requested dates
+      const overlappingBookings = await Booking.find({
+        status: { $in: ['confirmed', 'pending'] },
+        $or: [
+          // Booking starts during requested period
+          { startDate: { $gte: start, $lte: end } },
+          // Booking ends during requested period
+          { endDate: { $gte: start, $lte: end } },
+          // Booking spans the entire requested period
+          { startDate: { $lte: start }, endDate: { $gte: end } }
+        ]
+      }).select('vehicle');
+
+      // Get IDs of unavailable vehicles
+      const unavailableVehicleIds = overlappingBookings.map(b => b.vehicle.toString());
+
+      // Filter out unavailable vehicles
+      vehicles = vehicles.filter(v => !unavailableVehicleIds.includes(v._id.toString()));
+    }
 
     res.json(vehicles);
   } catch (error) {

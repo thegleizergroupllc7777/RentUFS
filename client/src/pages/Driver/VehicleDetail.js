@@ -17,6 +17,8 @@ const VehicleDetail = () => {
   const [bookingData, setBookingData] = useState({
     startDate: '',
     endDate: '',
+    rentalType: 'daily',
+    quantity: 1,
     message: ''
   });
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -48,20 +50,95 @@ const VehicleDetail = () => {
   };
 
   const handleBookingChange = (e) => {
-    setBookingData({
-      ...bookingData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setBookingData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
+  const handleRentalTypeChange = (e) => {
+    const rentalType = e.target.value;
+    setBookingData(prev => ({
+      ...prev,
+      rentalType,
+      quantity: 1,
+      startDate: prev.startDate,
+      endDate: ''
+    }));
+  };
+
+  // Calculate end date based on rental type and quantity
+  const calculateEndDate = (startDate, rentalType, quantity) => {
+    if (!startDate) return '';
+    const start = new Date(startDate);
+    let end = new Date(start);
+
+    switch (rentalType) {
+      case 'daily':
+        end.setDate(start.getDate() + quantity);
+        break;
+      case 'weekly':
+        end.setDate(start.getDate() + (quantity * 7));
+        break;
+      case 'monthly':
+        end.setMonth(start.getMonth() + quantity);
+        break;
+      default:
+        end.setDate(start.getDate() + quantity);
+    }
+
+    return end.toISOString().split('T')[0];
+  };
+
+  // Update end date when start date, rental type, or quantity changes
+  useEffect(() => {
+    if (bookingData.startDate && bookingData.rentalType && bookingData.quantity) {
+      const endDate = calculateEndDate(bookingData.startDate, bookingData.rentalType, bookingData.quantity);
+      setBookingData(prev => ({ ...prev, endDate }));
+    }
+  }, [bookingData.startDate, bookingData.rentalType, bookingData.quantity]);
+
   const calculateTotal = () => {
-    if (!bookingData.startDate || !bookingData.endDate || !vehicle) return 0;
+    if (!vehicle || !bookingData.quantity) return 0;
 
-    const start = new Date(bookingData.startDate);
-    const end = new Date(bookingData.endDate);
-    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    switch (bookingData.rentalType) {
+      case 'daily':
+        return bookingData.quantity * vehicle.pricePerDay;
+      case 'weekly':
+        return bookingData.quantity * (vehicle.pricePerWeek || vehicle.pricePerDay * 7);
+      case 'monthly':
+        return bookingData.quantity * (vehicle.pricePerMonth || vehicle.pricePerDay * 30);
+      default:
+        return bookingData.quantity * vehicle.pricePerDay;
+    }
+  };
 
-    return days > 0 ? days * vehicle.pricePerDay : 0;
+  const getPriceLabel = () => {
+    if (!vehicle) return '';
+    switch (bookingData.rentalType) {
+      case 'daily':
+        return `$${vehicle.pricePerDay}/day`;
+      case 'weekly':
+        return `$${vehicle.pricePerWeek || vehicle.pricePerDay * 7}/week`;
+      case 'monthly':
+        return `$${vehicle.pricePerMonth || vehicle.pricePerDay * 30}/month`;
+      default:
+        return `$${vehicle.pricePerDay}/day`;
+    }
+  };
+
+  const getQuantityLabel = () => {
+    switch (bookingData.rentalType) {
+      case 'daily':
+        return 'Number of Days';
+      case 'weekly':
+        return 'Number of Weeks';
+      case 'monthly':
+        return 'Number of Months';
+      default:
+        return 'Duration';
+    }
   };
 
   const handleBooking = async (e) => {
@@ -232,11 +309,56 @@ const VehicleDetail = () => {
               <div className="booking-card">
                 <h3>Book this car</h3>
 
+                {/* Show available pricing options */}
+                <div style={{
+                  backgroundColor: '#f0fdf4',
+                  padding: '1rem',
+                  borderRadius: '0.5rem',
+                  marginBottom: '1rem',
+                  border: '1px solid #bbf7d0'
+                }}>
+                  <div style={{ fontWeight: '600', marginBottom: '0.5rem', color: '#166534' }}>Available Rates:</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.95rem' }}>
+                    <div style={{ color: '#15803d' }}>
+                      <strong>${vehicle.pricePerDay}</strong>/day
+                    </div>
+                    {vehicle.pricePerWeek && (
+                      <div style={{ color: '#15803d' }}>
+                        <strong>${vehicle.pricePerWeek}</strong>/week
+                      </div>
+                    )}
+                    {vehicle.pricePerMonth && (
+                      <div style={{ color: '#15803d' }}>
+                        <strong>${vehicle.pricePerMonth}</strong>/month
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {error && <div className="error-message">{error}</div>}
 
                 <form onSubmit={handleBooking}>
                   <div className="form-group">
-                    <label className="form-label">Start Date</label>
+                    <label className="form-label">Rental Type</label>
+                    <select
+                      name="rentalType"
+                      className="form-select"
+                      value={bookingData.rentalType}
+                      onChange={handleRentalTypeChange}
+                      required
+                    >
+                      <option value="daily">Daily (${vehicle.pricePerDay}/day)</option>
+                      {vehicle.pricePerWeek && (
+                        <option value="weekly">Weekly (${vehicle.pricePerWeek}/week)</option>
+                      )}
+                      {vehicle.pricePerMonth && (
+                        <option value="monthly">Monthly (${vehicle.pricePerMonth}/month)</option>
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Pick-up Date</label>
                     <input
                       type="date"
                       name="startDate"
@@ -249,17 +371,31 @@ const VehicleDetail = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">End Date</label>
+                    <label className="form-label">{getQuantityLabel()}</label>
                     <input
-                      type="date"
-                      name="endDate"
+                      type="number"
+                      name="quantity"
                       className="form-input"
-                      value={bookingData.endDate}
+                      value={bookingData.quantity}
                       onChange={handleBookingChange}
-                      min={bookingData.startDate || new Date().toISOString().split('T')[0]}
+                      min="1"
+                      max={bookingData.rentalType === 'monthly' ? 12 : bookingData.rentalType === 'weekly' ? 52 : 365}
                       required
                     />
                   </div>
+
+                  {bookingData.startDate && bookingData.endDate && (
+                    <div style={{
+                      backgroundColor: '#f3f4f6',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.9rem'
+                    }}>
+                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate).toLocaleDateString()}</div>
+                      <div><strong>Return:</strong> {new Date(bookingData.endDate).toLocaleDateString()}</div>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label className="form-label">Message to Host (optional)</label>
@@ -276,7 +412,7 @@ const VehicleDetail = () => {
                     <div className="booking-summary">
                       <div className="summary-row">
                         <span>
-                          ${vehicle.pricePerDay} × {Math.ceil((new Date(bookingData.endDate) - new Date(bookingData.startDate)) / (1000 * 60 * 60 * 24))} days
+                          {getPriceLabel()} × {bookingData.quantity}
                         </span>
                         <span>${totalPrice}</span>
                       </div>

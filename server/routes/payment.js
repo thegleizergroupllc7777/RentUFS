@@ -28,9 +28,7 @@ router.post('/create-payment-intent', auth, async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(booking.totalPrice * 100), // Convert to cents
       currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      payment_method_types: ['card'],
       metadata: {
         bookingId: bookingId.toString(),
         driverId: booking.driver._id.toString(),
