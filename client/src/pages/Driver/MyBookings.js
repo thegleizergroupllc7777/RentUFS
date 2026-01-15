@@ -17,7 +17,10 @@ const MyBookings = () => {
 
   const fetchBookings = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/bookings/my-bookings`);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setBookings(response.data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -32,8 +35,11 @@ const MyBookings = () => {
     }
 
     try {
+      const token = localStorage.getItem('token');
       await axios.patch(`${API_URL}/api/bookings/${bookingId}/status`, {
         status: 'cancelled'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       fetchBookings();
     } catch (error) {
