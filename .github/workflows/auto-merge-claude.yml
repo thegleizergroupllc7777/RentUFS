@@ -19,30 +19,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create and Merge PR
+      - name: Create or Update and Merge PR
         uses: actions/github-script@v7
         with:
           script: |
             const branchName = context.ref.replace('refs/heads/', '');
 
-            // Create PR
-            const pr = await github.rest.pulls.create({
+            // Check if a PR already exists for this branch
+            const existingPRs = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Auto-merge: ${branchName}`,
-              head: branchName,
+              head: `${context.repo.owner}:${branchName}`,
               base: 'main',
-              body: 'Automatically merging Claude branch to main for deployment.'
+              state: 'open'
             });
 
-            console.log(`Created PR #${pr.data.number}`);
+            let prNumber;
 
-            // Merge PR immediately
-            await github.rest.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.data.number,
-              merge_method: 'squash'
-            });
+            if (existingPRs.data.length > 0) {
+              // Use existing PR
+              prNumber = existingPRs.data[0].number;
+              console.log(`Found existing PR #${prNumber}`);
+            } else {
+              // Create new PR
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Auto-merge: ${branchName}`,
+                head: branchName,
+                base: 'main',
+                body: 'Automatically merging Claude branch to main for deployment.'
+              });
+              prNumber = pr.data.number;
+              console.log(`Created PR #${prNumber}`);
+            }
 
-            console.log(`Merged PR #${pr.data.number}`);
+            // Try to merge PR
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                merge_method: 'squash'
+              });
+              console.log(`Merged PR #${prNumber}`);
+            } catch (mergeError) {
+              console.log(`Could not merge PR #${prNumber}: ${mergeError.message}`);
+              console.log('This may be due to merge conflicts or branch protection rules.');
+              throw mergeError;
+            }
