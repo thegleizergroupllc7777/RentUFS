@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
+import API_URL from '../../config/api';
 import './Driver.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Marketplace = () => {
   const [vehicles, setVehicles] = useState([]);

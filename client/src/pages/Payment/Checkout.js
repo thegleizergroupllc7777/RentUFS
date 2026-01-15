@@ -5,12 +5,11 @@ import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import CheckoutForm from './CheckoutForm';
+import API_URL from '../../config/api';
 import './Payment.css';
 
 // Load Stripe with your publishable key
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_test_your_publishable_key_here');
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Checkout = () => {
   const [searchParams] = useSearchParams();

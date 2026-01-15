@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import API_URL from '../../config/api';
 import './Payment.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();

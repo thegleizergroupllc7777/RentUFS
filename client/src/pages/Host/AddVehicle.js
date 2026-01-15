@@ -5,9 +5,8 @@ import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
+import API_URL from '../../config/api';
 import './Host.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const AddVehicle = () => {
   const navigate = useNavigate();

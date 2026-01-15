@@ -5,9 +5,8 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
+import API_URL from '../../config/api';
 import './Auth.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Register = () => {
   const [step, setStep] = useState(1); // 1 = user registration, 2 = vehicle details
