@@ -12,13 +12,25 @@ const Navbar = () => {
     navigate('/');
   };
 
-  const handleBecomeHost = async () => {
+  const handleSwitchToHost = async () => {
     setSwitching(true);
     try {
-      await updateUserType('both');
+      await updateUserType('host');
       navigate('/host/dashboard');
     } catch (error) {
       console.error('Failed to switch to host:', error);
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  const handleSwitchToDriver = async () => {
+    setSwitching(true);
+    try {
+      await updateUserType('driver');
+      navigate('/my-bookings');
+    } catch (error) {
+      console.error('Failed to switch to driver:', error);
     } finally {
       setSwitching(false);
     }
@@ -38,27 +50,47 @@ const Navbar = () => {
 
           {user ? (
             <>
-              {(user.userType === 'host' || user.userType === 'both') && (
-                <Link to="/host/dashboard" className="navbar-link">
-                  Host Dashboard
-                </Link>
-              )}
-
-              {(user.userType === 'driver' || user.userType === 'both') && (
-                <Link to="/my-bookings" className="navbar-link">
-                  My Bookings
-                </Link>
+              {user.userType === 'host' && (
+                <>
+                  <Link to="/host/dashboard" className="navbar-link">
+                    Host Dashboard
+                  </Link>
+                  <button
+                    onClick={handleSwitchToDriver}
+                    className="btn btn-secondary"
+                    disabled={switching}
+                    style={{ marginRight: '10px' }}
+                  >
+                    {switching ? 'Switching...' : 'Switch to Driver'}
+                  </button>
+                </>
               )}
 
               {user.userType === 'driver' && (
-                <button
-                  onClick={handleBecomeHost}
-                  className="btn btn-secondary"
-                  disabled={switching}
-                  style={{ marginRight: '10px' }}
-                >
-                  {switching ? 'Switching...' : 'Become a Host'}
-                </button>
+                <>
+                  <Link to="/my-bookings" className="navbar-link">
+                    My Bookings
+                  </Link>
+                  <button
+                    onClick={handleSwitchToHost}
+                    className="btn btn-secondary"
+                    disabled={switching}
+                    style={{ marginRight: '10px' }}
+                  >
+                    {switching ? 'Switching...' : 'Switch to Host'}
+                  </button>
+                </>
+              )}
+
+              {user.userType === 'both' && (
+                <>
+                  <Link to="/host/dashboard" className="navbar-link">
+                    Host Dashboard
+                  </Link>
+                  <Link to="/my-bookings" className="navbar-link">
+                    My Bookings
+                  </Link>
+                </>
               )}
 
               <span className="navbar-link">

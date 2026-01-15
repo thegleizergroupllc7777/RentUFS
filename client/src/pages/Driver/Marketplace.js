@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
+import API_URL from '../../config/api';
 import './Driver.css';
 
 const Marketplace = () => {
@@ -28,7 +29,7 @@ const Marketplace = () => {
         if (filters[key]) params.append(key, filters[key]);
       });
 
-      const response = await axios.get(`/api/vehicles?${params}`);
+      const response = await axios.get(`${API_URL}/api/vehicles?${params}`);
       setVehicles(response.data);
     } catch (error) {
       console.error('Error fetching vehicles:', error);

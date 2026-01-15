@@ -1,0 +1,26 @@
+services:
+  # Backend API
+  - type: web
+    name: rentufs-api
+    env: node
+    buildCommand: npm install
+    startCommand: npm run server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false  # Set this manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # Set this manually in Render dashboard
+      - key: CLIENT_URL
+        sync: false  # Set to your frontend URL
+
+  # Frontend Static Site
+  - type: web
+    name: rentufs-frontend
+    env: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/build
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false  # Set to your backend URL (e.g., https://rentufs-api.onrender.com)

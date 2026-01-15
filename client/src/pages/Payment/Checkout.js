@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import CheckoutForm from './CheckoutForm';
+import API_URL from '../../config/api';
 import './Payment.css';
 
 // Load Stripe with your publishable key
@@ -35,7 +36,7 @@ const Checkout = () => {
       const token = localStorage.getItem('token');
 
       // Create payment intent
-      const response = await axios.post('/api/payment/create-payment-intent',
+      const response = await axios.post(`${API_URL}/api/payment/create-payment-intent`,
         { bookingId },
         { headers: { Authorization: `Bearer ${token}` }}
       );
@@ -54,7 +55,7 @@ const Checkout = () => {
       const token = localStorage.getItem('token');
 
       // Confirm payment on server
-      await axios.post('/api/payment/confirm-payment',
+      await axios.post(`${API_URL}/api/payment/confirm-payment`,
         { paymentIntentId, bookingId },
         { headers: { Authorization: `Bearer ${token}` }}
       );

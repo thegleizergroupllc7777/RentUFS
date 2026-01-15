@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import API_URL from '../../config/api';
 import './Payment.css';
 
 const PaymentSuccess = () => {
@@ -25,7 +26,7 @@ const PaymentSuccess = () => {
   const fetchBooking = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/bookings/${bookingId}`, {
+      const response = await axios.get(`${API_URL}/api/bookings/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

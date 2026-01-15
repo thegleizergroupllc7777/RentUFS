@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import API_URL from '../../config/api';
 import './Host.css';
 
 const HostBookings = () => {
@@ -15,7 +16,10 @@ const HostBookings = () => {
 
   const fetchBookings = async () => {
     try {
-      const response = await axios.get('/api/bookings/host-bookings');
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setBookings(response.data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -26,8 +30,11 @@ const HostBookings = () => {
 
   const handleUpdateStatus = async (bookingId, newStatus) => {
     try {
-      await axios.patch(`/api/bookings/${bookingId}/status`, {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_URL}/api/bookings/${bookingId}/status`, {
         status: newStatus
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       fetchBookings();
     } catch (error) {

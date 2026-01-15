@@ -5,6 +5,7 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
+import API_URL from '../../config/api';
 import './Auth.css';
 
 const Register = () => {
@@ -183,7 +184,7 @@ const Register = () => {
         }
       };
 
-      await axios.post('/api/vehicles', vehiclePayload, {
+      await axios.post(`${API_URL}/api/vehicles`, vehiclePayload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
