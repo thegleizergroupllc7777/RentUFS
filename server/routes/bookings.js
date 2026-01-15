@@ -72,6 +72,30 @@ router.get('/host-bookings', auth, async (req, res) => {
   }
 });
 
+// Get single booking by ID
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('driver', 'firstName lastName email phone')
+      .populate('host', 'firstName lastName email phone');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only allow driver or host to view the booking
+    if (booking.driver._id.toString() !== req.user._id.toString() &&
+        booking.host._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update booking status
 router.patch('/:id/status', auth, async (req, res) => {
   try {
