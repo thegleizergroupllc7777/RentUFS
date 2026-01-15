@@ -11,11 +11,10 @@ const Marketplace = () => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [filters, setFilters] = useState({
-    type: '',
     location: '',
-    minPrice: '',
-    maxPrice: '',
-    seats: ''
+    radius: '25',
+    startDate: '',
+    endDate: ''
   });
 
   useEffect(() => {
@@ -52,11 +51,10 @@ const Marketplace = () => {
 
   const clearFilters = () => {
     setFilters({
-      type: '',
       location: '',
-      minPrice: '',
-      maxPrice: '',
-      seats: ''
+      radius: '25',
+      startDate: '',
+      endDate: ''
     });
     setTimeout(fetchVehicles, 0);
   };
@@ -92,7 +90,7 @@ const Marketplace = () => {
 
               <form onSubmit={handleSearch}>
                 <div className="form-group">
-                  <label className="form-label">City or Zip Code</label>
+                  <label className="form-label">Location</label>
                   <input
                     type="text"
                     name="location"
@@ -104,62 +102,47 @@ const Marketplace = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Car Type</label>
+                  <label className="form-label">Search Radius</label>
                   <select
-                    name="type"
+                    name="radius"
                     className="form-select"
-                    value={filters.type}
+                    value={filters.radius}
                     onChange={handleFilterChange}
                   >
-                    <option value="">All Types</option>
-                    <option value="sedan">Sedan</option>
-                    <option value="suv">SUV</option>
-                    <option value="truck">Truck</option>
-                    <option value="van">Van</option>
-                    <option value="convertible">Convertible</option>
-                    <option value="coupe">Coupe</option>
-                    <option value="wagon">Wagon</option>
+                    <option value="10">10 miles</option>
+                    <option value="25">25 miles</option>
+                    <option value="50">50 miles</option>
+                    <option value="100">100 miles</option>
+                    <option value="">Any distance</option>
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Min Seats</label>
+                  <label className="form-label">Pick-up Date</label>
                   <input
-                    type="number"
-                    name="seats"
+                    type="date"
+                    name="startDate"
                     className="form-input"
-                    placeholder="e.g., 4"
-                    min="1"
-                    value={filters.seats}
+                    value={filters.startDate}
                     onChange={handleFilterChange}
+                    min={new Date().toISOString().split('T')[0]}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Price Range ($/day)</label>
-                  <div className="price-inputs">
-                    <input
-                      type="number"
-                      name="minPrice"
-                      className="form-input"
-                      placeholder="Min"
-                      value={filters.minPrice}
-                      onChange={handleFilterChange}
-                    />
-                    <span>-</span>
-                    <input
-                      type="number"
-                      name="maxPrice"
-                      className="form-input"
-                      placeholder="Max"
-                      value={filters.maxPrice}
-                      onChange={handleFilterChange}
-                    />
-                  </div>
+                  <label className="form-label">Return Date</label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    className="form-input"
+                    value={filters.endDate}
+                    onChange={handleFilterChange}
+                    min={filters.startDate || new Date().toISOString().split('T')[0]}
+                  />
                 </div>
 
                 <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                  Apply Filters
+                  Search Cars
                 </button>
 
                 <button
