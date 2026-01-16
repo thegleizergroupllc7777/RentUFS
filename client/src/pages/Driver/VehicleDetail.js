@@ -71,21 +71,22 @@ const VehicleDetail = () => {
   // Calculate end date based on rental type and quantity
   const calculateEndDate = (startDate, rentalType, quantity) => {
     if (!startDate) return '';
-    const start = new Date(startDate);
+    const start = new Date(startDate + 'T00:00:00'); // Force local timezone
     let end = new Date(start);
+    const qty = parseInt(quantity, 10) || 1; // Ensure quantity is a number
 
     switch (rentalType) {
       case 'daily':
-        end.setDate(start.getDate() + quantity);
+        end.setDate(start.getDate() + qty);
         break;
       case 'weekly':
-        end.setDate(start.getDate() + (quantity * 7));
+        end.setDate(start.getDate() + (qty * 7));
         break;
       case 'monthly':
-        end.setMonth(start.getMonth() + quantity);
+        end.setMonth(start.getMonth() + qty);
         break;
       default:
-        end.setDate(start.getDate() + quantity);
+        end.setDate(start.getDate() + qty);
     }
 
     return end.toISOString().split('T')[0];
