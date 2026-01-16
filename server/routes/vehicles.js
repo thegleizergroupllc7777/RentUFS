@@ -3,8 +3,28 @@ const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
 const { sendVehicleListedEmail } = require('../utils/emailService');
+const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
 
 const router = express.Router();
+
+// Geocode a location (for search)
+router.get('/geocode', async (req, res) => {
+  try {
+    const { address } = req.query;
+    if (!address) {
+      return res.status(400).json({ message: 'Address is required' });
+    }
+
+    const coords = await geocodeAddress(address + ', USA');
+    if (coords) {
+      res.json(coords);
+    } else {
+      res.status(404).json({ message: 'Location not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Geocoding error', error: error.message });
+  }
+});
 
 // Get all vehicles (with filters)
 router.get('/', async (req, res) => {
@@ -89,11 +109,21 @@ router.get('/:id', async (req, res) => {
 // Create vehicle (host only)
 router.post('/', auth, async (req, res) => {
   try {
-    const vehicle = new Vehicle({
+    const vehicleData = {
       ...req.body,
       host: req.user._id
-    });
+    };
 
+    // Geocode the vehicle location to get coordinates
+    if (vehicleData.location) {
+      const addressString = buildAddressString(vehicleData.location);
+      const coords = await geocodeAddress(addressString);
+      if (coords) {
+        vehicleData.location.coordinates = [coords.lng, coords.lat]; // GeoJSON format: [lng, lat]
+      }
+    }
+
+    const vehicle = new Vehicle(vehicleData);
     await vehicle.save();
 
     // Send vehicle listing confirmation email (async, don't wait for it)
@@ -127,6 +157,25 @@ router.put('/:id', auth, async (req, res) => {
 
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+    }
+
+    // Check if location changed, if so re-geocode
+    if (req.body.location) {
+      const oldLocation = vehicle.location || {};
+      const newLocation = req.body.location;
+
+      const locationChanged =
+        oldLocation.city !== newLocation.city ||
+        oldLocation.state !== newLocation.state ||
+        oldLocation.zipCode !== newLocation.zipCode;
+
+      if (locationChanged) {
+        const addressString = buildAddressString(newLocation);
+        const coords = await geocodeAddress(addressString);
+        if (coords) {
+          req.body.location.coordinates = [coords.lng, coords.lat];
+        }
+      }
     }
 
     Object.assign(vehicle, req.body);

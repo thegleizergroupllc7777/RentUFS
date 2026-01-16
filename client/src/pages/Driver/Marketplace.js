@@ -72,6 +72,7 @@ const Marketplace = () => {
   });
   const [searchLocation, setSearchLocation] = useState('');
   const [resultsInfo, setResultsInfo] = useState({ showing: 0, total: 0 });
+  const [mapCenter, setMapCenter] = useState(null); // For centering map on search
 
   useEffect(() => {
     fetchVehicles();
@@ -106,8 +107,23 @@ const Marketplace = () => {
     });
   };
 
-  const handleQuickSearch = () => {
+  const handleQuickSearch = async () => {
     setFilters(prev => ({ ...prev, location: searchLocation }));
+
+    // Geocode the search location to center the map
+    if (searchLocation) {
+      try {
+        const response = await axios.get(`${API_URL}/api/vehicles/geocode`, {
+          params: { address: searchLocation }
+        });
+        setMapCenter({ lat: response.data.lat, lng: response.data.lng });
+      } catch (error) {
+        console.log('Could not geocode search location');
+      }
+    } else {
+      setMapCenter(null);
+    }
+
     setTimeout(fetchVehicles, 0);
   };
 
@@ -119,6 +135,7 @@ const Marketplace = () => {
       endDate: ''
     });
     setSearchLocation('');
+    setMapCenter(null);
     setTimeout(fetchVehicles, 0);
   };
 
@@ -326,6 +343,7 @@ const Marketplace = () => {
                 selectedVehicle={selectedVehicle}
                 onVehicleSelect={handleVehicleSelect}
                 height="100%"
+                searchLocation={mapCenter}
               />
             </MapErrorBoundary>
 
