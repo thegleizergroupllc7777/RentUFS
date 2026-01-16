@@ -61,7 +61,7 @@ const MapView = ({
 
   // Calculate center from vehicles if no search location
   useEffect(() => {
-    if (!searchLocation && vehicles.length > 0 && map) {
+    if (!searchLocation && vehicles.length > 0 && map && window.google) {
       const vehiclesWithCoords = vehicles.filter(v =>
         v.location?.coordinates &&
         Array.isArray(v.location.coordinates) &&

@@ -61,7 +61,7 @@ class MapErrorBoundary extends Component {
 const Marketplace = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list'); // Default to list for reliability
+  const [viewMode, setViewMode] = useState('list');
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -72,7 +72,7 @@ const Marketplace = () => {
   });
   const [searchLocation, setSearchLocation] = useState('');
   const [resultsInfo, setResultsInfo] = useState({ showing: 0, total: 0 });
-  const [mapCenter, setMapCenter] = useState(null); // For centering map on search
+  const [mapCenter, setMapCenter] = useState(null);
 
   useEffect(() => {
     fetchVehicles();
@@ -143,7 +143,6 @@ const Marketplace = () => {
     setSelectedVehicle(vehicleId);
   };
 
-  // Get location display text
   const getLocationText = () => {
     if (filters.location) {
       return `${filters.radius || 'Any'} miles of ${filters.location}`;
@@ -151,7 +150,6 @@ const Marketplace = () => {
     return 'All Locations';
   };
 
-  // Render vehicle list (shared between list view and map fallback)
   const renderVehicleList = () => (
     <div className="list-view-container">
       <div className="vehicles-list-grid">
