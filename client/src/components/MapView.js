@@ -4,67 +4,48 @@ import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix for default marker icon issue with Webpack
+// Fix for default marker icon issue with Webpack - use CDN URLs instead of require
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-  iconUrl: require('leaflet/dist/images/marker-icon.png'),
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
 // Custom car marker icon (red car pin like Turo)
-const carIcon = new L.DivIcon({
-  className: 'custom-car-marker',
-  html: `
-    <div style="
-      background-color: #dc2626;
-      width: 36px;
-      height: 36px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      border: 2px solid white;
-    ">
-      <span style="
-        transform: rotate(45deg);
-        font-size: 18px;
-      ">🚗</span>
-    </div>
-  `,
-  iconSize: [36, 36],
-  iconAnchor: [18, 36],
-  popupAnchor: [0, -36],
-});
+const createCarIcon = (isSelected = false) => {
+  const size = isSelected ? 44 : 36;
+  const bgColor = isSelected ? '#2563eb' : '#dc2626';
+  const borderWidth = isSelected ? 3 : 2;
+  const fontSize = isSelected ? 22 : 18;
+  const shadow = isSelected ? '0 4px 12px rgba(37, 99, 235, 0.5)' : '0 2px 8px rgba(0,0,0,0.3)';
 
-// Selected car marker (highlighted)
-const selectedCarIcon = new L.DivIcon({
-  className: 'custom-car-marker-selected',
-  html: `
-    <div style="
-      background-color: #2563eb;
-      width: 44px;
-      height: 44px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
-      border: 3px solid white;
-    ">
-      <span style="
-        transform: rotate(45deg);
-        font-size: 22px;
-      ">🚗</span>
-    </div>
-  `,
-  iconSize: [44, 44],
-  iconAnchor: [22, 44],
-  popupAnchor: [0, -44],
-});
+  return new L.DivIcon({
+    className: 'custom-car-marker',
+    html: `
+      <div style="
+        background-color: ${bgColor};
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: ${shadow};
+        border: ${borderWidth}px solid white;
+      ">
+        <span style="
+          transform: rotate(45deg);
+          font-size: ${fontSize}px;
+        ">🚗</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size],
+  });
+};
 
 // Component to update map center
 const MapUpdater = ({ center, zoom }) => {
@@ -77,19 +58,32 @@ const MapUpdater = ({ center, zoom }) => {
   return null;
 };
 
-const MapView = ({ vehicles, selectedVehicle, onVehicleSelect, center, zoom = 11, height = '100%' }) => {
+const MapView = ({ vehicles = [], selectedVehicle, onVehicleSelect, center, zoom = 11, height = '100%' }) => {
   const [hoveredVehicle, setHoveredVehicle] = useState(null);
 
-  // Calculate center based on vehicles with coordinates
-  const vehiclesWithCoords = vehicles.filter(v => v.location?.coordinates);
+  // Safely filter vehicles with coordinates
+  const vehiclesWithCoords = (vehicles || []).filter(v =>
+    v && v.location && v.location.coordinates &&
+    Array.isArray(v.location.coordinates) &&
+    v.location.coordinates.length >= 2
+  );
 
   const defaultCenter = [33.7490, -84.3880]; // Atlanta default
-  const mapCenter = center || (vehiclesWithCoords.length > 0
-    ? [
-        vehiclesWithCoords.reduce((sum, v) => sum + v.location.coordinates[1], 0) / vehiclesWithCoords.length,
-        vehiclesWithCoords.reduce((sum, v) => sum + v.location.coordinates[0], 0) / vehiclesWithCoords.length
-      ]
-    : defaultCenter);
+
+  let mapCenter = defaultCenter;
+  if (center) {
+    mapCenter = center;
+  } else if (vehiclesWithCoords.length > 0) {
+    try {
+      const avgLat = vehiclesWithCoords.reduce((sum, v) => sum + v.location.coordinates[1], 0) / vehiclesWithCoords.length;
+      const avgLng = vehiclesWithCoords.reduce((sum, v) => sum + v.location.coordinates[0], 0) / vehiclesWithCoords.length;
+      if (!isNaN(avgLat) && !isNaN(avgLng)) {
+        mapCenter = [avgLat, avgLng];
+      }
+    } catch (e) {
+      console.error('Error calculating map center:', e);
+    }
+  }
 
   return (
     <div style={{ height, width: '100%', borderRadius: '0', overflow: 'hidden' }}>
@@ -105,9 +99,7 @@ const MapView = ({ vehicles, selectedVehicle, onVehicleSelect, center, zoom = 11
         />
         <MapUpdater center={center ? mapCenter : null} zoom={zoom} />
 
-        {vehicles.map((vehicle) => {
-          if (!vehicle.location?.coordinates) return null;
-
+        {vehiclesWithCoords.map((vehicle) => {
           const [lng, lat] = vehicle.location.coordinates;
           const isSelected = selectedVehicle === vehicle._id || hoveredVehicle === vehicle._id;
 
@@ -115,7 +107,7 @@ const MapView = ({ vehicles, selectedVehicle, onVehicleSelect, center, zoom = 11
             <Marker
               key={vehicle._id}
               position={[lat, lng]}
-              icon={isSelected ? selectedCarIcon : carIcon}
+              icon={createCarIcon(isSelected)}
               eventHandlers={{
                 click: () => onVehicleSelect && onVehicleSelect(vehicle._id),
                 mouseover: () => setHoveredVehicle(vehicle._id),
