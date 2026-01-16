@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
@@ -6,10 +6,62 @@ import MapView from '../../components/MapView';
 import API_URL from '../../config/api';
 import './Driver.css';
 
+// Error Boundary for Map component
+class MapErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Map error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          background: '#f5f5f5',
+          flexDirection: 'column',
+          padding: '2rem'
+        }}>
+          <p style={{ marginBottom: '1rem', color: '#6b7280' }}>
+            Map could not be loaded. Please use list view.
+          </p>
+          <button
+            onClick={() => this.props.onSwitchToList()}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            Switch to List View
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const Marketplace = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('map'); // 'list' or 'map' - default to map
+  const [viewMode, setViewMode] = useState('list'); // Default to list for reliability
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -34,13 +86,14 @@ const Marketplace = () => {
       });
 
       const response = await axios.get(`${API_URL}/api/vehicles?${params}`);
-      setVehicles(response.data);
+      setVehicles(response.data || []);
       setResultsInfo({
-        showing: Math.min(12, response.data.length),
-        total: response.data.length
+        showing: Math.min(12, (response.data || []).length),
+        total: (response.data || []).length
       });
     } catch (error) {
       console.error('Error fetching vehicles:', error);
+      setVehicles([]);
     } finally {
       setLoading(false);
     }
@@ -51,12 +104,6 @@ const Marketplace = () => {
       ...filters,
       [e.target.name]: e.target.value
     });
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setFilters(prev => ({ ...prev, location: searchLocation }));
-    setTimeout(fetchVehicles, 0);
   };
 
   const handleQuickSearch = () => {
@@ -86,6 +133,69 @@ const Marketplace = () => {
     }
     return 'All Locations';
   };
+
+  // Render vehicle list (shared between list view and map fallback)
+  const renderVehicleList = () => (
+    <div className="list-view-container">
+      <div className="vehicles-list-grid">
+        {vehicles.length === 0 ? (
+          <div className="no-results">
+            <h3>No vehicles found</h3>
+            <p>Try adjusting your search filters</p>
+          </div>
+        ) : (
+          vehicles.map(vehicle => (
+            <Link
+              key={vehicle._id}
+              to={`/vehicle/${vehicle._id}`}
+              className="vehicle-card-list"
+            >
+              <div className="vehicle-card-image">
+                {vehicle.images?.[0] ? (
+                  <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
+                ) : (
+                  <div className="vehicle-placeholder">No Image</div>
+                )}
+                {vehicle.rating > 0 && (
+                  <div className="vehicle-rating-badge">
+                    ⭐ {vehicle.rating.toFixed(1)}
+                  </div>
+                )}
+              </div>
+
+              <div className="vehicle-card-content">
+                <h3 className="vehicle-title">
+                  {vehicle.year} {vehicle.make} {vehicle.model}
+                </h3>
+
+                <div className="vehicle-details">
+                  <span>{vehicle.type}</span>
+                  <span>{vehicle.seats} seats</span>
+                  <span>{vehicle.transmission}</span>
+                </div>
+
+                {vehicle.location?.city && (
+                  <p className="vehicle-location">
+                    📍 {vehicle.location.city}, {vehicle.location.state}
+                  </p>
+                )}
+
+                <div className="vehicle-card-footer">
+                  <div className="vehicle-price">
+                    <strong>${vehicle.pricePerDay}</strong>
+                    <span>/day</span>
+                  </div>
+                  <div className="vehicle-host">
+                    Hosted by {vehicle.host?.firstName}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="marketplace-fullscreen">
@@ -210,12 +320,14 @@ const Marketplace = () => {
         ) : viewMode === 'map' ? (
           /* Map View - Full Screen */
           <div className="map-view-container">
-            <MapView
-              vehicles={vehicles}
-              selectedVehicle={selectedVehicle}
-              onVehicleSelect={handleVehicleSelect}
-              height="100%"
-            />
+            <MapErrorBoundary onSwitchToList={() => setViewMode('list')}>
+              <MapView
+                vehicles={vehicles}
+                selectedVehicle={selectedVehicle}
+                onVehicleSelect={handleVehicleSelect}
+                height="100%"
+              />
+            </MapErrorBoundary>
 
             {/* Floating Vehicle Cards at Bottom */}
             {vehicles.length > 0 && (
@@ -263,65 +375,7 @@ const Marketplace = () => {
           </div>
         ) : (
           /* List View */
-          <div className="list-view-container">
-            <div className="vehicles-list-grid">
-              {vehicles.length === 0 ? (
-                <div className="no-results">
-                  <h3>No vehicles found</h3>
-                  <p>Try adjusting your search filters</p>
-                </div>
-              ) : (
-                vehicles.map(vehicle => (
-                  <Link
-                    key={vehicle._id}
-                    to={`/vehicle/${vehicle._id}`}
-                    className="vehicle-card-list"
-                  >
-                    <div className="vehicle-card-image">
-                      {vehicle.images?.[0] ? (
-                        <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
-                      ) : (
-                        <div className="vehicle-placeholder">No Image</div>
-                      )}
-                      {vehicle.rating > 0 && (
-                        <div className="vehicle-rating-badge">
-                          ⭐ {vehicle.rating.toFixed(1)}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="vehicle-card-content">
-                      <h3 className="vehicle-title">
-                        {vehicle.year} {vehicle.make} {vehicle.model}
-                      </h3>
-
-                      <div className="vehicle-details">
-                        <span>{vehicle.type}</span>
-                        <span>{vehicle.seats} seats</span>
-                        <span>{vehicle.transmission}</span>
-                      </div>
-
-                      {vehicle.location?.city && (
-                        <p className="vehicle-location">
-                          📍 {vehicle.location.city}, {vehicle.location.state}
-                        </p>
-                      )}
-
-                      <div className="vehicle-card-footer">
-                        <div className="vehicle-price">
-                          <strong>${vehicle.pricePerDay}</strong>
-                          <span>/day</span>
-                        </div>
-                        <div className="vehicle-host">
-                          Hosted by {vehicle.host?.firstName}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
+          renderVehicleList()
         )}
       </div>
     </div>
