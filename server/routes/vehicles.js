@@ -187,6 +187,47 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
+// Geocode all existing vehicles (migration endpoint)
+router.post('/geocode-all', async (req, res) => {
+  try {
+    // Find all vehicles that don't have coordinates
+    const vehicles = await Vehicle.find({
+      $or: [
+        { 'location.coordinates': { $exists: false } },
+        { 'location.coordinates': null },
+        { 'location.coordinates': [] }
+      ]
+    });
+
+    let updated = 0;
+    let failed = 0;
+
+    for (const vehicle of vehicles) {
+      if (vehicle.location) {
+        const addressString = buildAddressString(vehicle.location);
+        const coords = await geocodeAddress(addressString);
+
+        if (coords) {
+          vehicle.location.coordinates = [coords.lng, coords.lat];
+          await vehicle.save();
+          updated++;
+        } else {
+          failed++;
+        }
+      }
+    }
+
+    res.json({
+      message: `Geocoded ${updated} vehicles`,
+      updated,
+      failed,
+      total: vehicles.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Geocoding error', error: error.message });
+  }
+});
+
 // Delete vehicle
 router.delete('/:id', auth, async (req, res) => {
   try {
