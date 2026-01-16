@@ -61,7 +61,7 @@ class MapErrorBoundary extends Component {
 const Marketplace = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list'); // Default to list for reliability
+  const [viewMode, setViewMode] = useState('list');
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -72,6 +72,7 @@ const Marketplace = () => {
   });
   const [searchLocation, setSearchLocation] = useState('');
   const [resultsInfo, setResultsInfo] = useState({ showing: 0, total: 0 });
+  const [mapCenter, setMapCenter] = useState(null);
 
   useEffect(() => {
     fetchVehicles();
@@ -106,8 +107,23 @@ const Marketplace = () => {
     });
   };
 
-  const handleQuickSearch = () => {
+  const handleQuickSearch = async () => {
     setFilters(prev => ({ ...prev, location: searchLocation }));
+
+    // Geocode the search location to center the map
+    if (searchLocation) {
+      try {
+        const response = await axios.get(`${API_URL}/api/vehicles/geocode`, {
+          params: { address: searchLocation }
+        });
+        setMapCenter({ lat: response.data.lat, lng: response.data.lng });
+      } catch (error) {
+        console.log('Could not geocode search location');
+      }
+    } else {
+      setMapCenter(null);
+    }
+
     setTimeout(fetchVehicles, 0);
   };
 
@@ -119,6 +135,7 @@ const Marketplace = () => {
       endDate: ''
     });
     setSearchLocation('');
+    setMapCenter(null);
     setTimeout(fetchVehicles, 0);
   };
 
@@ -126,7 +143,6 @@ const Marketplace = () => {
     setSelectedVehicle(vehicleId);
   };
 
-  // Get location display text
   const getLocationText = () => {
     if (filters.location) {
       return `${filters.radius || 'Any'} miles of ${filters.location}`;
@@ -134,7 +150,6 @@ const Marketplace = () => {
     return 'All Locations';
   };
 
-  // Render vehicle list (shared between list view and map fallback)
   const renderVehicleList = () => (
     <div className="list-view-container">
       <div className="vehicles-list-grid">
@@ -326,6 +341,7 @@ const Marketplace = () => {
                 selectedVehicle={selectedVehicle}
                 onVehicleSelect={handleVehicleSelect}
                 height="100%"
+                searchLocation={mapCenter}
               />
             </MapErrorBoundary>
 
