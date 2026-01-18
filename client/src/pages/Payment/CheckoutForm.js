@@ -12,6 +12,7 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
 
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [elementReady, setElementReady] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,7 +79,16 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
     <form onSubmit={handleSubmit} className="checkout-form">
       <div className="payment-form-section">
         <h3>Payment Details</h3>
-        <PaymentElement />
+        {!elementReady && (
+          <div className="payment-loading">
+            <div className="spinner"></div>
+            <p>Loading payment form...</p>
+          </div>
+        )}
+        <PaymentElement
+          onReady={() => setElementReady(true)}
+          onLoadError={(error) => setErrorMessage(`Failed to load payment form: ${error.message}`)}
+        />
       </div>
 
       {errorMessage && (
@@ -94,10 +104,10 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
 
       <button
         type="submit"
-        disabled={!stripe || processing}
+        disabled={!stripe || !elementReady || processing}
         className="btn btn-primary btn-pay"
       >
-        {processing ? 'Processing payment...' : `Pay $${booking?.totalPrice?.toFixed(2)}`}
+        {!elementReady ? 'Loading...' : processing ? 'Processing payment...' : `Pay $${booking?.totalPrice?.toFixed(2)}`}
       </button>
 
       <p className="payment-secure-notice">
