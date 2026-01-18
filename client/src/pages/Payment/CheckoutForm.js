@@ -32,10 +32,31 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
       setErrorMessage(error.message);
       setProcessing(false);
       if (onError) onError(error);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      // Payment successful
+    } else if (paymentIntent) {
+      // Handle all payment intent statuses
+      if (paymentIntent.status === 'succeeded') {
+        // Payment successful
+        setProcessing(false);
+        if (onSuccess) onSuccess(paymentIntent.id);
+      } else if (paymentIntent.status === 'processing') {
+        // Payment is still processing - keep user informed
+        setErrorMessage('Payment is being processed. Please wait...');
+        // Don't reset processing - payment is still in progress
+      } else if (paymentIntent.status === 'requires_action') {
+        // 3D Secure or additional authentication required
+        // Stripe handles this automatically with redirect: 'if_required'
+        setProcessing(false);
+        setErrorMessage('Additional authentication required. Please complete the verification.');
+      } else {
+        // Handle other statuses (requires_payment_method, canceled, etc.)
+        setProcessing(false);
+        setErrorMessage(`Payment status: ${paymentIntent.status}. Please try again.`);
+        if (onError) onError({ message: `Payment ${paymentIntent.status}` });
+      }
+    } else {
+      // No error and no paymentIntent - unexpected state
       setProcessing(false);
-      if (onSuccess) onSuccess(paymentIntent.id);
+      setErrorMessage('An unexpected error occurred. Please try again.');
     }
   };
 
