@@ -87,11 +87,7 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
         )}
         <PaymentElement
           onReady={() => setElementReady(true)}
-          onLoadError={(event) => {
-            console.error('PaymentElement load error:', event);
-            const errorMsg = event?.error?.message || 'Unknown error loading payment form';
-            setErrorMessage(`Failed to load payment form: ${errorMsg}`);
-          }}
+          onLoadError={(error) => setErrorMessage(`Failed to load payment form: ${error.message}`)}
         />
       </div>
 
