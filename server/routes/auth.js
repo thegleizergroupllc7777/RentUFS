@@ -88,4 +88,31 @@ router.get('/me', auth, async (req, res) => {
   res.json(req.user);
 });
 
+// Reset password (for users who can't login due to corrupted passwords)
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: 'Email and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Password reset successful. You can now login with your new password.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;
