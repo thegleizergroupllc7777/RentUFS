@@ -9,7 +9,9 @@ import API_URL from '../../config/api';
 import './Payment.css';
 
 // Load Stripe with your publishable key
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_test_your_publishable_key_here');
+const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+const isValidStripeKey = stripeKey && (stripeKey.startsWith('pk_live_') || stripeKey.startsWith('pk_test_'));
+const stripePromise = isValidStripeKey ? loadStripe(stripeKey) : null;
 
 const Checkout = () => {
   const [searchParams] = useSearchParams();
@@ -182,7 +184,14 @@ const Checkout = () => {
               </div>
             </div>
 
-            {clientSecret && (
+            {!isValidStripeKey && (
+              <div className="error-message">
+                Payment system configuration error. The Stripe publishable key is missing or invalid.
+                Please contact support.
+              </div>
+            )}
+
+            {clientSecret && isValidStripeKey && (
               <Elements options={options} stripe={stripePromise}>
                 <CheckoutForm
                   booking={booking}
