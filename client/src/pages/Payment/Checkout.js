@@ -232,14 +232,6 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* Insurance Selection */}
-            <InsuranceSelection
-              bookingId={bookingId}
-              totalDays={booking.totalDays}
-              onInsuranceChange={handleInsuranceChange}
-              initialSelection={booking.insurance?.type || 'none'}
-            />
-
             {!isValidStripeKey && (
               <div className="error-message">
                 Payment system configuration error. The Stripe publishable key is missing or invalid.
