@@ -17,46 +17,60 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
     e.preventDefault();
 
     if (!stripe || !elements) {
+      setErrorMessage('Payment system not ready. Please refresh the page.');
       return;
     }
 
     setProcessing(true);
     setErrorMessage('');
 
-    const {error, paymentIntent} = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-    });
+    try {
+      // Add timeout to prevent infinite waiting
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Payment request timed out. Please try again.')), 30000)
+      );
 
-    if (error) {
-      setErrorMessage(error.message);
-      setProcessing(false);
-      if (onError) onError(error);
-    } else if (paymentIntent) {
-      // Handle all payment intent statuses
-      if (paymentIntent.status === 'succeeded') {
-        // Payment successful
+      const paymentPromise = stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+      });
+
+      const result = await Promise.race([paymentPromise, timeoutPromise]);
+      const { error, paymentIntent } = result;
+
+      if (error) {
+        setErrorMessage(error.message);
         setProcessing(false);
-        if (onSuccess) onSuccess(paymentIntent.id);
-      } else if (paymentIntent.status === 'processing') {
-        // Payment is still processing - keep user informed
-        setErrorMessage('Payment is being processed. Please wait...');
-        // Don't reset processing - payment is still in progress
-      } else if (paymentIntent.status === 'requires_action') {
-        // 3D Secure or additional authentication required
-        // Stripe handles this automatically with redirect: 'if_required'
-        setProcessing(false);
-        setErrorMessage('Additional authentication required. Please complete the verification.');
+        if (onError) onError(error);
+      } else if (paymentIntent) {
+        // Handle all payment intent statuses
+        if (paymentIntent.status === 'succeeded') {
+          // Payment successful
+          setProcessing(false);
+          if (onSuccess) onSuccess(paymentIntent.id);
+        } else if (paymentIntent.status === 'processing') {
+          // Payment is still processing
+          setErrorMessage('Payment is being processed. Please wait...');
+          setProcessing(false);
+        } else if (paymentIntent.status === 'requires_action') {
+          // 3D Secure or additional authentication required
+          setProcessing(false);
+          setErrorMessage('Additional authentication required. Please complete the verification.');
+        } else {
+          // Handle other statuses
+          setProcessing(false);
+          setErrorMessage(`Payment status: ${paymentIntent.status}. Please try again.`);
+          if (onError) onError({ message: `Payment ${paymentIntent.status}` });
+        }
       } else {
-        // Handle other statuses (requires_payment_method, canceled, etc.)
         setProcessing(false);
-        setErrorMessage(`Payment status: ${paymentIntent.status}. Please try again.`);
-        if (onError) onError({ message: `Payment ${paymentIntent.status}` });
+        setErrorMessage('An unexpected error occurred. Please try again.');
       }
-    } else {
-      // No error and no paymentIntent - unexpected state
+    } catch (err) {
+      // Handle timeout or any other unexpected errors
       setProcessing(false);
-      setErrorMessage('An unexpected error occurred. Please try again.');
+      setErrorMessage(err.message || 'Payment failed. Please try again.');
+      if (onError) onError(err);
     }
   };
 
