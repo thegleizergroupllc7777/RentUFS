@@ -178,7 +178,14 @@ const HostReports = () => {
                   <div className="summary-content">
                     <h3>Pending Revenue</h3>
                     <p className="summary-value pending">{formatCurrency(reportData.summary.pendingRevenue)}</p>
-                    <span className="summary-sub">Awaiting payment</span>
+                    <span className="summary-sub">
+                      {reportData.summary.pendingBookingsCount || 0} active (last 7 days)
+                      {reportData.summary.abandonedPendingCount > 0 && (
+                        <span style={{ display: 'block', marginTop: '4px', color: '#9ca3af' }}>
+                          +{reportData.summary.abandonedPendingCount} abandoned ({formatCurrency(reportData.summary.abandonedPendingRevenue || 0)})
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
 
