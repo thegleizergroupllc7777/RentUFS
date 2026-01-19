@@ -54,6 +54,12 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  extensions: [{
+    days: Number,
+    cost: Number,
+    paymentId: String,
+    extendedAt: { type: Date, default: Date.now }
+  }],
   createdAt: {
     type: Date,
     default: Date.now
