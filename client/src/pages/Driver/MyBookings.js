@@ -99,7 +99,6 @@ const MyBookings = () => {
   const [extensionLoading, setExtensionLoading] = useState(false);
   const [extensionError, setExtensionError] = useState('');
   const [extensionDetails, setExtensionDetails] = useState(null);
-  const [inspectionModal, setInspectionModal] = useState({ open: false, booking: null, type: null });
 
   useEffect(() => {
     fetchBookings();
@@ -195,37 +194,6 @@ const MyBookings = () => {
     fetchBookings();
   };
 
-  const openInspectionModal = (booking, type) => {
-    setInspectionModal({ open: true, booking, type });
-  };
-
-  const closeInspectionModal = () => {
-    setInspectionModal({ open: false, booking: null, type: null });
-  };
-
-  const handleInspectionComplete = (data) => {
-    alert(data.message);
-    closeInspectionModal();
-    fetchBookings();
-  };
-
-  const canStartReservation = (booking) => {
-    // Can start if: confirmed, paid, pickup inspection not done, and within rental period
-    const now = new Date();
-    const startDate = new Date(booking.startDate);
-    startDate.setHours(0, 0, 0, 0);
-    now.setHours(0, 0, 0, 0);
-    return booking.status === 'confirmed' &&
-           booking.paymentStatus === 'paid' &&
-           !booking.pickupInspection?.completed &&
-           startDate <= now;
-  };
-
-  const canReturnVehicle = (booking) => {
-    // Can return if: active and pickup inspection was done
-    return booking.status === 'active' && booking.pickupInspection?.completed;
-  };
-
   const getStatusColor = (status) => {
     const colors = {
       pending: '#f59e0b',
@@ -287,40 +255,6 @@ const MyBookings = () => {
   const activeBookings = getActiveBookings();
   const canExtend = (booking) => {
     return ['active', 'confirmed'].includes(booking.status) && booking.paymentStatus === 'paid';
-  };
-
-  // Check if a booking is overdue (past return date/time)
-  const isOverdue = (booking) => {
-    if (!['active', 'confirmed'].includes(booking.status)) return false;
-
-    const now = new Date();
-    const endDate = new Date(booking.endDate);
-
-    // Parse dropoff time (default to 10:00 if not set)
-    const dropoffTime = booking.dropoffTime || '10:00';
-    const [hours, minutes] = dropoffTime.split(':').map(Number);
-    endDate.setHours(hours, minutes, 0, 0);
-
-    return now > endDate;
-  };
-
-  // Calculate how overdue a booking is
-  const getOverdueInfo = (booking) => {
-    const now = new Date();
-    const endDate = new Date(booking.endDate);
-    const dropoffTime = booking.dropoffTime || '10:00';
-    const [hours, minutes] = dropoffTime.split(':').map(Number);
-    endDate.setHours(hours, minutes, 0, 0);
-
-    const diffMs = now - endDate;
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays >= 1) {
-      return `${diffDays} day${diffDays > 1 ? 's' : ''} overdue`;
-    } else {
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} overdue`;
-    }
   };
 
   if (loading) {
@@ -412,110 +346,32 @@ const MyBookings = () => {
               ) : (
                 <div className="bookings-list">
                   {activeBookings.map(booking => (
-                    <div
-                      key={booking._id}
-                      className="booking-card"
-                      style={isOverdue(booking) ? {
-                        border: '3px solid #ef4444',
-                        boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)'
-                      } : {}}
-                    >
-                      {/* Overdue Warning Banner */}
-                      {isOverdue(booking) && (
-                        <div style={{
-                          background: 'linear-gradient(90deg, #ef4444, #dc2626)',
-                          color: 'white',
-                          padding: '0.75rem 1rem',
-                          marginBottom: '1rem',
-                          borderRadius: '0.5rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontWeight: '600'
-                        }}>
-                          <span>
-                            {getOverdueInfo(booking)} - Please extend or return immediately!
-                          </span>
-                          <span style={{ fontSize: '1.25rem' }}>!</span>
+                    <div key={booking._id} className="booking-card">
+                      <div className="booking-header">
+                        <div>
+                          <h3 className="booking-vehicle">
+                            {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                          </h3>
+                          <p className="text-gray">
+                            Host: {booking.host?.firstName} {booking.host?.lastName}
+                          </p>
                         </div>
-                      )}
-                      <div style={{ display: 'flex', gap: '1.5rem' }}>
-                        {/* Vehicle Image */}
-                        <div style={{
-                          width: '140px',
-                          height: '100px',
-                          flexShrink: 0,
-                          borderRadius: '0.5rem',
-                          overflow: 'hidden',
-                          background: '#f3f4f6'
-                        }}>
-                          {booking.vehicle?.images && booking.vehicle.images.length > 0 ? (
-                            <img
-                              src={booking.vehicle.images[0]}
-                              alt={`${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
-                              }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#9ca3af',
-                              fontSize: '2rem'
-                            }}>
-                              🚗
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Booking Info */}
-                        <div style={{ flex: 1 }}>
-                          <div className="booking-header">
-                            <div>
-                              <div style={{
-                                display: 'inline-block',
-                                background: '#f3f4f6',
-                                padding: '0.25rem 0.5rem',
-                                borderRadius: '0.25rem',
-                                fontSize: '0.75rem',
-                                fontWeight: '600',
-                                color: '#6b7280',
-                                marginBottom: '0.5rem',
-                                fontFamily: 'monospace'
-                              }}>
-                                {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
-                              </div>
-                              <h3 className="booking-vehicle">
-                                {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
-                              </h3>
-                              <p className="text-gray">
-                                Host: {booking.host?.firstName} {booking.host?.lastName}
-                              </p>
-                            </div>
-                            <div
-                              className="booking-status"
-                              style={{ backgroundColor: getStatusColor(booking.status) }}
-                            >
-                              {booking.status}
-                            </div>
-                          </div>
+                        <div
+                          className="booking-status"
+                          style={{ backgroundColor: getStatusColor(booking.status) }}
+                        >
+                          {booking.status}
                         </div>
                       </div>
 
                       <div className="booking-details">
                         <div className="booking-detail-item">
                           <strong>Pickup:</strong>{' '}
-                          {new Date(booking.startDate).toLocaleDateString()} at {booking.pickupTime || '10:00 AM'}
+                          {new Date(booking.startDate).toLocaleDateString()}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Return:</strong>{' '}
-                          {new Date(booking.endDate).toLocaleDateString()} by {booking.dropoffTime || '10:00 AM'}
+                          {new Date(booking.endDate).toLocaleDateString()}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Duration:</strong> {booking.totalDays} days
@@ -551,26 +407,6 @@ const MyBookings = () => {
                         <Link to={`/vehicle/${booking.vehicle?._id}`}>
                           <button className="btn btn-secondary">View Vehicle</button>
                         </Link>
-
-                        {canStartReservation(booking) && (
-                          <button
-                            onClick={() => openInspectionModal(booking, 'pickup')}
-                            className="btn btn-primary"
-                            style={{ background: '#10b981' }}
-                          >
-                            Start Reservation
-                          </button>
-                        )}
-
-                        {canReturnVehicle(booking) && (
-                          <button
-                            onClick={() => openInspectionModal(booking, 'return')}
-                            className="btn btn-primary"
-                            style={{ background: '#f59e0b' }}
-                          >
-                            Return Vehicle
-                          </button>
-                        )}
 
                         {canExtend(booking) && (
                           <button
@@ -740,16 +576,6 @@ const MyBookings = () => {
             )}
           </div>
         </div>
-      )}
-
-      {/* Vehicle Inspection Modal */}
-      {inspectionModal.open && inspectionModal.booking && (
-        <VehicleInspection
-          booking={inspectionModal.booking}
-          type={inspectionModal.type}
-          onComplete={handleInspectionComplete}
-          onCancel={closeInspectionModal}
-        />
       )}
     </div>
   );
