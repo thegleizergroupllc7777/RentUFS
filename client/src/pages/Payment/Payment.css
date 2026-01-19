@@ -46,6 +46,23 @@
   font-size: 1.125rem;
 }
 
+.summary-item.insurance {
+  background-color: #ecfdf5;
+  margin: 0.5rem -0.5rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: 4px;
+  border-bottom: none;
+}
+
+.summary-item.insurance .label {
+  color: #065f46;
+}
+
+.summary-item.insurance .value {
+  color: #047857;
+  font-weight: 600;
+}
+
 .summary-item .label {
   color: #6b7280;
 }
