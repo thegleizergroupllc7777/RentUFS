@@ -60,8 +60,20 @@ router.get('/host', auth, async (req, res) => {
 
     // Use Number() to ensure proper addition (not string concatenation)
     const totalRevenue = paidBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
-    const pendingBookings = bookings.filter(b => b.paymentStatus === 'pending' && b.status !== 'cancelled');
+
+    // Only count recent pending bookings (last 7 days) as truly "awaiting payment"
+    // Older pending bookings are likely abandoned
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const pendingBookings = bookings.filter(b =>
+      b.paymentStatus === 'pending' &&
+      b.status !== 'cancelled' &&
+      new Date(b.createdAt) >= sevenDaysAgo
+    );
     const pendingRevenue = pendingBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+
+    // Also calculate total of all pending (including old) for transparency
+    const allPendingBookings = bookings.filter(b => b.paymentStatus === 'pending' && b.status !== 'cancelled');
+    const allPendingRevenue = allPendingBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
 
     // Calculate per-vehicle stats
     const vehicleStats = {};
@@ -94,7 +106,10 @@ router.get('/host', auth, async (req, res) => {
         vehicleStats[vehicleId].totalRevenue += (Number(booking.totalPrice) || 0);
         vehicleStats[vehicleId].totalDays += (Number(booking.totalDays) || 0);
       } else if (booking.paymentStatus === 'pending' && booking.status !== 'cancelled') {
-        vehicleStats[vehicleId].pendingRevenue += (Number(booking.totalPrice) || 0);
+        // Only count recent pending (last 7 days) as active pending revenue
+        if (new Date(booking.createdAt) >= sevenDaysAgo) {
+          vehicleStats[vehicleId].pendingRevenue += (Number(booking.totalPrice) || 0);
+        }
       }
     });
 
@@ -146,7 +161,11 @@ router.get('/host', auth, async (req, res) => {
         confirmedBookings: confirmedBookings.length,
         cancelledBookings: bookings.filter(b => b.status === 'cancelled').length,
         totalRevenue,
-        pendingRevenue,
+        pendingRevenue, // Only recent pending (last 7 days)
+        pendingBookingsCount: pendingBookings.length,
+        // Include old abandoned bookings info for transparency
+        abandonedPendingRevenue: allPendingRevenue - pendingRevenue,
+        abandonedPendingCount: allPendingBookings.length - pendingBookings.length,
         averageBookingValue: paidBookings.length > 0 ? totalRevenue / paidBookings.length : 0,
         totalDaysBooked: paidBookings.reduce((sum, b) => sum + (Number(b.totalDays) || 0), 0)
       },
