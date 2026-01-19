@@ -32,10 +32,40 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
       setErrorMessage(error.message);
       setProcessing(false);
       if (onError) onError(error);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      // Payment successful
+    } else if (paymentIntent) {
+      switch (paymentIntent.status) {
+        case 'succeeded':
+          // Payment successful
+          setProcessing(false);
+          if (onSuccess) onSuccess(paymentIntent.id);
+          break;
+        case 'processing':
+          // Payment is processing asynchronously
+          setErrorMessage('Your payment is being processed. Please wait...');
+          // Keep checking the payment status
+          setTimeout(() => setProcessing(false), 3000);
+          break;
+        case 'requires_action':
+          // 3D Secure or additional authentication required
+          setErrorMessage('Additional authentication required. Please complete the verification.');
+          setProcessing(false);
+          break;
+        case 'requires_payment_method':
+          // Payment method failed or was declined
+          setErrorMessage('Payment failed. Please try a different payment method.');
+          setProcessing(false);
+          if (onError) onError({ message: 'Payment method failed' });
+          break;
+        default:
+          // Handle any other unexpected status
+          setErrorMessage(`Unexpected payment status: ${paymentIntent.status}. Please try again.`);
+          setProcessing(false);
+          if (onError) onError({ message: `Unexpected status: ${paymentIntent.status}` });
+      }
+    } else {
+      // No paymentIntent and no error - shouldn't happen but handle it
+      setErrorMessage('Something went wrong. Please try again.');
       setProcessing(false);
-      if (onSuccess) onSuccess(paymentIntent.id);
     }
   };
 
