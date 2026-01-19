@@ -192,38 +192,20 @@ router.post('/:id/extend', auth, async (req, res) => {
     }
 
     // Check if vehicle is available for the extension period
-    const currentEndDate = new Date(booking.endDate);
     const newEndDate = new Date(booking.endDate);
     newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
-    console.log('Extension availability check:', {
-      bookingId: booking._id,
-      vehicleId: booking.vehicle._id,
-      currentEndDate: currentEndDate.toISOString(),
-      newEndDate: newEndDate.toISOString(),
-      extensionDays
-    });
-
-    // Check for conflicting bookings - ONLY conflict if another booking
-    // STARTS during the extension period (between current end and new end)
-    // Simple and precise: startDate must be >= current end AND < new end
+    // Check for overlapping bookings
     const conflictingBooking = await Booking.findOne({
       vehicle: booking.vehicle._id,
       _id: { $ne: booking._id },
-      status: { $in: ['confirmed', 'active'] },
-      startDate: {
-        $gte: currentEndDate,  // Starts on or after current booking ends
-        $lt: newEndDate        // Starts before the new end date
-      }
+      status: { $in: ['confirmed', 'active', 'pending'] },
+      $or: [
+        { startDate: { $lt: newEndDate }, endDate: { $gt: booking.endDate } }
+      ]
     });
 
     if (conflictingBooking) {
-      console.log('Extension conflict found:', {
-        bookingId: booking._id,
-        conflictingId: conflictingBooking._id,
-        conflictingStartDate: conflictingBooking.startDate,
-        extensionPeriod: { start: currentEndDate, end: newEndDate }
-      });
       return res.status(400).json({
         message: 'Vehicle is not available for the requested extension period',
         availableUntil: conflictingBooking.startDate
@@ -310,130 +292,6 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Extension confirmation error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Start reservation with pickup inspection photos
-router.post('/:id/start-inspection', auth, async (req, res) => {
-  try {
-    const { photos, notes } = req.body;
-    const booking = await Booking.findById(req.params.id)
-      .populate('vehicle')
-      .populate('host', 'firstName lastName email');
-
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    // Only driver can start the inspection
-    if (booking.driver.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Only the driver can start this reservation' });
-    }
-
-    // Check booking status - must be confirmed and paid
-    if (booking.status !== 'confirmed') {
-      return res.status(400).json({ message: 'Booking must be confirmed before starting' });
-    }
-
-    if (booking.paymentStatus !== 'paid') {
-      return res.status(400).json({ message: 'Payment must be completed before starting' });
-    }
-
-    // Validate all 4 photos are provided
-    if (!photos || !photos.frontView || !photos.backView || !photos.leftSide || !photos.rightSide) {
-      return res.status(400).json({
-        message: 'All 4 inspection photos are required (front, back, left side, right side)'
-      });
-    }
-
-    // Update booking with inspection photos and change status to active
-    booking.pickupInspection = {
-      completed: true,
-      completedAt: new Date(),
-      photos: {
-        frontView: photos.frontView,
-        backView: photos.backView,
-        leftSide: photos.leftSide,
-        rightSide: photos.rightSide
-      },
-      notes: notes || ''
-    };
-    booking.status = 'active';
-
-    await booking.save();
-
-    res.json({
-      success: true,
-      message: 'Reservation started successfully! Drive safely!',
-      booking: {
-        _id: booking._id,
-        status: booking.status,
-        pickupInspection: booking.pickupInspection
-      }
-    });
-  } catch (error) {
-    console.error('Start inspection error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Complete reservation with return inspection photos
-router.post('/:id/return-inspection', auth, async (req, res) => {
-  try {
-    const { photos, notes } = req.body;
-    const booking = await Booking.findById(req.params.id)
-      .populate('vehicle')
-      .populate('host', 'firstName lastName email');
-
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    // Only driver can complete the return inspection
-    if (booking.driver.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Only the driver can return this vehicle' });
-    }
-
-    // Check booking status - must be active
-    if (booking.status !== 'active') {
-      return res.status(400).json({ message: 'Booking must be active to complete return' });
-    }
-
-    // Validate all 4 photos are provided
-    if (!photos || !photos.frontView || !photos.backView || !photos.leftSide || !photos.rightSide) {
-      return res.status(400).json({
-        message: 'All 4 return inspection photos are required (front, back, left side, right side)'
-      });
-    }
-
-    // Update booking with return inspection photos and change status to completed
-    booking.returnInspection = {
-      completed: true,
-      completedAt: new Date(),
-      photos: {
-        frontView: photos.frontView,
-        backView: photos.backView,
-        leftSide: photos.leftSide,
-        rightSide: photos.rightSide
-      },
-      notes: notes || ''
-    };
-    booking.status = 'completed';
-
-    await booking.save();
-
-    res.json({
-      success: true,
-      message: 'Vehicle returned successfully! Thank you for renting with us!',
-      booking: {
-        _id: booking._id,
-        status: booking.status,
-        returnInspection: booking.returnInspection
-      }
-    });
-  } catch (error) {
-    console.error('Return inspection error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

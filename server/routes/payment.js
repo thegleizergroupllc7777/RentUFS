@@ -227,9 +227,7 @@ router.post('/create-extension-payment', auth, async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(extensionCost * 100), // Convert to cents
       currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      payment_method_types: ['card'],
       metadata: {
         bookingId: bookingId.toString(),
         extensionDays: extensionDays.toString(),
