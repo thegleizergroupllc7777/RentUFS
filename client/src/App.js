@@ -19,6 +19,7 @@ import HostDashboard from './pages/Host/HostDashboard';
 import AddVehicle from './pages/Host/AddVehicle';
 import EditVehicle from './pages/Host/EditVehicle';
 import HostBookings from './pages/Host/HostBookings';
+import HostEarnings from './pages/Host/HostEarnings';
 
 // Payment pages
 import Checkout from './pages/Payment/Checkout';
@@ -81,6 +82,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <HostBookings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/host/earnings"
+              element={
+                <PrivateRoute>
+                  <HostEarnings />
                 </PrivateRoute>
               }
             />
