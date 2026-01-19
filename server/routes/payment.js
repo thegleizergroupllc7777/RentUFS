@@ -190,6 +190,137 @@ router.post('/confirm-payment', auth, async (req, res) => {
   }
 });
 
+// Create Payment Intent for booking extension
+router.post('/create-extension-payment', auth, async (req, res) => {
+  try {
+    const { bookingId, extensionDays } = req.body;
+
+    // Fetch the booking
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicle')
+      .populate('driver');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Ensure the booking belongs to the authenticated user
+    if (booking.driver._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // Only active or confirmed bookings can be extended
+    if (!['active', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
+    }
+
+    // Calculate extension cost
+    const extensionCost = extensionDays * booking.pricePerDay;
+
+    // Calculate new end date
+    const newEndDate = new Date(booking.endDate);
+    newEndDate.setDate(newEndDate.getDate() + extensionDays);
+
+    // Create a PaymentIntent for the extension
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(extensionCost * 100), // Convert to cents
+      currency: 'usd',
+      payment_method_types: ['card'],
+      metadata: {
+        bookingId: bookingId.toString(),
+        extensionDays: extensionDays.toString(),
+        type: 'extension',
+        driverId: booking.driver._id.toString(),
+        vehicleId: booking.vehicle._id.toString(),
+      },
+      description: `Extension: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model} - ${extensionDays} additional day(s)`,
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      extensionDetails: {
+        bookingId,
+        extensionDays,
+        extensionCost,
+        pricePerDay: booking.pricePerDay,
+        currentEndDate: booking.endDate,
+        newEndDate,
+        vehicle: {
+          name: `${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Extension payment intent creation error:', error);
+    res.status(500).json({ message: 'Failed to create extension payment', error: error.message });
+  }
+});
+
+// Confirm extension payment and update booking
+router.post('/confirm-extension-payment', auth, async (req, res) => {
+  try {
+    const { paymentIntentId, bookingId, extensionDays } = req.body;
+
+    // Retrieve the payment intent from Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status === 'succeeded') {
+      const booking = await Booking.findById(bookingId)
+        .populate('vehicle')
+        .populate('driver', 'firstName lastName email')
+        .populate('host', 'firstName lastName email');
+
+      if (!booking) {
+        return res.status(404).json({ message: 'Booking not found' });
+      }
+
+      // Calculate new values
+      const extensionCost = extensionDays * booking.pricePerDay;
+      const newEndDate = new Date(booking.endDate);
+      newEndDate.setDate(newEndDate.getDate() + extensionDays);
+
+      // Update booking
+      booking.endDate = newEndDate;
+      booking.totalDays = booking.totalDays + extensionDays;
+      booking.totalPrice = booking.totalPrice + extensionCost;
+
+      // Track extension
+      if (!booking.extensions) {
+        booking.extensions = [];
+      }
+      booking.extensions.push({
+        days: extensionDays,
+        cost: extensionCost,
+        paymentId: paymentIntentId,
+        extendedAt: new Date()
+      });
+
+      await booking.save();
+
+      res.json({
+        success: true,
+        message: `Booking extended by ${extensionDays} day(s)!`,
+        booking: {
+          _id: booking._id,
+          newEndDate: booking.endDate,
+          totalDays: booking.totalDays,
+          totalPrice: booking.totalPrice,
+          extensionCost
+        }
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Extension payment not completed',
+        status: paymentIntent.status,
+      });
+    }
+  } catch (error) {
+    console.error('Extension payment confirmation error:', error);
+    res.status(500).json({ message: 'Failed to confirm extension payment', error: error.message });
+  }
+});
+
 // Get payment session details
 router.get('/session/:sessionId', auth, async (req, res) => {
   try {

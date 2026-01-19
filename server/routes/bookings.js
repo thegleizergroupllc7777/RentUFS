@@ -96,6 +96,143 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// Request booking extension (creates extension request, needs payment)
+router.post('/:id/extend', auth, async (req, res) => {
+  try {
+    const { extensionDays } = req.body;
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('host', 'firstName lastName email');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only driver can request extension
+    if (booking.driver.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the driver can extend this booking' });
+    }
+
+    // Only active or confirmed bookings can be extended
+    if (!['active', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
+    }
+
+    // Only paid bookings can be extended
+    if (booking.paymentStatus !== 'paid') {
+      return res.status(400).json({ message: 'Booking must be paid before extending' });
+    }
+
+    // Validate extension days
+    if (!extensionDays || extensionDays < 1 || extensionDays > 30) {
+      return res.status(400).json({ message: 'Extension must be between 1 and 30 days' });
+    }
+
+    // Check if vehicle is available for the extension period
+    const newEndDate = new Date(booking.endDate);
+    newEndDate.setDate(newEndDate.getDate() + extensionDays);
+
+    // Check for overlapping bookings
+    const conflictingBooking = await Booking.findOne({
+      vehicle: booking.vehicle._id,
+      _id: { $ne: booking._id },
+      status: { $in: ['confirmed', 'active', 'pending'] },
+      $or: [
+        { startDate: { $lt: newEndDate }, endDate: { $gt: booking.endDate } }
+      ]
+    });
+
+    if (conflictingBooking) {
+      return res.status(400).json({
+        message: 'Vehicle is not available for the requested extension period',
+        availableUntil: conflictingBooking.startDate
+      });
+    }
+
+    // Calculate extension cost
+    const extensionCost = extensionDays * booking.pricePerDay;
+
+    res.json({
+      bookingId: booking._id,
+      currentEndDate: booking.endDate,
+      newEndDate,
+      extensionDays,
+      pricePerDay: booking.pricePerDay,
+      extensionCost,
+      vehicle: {
+        id: booking.vehicle._id,
+        name: `${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`
+      }
+    });
+  } catch (error) {
+    console.error('Extension request error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Confirm booking extension (after payment)
+router.post('/:id/confirm-extension', auth, async (req, res) => {
+  try {
+    const { extensionDays, paymentIntentId } = req.body;
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('driver', 'firstName lastName email')
+      .populate('host', 'firstName lastName email');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only driver can confirm extension
+    if (booking.driver._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // Only active or confirmed bookings can be extended
+    if (!['active', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
+    }
+
+    // Calculate new values
+    const newEndDate = new Date(booking.endDate);
+    newEndDate.setDate(newEndDate.getDate() + extensionDays);
+    const extensionCost = extensionDays * booking.pricePerDay;
+
+    // Update booking
+    booking.endDate = newEndDate;
+    booking.totalDays = booking.totalDays + extensionDays;
+    booking.totalPrice = booking.totalPrice + extensionCost;
+
+    // Track extension history
+    if (!booking.extensions) {
+      booking.extensions = [];
+    }
+    booking.extensions.push({
+      days: extensionDays,
+      cost: extensionCost,
+      paymentId: paymentIntentId,
+      extendedAt: new Date()
+    });
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: `Booking extended by ${extensionDays} day(s)`,
+      booking: {
+        _id: booking._id,
+        newEndDate: booking.endDate,
+        totalDays: booking.totalDays,
+        totalPrice: booking.totalPrice,
+        extensionCost
+      }
+    });
+  } catch (error) {
+    console.error('Extension confirmation error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update booking status
 router.patch('/:id/status', auth, async (req, res) => {
   try {

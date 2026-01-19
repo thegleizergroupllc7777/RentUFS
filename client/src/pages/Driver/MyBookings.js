@@ -1,14 +1,103 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Navbar from '../../components/Navbar';
 import API_URL from '../../config/api';
 import './Driver.css';
 
+// Initialize Stripe
+const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+
+// Extension Payment Form Component
+const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, onSuccess, onCancel }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setError('');
+
+    try {
+      const { error: submitError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+      });
+
+      if (submitError) {
+        setError(submitError.message);
+        setProcessing(false);
+        return;
+      }
+
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Confirm extension on backend
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_URL}/api/payment/confirm-extension-payment`,
+          {
+            paymentIntentId: paymentIntent.id,
+            bookingId,
+            extensionDays
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.success) {
+          onSuccess(response.data);
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Payment failed');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <PaymentElement />
+      {error && <div style={{ marginTop: '1rem', color: '#ef4444', fontSize: '0.875rem' }}>{error}</div>}
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="btn btn-secondary"
+          disabled={processing}
+          style={{ flex: 1 }}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={!stripe || processing}
+          style={{ flex: 1 }}
+        >
+          {processing ? 'Processing...' : `Pay $${extensionCost.toFixed(2)}`}
+        </button>
+      </div>
+    </form>
+  );
+};
+
 const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('current'); // current, upcoming, past
+  const [activeTab, setActiveTab] = useState('current');
+  const [extendModal, setExtendModal] = useState({ open: false, booking: null });
+  const [extensionDays, setExtensionDays] = useState(1);
+  const [extensionClientSecret, setExtensionClientSecret] = useState(null);
+  const [extensionLoading, setExtensionLoading] = useState(false);
+  const [extensionError, setExtensionError] = useState('');
+  const [extensionDetails, setExtensionDetails] = useState(null);
 
   useEffect(() => {
     fetchBookings();
@@ -47,6 +136,63 @@ const MyBookings = () => {
     }
   };
 
+  const openExtendModal = (booking) => {
+    setExtendModal({ open: true, booking });
+    setExtensionDays(1);
+    setExtensionClientSecret(null);
+    setExtensionError('');
+    setExtensionDetails(null);
+  };
+
+  const closeExtendModal = () => {
+    setExtendModal({ open: false, booking: null });
+    setExtensionDays(1);
+    setExtensionClientSecret(null);
+    setExtensionError('');
+    setExtensionDetails(null);
+  };
+
+  const handleExtensionRequest = async () => {
+    if (!extendModal.booking) return;
+
+    setExtensionLoading(true);
+    setExtensionError('');
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // First check availability
+      const checkResponse = await axios.post(
+        `${API_URL}/api/bookings/${extendModal.booking._id}/extend`,
+        { extensionDays },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Create payment intent for extension
+      const paymentResponse = await axios.post(
+        `${API_URL}/api/payment/create-extension-payment`,
+        {
+          bookingId: extendModal.booking._id,
+          extensionDays
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setExtensionClientSecret(paymentResponse.data.clientSecret);
+      setExtensionDetails(paymentResponse.data.extensionDetails);
+    } catch (error) {
+      setExtensionError(error.response?.data?.message || 'Failed to process extension request');
+    } finally {
+      setExtensionLoading(false);
+    }
+  };
+
+  const handleExtensionSuccess = (data) => {
+    alert(data.message);
+    closeExtendModal();
+    fetchBookings();
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending: '#f59e0b',
@@ -58,7 +204,6 @@ const MyBookings = () => {
     return colors[status] || '#6b7280';
   };
 
-  // Categorize bookings into current, upcoming, and past
   const categorizeBookings = () => {
     const now = new Date();
 
@@ -97,6 +242,9 @@ const MyBookings = () => {
   };
 
   const activeBookings = getActiveBookings();
+  const canExtend = (booking) => {
+    return ['active', 'confirmed'].includes(booking.status) && booking.paymentStatus === 'paid';
+  };
 
   if (loading) {
     return (
@@ -134,7 +282,6 @@ const MyBookings = () => {
               }}>
                 <button
                   onClick={() => setActiveTab('current')}
-                  className={activeTab === 'current' ? 'tab-active' : 'tab'}
                   style={{
                     padding: '0.75rem 1.5rem',
                     background: activeTab === 'current' ? '#10b981' : 'transparent',
@@ -150,7 +297,6 @@ const MyBookings = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('upcoming')}
-                  className={activeTab === 'upcoming' ? 'tab-active' : 'tab'}
                   style={{
                     padding: '0.75rem 1.5rem',
                     background: activeTab === 'upcoming' ? '#10b981' : 'transparent',
@@ -166,7 +312,6 @@ const MyBookings = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('past')}
-                  className={activeTab === 'past' ? 'tab-active' : 'tab'}
                   style={{
                     padding: '0.75rem 1.5rem',
                     background: activeTab === 'past' ? '#10b981' : 'transparent',
@@ -190,70 +335,237 @@ const MyBookings = () => {
               ) : (
                 <div className="bookings-list">
                   {activeBookings.map(booking => (
-                <div key={booking._id} className="booking-card">
-                  <div className="booking-header">
-                    <div>
-                      <h3 className="booking-vehicle">
-                        {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
-                      </h3>
-                      <p className="text-gray">
-                        Host: {booking.host?.firstName} {booking.host?.lastName}
-                      </p>
-                    </div>
-                    <div
-                      className="booking-status"
-                      style={{ backgroundColor: getStatusColor(booking.status) }}
-                    >
-                      {booking.status}
-                    </div>
-                  </div>
+                    <div key={booking._id} className="booking-card">
+                      <div className="booking-header">
+                        <div>
+                          <h3 className="booking-vehicle">
+                            {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                          </h3>
+                          <p className="text-gray">
+                            Host: {booking.host?.firstName} {booking.host?.lastName}
+                          </p>
+                        </div>
+                        <div
+                          className="booking-status"
+                          style={{ backgroundColor: getStatusColor(booking.status) }}
+                        >
+                          {booking.status}
+                        </div>
+                      </div>
 
-                  <div className="booking-details">
-                    <div className="booking-detail-item">
-                      <strong>Pickup:</strong>{' '}
-                      {new Date(booking.startDate).toLocaleDateString()}
-                    </div>
-                    <div className="booking-detail-item">
-                      <strong>Return:</strong>{' '}
-                      {new Date(booking.endDate).toLocaleDateString()}
-                    </div>
-                    <div className="booking-detail-item">
-                      <strong>Duration:</strong> {booking.totalDays} days
-                    </div>
-                    <div className="booking-detail-item">
-                      <strong>Total Price:</strong> ${booking.totalPrice}
-                    </div>
-                  </div>
+                      <div className="booking-details">
+                        <div className="booking-detail-item">
+                          <strong>Pickup:</strong>{' '}
+                          {new Date(booking.startDate).toLocaleDateString()}
+                        </div>
+                        <div className="booking-detail-item">
+                          <strong>Return:</strong>{' '}
+                          {new Date(booking.endDate).toLocaleDateString()}
+                        </div>
+                        <div className="booking-detail-item">
+                          <strong>Duration:</strong> {booking.totalDays} days
+                        </div>
+                        <div className="booking-detail-item">
+                          <strong>Total Price:</strong> ${booking.totalPrice}
+                        </div>
+                        <div className="booking-detail-item">
+                          <strong>Rate:</strong> ${booking.pricePerDay}/day
+                        </div>
+                      </div>
 
-                  {booking.message && (
-                    <div className="booking-message">
-                      <strong>Your message:</strong>
-                      <p>{booking.message}</p>
+                      {booking.extensions && booking.extensions.length > 0 && (
+                        <div style={{
+                          marginTop: '1rem',
+                          padding: '0.75rem',
+                          background: '#ecfdf5',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem'
+                        }}>
+                          <strong style={{ color: '#059669' }}>Extended {booking.extensions.length} time(s)</strong>
+                        </div>
+                      )}
+
+                      {booking.message && (
+                        <div className="booking-message">
+                          <strong>Your message:</strong>
+                          <p>{booking.message}</p>
+                        </div>
+                      )}
+
+                      <div className="booking-actions">
+                        <Link to={`/vehicle/${booking.vehicle?._id}`}>
+                          <button className="btn btn-secondary">View Vehicle</button>
+                        </Link>
+
+                        {canExtend(booking) && (
+                          <button
+                            onClick={() => openExtendModal(booking)}
+                            className="btn btn-primary"
+                            style={{ background: '#3b82f6' }}
+                          >
+                            Extend Rental
+                          </button>
+                        )}
+
+                        {booking.status === 'pending' && (
+                          <button
+                            onClick={() => handleCancelBooking(booking._id)}
+                            className="btn btn-danger"
+                          >
+                            Cancel Booking
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-
-                  <div className="booking-actions">
-                    <Link to={`/vehicle/${booking.vehicle?._id}`}>
-                      <button className="btn btn-secondary">View Vehicle</button>
-                    </Link>
-
-                    {booking.status === 'pending' && (
-                      <button
-                        onClick={() => handleCancelBooking(booking._id)}
-                        className="btn btn-danger"
-                      >
-                        Cancel Booking
-                      </button>
-                    )}
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
               )}
             </>
           )}
         </div>
       </div>
+
+      {/* Extension Modal */}
+      {extendModal.open && extendModal.booking && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h2 style={{ marginBottom: '1.5rem', color: '#1f2937' }}>Extend Your Rental</h2>
+
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem' }}>
+              <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
+                {extendModal.booking.vehicle?.year} {extendModal.booking.vehicle?.make} {extendModal.booking.vehicle?.model}
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Current return: {new Date(extendModal.booking.endDate).toLocaleDateString()}
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Daily rate: ${extendModal.booking.pricePerDay}
+              </p>
+            </div>
+
+            {!extensionClientSecret ? (
+              <>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    How many days would you like to extend?
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                      onClick={() => setExtensionDays(Math.max(1, extensionDays - 1))}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.5rem 1rem' }}
+                    >
+                      -
+                    </button>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '600', minWidth: '3rem', textAlign: 'center' }}>
+                      {extensionDays}
+                    </span>
+                    <button
+                      onClick={() => setExtensionDays(Math.min(30, extensionDays + 1))}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.5rem 1rem' }}
+                    >
+                      +
+                    </button>
+                    <span style={{ color: '#6b7280' }}>day(s)</span>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '1rem',
+                  background: '#eff6ff',
+                  borderRadius: '0.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span>New return date:</span>
+                    <span style={{ fontWeight: '600' }}>
+                      {new Date(new Date(extendModal.booking.endDate).getTime() + extensionDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Extension cost:</span>
+                    <span style={{ fontWeight: '600', color: '#10b981', fontSize: '1.25rem' }}>
+                      ${(extensionDays * extendModal.booking.pricePerDay).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {extensionError && (
+                  <div style={{
+                    padding: '0.75rem',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    borderRadius: '0.5rem',
+                    marginBottom: '1rem',
+                    fontSize: '0.875rem'
+                  }}>
+                    {extensionError}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button
+                    onClick={closeExtendModal}
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleExtensionRequest}
+                    className="btn btn-primary"
+                    disabled={extensionLoading}
+                    style={{ flex: 1 }}
+                  >
+                    {extensionLoading ? 'Processing...' : 'Continue to Payment'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {stripePromise && extensionDetails && (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      clientSecret: extensionClientSecret,
+                      appearance: { theme: 'stripe' }
+                    }}
+                  >
+                    <ExtensionPaymentForm
+                      bookingId={extendModal.booking._id}
+                      extensionDays={extensionDays}
+                      extensionCost={extensionDetails.extensionCost}
+                      onSuccess={handleExtensionSuccess}
+                      onCancel={closeExtendModal}
+                    />
+                  </Elements>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
