@@ -447,7 +447,351 @@ The RentUFS Team
   }
 };
 
+// Send booking confirmation email to driver
+const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) => {
+  try {
+    const transporter = createTransporter();
+    const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    if (!transporter) {
+      console.log('📧 [DEV] Booking Confirmation Email to Driver:', driver.email);
+      console.log('-----------------------------------');
+      console.log(`To: ${driver.email}`);
+      console.log(`Subject: Booking Confirmed - ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
+      console.log(`
+Hi ${driver.firstName},
+
+Great news! Your booking has been confirmed and payment processed successfully!
+
+Booking Details:
+- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- Pick-up Date: ${startDate}
+- Return Date: ${endDate}
+- Duration: ${booking.totalDays} day(s)
+- Total Paid: $${booking.totalPrice.toFixed(2)}
+
+Host Information:
+- Name: ${host.firstName} ${host.lastName}
+- Email: ${host.email}
+
+Pick-up Location:
+${vehicle.location?.address || ''}, ${vehicle.location?.city || ''}, ${vehicle.location?.state || ''} ${vehicle.location?.zipCode || ''}
+
+Important Reminders:
+- Bring a valid driver's license
+- Arrive on time for pick-up
+- Inspect the vehicle before driving
+
+Thank you for choosing RentUFS!
+
+Best regards,
+The RentUFS Team
+      `);
+      console.log('-----------------------------------\n');
+      return { success: true, dev: true };
+    }
+
+    const mailOptions = {
+      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      to: driver.email,
+      subject: `Booking Confirmed - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .total { font-size: 1.5rem; color: #10b981; font-weight: bold; text-align: right; margin-top: 15px; }
+            .host-info { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+            .reminders { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Booking Confirmed!</h1>
+              <p style="margin: 0; opacity: 0.9;">Your payment was successful</p>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${driver.firstName},</h2>
+              <p>Great news! Your booking has been confirmed and payment processed successfully!</p>
+
+              <div class="booking-card">
+                <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+
+                <div class="detail-row">
+                  <span class="label">Pick-up Date</span>
+                  <span class="value">${startDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Date</span>
+                  <span class="value">${endDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Duration</span>
+                  <span class="value">${booking.totalDays} day(s)</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Location</span>
+                  <span class="value">${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}</span>
+                </div>
+
+                <div class="total">Total Paid: $${booking.totalPrice.toFixed(2)}</div>
+              </div>
+
+              <div class="host-info">
+                <h4 style="margin-top: 0; color: #059669;">Host Information</h4>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${host.firstName} ${host.lastName}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${host.email}</p>
+              </div>
+
+              <div class="reminders">
+                <h4 style="margin-top: 0; color: #b45309;">Important Reminders</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>Bring a valid driver's license</li>
+                  <li>Arrive on time for pick-up</li>
+                  <li>Inspect the vehicle before driving</li>
+                </ul>
+              </div>
+
+              <center>
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button">
+                  View My Bookings
+                </a>
+              </center>
+            </div>
+
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p>Booking ID: ${booking._id}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${driver.firstName},
+
+Great news! Your booking has been confirmed and payment processed successfully!
+
+Booking Details:
+- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- Pick-up Date: ${startDate}
+- Return Date: ${endDate}
+- Duration: ${booking.totalDays} day(s)
+- Total Paid: $${booking.totalPrice.toFixed(2)}
+
+Host Information:
+- Name: ${host.firstName} ${host.lastName}
+- Email: ${host.email}
+
+Pick-up Location:
+${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}
+
+Important Reminders:
+- Bring a valid driver's license
+- Arrive on time for pick-up
+- Inspect the vehicle before driving
+
+Thank you for choosing RentUFS!
+
+Booking ID: ${booking._id}
+
+Best regards,
+The RentUFS Team
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Booking confirmation email sent to driver:', driver.email);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error sending booking confirmation to driver:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send booking notification email to host
+const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => {
+  try {
+    const transporter = createTransporter();
+    const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    if (!transporter) {
+      console.log('📧 [DEV] Booking Notification Email to Host:', host.email);
+      console.log('-----------------------------------');
+      console.log(`To: ${host.email}`);
+      console.log(`Subject: New Booking! ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
+      console.log(`
+Hi ${host.firstName},
+
+Great news! You have a new confirmed booking for your vehicle!
+
+Booking Details:
+- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- Pick-up Date: ${startDate}
+- Return Date: ${endDate}
+- Duration: ${booking.totalDays} day(s)
+- Earnings: $${booking.totalPrice.toFixed(2)}
+
+Driver Information:
+- Name: ${driver.firstName} ${driver.lastName}
+- Email: ${driver.email}
+
+Next Steps:
+- Ensure your vehicle is clean and ready
+- Confirm the pick-up location with the driver
+- Have all necessary documents ready
+
+Congratulations on your booking!
+
+Best regards,
+The RentUFS Team
+      `);
+      console.log('-----------------------------------\n');
+      return { success: true, dev: true };
+    }
+
+    const mailOptions = {
+      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      to: host.email,
+      subject: `New Booking! ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .earnings { font-size: 1.5rem; color: #10b981; font-weight: bold; text-align: right; margin-top: 15px; }
+            .driver-info { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+            .next-steps { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>New Booking!</h1>
+              <p style="margin: 0; opacity: 0.9;">Payment has been processed</p>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${host.firstName},</h2>
+              <p>Great news! You have a new confirmed booking for your vehicle!</p>
+
+              <div class="booking-card">
+                <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+
+                <div class="detail-row">
+                  <span class="label">Pick-up Date</span>
+                  <span class="value">${startDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Date</span>
+                  <span class="value">${endDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Duration</span>
+                  <span class="value">${booking.totalDays} day(s)</span>
+                </div>
+
+                <div class="earnings">Earnings: $${booking.totalPrice.toFixed(2)}</div>
+              </div>
+
+              <div class="driver-info">
+                <h4 style="margin-top: 0; color: #1d4ed8;">Driver Information</h4>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${driver.firstName} ${driver.lastName}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${driver.email}</p>
+              </div>
+
+              <div class="next-steps">
+                <h4 style="margin-top: 0; color: #059669;">Next Steps</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>Ensure your vehicle is clean and ready</li>
+                  <li>Confirm the pick-up location with the driver</li>
+                  <li>Have all necessary documents ready</li>
+                </ul>
+              </div>
+
+              <center>
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/bookings" class="button">
+                  View Bookings
+                </a>
+              </center>
+            </div>
+
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p>Booking ID: ${booking._id}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${host.firstName},
+
+Great news! You have a new confirmed booking for your vehicle!
+
+Booking Details:
+- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- Pick-up Date: ${startDate}
+- Return Date: ${endDate}
+- Duration: ${booking.totalDays} day(s)
+- Earnings: $${booking.totalPrice.toFixed(2)}
+
+Driver Information:
+- Name: ${driver.firstName} ${driver.lastName}
+- Email: ${driver.email}
+
+Next Steps:
+- Ensure your vehicle is clean and ready
+- Confirm the pick-up location with the driver
+- Have all necessary documents ready
+
+Congratulations on your booking!
+
+Booking ID: ${booking._id}
+
+Best regards,
+The RentUFS Team
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Booking notification email sent to host:', host.email);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error sending booking notification to host:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
-  sendVehicleListedEmail
+  sendVehicleListedEmail,
+  sendBookingConfirmationToDriver,
+  sendBookingNotificationToHost
 };

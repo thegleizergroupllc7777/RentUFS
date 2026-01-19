@@ -2,6 +2,8 @@ const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
+const { sendBookingConfirmationToDriver, sendBookingNotificationToHost } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -115,7 +117,15 @@ router.post('/verify-payment', auth, async (req, res) => {
           paymentSessionId: sessionId,
         },
         { new: true }
-      ).populate('vehicle');
+      ).populate('vehicle').populate('driver').populate('host');
+
+      // Send confirmation emails to both driver and host
+      if (booking.driver && booking.host && booking.vehicle) {
+        sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation email:', err));
+        sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
+          .catch(err => console.error('Failed to send host notification email:', err));
+      }
 
       res.json({
         success: true,
@@ -152,7 +162,15 @@ router.post('/confirm-payment', auth, async (req, res) => {
           paymentSessionId: paymentIntentId,
         },
         { new: true }
-      ).populate('vehicle').populate('host');
+      ).populate('vehicle').populate('driver').populate('host');
+
+      // Send confirmation emails to both driver and host
+      if (booking.driver && booking.host && booking.vehicle) {
+        sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation email:', err));
+        sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
+          .catch(err => console.error('Failed to send host notification email:', err));
+      }
 
       res.json({
         success: true,
