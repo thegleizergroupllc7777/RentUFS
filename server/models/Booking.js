@@ -90,6 +90,36 @@ const bookingSchema = new mongoose.Schema({
     paymentId: String,
     extendedAt: { type: Date, default: Date.now }
   }],
+  insurance: {
+    type: {
+      type: String,
+      enum: ['none', 'basic', 'standard', 'premium'],
+      default: 'none'
+    },
+    provider: {
+      type: String,
+      default: null
+    },
+    policyNumber: {
+      type: String,
+      default: null
+    },
+    costPerDay: {
+      type: Number,
+      default: 0
+    },
+    totalCost: {
+      type: Number,
+      default: 0
+    },
+    coverage: {
+      liability: { type: Boolean, default: false },
+      collision: { type: Boolean, default: false },
+      comprehensive: { type: Boolean, default: false },
+      personalInjury: { type: Boolean, default: false },
+      roadsideAssistance: { type: Boolean, default: false }
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

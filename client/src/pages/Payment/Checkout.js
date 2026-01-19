@@ -214,9 +214,7 @@ const Checkout = () => {
 
               <div className="summary-item">
                 <span className="label">Rental subtotal:</span>
-                <span className="value">
-                  ${((booking.insurance?.totalCost ? booking.totalPrice - booking.insurance.totalCost : booking.totalPrice) || 0).toFixed(2)}
-                </span>
+                <span className="value">${(booking.pricePerDay * booking.totalDays).toFixed(2)}</span>
               </div>
 
               {booking.insurance && booking.insurance.totalCost > 0 && (
@@ -231,6 +229,14 @@ const Checkout = () => {
                 <span className="value">${booking.totalPrice.toFixed(2)}</span>
               </div>
             </div>
+
+            {/* Insurance Selection */}
+            <InsuranceSelection
+              bookingId={bookingId}
+              totalDays={booking.totalDays}
+              onInsuranceChange={handleInsuranceChange}
+              initialSelection={booking.insurance?.type || 'none'}
+            />
 
             {!isValidStripeKey && (
               <div className="error-message">

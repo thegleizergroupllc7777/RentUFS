@@ -11,6 +11,7 @@ const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
 const paymentRoutes = require('./routes/payment');
 const reportRoutes = require('./routes/reports');
+const insuranceRoutes = require('./routes/insurance');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/insurance', insuranceRoutes);
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
