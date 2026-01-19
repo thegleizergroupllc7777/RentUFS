@@ -78,6 +78,9 @@ const HostDashboard = () => {
           <div className="host-header">
             <h1 className="page-title">My Vehicles</h1>
             <div className="host-actions">
+              <Link to="/host/reports">
+                <button className="btn btn-secondary">View Reports</button>
+              </Link>
               <Link to="/host/bookings">
                 <button className="btn btn-secondary">View Bookings</button>
               </Link>
