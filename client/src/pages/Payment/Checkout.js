@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import CheckoutForm from './CheckoutForm';
+import InsuranceSelection from '../../components/InsuranceSelection';
 import API_URL from '../../config/api';
 import './Payment.css';
 
@@ -22,6 +23,7 @@ const Checkout = () => {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [insuranceSelected, setInsuranceSelected] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -71,6 +73,28 @@ const Checkout = () => {
 
   const handlePaymentError = (error) => {
     console.error('Payment error:', error);
+  };
+
+  const handleInsuranceChange = async (updatedBooking) => {
+    // Update local booking state with new insurance and total
+    setBooking(prev => ({
+      ...prev,
+      insurance: updatedBooking.insurance,
+      totalPrice: updatedBooking.totalPrice
+    }));
+    setInsuranceSelected(updatedBooking.insurance?.type !== 'none');
+
+    // Refresh payment intent with new total
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/payment/create-payment-intent`,
+        { bookingId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      setClientSecret(response.data.clientSecret);
+    } catch (err) {
+      console.error('Error refreshing payment intent:', err);
+    }
   };
 
   if (loading) {
@@ -178,11 +202,31 @@ const Checkout = () => {
                 <span className="value">${booking.pricePerDay.toFixed(2)}</span>
               </div>
 
+              <div className="summary-item">
+                <span className="label">Rental subtotal:</span>
+                <span className="value">${(booking.pricePerDay * booking.totalDays).toFixed(2)}</span>
+              </div>
+
+              {booking.insurance && booking.insurance.totalCost > 0 && (
+                <div className="summary-item insurance">
+                  <span className="label">Insurance ({booking.insurance.type}):</span>
+                  <span className="value">${booking.insurance.totalCost.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="summary-item total">
                 <span className="label">Total Amount:</span>
                 <span className="value">${booking.totalPrice.toFixed(2)}</span>
               </div>
             </div>
+
+            {/* Insurance Selection */}
+            <InsuranceSelection
+              bookingId={bookingId}
+              totalDays={booking.totalDays}
+              onInsuranceChange={handleInsuranceChange}
+              initialSelection={booking.insurance?.type || 'none'}
+            />
 
             {!isValidStripeKey && (
               <div className="error-message">
