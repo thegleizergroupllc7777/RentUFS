@@ -935,6 +935,350 @@
   padding: 4rem;
 }
 
+/* Reports Page Styles */
+.reports-filter-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.period-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.period-btn {
+  padding: 0.75rem 1.25rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.period-btn:hover {
+  background: #e5e7eb;
+}
+
+.period-btn.active {
+  background: #10b981;
+  color: white;
+}
+
+.custom-range-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  align-items: flex-end;
+}
+
+.custom-range-form .form-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.custom-range-form .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.reports-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.summary-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.revenue-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.pending-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.bookings-icon {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.days-icon {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.summary-content h3 {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.summary-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.summary-value.pending {
+  color: #f59e0b;
+}
+
+.summary-sub {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.reports-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1f2937;
+}
+
+/* Revenue Chart */
+.revenue-chart {
+  overflow-x: auto;
+}
+
+.chart-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 200px;
+  min-width: max-content;
+  padding: 1rem 0;
+}
+
+.chart-bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 24px;
+}
+
+.chart-bar {
+  width: 100%;
+  background: linear-gradient(180deg, #10b981, #059669);
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+  position: relative;
+  transition: height 0.3s;
+}
+
+.chart-bar:hover {
+  background: linear-gradient(180deg, #059669, #047857);
+}
+
+.bar-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.chart-bar:hover .bar-tooltip {
+  display: block;
+}
+
+.chart-label {
+  font-size: 0.625rem;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* Vehicle Stats Grid */
+.vehicle-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.vehicle-stat-card {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: box-shadow 0.2s;
+}
+
+.vehicle-stat-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.vehicle-stat-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.vehicle-stat-image {
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.vehicle-stat-image-placeholder {
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.vehicle-stat-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.vehicle-stat-info p {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.vehicle-stat-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.metric-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.metric-value.pending {
+  color: #f59e0b;
+}
+
+/* Recent Bookings Table */
+.recent-bookings-table {
+  overflow-x: auto;
+}
+
+.recent-bookings-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+
+.recent-bookings-table th,
+.recent-bookings-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.recent-bookings-table th {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.875rem;
+  background: #f9fafb;
+}
+
+.recent-bookings-table td {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.recent-bookings-table tr:hover {
+  background: #f9fafb;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-confirmed { background: #d1fae5; color: #065f46; }
+.status-active { background: #dbeafe; color: #1e40af; }
+.status-completed { background: #e0e7ff; color: #3730a3; }
+.status-cancelled { background: #fee2e2; color: #991b1b; }
+
+.payment-pending { background: #fef3c7; color: #92400e; }
+.payment-paid { background: #d1fae5; color: #065f46; }
+.payment-failed { background: #fee2e2; color: #991b1b; }
+.payment-refunded { background: #e5e7eb; color: #374151; }
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+}
+
 @media (max-width: 768px) {
   .host-header {
     flex-direction: column;
