@@ -58,26 +58,10 @@ router.get('/host', auth, async (req, res) => {
     const confirmedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed' || b.status === 'active');
     const paidBookings = bookings.filter(b => b.paymentStatus === 'paid');
 
-    // Use Number() to ensure proper addition (not string concatenation)
-    const totalRevenue = paidBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
-
-    // Only count as "pending revenue" bookings that are:
-    // 1. Actually confirmed/active (not abandoned checkout attempts)
-    // 2. But payment is still pending
-    // Bookings with status='pending' are just abandoned cart items, not real pending revenue
-    const realPendingBookings = bookings.filter(b =>
-      ['confirmed', 'active'].includes(b.status) &&
-      b.paymentStatus === 'pending'
-    );
-    const pendingRevenue = realPendingBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
-
-    // Count abandoned bookings (status=pending, never completed) for reference
-    const abandonedBookings = bookings.filter(b =>
-      b.status === 'pending' &&
-      b.paymentStatus === 'pending' &&
-      b.status !== 'cancelled'
-    );
-    const abandonedValue = abandonedBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+    const totalRevenue = paidBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    const pendingRevenue = bookings
+      .filter(b => b.paymentStatus === 'pending' && b.status !== 'cancelled')
+      .reduce((sum, b) => sum + b.totalPrice, 0);
 
     // Calculate per-vehicle stats
     const vehicleStats = {};
@@ -107,11 +91,10 @@ router.get('/host', auth, async (req, res) => {
       }
 
       if (booking.paymentStatus === 'paid') {
-        vehicleStats[vehicleId].totalRevenue += (Number(booking.totalPrice) || 0);
-        vehicleStats[vehicleId].totalDays += (Number(booking.totalDays) || 0);
-      } else if (['confirmed', 'active'].includes(booking.status) && booking.paymentStatus === 'pending') {
-        // Only count confirmed/active bookings awaiting payment as real pending revenue
-        vehicleStats[vehicleId].pendingRevenue += (Number(booking.totalPrice) || 0);
+        vehicleStats[vehicleId].totalRevenue += booking.totalPrice;
+        vehicleStats[vehicleId].totalDays += booking.totalDays;
+      } else if (booking.paymentStatus === 'pending' && booking.status !== 'cancelled') {
+        vehicleStats[vehicleId].pendingRevenue += booking.totalPrice;
       }
     });
 
@@ -125,7 +108,7 @@ router.get('/host', auth, async (req, res) => {
       if (!dailyRevenue[date]) {
         dailyRevenue[date] = 0;
       }
-      dailyRevenue[date] += (Number(booking.totalPrice) || 0);
+      dailyRevenue[date] += booking.totalPrice;
     });
 
     // Fill in missing dates with 0
@@ -163,13 +146,9 @@ router.get('/host', auth, async (req, res) => {
         confirmedBookings: confirmedBookings.length,
         cancelledBookings: bookings.filter(b => b.status === 'cancelled').length,
         totalRevenue,
-        pendingRevenue, // Only confirmed/active bookings awaiting payment
-        pendingBookingsCount: realPendingBookings.length,
-        // Show abandoned checkout attempts for reference
-        abandonedPendingRevenue: abandonedValue,
-        abandonedPendingCount: abandonedBookings.length,
+        pendingRevenue,
         averageBookingValue: paidBookings.length > 0 ? totalRevenue / paidBookings.length : 0,
-        totalDaysBooked: paidBookings.reduce((sum, b) => sum + (Number(b.totalDays) || 0), 0)
+        totalDaysBooked: paidBookings.reduce((sum, b) => sum + b.totalDays, 0)
       },
       vehicleStats: Object.values(vehicleStats).sort((a, b) => b.totalRevenue - a.totalRevenue),
       dailyRevenue: dailyRevenueArray,
