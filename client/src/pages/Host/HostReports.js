@@ -179,10 +179,10 @@ const HostReports = () => {
                     <h3>Pending Revenue</h3>
                     <p className="summary-value pending">{formatCurrency(reportData.summary.pendingRevenue)}</p>
                     <span className="summary-sub">
-                      {reportData.summary.pendingBookingsCount || 0} active (last 7 days)
+                      {reportData.summary.pendingBookingsCount || 0} confirmed awaiting payment
                       {reportData.summary.abandonedPendingCount > 0 && (
-                        <span style={{ display: 'block', marginTop: '4px', color: '#9ca3af' }}>
-                          +{reportData.summary.abandonedPendingCount} abandoned ({formatCurrency(reportData.summary.abandonedPendingRevenue || 0)})
+                        <span style={{ display: 'block', marginTop: '4px', color: '#9ca3af', fontSize: '0.75rem' }}>
+                          {reportData.summary.abandonedPendingCount} incomplete checkouts
                         </span>
                       )}
                     </span>
