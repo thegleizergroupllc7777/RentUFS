@@ -50,7 +50,7 @@ router.post('/migrate-reservation-ids', auth, async (req, res) => {
 // Create booking
 router.post('/', auth, async (req, res) => {
   try {
-    const { vehicleId, startDate, endDate, rentalType, quantity, message } = req.body;
+    const { vehicleId, startDate, endDate, pickupTime, dropoffTime, rentalType, quantity, message } = req.body;
 
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
@@ -88,6 +88,8 @@ router.post('/', auth, async (req, res) => {
       host: vehicle.host,
       startDate: start,
       endDate: end,
+      pickupTime: pickupTime || '10:00',
+      dropoffTime: dropoffTime || '10:00',
       totalDays,
       rentalType: rentalType || 'daily',
       quantity: quantity || totalDays,
