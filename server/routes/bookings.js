@@ -8,7 +8,7 @@ const router = express.Router();
 // Create booking
 router.post('/', auth, async (req, res) => {
   try {
-    const { vehicleId, startDate, endDate, message } = req.body;
+    const { vehicleId, startDate, endDate, rentalType, quantity, message } = req.body;
 
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
@@ -23,6 +23,23 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid date range' });
     }
 
+    // Calculate total price based on rental type
+    let totalPrice;
+    let pricePerDay = vehicle.pricePerDay;
+
+    if (rentalType === 'weekly') {
+      // Use weekly rate if available, otherwise calculate from daily
+      const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
+      totalPrice = quantity * weeklyRate;
+    } else if (rentalType === 'monthly') {
+      // Use monthly rate if available, otherwise calculate from daily
+      const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
+      totalPrice = quantity * monthlyRate;
+    } else {
+      // Daily rate (default)
+      totalPrice = totalDays * vehicle.pricePerDay;
+    }
+
     const booking = new Booking({
       vehicle: vehicleId,
       driver: req.user._id,
@@ -30,8 +47,10 @@ router.post('/', auth, async (req, res) => {
       startDate: start,
       endDate: end,
       totalDays,
-      pricePerDay: vehicle.pricePerDay,
-      totalPrice: totalDays * vehicle.pricePerDay,
+      rentalType: rentalType || 'daily',
+      quantity: quantity || totalDays,
+      pricePerDay: vehicle.pricePerDay, // Store original daily rate
+      totalPrice,
       message
     });
 
