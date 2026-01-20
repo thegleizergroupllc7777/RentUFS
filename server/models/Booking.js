@@ -28,6 +28,15 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  rentalType: {
+    type: String,
+    enum: ['daily', 'weekly', 'monthly'],
+    default: 'daily'
+  },
+  quantity: {
+    type: Number,
+    default: 1
+  },
   pricePerDay: {
     type: Number,
     required: true

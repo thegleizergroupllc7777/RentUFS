@@ -199,13 +199,17 @@ const Checkout = () => {
               </div>
 
               <div className="summary-item">
-                <span className="label">Price per day:</span>
-                <span className="value">${booking.pricePerDay.toFixed(2)}</span>
+                <span className="label">Rental Type:</span>
+                <span className="value" style={{ textTransform: 'capitalize' }}>
+                  {booking.rentalType || 'daily'} ({booking.quantity || booking.totalDays} {booking.rentalType === 'weekly' ? 'week(s)' : booking.rentalType === 'monthly' ? 'month(s)' : 'day(s)'})
+                </span>
               </div>
 
               <div className="summary-item">
                 <span className="label">Rental subtotal:</span>
-                <span className="value">${(booking.pricePerDay * booking.totalDays).toFixed(2)}</span>
+                <span className="value">
+                  ${((booking.insurance?.totalCost ? booking.totalPrice - booking.insurance.totalCost : booking.totalPrice) || 0).toFixed(2)}
+                </span>
               </div>
 
               {booking.insurance && booking.insurance.totalCost > 0 && (
