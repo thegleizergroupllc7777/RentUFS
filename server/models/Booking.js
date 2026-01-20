@@ -166,8 +166,8 @@ bookingSchema.pre('save', async function(next) {
         { $inc: { seq: 1 } },
         { new: true, upsert: true }
       );
-      // Format: RUFS-00001, RUFS-00002, etc.
-      this.reservationId = `RUFS-${counter.seq.toString().padStart(5, '0')}`;
+      // Format: RUF-100001, RUF-100002, etc.
+      this.reservationId = `RUF-${(100000 + counter.seq).toString()}`;
     } catch (error) {
       console.error('Error generating reservation ID:', error);
     }
