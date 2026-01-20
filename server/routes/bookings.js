@@ -192,20 +192,38 @@ router.post('/:id/extend', auth, async (req, res) => {
     }
 
     // Check if vehicle is available for the extension period
+    const currentEndDate = new Date(booking.endDate);
     const newEndDate = new Date(booking.endDate);
     newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
-    // Check for overlapping bookings
+    // Normalize dates for comparison (set to start/end of day)
+    const extensionStartDate = new Date(currentEndDate);
+    extensionStartDate.setHours(0, 0, 0, 0);
+
+    const extensionEndDate = new Date(newEndDate);
+    extensionEndDate.setHours(23, 59, 59, 999);
+
+    // Check for overlapping bookings - a booking conflicts if:
+    // - It starts DURING the extension period (between current end and new end)
+    // This is more precise than checking general overlap
     const conflictingBooking = await Booking.findOne({
       vehicle: booking.vehicle._id,
       _id: { $ne: booking._id },
-      status: { $in: ['confirmed', 'active', 'pending'] },
-      $or: [
-        { startDate: { $lt: newEndDate }, endDate: { $gt: booking.endDate } }
+      status: { $in: ['confirmed', 'active'] }, // Only check confirmed/active, not pending
+      // Find bookings that start within or overlap the extension window
+      $and: [
+        { startDate: { $lt: extensionEndDate } },  // Starts before extension ends
+        { endDate: { $gt: extensionStartDate } }    // Ends after extension starts
       ]
     });
 
     if (conflictingBooking) {
+      console.log('Extension conflict found:', {
+        bookingId: booking._id,
+        conflictingId: conflictingBooking._id,
+        extensionPeriod: { start: extensionStartDate, end: extensionEndDate },
+        conflictingDates: { start: conflictingBooking.startDate, end: conflictingBooking.endDate }
+      });
       return res.status(400).json({
         message: 'Vehicle is not available for the requested extension period',
         availableUntil: conflictingBooking.startDate
