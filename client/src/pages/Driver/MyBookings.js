@@ -206,20 +206,30 @@ const MyBookings = () => {
 
   const categorizeBookings = () => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
 
     const current = bookings.filter(booking => {
       const startDate = new Date(booking.startDate);
       const endDate = new Date(booking.endDate);
-      return startDate <= now && endDate >= now && booking.status === 'active';
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      // Current = active rentals where we're within the rental period
+      // Include both 'active' and 'confirmed' status (confirmed = paid, ready for pickup)
+      return startDate <= now && endDate >= now &&
+             (booking.status === 'active' || booking.status === 'confirmed');
     });
 
     const upcoming = bookings.filter(booking => {
       const startDate = new Date(booking.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      // Upcoming = future bookings that are pending or confirmed
       return startDate > now && (booking.status === 'pending' || booking.status === 'confirmed');
     });
 
     const past = bookings.filter(booking => {
       const endDate = new Date(booking.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      // Past = ended rentals or cancelled/completed
       return endDate < now || booking.status === 'completed' || booking.status === 'cancelled';
     });
 
