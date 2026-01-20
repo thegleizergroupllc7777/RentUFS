@@ -89,7 +89,8 @@ const CheckoutForm = ({ booking, bookingId, onSuccess, onError }) => {
           onReady={() => setElementReady(true)}
           onLoadError={(event) => {
             console.error('PaymentElement load error:', event);
-            setErrorMessage('Failed to load payment form. Please ensure your Stripe account is fully activated for live payments.');
+            const errorMsg = event?.error?.message || 'Unknown error loading payment form';
+            setErrorMessage(`Failed to load payment form: ${errorMsg}`);
           }}
         />
       </div>
