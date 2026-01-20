@@ -17,6 +17,8 @@ const VehicleDetail = () => {
   const [bookingData, setBookingData] = useState({
     startDate: '',
     endDate: '',
+    pickupTime: '10:00',
+    dropoffTime: '10:00',
     rentalType: 'daily',
     quantity: 1,
     message: ''
@@ -372,6 +374,28 @@ const VehicleDetail = () => {
                   </div>
 
                   <div className="form-group">
+                    <label className="form-label">Pick-up Time</label>
+                    <select
+                      name="pickupTime"
+                      className="form-select"
+                      value={bookingData.pickupTime}
+                      onChange={handleBookingChange}
+                    >
+                      <option value="08:00">8:00 AM</option>
+                      <option value="09:00">9:00 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="13:00">1:00 PM</option>
+                      <option value="14:00">2:00 PM</option>
+                      <option value="15:00">3:00 PM</option>
+                      <option value="16:00">4:00 PM</option>
+                      <option value="17:00">5:00 PM</option>
+                      <option value="18:00">6:00 PM</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
                     <label className="form-label">{getQuantityLabel()}</label>
                     <input
                       type="number"
@@ -385,6 +409,28 @@ const VehicleDetail = () => {
                     />
                   </div>
 
+                  <div className="form-group">
+                    <label className="form-label">Drop-off Time</label>
+                    <select
+                      name="dropoffTime"
+                      className="form-select"
+                      value={bookingData.dropoffTime}
+                      onChange={handleBookingChange}
+                    >
+                      <option value="08:00">8:00 AM</option>
+                      <option value="09:00">9:00 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="13:00">1:00 PM</option>
+                      <option value="14:00">2:00 PM</option>
+                      <option value="15:00">3:00 PM</option>
+                      <option value="16:00">4:00 PM</option>
+                      <option value="17:00">5:00 PM</option>
+                      <option value="18:00">6:00 PM</option>
+                    </select>
+                  </div>
+
                   {bookingData.startDate && bookingData.endDate && (
                     <div style={{
                       backgroundColor: '#f3f4f6',
@@ -393,8 +439,8 @@ const VehicleDetail = () => {
                       marginBottom: '1rem',
                       fontSize: '0.9rem'
                     }}>
-                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate).toLocaleDateString()}</div>
-                      <div><strong>Return:</strong> {new Date(bookingData.endDate).toLocaleDateString()}</div>
+                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate).toLocaleDateString()} at {bookingData.pickupTime}</div>
+                      <div><strong>Return:</strong> {new Date(bookingData.endDate).toLocaleDateString()} by {bookingData.dropoffTime}</div>
                     </div>
                   )}
 

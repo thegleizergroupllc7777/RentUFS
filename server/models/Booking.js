@@ -37,6 +37,14 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  pickupTime: {
+    type: String,
+    default: '10:00'
+  },
+  dropoffTime: {
+    type: String,
+    default: '10:00'
+  },
   totalDays: {
     type: Number,
     required: true
