@@ -48,7 +48,8 @@ const Checkout = () => {
       setClientSecret(response.data.clientSecret);
       setBooking(response.data.booking);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to initialize payment');
+      console.error('Payment initialization error:', err.response?.data || err);
+      setError(err.response?.data?.message || err.response?.data?.error || 'Failed to initialize payment');
     } finally {
       setLoading(false);
     }
