@@ -37,9 +37,9 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image size must be less than 10MB');
+    // Validate file size (max 5MB to match server limit)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
       return;
     }
 
@@ -47,36 +47,41 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
     setError('');
 
     try {
-      // Convert to base64 for upload
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await axios.post(
-            `${API_URL}/api/upload/image`,
-            { image: reader.result },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+      const token = localStorage.getItem('token');
 
-          // Update photos state with the uploaded URL
-          setPhotos(prev => ({
-            ...prev,
-            [currentPosition.key]: response.data.url
-          }));
+      // Create FormData for proper file upload
+      const formData = new FormData();
+      formData.append('image', file);
 
-          // Auto-advance to next step if not on last photo
-          if (currentStep < PHOTO_POSITIONS.length - 1) {
-            setTimeout(() => setCurrentStep(currentStep + 1), 500);
+      const response = await axios.post(
+        `${API_URL}/api/upload/image`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
           }
-        } catch (err) {
-          setError(err.response?.data?.message || 'Failed to upload photo');
-        } finally {
-          setUploading(false);
         }
-      };
-      reader.readAsDataURL(file);
+      );
+
+      // Update photos state with the uploaded URL
+      // The server returns imageUrl, construct full URL
+      const imageUrl = response.data.imageUrl.startsWith('http')
+        ? response.data.imageUrl
+        : `${API_URL}${response.data.imageUrl}`;
+
+      setPhotos(prev => ({
+        ...prev,
+        [currentPosition.key]: imageUrl
+      }));
+
+      // Auto-advance to next step if not on last photo
+      if (currentStep < PHOTO_POSITIONS.length - 1) {
+        setTimeout(() => setCurrentStep(currentStep + 1), 500);
+      }
     } catch (err) {
-      setError('Failed to read file');
+      setError(err.response?.data?.message || 'Failed to upload photo');
+    } finally {
       setUploading(false);
     }
 
