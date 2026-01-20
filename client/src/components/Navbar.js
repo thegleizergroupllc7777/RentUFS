@@ -92,9 +92,12 @@ const Navbar = () => {
         </Link>
 
         <div className="navbar-links">
-          <Link to="/marketplace" className="navbar-link">
-            Browse Cars
-          </Link>
+          {/* Browse Cars only shows for non-logged in users or drivers */}
+          {(!user || isDriverMode) && (
+            <Link to="/marketplace" className="navbar-link">
+              Browse Cars
+            </Link>
+          )}
 
           {user ? (
             <>
