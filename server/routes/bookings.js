@@ -50,7 +50,7 @@ router.post('/migrate-reservation-ids', auth, async (req, res) => {
 // Create booking
 router.post('/', auth, async (req, res) => {
   try {
-    const { vehicleId, startDate, endDate, pickupTime, dropoffTime, rentalType, quantity, message } = req.body;
+    const { vehicleId, startDate, endDate, rentalType, quantity, message } = req.body;
 
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
@@ -69,17 +69,25 @@ router.post('/', auth, async (req, res) => {
     let totalPrice;
     let pricePerDay = vehicle.pricePerDay;
 
-    if (rentalType === 'weekly') {
-      // Use weekly rate if available, otherwise calculate from daily
-      const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
-      totalPrice = quantity * weeklyRate;
-    } else if (rentalType === 'monthly') {
-      // Use monthly rate if available, otherwise calculate from daily
-      const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
-      totalPrice = quantity * monthlyRate;
-    } else {
-      // Daily rate (default)
-      totalPrice = totalDays * vehicle.pricePerDay;
+    switch (rentalType) {
+      case 'weekly':
+        // Use weekly rate if available, otherwise calculate from daily
+        const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
+        totalPrice = quantity * weeklyRate;
+        // Store effective daily rate for display purposes
+        pricePerDay = weeklyRate / 7;
+        break;
+      case 'monthly':
+        // Use monthly rate if available, otherwise calculate from daily
+        const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
+        totalPrice = quantity * monthlyRate;
+        // Store effective daily rate for display purposes
+        pricePerDay = monthlyRate / 30;
+        break;
+      case 'daily':
+      default:
+        totalPrice = totalDays * vehicle.pricePerDay;
+        break;
     }
 
     const booking = new Booking({
