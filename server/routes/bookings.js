@@ -1,9 +1,51 @@
 const express = require('express');
 const Booking = require('../models/Booking');
+const { Counter } = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
+
+// Migration endpoint to add reservation IDs to existing bookings
+router.post('/migrate-reservation-ids', auth, async (req, res) => {
+  try {
+    // Find all bookings without a reservationId
+    const bookingsWithoutId = await Booking.find({
+      $or: [
+        { reservationId: { $exists: false } },
+        { reservationId: null },
+        { reservationId: '' }
+      ]
+    }).sort({ createdAt: 1 });
+
+    const results = [];
+    for (const booking of bookingsWithoutId) {
+      const counter = await Counter.findByIdAndUpdate(
+        'reservationId',
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+
+      const reservationId = `RUFS-${counter.seq.toString().padStart(5, '0')}`;
+
+      await Booking.updateOne(
+        { _id: booking._id },
+        { $set: { reservationId: reservationId } }
+      );
+
+      results.push({ bookingId: booking._id, reservationId });
+    }
+
+    res.json({
+      success: true,
+      message: `Migrated ${results.length} bookings`,
+      results
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ message: 'Migration failed', error: error.message });
+  }
+});
 
 // Create booking
 router.post('/', auth, async (req, res) => {
