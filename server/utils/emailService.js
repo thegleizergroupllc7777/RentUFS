@@ -464,6 +464,8 @@ Hi ${driver.firstName},
 
 Great news! Your booking has been confirmed and payment processed successfully!
 
+Reservation ID: ${booking.reservationId || booking._id}
+
 Booking Details:
 - Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
 - Pick-up Date: ${startDate}
@@ -529,6 +531,10 @@ The RentUFS Team
               <p>Great news! Your booking has been confirmed and payment processed successfully!</p>
 
               <div class="booking-card">
+                <div style="background: #f0fdf4; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                  <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId || booking._id}</span>
+                </div>
                 <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
@@ -586,6 +592,8 @@ Hi ${driver.firstName},
 
 Great news! Your booking has been confirmed and payment processed successfully!
 
+Reservation ID: ${booking.reservationId || booking._id}
+
 Booking Details:
 - Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
 - Pick-up Date: ${startDate}
@@ -606,8 +614,6 @@ Important Reminders:
 - Inspect the vehicle before driving
 
 Thank you for choosing RentUFS!
-
-Booking ID: ${booking._id}
 
 Best regards,
 The RentUFS Team
@@ -639,6 +645,8 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
 Hi ${host.firstName},
 
 Great news! You have a new confirmed booking for your vehicle!
+
+Reservation ID: ${booking.reservationId || booking._id}
 
 Booking Details:
 - Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
@@ -702,6 +710,10 @@ The RentUFS Team
               <p>Great news! You have a new confirmed booking for your vehicle!</p>
 
               <div class="booking-card">
+                <div style="background: #f0fdf4; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                  <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId || booking._id}</span>
+                </div>
                 <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
@@ -755,6 +767,8 @@ Hi ${host.firstName},
 
 Great news! You have a new confirmed booking for your vehicle!
 
+Reservation ID: ${booking.reservationId || booking._id}
+
 Booking Details:
 - Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
 - Pick-up Date: ${startDate}
@@ -772,8 +786,6 @@ Next Steps:
 - Have all necessary documents ready
 
 Congratulations on your booking!
-
-Booking ID: ${booking._id}
 
 Best regards,
 The RentUFS Team
