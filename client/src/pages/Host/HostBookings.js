@@ -261,7 +261,41 @@ const HostBookings = () => {
                     </div>
                   )}
                   <div className="booking-header">
-                    <div>
+                    {/* Vehicle thumbnail */}
+                    <div style={{
+                      width: '140px',
+                      height: '100px',
+                      borderRadius: '0.5rem',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      marginRight: '1rem',
+                      backgroundColor: '#f3f4f6'
+                    }}>
+                      {booking.vehicle?.images?.[0] ? (
+                        <img
+                          src={booking.vehicle.images[0]}
+                          alt={`${booking.vehicle.make} ${booking.vehicle.model}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#9ca3af',
+                          fontSize: '0.875rem'
+                        }}>
+                          No Image
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
                       <div style={{
                         display: 'inline-block',
                         backgroundColor: '#f3f4f6',
