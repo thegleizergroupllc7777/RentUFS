@@ -1,6 +1,19 @@
 const mongoose = require('mongoose');
 
+// Counter schema for auto-incrementing reservation IDs
+const counterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  seq: { type: Number, default: 0 }
+});
+
+const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
+
 const bookingSchema = new mongoose.Schema({
+  reservationId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   vehicle: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vehicle',
@@ -133,9 +146,25 @@ const bookingSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt timestamp before saving
-bookingSchema.pre('save', function(next) {
+// Generate reservation ID before saving new booking
+bookingSchema.pre('save', async function(next) {
   this.updatedAt = Date.now();
+
+  // Only generate reservationId for new documents
+  if (this.isNew && !this.reservationId) {
+    try {
+      const counter = await Counter.findByIdAndUpdate(
+        'reservationId',
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      // Format: RUF-100001, RUF-100002, etc.
+      this.reservationId = `RUF-${(100000 + counter.seq).toString()}`;
+    } catch (error) {
+      console.error('Error generating reservation ID:', error);
+    }
+  }
+
   next();
 });
 

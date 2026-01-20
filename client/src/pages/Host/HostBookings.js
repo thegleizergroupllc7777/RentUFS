@@ -57,20 +57,27 @@ const HostBookings = () => {
   // Categorize bookings into current, upcoming, and past
   const categorizeBookings = () => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
 
     const current = bookings.filter(booking => {
       const startDate = new Date(booking.startDate);
       const endDate = new Date(booking.endDate);
-      return startDate <= now && endDate >= now && booking.status === 'active';
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      // Include both active and confirmed bookings within the rental period
+      return startDate <= now && endDate >= now &&
+             (booking.status === 'active' || booking.status === 'confirmed');
     });
 
     const upcoming = bookings.filter(booking => {
       const startDate = new Date(booking.startDate);
+      startDate.setHours(0, 0, 0, 0);
       return startDate > now && (booking.status === 'pending' || booking.status === 'confirmed');
     });
 
     const past = bookings.filter(booking => {
       const endDate = new Date(booking.endDate);
+      endDate.setHours(23, 59, 59, 999);
       return endDate < now || booking.status === 'completed' || booking.status === 'cancelled';
     });
 
@@ -195,6 +202,19 @@ const HostBookings = () => {
                 <div key={booking._id} className="booking-card host-booking-card">
                   <div className="booking-header">
                     <div>
+                      <div style={{
+                        display: 'inline-block',
+                        backgroundColor: '#f3f4f6',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.25rem',
+                        marginBottom: '0.5rem',
+                        fontFamily: 'monospace',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151'
+                      }}>
+                        {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                      </div>
                       <h3 className="booking-vehicle">
                         {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
                       </h3>
