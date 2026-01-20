@@ -93,9 +93,22 @@ const Navbar = () => {
                 </>
               )}
 
-              <span className="navbar-link">
-                Hi, {user.firstName}
-              </span>
+              <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {user.profileImage ? (
+                  <img
+                    src={user.profileImage}
+                    alt="Profile"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid #10b981'
+                    }}
+                  />
+                ) : null}
+                {user.firstName}
+              </Link>
 
               <button onClick={handleLogout} className="btn btn-secondary">
                 Logout

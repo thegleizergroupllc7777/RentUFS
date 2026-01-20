@@ -126,7 +126,7 @@ router.get('/host-bookings', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({ host: req.user._id })
       .populate('vehicle')
-      .populate('driver', 'firstName lastName email phone')
+      .populate('driver', 'firstName lastName email phone profileImage')
       .sort({ createdAt: -1 });
 
     res.json(bookings);

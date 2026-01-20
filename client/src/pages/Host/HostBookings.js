@@ -268,7 +268,7 @@ const HostBookings = () => {
                       borderRadius: '0.5rem',
                       overflow: 'hidden',
                       flexShrink: 0,
-                      marginRight: '1rem',
+                      marginRight: '0.5rem',
                       backgroundColor: '#f3f4f6'
                     }}>
                       {booking.vehicle?.images?.[0] ? (
@@ -292,6 +292,42 @@ const HostBookings = () => {
                           fontSize: '0.875rem'
                         }}>
                           No Image
+                        </div>
+                      )}
+                    </div>
+                    {/* Driver photo */}
+                    <div style={{
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '0.5rem',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      marginRight: '1rem',
+                      backgroundColor: '#f3f4f6',
+                      border: '2px solid #10b981'
+                    }}>
+                      {booking.driver?.profileImage ? (
+                        <img
+                          src={booking.driver.profileImage}
+                          alt={`${booking.driver.firstName} ${booking.driver.lastName}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#9ca3af',
+                          fontSize: '2rem',
+                          background: '#e5e7eb'
+                        }}>
+                          {booking.driver?.firstName?.[0]?.toUpperCase() || '?'}
                         </div>
                       )}
                     </div>
