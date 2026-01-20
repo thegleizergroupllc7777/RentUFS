@@ -379,33 +379,72 @@ const MyBookings = () => {
                 <div className="bookings-list">
                   {activeBookings.map(booking => (
                     <div key={booking._id} className="booking-card">
-                      <div className="booking-header">
-                        <div>
-                          <div style={{
-                            display: 'inline-block',
-                            background: '#f3f4f6',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                            color: '#6b7280',
-                            marginBottom: '0.5rem',
-                            fontFamily: 'monospace'
-                          }}>
-                            {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
-                          </div>
-                          <h3 className="booking-vehicle">
-                            {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
-                          </h3>
-                          <p className="text-gray">
-                            Host: {booking.host?.firstName} {booking.host?.lastName}
-                          </p>
+                      <div style={{ display: 'flex', gap: '1.5rem' }}>
+                        {/* Vehicle Image */}
+                        <div style={{
+                          width: '140px',
+                          height: '100px',
+                          flexShrink: 0,
+                          borderRadius: '0.5rem',
+                          overflow: 'hidden',
+                          background: '#f3f4f6'
+                        }}>
+                          {booking.vehicle?.images && booking.vehicle.images.length > 0 ? (
+                            <img
+                              src={booking.vehicle.images[0]}
+                              alt={`${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#9ca3af',
+                              fontSize: '2rem'
+                            }}>
+                              🚗
+                            </div>
+                          )}
                         </div>
-                        <div
-                          className="booking-status"
-                          style={{ backgroundColor: getStatusColor(booking.status) }}
-                        >
-                          {booking.status}
+
+                        {/* Booking Info */}
+                        <div style={{ flex: 1 }}>
+                          <div className="booking-header">
+                            <div>
+                              <div style={{
+                                display: 'inline-block',
+                                background: '#f3f4f6',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.25rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                color: '#6b7280',
+                                marginBottom: '0.5rem',
+                                fontFamily: 'monospace'
+                              }}>
+                                {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                              </div>
+                              <h3 className="booking-vehicle">
+                                {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                              </h3>
+                              <p className="text-gray">
+                                Host: {booking.host?.firstName} {booking.host?.lastName}
+                              </p>
+                            </div>
+                            <div
+                              className="booking-status"
+                              style={{ backgroundColor: getStatusColor(booking.status) }}
+                            >
+                              {booking.status}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
