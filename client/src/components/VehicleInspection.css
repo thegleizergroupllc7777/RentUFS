@@ -1,0 +1,318 @@
+.inspection-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.inspection-modal {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.inspection-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.inspection-header h2 {
+  font-size: 1.5rem;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.inspection-subtitle {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.inspection-vehicle-info {
+  background: #f3f4f6;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #374151;
+}
+
+/* Progress indicator */
+.inspection-progress {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  flex: 1;
+}
+
+.progress-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+}
+
+.progress-step.active .progress-dot {
+  background: #3b82f6;
+  color: white;
+}
+
+.progress-step.completed .progress-dot {
+  background: #10b981;
+  color: white;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.progress-step.active .progress-label {
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.progress-step.completed .progress-label {
+  color: #10b981;
+}
+
+/* Capture area */
+.inspection-capture {
+  margin-bottom: 1.5rem;
+}
+
+.capture-instruction {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.capture-instruction h3 {
+  font-size: 1.125rem;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.capture-instruction p {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.capture-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 1rem;
+}
+
+.capture-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem 3rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  cursor: pointer;
+  font-size: 1.125rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.capture-button:hover:not(:disabled) {
+  background: #059669;
+  transform: scale(1.02);
+}
+
+.capture-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.capture-button .camera-icon {
+  font-size: 2.5rem;
+}
+
+.capture-button .uploading {
+  padding: 1rem;
+}
+
+/* Photo preview */
+.photo-preview {
+  text-align: center;
+}
+
+.photo-preview img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.retake-btn {
+  margin: 0 auto;
+}
+
+/* Thumbnails */
+.inspection-thumbnails {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.thumbnail {
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.thumbnail:hover {
+  border-color: #3b82f6;
+}
+
+.thumbnail.active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+.thumbnail.has-photo {
+  border-color: #10b981;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+}
+
+.thumbnail-placeholder .camera-icon {
+  font-size: 1.5rem;
+  opacity: 0.5;
+}
+
+.thumbnail-label {
+  display: block;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Notes section */
+.inspection-notes {
+  margin-bottom: 1.5rem;
+}
+
+.inspection-notes label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.inspection-notes textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.inspection-notes textarea:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Error message */
+.inspection-error {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* Actions */
+.inspection-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.inspection-actions button {
+  flex: 1;
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .inspection-modal {
+    padding: 1rem;
+    border-radius: 0.75rem;
+  }
+
+  .inspection-thumbnails {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .progress-label {
+    display: none;
+  }
+
+  .capture-button {
+    padding: 1.5rem 2rem;
+  }
+}
