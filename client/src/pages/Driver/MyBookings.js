@@ -289,6 +289,40 @@ const MyBookings = () => {
     return ['active', 'confirmed'].includes(booking.status) && booking.paymentStatus === 'paid';
   };
 
+  // Check if a booking is overdue (past return date/time)
+  const isOverdue = (booking) => {
+    if (!['active', 'confirmed'].includes(booking.status)) return false;
+
+    const now = new Date();
+    const endDate = new Date(booking.endDate);
+
+    // Parse dropoff time (default to 10:00 if not set)
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endDate.setHours(hours, minutes, 0, 0);
+
+    return now > endDate;
+  };
+
+  // Calculate how overdue a booking is
+  const getOverdueInfo = (booking) => {
+    const now = new Date();
+    const endDate = new Date(booking.endDate);
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endDate.setHours(hours, minutes, 0, 0);
+
+    const diffMs = now - endDate;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays >= 1) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} overdue`;
+    } else {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} overdue`;
+    }
+  };
+
   if (loading) {
     return (
       <div>
@@ -378,7 +412,33 @@ const MyBookings = () => {
               ) : (
                 <div className="bookings-list">
                   {activeBookings.map(booking => (
-                    <div key={booking._id} className="booking-card">
+                    <div
+                      key={booking._id}
+                      className="booking-card"
+                      style={isOverdue(booking) ? {
+                        border: '3px solid #ef4444',
+                        boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)'
+                      } : {}}
+                    >
+                      {/* Overdue Warning Banner */}
+                      {isOverdue(booking) && (
+                        <div style={{
+                          background: 'linear-gradient(90deg, #ef4444, #dc2626)',
+                          color: 'white',
+                          padding: '0.75rem 1rem',
+                          marginBottom: '1rem',
+                          borderRadius: '0.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          fontWeight: '600'
+                        }}>
+                          <span>
+                            {getOverdueInfo(booking)} - Please extend or return immediately!
+                          </span>
+                          <span style={{ fontSize: '1.25rem' }}>!</span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', gap: '1.5rem' }}>
                         {/* Vehicle Image */}
                         <div style={{
@@ -451,11 +511,11 @@ const MyBookings = () => {
                       <div className="booking-details">
                         <div className="booking-detail-item">
                           <strong>Pickup:</strong>{' '}
-                          {new Date(booking.startDate).toLocaleDateString()}
+                          {new Date(booking.startDate).toLocaleDateString()} at {booking.pickupTime || '10:00 AM'}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Return:</strong>{' '}
-                          {new Date(booking.endDate).toLocaleDateString()}
+                          {new Date(booking.endDate).toLocaleDateString()} by {booking.dropoffTime || '10:00 AM'}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Duration:</strong> {booking.totalDays} days
