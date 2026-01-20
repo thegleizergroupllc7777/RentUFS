@@ -47,7 +47,19 @@ const vehicleSchema = new mongoose.Schema({
     city: String,
     state: String,
     zipCode: String,
-    coordinates: [Number] // [longitude, latitude] - GeoJSON format
+    coordinates: [Number] // [longitude, latitude] - for legacy support
+  },
+  // GeoJSON location for geospatial queries
+  geoLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: undefined
+    }
   },
   pricePerDay: {
     type: Number,
@@ -90,5 +102,8 @@ const vehicleSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Add 2dsphere index for geospatial queries
+vehicleSchema.index({ geoLocation: '2dsphere' });
 
 module.exports = mongoose.model('Vehicle', vehicleSchema);

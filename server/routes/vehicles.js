@@ -29,23 +29,89 @@ router.get('/geocode', async (req, res) => {
 // Get all vehicles (with filters)
 router.get('/', async (req, res) => {
   try {
-    const { location, startDate, endDate } = req.query;
-    let query = { availability: true };
+    const { location, radius, startDate, endDate } = req.query;
+    let vehicles;
 
-    // Handle location search (city or zip code)
-    if (location) {
-      // Check if it looks like a zip code (5 digits)
+    // If location and radius are provided, use geospatial query
+    if (location && radius) {
+      // First geocode the search location
+      const searchCoords = await geocodeAddress(location + ', USA');
+
+      if (searchCoords) {
+        // Convert radius from miles to meters (1 mile = 1609.34 meters)
+        const radiusInMeters = parseFloat(radius) * 1609.34;
+
+        // Use aggregation with $geoNear for radius search
+        vehicles = await Vehicle.aggregate([
+          {
+            $geoNear: {
+              near: {
+                type: 'Point',
+                coordinates: [searchCoords.lng, searchCoords.lat]
+              },
+              distanceField: 'distance',
+              maxDistance: radiusInMeters,
+              spherical: true,
+              query: { availability: true }
+            }
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'host',
+              foreignField: '_id',
+              as: 'host'
+            }
+          },
+          {
+            $unwind: '$host'
+          },
+          {
+            $project: {
+              'host.password': 0,
+              'host.resetPasswordToken': 0,
+              'host.resetPasswordExpires': 0
+            }
+          },
+          {
+            $sort: { distance: 1 }
+          }
+        ]);
+
+        // Convert distance from meters to miles for display
+        vehicles = vehicles.map(v => ({
+          ...v,
+          distanceMiles: (v.distance / 1609.34).toFixed(1)
+        }));
+      } else {
+        // Geocoding failed, fall back to text search
+        let query = { availability: true };
+        if (/^\d{5}$/.test(location.trim())) {
+          query['location.zipCode'] = location.trim();
+        } else {
+          query['location.city'] = new RegExp(location, 'i');
+        }
+        vehicles = await Vehicle.find(query)
+          .populate('host', 'firstName lastName rating reviewCount')
+          .sort({ createdAt: -1 });
+      }
+    } else if (location) {
+      // Location without radius - use text search
+      let query = { availability: true };
       if (/^\d{5}$/.test(location.trim())) {
         query['location.zipCode'] = location.trim();
       } else {
-        // Search by city name (case insensitive)
         query['location.city'] = new RegExp(location, 'i');
       }
+      vehicles = await Vehicle.find(query)
+        .populate('host', 'firstName lastName rating reviewCount')
+        .sort({ createdAt: -1 });
+    } else {
+      // No location filter - return all available vehicles
+      vehicles = await Vehicle.find({ availability: true })
+        .populate('host', 'firstName lastName rating reviewCount')
+        .sort({ createdAt: -1 });
     }
-
-    let vehicles = await Vehicle.find(query)
-      .populate('host', 'firstName lastName rating reviewCount')
-      .sort({ createdAt: -1 });
 
     // Filter by date availability if dates are provided
     if (startDate && endDate) {
@@ -119,7 +185,12 @@ router.post('/', auth, async (req, res) => {
       const addressString = buildAddressString(vehicleData.location);
       const coords = await geocodeAddress(addressString);
       if (coords) {
-        vehicleData.location.coordinates = [coords.lng, coords.lat]; // GeoJSON format: [lng, lat]
+        vehicleData.location.coordinates = [coords.lng, coords.lat]; // Legacy format
+        // Set GeoJSON format for geospatial queries
+        vehicleData.geoLocation = {
+          type: 'Point',
+          coordinates: [coords.lng, coords.lat]
+        };
       }
     }
 
@@ -174,6 +245,11 @@ router.put('/:id', auth, async (req, res) => {
         const coords = await geocodeAddress(addressString);
         if (coords) {
           req.body.location.coordinates = [coords.lng, coords.lat];
+          // Set GeoJSON format for geospatial queries
+          req.body.geoLocation = {
+            type: 'Point',
+            coordinates: [coords.lng, coords.lat]
+          };
         }
       }
     }
@@ -190,12 +266,12 @@ router.put('/:id', auth, async (req, res) => {
 // Geocode all existing vehicles (migration endpoint)
 router.post('/geocode-all', async (req, res) => {
   try {
-    // Find all vehicles that don't have coordinates
+    // Find all vehicles that don't have geoLocation coordinates
     const vehicles = await Vehicle.find({
       $or: [
-        { 'location.coordinates': { $exists: false } },
-        { 'location.coordinates': null },
-        { 'location.coordinates': [] }
+        { 'geoLocation.coordinates': { $exists: false } },
+        { 'geoLocation.coordinates': null },
+        { 'geoLocation': { $exists: false } }
       ]
     });
 
@@ -209,6 +285,10 @@ router.post('/geocode-all', async (req, res) => {
 
         if (coords) {
           vehicle.location.coordinates = [coords.lng, coords.lat];
+          vehicle.geoLocation = {
+            type: 'Point',
+            coordinates: [coords.lng, coords.lat]
+          };
           await vehicle.save();
           updated++;
         } else {
