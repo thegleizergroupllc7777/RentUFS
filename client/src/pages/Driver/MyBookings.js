@@ -99,6 +99,7 @@ const MyBookings = () => {
   const [extensionLoading, setExtensionLoading] = useState(false);
   const [extensionError, setExtensionError] = useState('');
   const [extensionDetails, setExtensionDetails] = useState(null);
+  const [inspectionModal, setInspectionModal] = useState({ open: false, booking: null, type: null });
 
   useEffect(() => {
     fetchBookings();
@@ -192,6 +193,37 @@ const MyBookings = () => {
     alert(data.message);
     closeExtendModal();
     fetchBookings();
+  };
+
+  const openInspectionModal = (booking, type) => {
+    setInspectionModal({ open: true, booking, type });
+  };
+
+  const closeInspectionModal = () => {
+    setInspectionModal({ open: false, booking: null, type: null });
+  };
+
+  const handleInspectionComplete = (data) => {
+    alert(data.message);
+    closeInspectionModal();
+    fetchBookings();
+  };
+
+  const canStartReservation = (booking) => {
+    // Can start if: confirmed, paid, pickup inspection not done, and within rental period
+    const now = new Date();
+    const startDate = new Date(booking.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    return booking.status === 'confirmed' &&
+           booking.paymentStatus === 'paid' &&
+           !booking.pickupInspection?.completed &&
+           startDate <= now;
+  };
+
+  const canReturnVehicle = (booking) => {
+    // Can return if: active and pickup inspection was done
+    return booking.status === 'active' && booking.pickupInspection?.completed;
   };
 
   const getStatusColor = (status) => {
@@ -408,6 +440,26 @@ const MyBookings = () => {
                           <button className="btn btn-secondary">View Vehicle</button>
                         </Link>
 
+                        {canStartReservation(booking) && (
+                          <button
+                            onClick={() => openInspectionModal(booking, 'pickup')}
+                            className="btn btn-primary"
+                            style={{ background: '#10b981' }}
+                          >
+                            Start Reservation
+                          </button>
+                        )}
+
+                        {canReturnVehicle(booking) && (
+                          <button
+                            onClick={() => openInspectionModal(booking, 'return')}
+                            className="btn btn-primary"
+                            style={{ background: '#f59e0b' }}
+                          >
+                            Return Vehicle
+                          </button>
+                        )}
+
                         {canExtend(booking) && (
                           <button
                             onClick={() => openExtendModal(booking)}
@@ -576,6 +628,16 @@ const MyBookings = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Vehicle Inspection Modal */}
+      {inspectionModal.open && inspectionModal.booking && (
+        <VehicleInspection
+          booking={inspectionModal.booking}
+          type={inspectionModal.type}
+          onComplete={handleInspectionComplete}
+          onCancel={closeInspectionModal}
+        />
       )}
     </div>
   );

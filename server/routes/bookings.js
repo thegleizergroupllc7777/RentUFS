@@ -296,6 +296,130 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
   }
 });
 
+// Start reservation with pickup inspection photos
+router.post('/:id/start-inspection', auth, async (req, res) => {
+  try {
+    const { photos, notes } = req.body;
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('host', 'firstName lastName email');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only driver can start the inspection
+    if (booking.driver.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the driver can start this reservation' });
+    }
+
+    // Check booking status - must be confirmed and paid
+    if (booking.status !== 'confirmed') {
+      return res.status(400).json({ message: 'Booking must be confirmed before starting' });
+    }
+
+    if (booking.paymentStatus !== 'paid') {
+      return res.status(400).json({ message: 'Payment must be completed before starting' });
+    }
+
+    // Validate all 4 photos are provided
+    if (!photos || !photos.frontView || !photos.backView || !photos.leftSide || !photos.rightSide) {
+      return res.status(400).json({
+        message: 'All 4 inspection photos are required (front, back, left side, right side)'
+      });
+    }
+
+    // Update booking with inspection photos and change status to active
+    booking.pickupInspection = {
+      completed: true,
+      completedAt: new Date(),
+      photos: {
+        frontView: photos.frontView,
+        backView: photos.backView,
+        leftSide: photos.leftSide,
+        rightSide: photos.rightSide
+      },
+      notes: notes || ''
+    };
+    booking.status = 'active';
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Reservation started successfully! Drive safely!',
+      booking: {
+        _id: booking._id,
+        status: booking.status,
+        pickupInspection: booking.pickupInspection
+      }
+    });
+  } catch (error) {
+    console.error('Start inspection error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Complete reservation with return inspection photos
+router.post('/:id/return-inspection', auth, async (req, res) => {
+  try {
+    const { photos, notes } = req.body;
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('host', 'firstName lastName email');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only driver can complete the return inspection
+    if (booking.driver.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the driver can return this vehicle' });
+    }
+
+    // Check booking status - must be active
+    if (booking.status !== 'active') {
+      return res.status(400).json({ message: 'Booking must be active to complete return' });
+    }
+
+    // Validate all 4 photos are provided
+    if (!photos || !photos.frontView || !photos.backView || !photos.leftSide || !photos.rightSide) {
+      return res.status(400).json({
+        message: 'All 4 return inspection photos are required (front, back, left side, right side)'
+      });
+    }
+
+    // Update booking with return inspection photos and change status to completed
+    booking.returnInspection = {
+      completed: true,
+      completedAt: new Date(),
+      photos: {
+        frontView: photos.frontView,
+        backView: photos.backView,
+        leftSide: photos.leftSide,
+        rightSide: photos.rightSide
+      },
+      notes: notes || ''
+    };
+    booking.status = 'completed';
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Vehicle returned successfully! Thank you for renting with us!',
+      booking: {
+        _id: booking._id,
+        status: booking.status,
+        returnInspection: booking.returnInspection
+      }
+    });
+  } catch (error) {
+    console.error('Return inspection error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update booking status
 router.patch('/:id/status', auth, async (req, res) => {
   try {
