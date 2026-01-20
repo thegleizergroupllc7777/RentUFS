@@ -381,6 +381,19 @@ const MyBookings = () => {
                     <div key={booking._id} className="booking-card">
                       <div className="booking-header">
                         <div>
+                          <div style={{
+                            display: 'inline-block',
+                            background: '#f3f4f6',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            color: '#6b7280',
+                            marginBottom: '0.5rem',
+                            fontFamily: 'monospace'
+                          }}>
+                            {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                          </div>
                           <h3 className="booking-vehicle">
                             {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
                           </h3>
