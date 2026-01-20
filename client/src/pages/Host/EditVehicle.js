@@ -15,6 +15,7 @@ const EditVehicle = () => {
     make: '',
     model: '',
     year: '',
+    vin: '',
     type: 'sedan',
     transmission: 'automatic',
     seats: 5,
@@ -52,6 +53,7 @@ const EditVehicle = () => {
         make: vehicle.make,
         model: vehicle.model,
         year: vehicle.year,
+        vin: vehicle.vin || '',
         type: vehicle.type,
         transmission: vehicle.transmission,
         seats: vehicle.seats,
@@ -273,6 +275,25 @@ const EditVehicle = () => {
                     />
                   </div>
 
+                  <div className="form-group">
+                    <label className="form-label">VIN (Vehicle Identification Number)</label>
+                    <input
+                      type="text"
+                      name="vin"
+                      className="form-input"
+                      value={formData.vin}
+                      onChange={handleChange}
+                      placeholder="17 characters"
+                      maxLength="17"
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Optional - Found on dashboard or driver's door jamb
+                    </p>
+                  </div>
+                </div>
+
+                <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Vehicle Type *</label>
                     <select
