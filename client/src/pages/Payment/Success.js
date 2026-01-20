@@ -89,6 +89,12 @@ const PaymentSuccess = () => {
             <div className="booking-details">
               <h3>Booking Details</h3>
               <div className="detail-item">
+                <span className="label">Reservation ID:</span>
+                <span className="value" style={{ fontFamily: 'monospace', fontWeight: '600', color: '#10b981' }}>
+                  {booking.reservationId || `#${booking._id?.slice(-8).toUpperCase()}`}
+                </span>
+              </div>
+              <div className="detail-item">
                 <span className="label">Vehicle:</span>
                 <span className="value">
                   {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
