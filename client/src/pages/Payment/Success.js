@@ -88,6 +88,34 @@ const PaymentSuccess = () => {
 
             <div className="booking-details">
               <h3>Booking Details</h3>
+
+              {/* Vehicle Image */}
+              {booking.vehicle?.images?.[0] && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div style={{
+                    width: '200px',
+                    height: '140px',
+                    borderRadius: '0.75rem',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <img
+                      src={booking.vehicle.images[0]}
+                      alt={`${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="detail-item">
                 <span className="label">Reservation ID:</span>
                 <span className="value" style={{ fontFamily: 'monospace', fontWeight: '600', color: '#10b981' }}>
