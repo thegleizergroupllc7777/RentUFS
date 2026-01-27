@@ -1,3 +1,18 @@
+/* Host Page - Light Theme with Black/Green accents */
+.host-page {
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.host-page .page-title {
+  color: #1f2937;
+}
+
+.host-page .container {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
 .host-header {
   display: flex;
   justify-content: space-between;
@@ -20,24 +35,25 @@
 }
 
 .host-vehicle-card {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  transition: box-shadow 0.2s;
-  border: 1px solid #333333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
 }
 
 .host-vehicle-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 255, 102, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border-color: #00FF66;
+  transform: translateY(-2px);
 }
 
 .host-vehicle-image {
   position: relative;
   width: 100%;
   height: 200px;
-  background: #2a2a2a;
+  background: #e5e7eb;
   overflow: hidden;
 }
 
@@ -55,11 +71,11 @@
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #000000;
 }
 
 .availability-badge.available {
   background: #00FF66;
+  color: #000000;
 }
 
 .availability-badge.unavailable {
@@ -75,7 +91,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  color: #ffffff;
+  color: #1f2937;
 }
 
 .host-vehicle-stats {
@@ -84,7 +100,7 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: #2a2a2a;
+  background: #f9fafb;
   border-radius: 8px;
 }
 
@@ -96,13 +112,13 @@
 
 .stat-label {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .stat-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #ffffff;
+  color: #1f2937;
 }
 
 .host-vehicle-actions {
@@ -113,7 +129,7 @@
 
 .btn-action {
   padding: 0.5rem 1rem;
-  background: #2a2a2a;
+  background: #000000;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -129,7 +145,9 @@
 }
 
 .btn-action-danger {
+  background: transparent;
   color: #ef4444;
+  border: 1px solid #ef4444;
 }
 
 .btn-action-danger:hover {
@@ -144,11 +162,29 @@
 }
 
 .vehicle-form {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  border: 1px solid #333333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.vehicle-form .form-label {
+  color: #374151;
+}
+
+.vehicle-form .form-input,
+.vehicle-form .form-select,
+.vehicle-form .form-textarea {
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
+  color: #1f2937;
+}
+
+.vehicle-form .form-input:focus,
+.vehicle-form .form-select:focus,
+.vehicle-form .form-textarea:focus {
+  border-color: #00FF66;
 }
 
 .form-section {
@@ -163,7 +199,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
-  color: #ffffff;
+  color: #1f2937;
   padding-bottom: 0.75rem;
   border-bottom: 2px solid #00FF66;
 }
@@ -180,7 +216,7 @@
   justify-content: flex-end;
   margin-top: 2rem;
   padding-top: 2rem;
-  border-top: 1px solid #333333;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* Host Booking Styles */
@@ -190,12 +226,12 @@
 
 /* Reports Page Styles */
 .reports-filter-section {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  border: 1px solid #333333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
 }
 
 .period-buttons {
@@ -206,8 +242,8 @@
 
 .period-btn {
   padding: 0.75rem 1.25rem;
-  background: #2a2a2a;
-  color: #ffffff;
+  background: #f3f4f6;
+  color: #374151;
   border: none;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -217,7 +253,7 @@
 }
 
 .period-btn:hover {
-  background: #333333;
+  background: #e5e7eb;
 }
 
 .period-btn.active {
@@ -231,7 +267,7 @@
   gap: 1rem;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #333333;
+  border-top: 1px solid #e5e7eb;
   align-items: flex-end;
 }
 
@@ -244,7 +280,7 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #ffffff;
+  color: #374151;
 }
 
 .reports-summary-grid {
@@ -255,14 +291,14 @@
 }
 
 .summary-card {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  border: 1px solid #333333;
+  border: 1px solid #e5e7eb;
 }
 
 .summary-icon {
@@ -299,14 +335,14 @@
 
 .summary-content h3 {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: #6b7280;
   margin-bottom: 0.25rem;
 }
 
 .summary-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #1f2937;
   margin-bottom: 0.25rem;
 }
 
@@ -316,23 +352,23 @@
 
 .summary-sub {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .reports-section {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  border: 1px solid #333333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
 }
 
 .section-title {
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
-  color: #ffffff;
+  color: #1f2937;
 }
 
 /* Revenue Chart */
@@ -375,8 +411,8 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background: #00FF66;
-  color: #000000;
+  background: #000000;
+  color: #00FF66;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -390,7 +426,7 @@
 
 .chart-label {
   font-size: 0.625rem;
-  color: #9ca3af;
+  color: #6b7280;
   margin-top: 4px;
 }
 
@@ -402,15 +438,15 @@
 }
 
 .vehicle-stat-card {
-  background: #2a2a2a;
+  background: #f9fafb;
   border-radius: 12px;
   padding: 1.25rem;
   transition: box-shadow 0.2s;
-  border: 1px solid #333333;
+  border: 1px solid #e5e7eb;
 }
 
 .vehicle-stat-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 255, 102, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-color: #00FF66;
 }
 
@@ -431,24 +467,24 @@
   width: 80px;
   height: 60px;
   border-radius: 8px;
-  background: #333333;
+  background: #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .vehicle-stat-info h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #ffffff;
+  color: #1f2937;
   margin-bottom: 0.25rem;
 }
 
 .vehicle-stat-info p {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .vehicle-stat-metrics {
@@ -464,14 +500,14 @@
 
 .metric-label {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #6b7280;
   margin-bottom: 0.25rem;
 }
 
 .metric-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #ffffff;
+  color: #1f2937;
 }
 
 .metric-value.pending {
@@ -493,23 +529,23 @@
 .recent-bookings-table td {
   padding: 1rem;
   text-align: left;
-  border-bottom: 1px solid #333333;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .recent-bookings-table th {
   font-weight: 600;
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 0.875rem;
-  background: #2a2a2a;
+  background: #f9fafb;
 }
 
 .recent-bookings-table td {
   font-size: 0.875rem;
-  color: #ffffff;
+  color: #374151;
 }
 
 .recent-bookings-table tr:hover {
-  background: #2a2a2a;
+  background: #f9fafb;
 }
 
 .status-badge {
@@ -531,6 +567,21 @@
 .payment-paid { background: #d1fae5; color: #065f46; }
 .payment-failed { background: #fee2e2; color: #991b1b; }
 .payment-refunded { background: #e5e7eb; color: #374151; }
+
+/* Empty State for Host pages */
+.host-page .empty-state {
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+}
+
+.host-page .empty-state h2 {
+  color: #1f2937;
+}
+
+.host-page .empty-state p {
+  color: #6b7280;
+}
 
 .loading-spinner {
   display: flex;
