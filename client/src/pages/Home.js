@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import './Home.css';
 
 const Home = () => {
@@ -15,7 +16,7 @@ const Home = () => {
               Rent the Perfect Car for Every Journey
             </h1>
             <p className="hero-subtitle">
-              Join thousands of drivers and hosts on <span style={{color: '#10b981', fontWeight: 'bold'}}>RentUFS</span>, the trusted peer-to-peer car rental marketplace.
+              Join thousands of drivers and hosts on <span style={{color: '#00FF66', fontWeight: 'bold'}}>UFS</span>, the trusted peer-to-peer car rental marketplace.
             </p>
             <div className="hero-buttons">
               <Link to="/marketplace">
@@ -72,16 +73,18 @@ const Home = () => {
           <h2 className="text-3xl font-bold mb-2">
             Ready to Get Started?
           </h2>
-          <p className="text-lg text-gray mb-3">
+          <p className="text-lg mb-3" style={{ color: '#000000' }}>
             Join our community today as a driver or host
           </p>
           <Link to="/register">
-            <button className="btn btn-primary btn-lg">
+            <button className="btn btn-primary btn-lg" style={{ background: '#000000', color: '#00FF66' }}>
               Sign Up Now
             </button>
           </Link>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };
