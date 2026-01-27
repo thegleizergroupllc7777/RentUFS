@@ -20,22 +20,24 @@
 }
 
 .host-vehicle-card {
-  background: white;
+  background: #1a1a1a;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   transition: box-shadow 0.2s;
+  border: 1px solid #333333;
 }
 
 .host-vehicle-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 255, 102, 0.2);
+  border-color: #00FF66;
 }
 
 .host-vehicle-image {
   position: relative;
   width: 100%;
   height: 200px;
-  background: #e5e7eb;
+  background: #2a2a2a;
   overflow: hidden;
 }
 
@@ -53,15 +55,16 @@
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: white;
+  color: #000000;
 }
 
 .availability-badge.available {
-  background: #10b981;
+  background: #00FF66;
 }
 
 .availability-badge.unavailable {
   background: #ef4444;
+  color: white;
 }
 
 .host-vehicle-info {
@@ -72,7 +75,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  color: #1f2937;
+  color: #ffffff;
 }
 
 .host-vehicle-stats {
@@ -81,7 +84,7 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: #f9fafb;
+  background: #2a2a2a;
   border-radius: 8px;
 }
 
@@ -93,13 +96,13 @@
 
 .stat-label {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .stat-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #ffffff;
 }
 
 .host-vehicle-actions {
@@ -110,26 +113,28 @@
 
 .btn-action {
   padding: 0.5rem 1rem;
-  background: #f3f4f6;
-  color: #374151;
+  background: #2a2a2a;
+  color: #ffffff;
   border: none;
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-action:hover {
-  background: #e5e7eb;
+  background: #00FF66;
+  color: #000000;
 }
 
 .btn-action-danger {
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .btn-action-danger:hover {
-  background: #fee2e2;
+  background: #ef4444;
+  color: white;
 }
 
 /* Vehicle Form Styles */
@@ -139,10 +144,11 @@
 }
 
 .vehicle-form {
-  background: white;
+  background: #1a1a1a;
   border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  border: 1px solid #333333;
 }
 
 .form-section {
@@ -157,9 +163,9 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
-  color: #1f2937;
+  color: #ffffff;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #00FF66;
 }
 
 .form-row {
@@ -174,21 +180,22 @@
   justify-content: flex-end;
   margin-top: 2rem;
   padding-top: 2rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #333333;
 }
 
 /* Host Booking Styles */
 .host-booking-card {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid #00FF66;
 }
 
 /* Reports Page Styles */
 .reports-filter-section {
-  background: white;
+  background: #1a1a1a;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  border: 1px solid #333333;
 }
 
 .period-buttons {
@@ -199,8 +206,8 @@
 
 .period-btn {
   padding: 0.75rem 1.25rem;
-  background: #f3f4f6;
-  color: #374151;
+  background: #2a2a2a;
+  color: #ffffff;
   border: none;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -210,12 +217,12 @@
 }
 
 .period-btn:hover {
-  background: #e5e7eb;
+  background: #333333;
 }
 
 .period-btn.active {
-  background: #10b981;
-  color: white;
+  background: #00FF66;
+  color: #000000;
 }
 
 .custom-range-form {
@@ -224,7 +231,7 @@
   gap: 1rem;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #333333;
   align-items: flex-end;
 }
 
@@ -237,7 +244,7 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #374151;
+  color: #ffffff;
 }
 
 .reports-summary-grid {
@@ -248,13 +255,14 @@
 }
 
 .summary-card {
-  background: white;
+  background: #1a1a1a;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+  border: 1px solid #333333;
 }
 
 .summary-icon {
@@ -266,36 +274,39 @@
   justify-content: center;
   font-size: 1.25rem;
   font-weight: 700;
-  color: white;
+  color: #000000;
   flex-shrink: 0;
 }
 
 .revenue-icon {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, #00FF66, #00CC52);
 }
 
 .pending-icon {
   background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
 }
 
 .bookings-icon {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
 }
 
 .days-icon {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
 }
 
 .summary-content h3 {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #9ca3af;
   margin-bottom: 0.25rem;
 }
 
 .summary-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1f2937;
+  color: #ffffff;
   margin-bottom: 0.25rem;
 }
 
@@ -305,22 +316,23 @@
 
 .summary-sub {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .reports-section {
-  background: white;
+  background: #1a1a1a;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  border: 1px solid #333333;
 }
 
 .section-title {
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
-  color: #1f2937;
+  color: #ffffff;
 }
 
 /* Revenue Chart */
@@ -346,7 +358,7 @@
 
 .chart-bar {
   width: 100%;
-  background: linear-gradient(180deg, #10b981, #059669);
+  background: linear-gradient(180deg, #00FF66, #00CC52);
   border-radius: 4px 4px 0 0;
   min-height: 2px;
   position: relative;
@@ -354,7 +366,7 @@
 }
 
 .chart-bar:hover {
-  background: linear-gradient(180deg, #059669, #047857);
+  background: linear-gradient(180deg, #00CC52, #00AA44);
 }
 
 .bar-tooltip {
@@ -363,8 +375,8 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background: #1f2937;
-  color: white;
+  background: #00FF66;
+  color: #000000;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -390,14 +402,16 @@
 }
 
 .vehicle-stat-card {
-  background: #f9fafb;
+  background: #2a2a2a;
   border-radius: 12px;
   padding: 1.25rem;
   transition: box-shadow 0.2s;
+  border: 1px solid #333333;
 }
 
 .vehicle-stat-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 255, 102, 0.2);
+  border-color: #00FF66;
 }
 
 .vehicle-stat-header {
@@ -417,24 +431,24 @@
   width: 80px;
   height: 60px;
   border-radius: 8px;
-  background: #e5e7eb;
+  background: #333333;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .vehicle-stat-info h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #ffffff;
   margin-bottom: 0.25rem;
 }
 
 .vehicle-stat-info p {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .vehicle-stat-metrics {
@@ -450,14 +464,14 @@
 
 .metric-label {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #9ca3af;
   margin-bottom: 0.25rem;
 }
 
 .metric-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #ffffff;
 }
 
 .metric-value.pending {
@@ -479,23 +493,23 @@
 .recent-bookings-table td {
   padding: 1rem;
   text-align: left;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #333333;
 }
 
 .recent-bookings-table th {
   font-weight: 600;
-  color: #6b7280;
+  color: #9ca3af;
   font-size: 0.875rem;
-  background: #f9fafb;
+  background: #2a2a2a;
 }
 
 .recent-bookings-table td {
   font-size: 0.875rem;
-  color: #374151;
+  color: #ffffff;
 }
 
 .recent-bookings-table tr:hover {
-  background: #f9fafb;
+  background: #2a2a2a;
 }
 
 .status-badge {

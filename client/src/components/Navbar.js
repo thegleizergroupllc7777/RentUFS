@@ -88,7 +88,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="container navbar-content">
         <Link to="/" className="navbar-logo">
-          🏎️ RentUFS
+          UFS
         </Link>
 
         <div className="navbar-links">
@@ -149,7 +149,7 @@ const Navbar = () => {
                       height: '32px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '2px solid #10b981'
+                      border: '2px solid #00FF66'
                     }}
                   />
                 ) : null}

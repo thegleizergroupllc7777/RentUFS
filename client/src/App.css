@@ -15,8 +15,8 @@
 
 /* Navbar Styles */
 .navbar {
-  background: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: #000000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   padding: 1rem 0;
   position: sticky;
   top: 0;
@@ -32,21 +32,16 @@
 .navbar-logo {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #10b981;
-  border: 2px solid #000000;
+  color: #ffffff;
+  letter-spacing: 0.15em;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
   transition: all 0.3s;
-  font-style: italic;
-  transform: skewX(-10deg);
   display: inline-block;
+  text-transform: uppercase;
 }
 
 .navbar-logo:hover {
-  background: #10b981;
-  color: white;
-  border-color: #000000;
-  transform: skewX(-10deg) scale(1.05);
+  color: #00FF66;
 }
 
 .navbar-links {
@@ -56,13 +51,13 @@
 }
 
 .navbar-link {
-  color: #374151;
+  color: #ffffff;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .navbar-link:hover {
-  color: #10b981;
+  color: #00FF66;
 }
 
 /* Button Styles */
@@ -76,22 +71,22 @@
 }
 
 .btn-primary {
-  background: #10b981;
-  color: white;
+  background: #00FF66;
+  color: #000000;
 }
 
 .btn-primary:hover {
-  background: #059669;
+  background: #00CC52;
 }
 
 .btn-secondary {
-  background: white;
-  color: #10b981;
-  border: 2px solid #10b981;
+  background: #000000;
+  color: #00FF66;
+  border: 2px solid #00FF66;
 }
 
 .btn-secondary:hover {
-  background: #f3f4f6;
+  background: #111111;
 }
 
 .btn-danger {
@@ -104,12 +99,12 @@
 }
 
 .btn-success {
-  background: #10b981;
-  color: white;
+  background: #00FF66;
+  color: #000000;
 }
 
 .btn-success:hover {
-  background: #059669;
+  background: #00CC52;
 }
 
 /* Form Styles */
@@ -121,7 +116,7 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: #374151;
+  color: #ffffff;
 }
 
 .form-input,
@@ -129,17 +124,24 @@
 .form-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #333333;
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.2s;
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #10b981;
+  border-color: #00FF66;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #6b7280;
 }
 
 .form-textarea {
@@ -149,10 +151,11 @@
 
 /* Card Styles */
 .card {
-  background: white;
+  background: #1a1a1a;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  border: 1px solid #333333;
 }
 
 /* Grid Styles */
@@ -224,7 +227,7 @@
 .font-bold { font-weight: 700; }
 .font-semibold { font-weight: 600; }
 
-.text-gray { color: #6b7280; }
-.text-primary { color: #10b981; }
+.text-gray { color: #9ca3af; }
+.text-primary { color: #00FF66; }
 .text-danger { color: #dc2626; }
-.text-success { color: #10b981; }
+.text-success { color: #00FF66; }

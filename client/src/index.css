@@ -10,7 +10,20 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8f9fa;
+  background-color: #111111;
+  color: #ffffff;
+}
+
+:root {
+  --primary-green: #00FF66;
+  --primary-green-hover: #00CC52;
+  --black: #000000;
+  --dark-bg: #111111;
+  --dark-surface: #1a1a1a;
+  --white: #ffffff;
+  --gray-light: #f3f4f6;
+  --gray-text: #9ca3af;
+  --gray-border: #333333;
 }
 
 code {
