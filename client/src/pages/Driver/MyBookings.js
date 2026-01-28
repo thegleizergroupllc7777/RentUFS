@@ -166,7 +166,7 @@ const MyBookings = () => {
       const token = localStorage.getItem('token');
 
       // First check availability
-      const checkResponse = await axios.post(
+      await axios.post(
         `${API_URL}/api/bookings/${extendModal.booking._id}/extend`,
         { extensionDays },
         { headers: { Authorization: `Bearer ${token}` } }
