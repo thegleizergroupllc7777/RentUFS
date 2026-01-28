@@ -14,6 +14,7 @@ const VehicleDetail = () => {
   const [vehicle, setVehicle] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeBooking, setActiveBooking] = useState(null);
   const [bookingData, setBookingData] = useState({
     startDate: '',
     endDate: '',
@@ -29,7 +30,33 @@ const VehicleDetail = () => {
   useEffect(() => {
     fetchVehicle();
     fetchReviews();
-  }, [id]);
+    if (user) {
+      fetchActiveBooking();
+    }
+  }, [id, user]);
+
+  const fetchActiveBooking = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Find an active or confirmed booking for this vehicle
+      const activeOrConfirmed = response.data.find(
+        booking => booking.vehicle?._id === id &&
+        ['active', 'confirmed'].includes(booking.status)
+      );
+
+      if (activeOrConfirmed) {
+        setActiveBooking(activeOrConfirmed);
+      }
+    } catch (error) {
+      console.error('Error fetching active booking:', error);
+    }
+  };
 
   const fetchVehicle = async () => {
     try {
@@ -310,9 +337,67 @@ const VehicleDetail = () => {
 
             <aside className="booking-sidebar">
               <div className="booking-card">
-                <h3>Book this car</h3>
+                {activeBooking ? (
+                  <>
+                    <h3>Your Current Reservation</h3>
+                    <div style={{
+                      backgroundColor: '#eff6ff',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      <div style={{
+                        display: 'inline-block',
+                        background: activeBooking.status === 'active' ? '#3b82f6' : '#10b981',
+                        color: 'white',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '1rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        marginBottom: '0.75rem',
+                        textTransform: 'capitalize'
+                      }}>
+                        {activeBooking.status}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Reservation ID:</strong><br />
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                          {activeBooking.reservationId || activeBooking._id.slice(-8).toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Pickup:</strong><br />
+                        {new Date(activeBooking.startDate).toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Return:</strong><br />
+                        {new Date(activeBooking.endDate).toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Duration:</strong> {activeBooking.totalDays} day(s)
+                      </div>
+                      <div>
+                        <strong>Total Price:</strong> ${activeBooking.totalPrice}
+                      </div>
+                    </div>
 
-                {/* Show available pricing options */}
+                    <button
+                      onClick={() => navigate('/my-bookings')}
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    >
+                      Manage Reservation
+                    </button>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: 0 }}>
+                      Go to My Reservations to start, extend, or return this vehicle
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3>Book this car</h3>
+
+                    {/* Show available pricing options */}
                 <div style={{
                   backgroundColor: '#f0fdf4',
                   padding: '1rem',
@@ -503,8 +588,10 @@ const VehicleDetail = () => {
                     disabled={bookingLoading || !vehicle.availability}
                   >
                     {bookingLoading ? 'Processing...' : vehicle.availability ? 'Request to Book' : 'Not Available'}
-                  </button>
-                </form>
+                    </button>
+                  </form>
+                  </>
+                )}
               </div>
             </aside>
           </div>
