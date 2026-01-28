@@ -488,30 +488,25 @@ const HostBookings = () => {
                     )}
 
                     {booking.status === 'confirmed' && (
-                      <>
-                        <button
-                          onClick={() => handleUpdateStatus(booking._id, 'active')}
-                          className="btn btn-primary"
-                        >
-                          Mark as Active
-                        </button>
-                        <button
-                          onClick={() => handleOpenSwitchModal(booking)}
-                          className="btn btn-secondary"
-                          style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
-                        >
-                          Switch Vehicle
-                        </button>
-                      </>
+                      <button
+                        onClick={() => handleOpenSwitchModal(booking)}
+                        className="btn btn-secondary"
+                        style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                      >
+                        Switch Vehicle
+                      </button>
                     )}
 
                     {booking.status === 'active' && (
-                      <button
-                        onClick={() => handleUpdateStatus(booking._id, 'completed')}
-                        className="btn btn-success"
-                      >
-                        Complete Trip
-                      </button>
+                      <span style={{
+                        padding: '0.5rem 1rem',
+                        background: '#dbeafe',
+                        color: '#1e40af',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        Driver will complete return inspection
+                      </span>
                     )}
                   </div>
                 </div>
