@@ -619,9 +619,12 @@ The RentUFS Team
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Booking confirmation email sent to driver:', driver.email);
-    return { success: true, messageId: info.messageId };
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log('✅ Booking confirmation email sent to driver:', driver.email);
+      if (result.messageId) console.log('Message ID:', result.messageId);
+    }
+    return result;
   } catch (error) {
     console.error('❌ Error sending booking confirmation to driver:', error);
     return { success: false, error: error.message };
@@ -791,9 +794,12 @@ The RentUFS Team
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Booking notification email sent to host:', host.email);
-    return { success: true, messageId: info.messageId };
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log('✅ Booking notification email sent to host:', host.email);
+      if (result.messageId) console.log('Message ID:', result.messageId);
+    }
+    return result;
   } catch (error) {
     console.error('❌ Error sending booking notification to host:', error);
     return { success: false, error: error.message };
