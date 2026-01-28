@@ -110,6 +110,10 @@ router.post('/verify-payment', auth, async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status === 'paid') {
+      // First check if booking is already confirmed to prevent duplicate emails
+      const existingBooking = await Booking.findById(bookingId);
+      const wasAlreadyConfirmed = existingBooking && existingBooking.paymentStatus === 'paid';
+
       // Update booking status to confirmed
       const booking = await Booking.findByIdAndUpdate(
         bookingId,
@@ -121,8 +125,8 @@ router.post('/verify-payment', auth, async (req, res) => {
         { new: true }
       ).populate('vehicle').populate('driver').populate('host');
 
-      // Send confirmation emails to both driver and host
-      if (booking.driver && booking.host && booking.vehicle) {
+      // Only send confirmation emails if this is a new confirmation (not already paid)
+      if (!wasAlreadyConfirmed && booking.driver && booking.host && booking.vehicle) {
         sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
           .catch(err => console.error('Failed to send driver confirmation email:', err));
         sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
@@ -155,6 +159,10 @@ router.post('/confirm-payment', auth, async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status === 'succeeded') {
+      // First check if booking is already confirmed to prevent duplicate emails
+      const existingBooking = await Booking.findById(bookingId);
+      const wasAlreadyConfirmed = existingBooking && existingBooking.paymentStatus === 'paid';
+
       // Update booking status to confirmed
       const booking = await Booking.findByIdAndUpdate(
         bookingId,
@@ -166,8 +174,8 @@ router.post('/confirm-payment', auth, async (req, res) => {
         { new: true }
       ).populate('vehicle').populate('driver').populate('host');
 
-      // Send confirmation emails to both driver and host
-      if (booking.driver && booking.host && booking.vehicle) {
+      // Only send confirmation emails if this is a new confirmation (not already paid)
+      if (!wasAlreadyConfirmed && booking.driver && booking.host && booking.vehicle) {
         sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
           .catch(err => console.error('Failed to send driver confirmation email:', err));
         sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
