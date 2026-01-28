@@ -563,6 +563,48 @@ const MyBookings = () => {
                         </div>
                       </div>
 
+                      {/* Host Contact Info - Only shown when booking is confirmed/active and paid */}
+                      {['confirmed', 'active'].includes(booking.status) && booking.paymentStatus === 'paid' && (
+                        <div style={{
+                          marginTop: '1rem',
+                          padding: '1rem',
+                          background: '#1e3a5f',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #3b82f6'
+                        }}>
+                          <div style={{
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            color: '#93c5fd',
+                            marginBottom: '0.75rem'
+                          }}>
+                            Host Contact Information
+                          </div>
+                          <div style={{ color: '#ffffff', fontSize: '0.9rem' }}>
+                            <div style={{ marginBottom: '0.5rem' }}>
+                              <strong style={{ color: '#93c5fd' }}>Name:</strong>{' '}
+                              {booking.host?.firstName} {booking.host?.lastName}
+                            </div>
+                            {booking.host?.email && (
+                              <div style={{ marginBottom: '0.5rem' }}>
+                                <strong style={{ color: '#93c5fd' }}>Email:</strong>{' '}
+                                <a href={`mailto:${booking.host.email}`} style={{ color: '#60a5fa', textDecoration: 'none' }}>
+                                  {booking.host.email}
+                                </a>
+                              </div>
+                            )}
+                            {booking.host?.phone && (
+                              <div>
+                                <strong style={{ color: '#93c5fd' }}>Phone:</strong>{' '}
+                                <a href={`tel:${booking.host.phone}`} style={{ color: '#60a5fa', textDecoration: 'none' }}>
+                                  {booking.host.phone}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {booking.extensions && booking.extensions.length > 0 && (
                         <div style={{
                           marginTop: '1rem',
