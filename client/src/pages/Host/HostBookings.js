@@ -10,6 +10,14 @@ const HostBookings = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current'); // current, upcoming, past
 
+  // Switch vehicle modal state
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [availableVehicles, setAvailableVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [switchReason, setSwitchReason] = useState('');
+  const [switching, setSwitching] = useState(false);
+
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -40,6 +48,69 @@ const HostBookings = () => {
     } catch (error) {
       console.error('Error updating booking status:', error);
       alert('Failed to update booking status');
+    }
+  };
+
+  // Open switch vehicle modal and fetch available vehicles
+  const handleOpenSwitchModal = async (booking) => {
+    setSelectedBooking(booking);
+    setShowSwitchModal(true);
+    setLoadingVehicles(true);
+    setSwitchReason('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/available-vehicles`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAvailableVehicles(response.data.availableVehicles || []);
+    } catch (error) {
+      console.error('Error fetching available vehicles:', error);
+      alert(error.response?.data?.message || 'Failed to fetch available vehicles');
+      setShowSwitchModal(false);
+    } finally {
+      setLoadingVehicles(false);
+    }
+  };
+
+  // Close switch vehicle modal
+  const handleCloseSwitchModal = () => {
+    setShowSwitchModal(false);
+    setSelectedBooking(null);
+    setAvailableVehicles([]);
+    setSwitchReason('');
+    setSwitching(false);
+  };
+
+  // Switch vehicle for booking
+  const handleSwitchVehicle = async (newVehicleId) => {
+    if (!selectedBooking) return;
+
+    setSwitching(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.patch(
+        `${API_URL}/api/bookings/${selectedBooking._id}/switch-vehicle`,
+        {
+          newVehicleId,
+          reason: switchReason || 'Vehicle switched by host'
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      alert(`Vehicle switched successfully! ${response.data.booking.priceDifference !== 0
+        ? `Price ${response.data.booking.priceDifference > 0 ? 'increased' : 'decreased'} by $${Math.abs(response.data.booking.priceDifference).toFixed(2)}`
+        : 'Price remains the same.'}`);
+
+      handleCloseSwitchModal();
+      fetchBookings();
+    } catch (error) {
+      console.error('Error switching vehicle:', error);
+      alert(error.response?.data?.message || 'Failed to switch vehicle');
+    } finally {
+      setSwitching(false);
     }
   };
 
@@ -401,6 +472,13 @@ const HostBookings = () => {
                           Confirm Booking
                         </button>
                         <button
+                          onClick={() => handleOpenSwitchModal(booking)}
+                          className="btn btn-secondary"
+                          style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                        >
+                          Switch Vehicle
+                        </button>
+                        <button
                           onClick={() => handleUpdateStatus(booking._id, 'cancelled')}
                           className="btn btn-danger"
                         >
@@ -410,12 +488,21 @@ const HostBookings = () => {
                     )}
 
                     {booking.status === 'confirmed' && (
-                      <button
-                        onClick={() => handleUpdateStatus(booking._id, 'active')}
-                        className="btn btn-primary"
-                      >
-                        Mark as Active
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleUpdateStatus(booking._id, 'active')}
+                          className="btn btn-primary"
+                        >
+                          Mark as Active
+                        </button>
+                        <button
+                          onClick={() => handleOpenSwitchModal(booking)}
+                          className="btn btn-secondary"
+                          style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                        >
+                          Switch Vehicle
+                        </button>
+                      </>
                     )}
 
                     {booking.status === 'active' && (
@@ -435,6 +522,86 @@ const HostBookings = () => {
           )}
         </div>
       </div>
+
+      {/* Switch Vehicle Modal */}
+      {showSwitchModal && (
+        <div className="switch-modal-overlay" onClick={handleCloseSwitchModal}>
+          <div className="switch-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="switch-modal-header">
+              <h2>Switch Vehicle</h2>
+              <button className="switch-modal-close" onClick={handleCloseSwitchModal}>
+                &times;
+              </button>
+            </div>
+
+            {selectedBooking && (
+              <div className="switch-modal-body">
+                <div className="current-booking-info">
+                  <h3>Current Booking</h3>
+                  <p><strong>Reservation:</strong> {selectedBooking.reservationId}</p>
+                  <p><strong>Vehicle:</strong> {selectedBooking.vehicle?.year} {selectedBooking.vehicle?.make} {selectedBooking.vehicle?.model}</p>
+                  <p><strong>Dates:</strong> {new Date(selectedBooking.startDate).toLocaleDateString()} - {new Date(selectedBooking.endDate).toLocaleDateString()}</p>
+                  <p><strong>Current Price:</strong> ${selectedBooking.totalPrice}</p>
+                </div>
+
+                <div className="switch-reason-section">
+                  <label htmlFor="switchReason">Reason for Switch (optional):</label>
+                  <input
+                    type="text"
+                    id="switchReason"
+                    value={switchReason}
+                    onChange={(e) => setSwitchReason(e.target.value)}
+                    placeholder="e.g., Vehicle needs maintenance"
+                    className="switch-reason-input"
+                  />
+                </div>
+
+                <div className="available-vehicles-section">
+                  <h3>Available Vehicles</h3>
+                  {loadingVehicles ? (
+                    <p className="loading-text">Loading available vehicles...</p>
+                  ) : availableVehicles.length === 0 ? (
+                    <p className="no-vehicles-text">No other vehicles available for these dates.</p>
+                  ) : (
+                    <div className="available-vehicles-list">
+                      {availableVehicles.map((vehicle) => (
+                        <div key={vehicle._id} className="available-vehicle-card">
+                          <div className="available-vehicle-image">
+                            {vehicle.images?.[0] ? (
+                              <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
+                            ) : (
+                              <div className="no-image-placeholder">No Image</div>
+                            )}
+                          </div>
+                          <div className="available-vehicle-info">
+                            <h4>{vehicle.year} {vehicle.make} {vehicle.model}</h4>
+                            <p className="vehicle-type">{vehicle.type} | {vehicle.seats} seats</p>
+                            <div className="price-comparison">
+                              <p><strong>New Price:</strong> ${vehicle.newTotalPrice}</p>
+                              <p className={`price-diff ${vehicle.priceDifference > 0 ? 'increase' : vehicle.priceDifference < 0 ? 'decrease' : 'same'}`}>
+                                {vehicle.priceDifference > 0 ? `+$${vehicle.priceDifference.toFixed(2)}` :
+                                 vehicle.priceDifference < 0 ? `-$${Math.abs(vehicle.priceDifference).toFixed(2)}` :
+                                 'Same price'}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            className="btn btn-primary switch-btn"
+                            onClick={() => handleSwitchVehicle(vehicle._id)}
+                            disabled={switching}
+                          >
+                            {switching ? 'Switching...' : 'Select'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

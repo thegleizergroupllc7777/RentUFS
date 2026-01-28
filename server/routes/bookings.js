@@ -438,6 +438,214 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
   }
 });
 
+// Get host's available vehicles for switching a booking
+router.get('/:id/available-vehicles', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only host can view available vehicles for switching
+    if (booking.host.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the host can switch vehicles' });
+    }
+
+    // Only pending or confirmed bookings can have vehicles switched
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({
+        message: 'Can only switch vehicles for pending or confirmed bookings'
+      });
+    }
+
+    // Get all host's vehicles except the current one
+    const hostVehicles = await Vehicle.find({
+      host: req.user._id,
+      _id: { $ne: booking.vehicle._id },
+      availability: true
+    });
+
+    // Check for conflicting bookings on each vehicle
+    const availableVehicles = [];
+
+    for (const vehicle of hostVehicles) {
+      // Check if this vehicle has any conflicting bookings
+      const conflictingBooking = await Booking.findOne({
+        vehicle: vehicle._id,
+        _id: { $ne: booking._id },
+        status: { $in: ['pending', 'confirmed', 'active'] },
+        $or: [
+          // Booking starts during the period
+          { startDate: { $gte: booking.startDate, $lte: booking.endDate } },
+          // Booking ends during the period
+          { endDate: { $gte: booking.startDate, $lte: booking.endDate } },
+          // Booking spans the entire period
+          { startDate: { $lte: booking.startDate }, endDate: { $gte: booking.endDate } }
+        ]
+      });
+
+      if (!conflictingBooking) {
+        // Calculate price for this vehicle
+        let newTotalPrice;
+        if (booking.rentalType === 'weekly') {
+          const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
+          newTotalPrice = booking.quantity * weeklyRate;
+        } else if (booking.rentalType === 'monthly') {
+          const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
+          newTotalPrice = booking.quantity * monthlyRate;
+        } else {
+          newTotalPrice = booking.totalDays * vehicle.pricePerDay;
+        }
+
+        const priceDifference = newTotalPrice - booking.totalPrice;
+
+        availableVehicles.push({
+          ...vehicle.toObject(),
+          newTotalPrice,
+          priceDifference,
+          currentBookingPrice: booking.totalPrice
+        });
+      }
+    }
+
+    res.json({
+      bookingId: booking._id,
+      currentVehicle: booking.vehicle,
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      availableVehicles
+    });
+  } catch (error) {
+    console.error('Error fetching available vehicles:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Switch booking to a different vehicle
+router.patch('/:id/switch-vehicle', auth, async (req, res) => {
+  try {
+    const { newVehicleId, reason } = req.body;
+
+    if (!newVehicleId) {
+      return res.status(400).json({ message: 'New vehicle ID is required' });
+    }
+
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('driver', 'firstName lastName email');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only host can switch vehicles
+    if (booking.host.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the host can switch vehicles' });
+    }
+
+    // Only pending or confirmed bookings can have vehicles switched
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({
+        message: 'Can only switch vehicles for pending or confirmed bookings'
+      });
+    }
+
+    // Verify new vehicle exists and belongs to the same host
+    const newVehicle = await Vehicle.findOne({
+      _id: newVehicleId,
+      host: req.user._id
+    });
+
+    if (!newVehicle) {
+      return res.status(404).json({ message: 'New vehicle not found or unauthorized' });
+    }
+
+    // Check for conflicting bookings on the new vehicle
+    const conflictingBooking = await Booking.findOne({
+      vehicle: newVehicleId,
+      _id: { $ne: booking._id },
+      status: { $in: ['pending', 'confirmed', 'active'] },
+      $or: [
+        { startDate: { $gte: booking.startDate, $lte: booking.endDate } },
+        { endDate: { $gte: booking.startDate, $lte: booking.endDate } },
+        { startDate: { $lte: booking.startDate }, endDate: { $gte: booking.endDate } }
+      ]
+    });
+
+    if (conflictingBooking) {
+      return res.status(400).json({
+        message: 'New vehicle is not available for the booking dates'
+      });
+    }
+
+    // Calculate new price
+    let newTotalPrice;
+    let newPricePerDay = newVehicle.pricePerDay;
+
+    if (booking.rentalType === 'weekly') {
+      const weeklyRate = newVehicle.pricePerWeek || (newVehicle.pricePerDay * 7);
+      newTotalPrice = booking.quantity * weeklyRate;
+    } else if (booking.rentalType === 'monthly') {
+      const monthlyRate = newVehicle.pricePerMonth || (newVehicle.pricePerDay * 30);
+      newTotalPrice = booking.quantity * monthlyRate;
+    } else {
+      newTotalPrice = booking.totalDays * newVehicle.pricePerDay;
+    }
+
+    const priceDifference = newTotalPrice - booking.totalPrice;
+
+    // Store previous vehicle info for history
+    const previousVehicle = booking.vehicle._id;
+    const previousPrice = booking.totalPrice;
+
+    // Add to switch history
+    if (!booking.vehicleSwitchHistory) {
+      booking.vehicleSwitchHistory = [];
+    }
+    booking.vehicleSwitchHistory.push({
+      previousVehicle: previousVehicle,
+      newVehicle: newVehicleId,
+      previousPrice: previousPrice,
+      newPrice: newTotalPrice,
+      priceDifference: priceDifference,
+      reason: reason || 'Vehicle switched by host',
+      switchedAt: new Date()
+    });
+
+    // Update booking with new vehicle and price
+    booking.vehicle = newVehicleId;
+    booking.pricePerDay = newPricePerDay;
+    booking.totalPrice = newTotalPrice;
+
+    await booking.save();
+
+    // Populate the updated booking for response
+    await booking.populate('vehicle');
+    await booking.populate('driver', 'firstName lastName email');
+
+    console.log(`✅ Vehicle switched for booking ${booking.reservationId}: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`);
+
+    res.json({
+      success: true,
+      message: 'Vehicle switched successfully',
+      booking: {
+        _id: booking._id,
+        reservationId: booking.reservationId,
+        vehicle: booking.vehicle,
+        previousPrice: previousPrice,
+        newPrice: newTotalPrice,
+        priceDifference: priceDifference,
+        status: booking.status
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error switching vehicle:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update booking status
 router.patch('/:id/status', auth, async (req, res) => {
   try {
