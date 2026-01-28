@@ -234,13 +234,13 @@ const DriverProfile = () => {
 
           {/* Profile Photo Section */}
           <div style={{
-            background: 'white',
+            background: '#000',
             borderRadius: '1rem',
             padding: '2rem',
             marginBottom: '1.5rem',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            border: '1px solid #333'
           }}>
-            <h3 style={{ marginBottom: '1.5rem', color: '#1f2937' }}>Profile Photo</h3>
+            <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>Profile Photo</h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
               {/* Current Photo or Placeholder */}
@@ -342,10 +342,10 @@ const DriverProfile = () => {
               )}
 
               {loading && (
-                <p style={{ color: '#6b7280' }}>Uploading...</p>
+                <p style={{ color: '#9ca3af' }}>Uploading...</p>
               )}
 
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.875rem', color: '#9ca3af', textAlign: 'center' }}>
                 Your photo will be shown to hosts when you book their vehicles
               </p>
             </div>
@@ -353,12 +353,12 @@ const DriverProfile = () => {
 
           {/* Profile Info Form */}
           <div style={{
-            background: 'white',
+            background: '#000',
             borderRadius: '1rem',
             padding: '2rem',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            border: '1px solid #333'
           }}>
-            <h3 style={{ marginBottom: '1.5rem', color: '#1f2937' }}>Personal Information</h3>
+            <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>Personal Information</h3>
 
             <form onSubmit={handleProfileUpdate}>
               <div className="form-group">
@@ -390,7 +390,7 @@ const DriverProfile = () => {
                   className="form-input"
                   value={profileData.email}
                   disabled
-                  style={{ background: '#f3f4f6', cursor: 'not-allowed' }}
+                  style={{ background: '#1a1a1a', cursor: 'not-allowed', color: '#6b7280' }}
                 />
               </div>
 
