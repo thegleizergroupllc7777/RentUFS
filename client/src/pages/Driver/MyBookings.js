@@ -101,6 +101,7 @@ const MyBookings = () => {
   const [extensionDetails, setExtensionDetails] = useState(null);
   const [inspectionModal, setInspectionModal] = useState({ open: false, booking: null, type: null });
   const [reconciling, setReconciling] = useState({});
+  const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
 
   useEffect(() => {
     fetchBookings();
@@ -165,7 +166,7 @@ const MyBookings = () => {
       const token = localStorage.getItem('token');
 
       // First check availability
-      const checkResponse = await axios.post(
+      await axios.post(
         `${API_URL}/api/bookings/${extendModal.booking._id}/extend`,
         { extensionDays },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -604,6 +605,16 @@ const MyBookings = () => {
                           </button>
                         )}
 
+                        {booking.status === 'active' && booking.vehicle?.registrationImage && (
+                          <button
+                            onClick={() => setRegistrationModal({ open: true, booking })}
+                            className="btn btn-secondary"
+                            style={{ background: '#8b5cf6', color: 'white', border: 'none' }}
+                          >
+                            View Registration
+                          </button>
+                        )}
+
                         {canExtend(booking) && (
                           <button
                             onClick={() => openExtendModal(booking)}
@@ -793,6 +804,74 @@ const MyBookings = () => {
           onComplete={handleInspectionComplete}
           onCancel={closeInspectionModal}
         />
+      )}
+
+      {/* Registration Modal */}
+      {registrationModal.open && registrationModal.booking && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, color: '#1f2937' }}>Vehicle Registration</h2>
+              <button
+                onClick={() => setRegistrationModal({ open: false, booking: null })}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                x
+              </button>
+            </div>
+            <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
+              {registrationModal.booking.vehicle?.year} {registrationModal.booking.vehicle?.make} {registrationModal.booking.vehicle?.model}
+            </p>
+            <div style={{
+              borderRadius: '0.5rem',
+              overflow: 'hidden',
+              background: '#f3f4f6'
+            }}>
+              <img
+                src={registrationModal.booking.vehicle?.registrationImage}
+                alt="Vehicle Registration"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block'
+                }}
+              />
+            </div>
+            <button
+              onClick={() => setRegistrationModal({ open: false, booking: null })}
+              className="btn btn-secondary"
+              style={{ width: '100%', marginTop: '1rem' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
