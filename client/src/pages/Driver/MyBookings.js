@@ -100,6 +100,7 @@ const MyBookings = () => {
   const [extensionError, setExtensionError] = useState('');
   const [extensionDetails, setExtensionDetails] = useState(null);
   const [inspectionModal, setInspectionModal] = useState({ open: false, booking: null, type: null });
+  const [reconciling, setReconciling] = useState({});
 
   useEffect(() => {
     fetchBookings();
@@ -207,6 +208,37 @@ const MyBookings = () => {
     alert(data.message);
     closeInspectionModal();
     fetchBookings();
+  };
+
+  const handleReconcilePayment = async (bookingId) => {
+    setReconciling(prev => ({ ...prev, [bookingId]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/api/payment/reconcile/${bookingId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.reconciled) {
+        alert('Payment found and booking updated! You can now start your reservation.');
+        fetchBookings();
+      } else if (response.data.success && !response.data.reconciled) {
+        alert('Booking is already marked as paid.');
+      } else {
+        alert('No payment found for this booking. Please complete the payment process.');
+      }
+    } catch (error) {
+      console.error('Error reconciling payment:', error);
+      alert(error.response?.data?.message || 'Failed to check payment status');
+    } finally {
+      setReconciling(prev => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
+  // Check if a booking needs payment reconciliation
+  const needsPaymentCheck = (booking) => {
+    return booking.status === 'confirmed' && booking.paymentStatus !== 'paid';
   };
 
   const canStartReservation = (booking) => {
@@ -588,6 +620,17 @@ const MyBookings = () => {
                             className="btn btn-danger"
                           >
                             Cancel Booking
+                          </button>
+                        )}
+
+                        {needsPaymentCheck(booking) && (
+                          <button
+                            onClick={() => handleReconcilePayment(booking._id)}
+                            className="btn btn-secondary"
+                            disabled={reconciling[booking._id]}
+                            style={{ background: '#f59e0b', color: 'white', border: 'none' }}
+                          >
+                            {reconciling[booking._id] ? 'Checking...' : 'Check Payment Status'}
                           </button>
                         )}
                       </div>
