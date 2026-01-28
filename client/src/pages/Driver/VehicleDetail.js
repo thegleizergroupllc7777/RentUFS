@@ -341,11 +341,11 @@ const VehicleDetail = () => {
                   <>
                     <h3>Your Current Reservation</h3>
                     <div style={{
-                      backgroundColor: '#eff6ff',
+                      backgroundColor: '#1e3a5f',
                       padding: '1rem',
                       borderRadius: '0.5rem',
                       marginBottom: '1rem',
-                      border: '1px solid #bfdbfe'
+                      border: '1px solid #3b82f6'
                     }}>
                       <div style={{
                         display: 'inline-block',
@@ -360,25 +360,25 @@ const VehicleDetail = () => {
                       }}>
                         {activeBooking.status}
                       </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Reservation ID:</strong><br />
-                        <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#93c5fd' }}>Reservation ID:</strong><br />
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', color: '#ffffff' }}>
                           {activeBooking.reservationId || activeBooking._id.slice(-8).toUpperCase()}
                         </span>
                       </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Pickup:</strong><br />
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#93c5fd' }}>Pickup:</strong><br />
                         {new Date(activeBooking.startDate).toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
                       </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Return:</strong><br />
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#93c5fd' }}>Return:</strong><br />
                         {new Date(activeBooking.endDate).toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
                       </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Duration:</strong> {activeBooking.totalDays} day(s)
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#93c5fd' }}>Duration:</strong> {activeBooking.totalDays} day(s)
                       </div>
-                      <div>
-                        <strong>Total Price:</strong> ${activeBooking.totalPrice}
+                      <div style={{ color: '#ffffff' }}>
+                        <strong style={{ color: '#93c5fd' }}>Total Price:</strong> ${activeBooking.totalPrice}
                       </div>
                     </div>
 
