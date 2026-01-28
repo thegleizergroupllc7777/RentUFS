@@ -48,7 +48,7 @@
 }
 
 .summary-item.insurance {
-  background-color: rgba(0, 255, 102, 0.1);
+  background-color: #ecfdf5;
   margin: 0.5rem -0.5rem;
   padding: 0.75rem 0.5rem;
   border-radius: 4px;
@@ -56,11 +56,11 @@
 }
 
 .summary-item.insurance .label {
-  color: #00FF66;
+  color: #065f46;
 }
 
 .summary-item.insurance .value {
-  color: #00FF66;
+  color: #047857;
   font-weight: 600;
 }
 
@@ -297,6 +297,20 @@
   padding: 3rem;
   color: #9ca3af;
   font-size: 1.125rem;
+}
+
+.payment-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+  background: #1a1a1a;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.payment-loading p {
+  margin-top: 1rem;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 768px) {

@@ -139,6 +139,17 @@ const Navbar = () => {
                 </>
               )}
 
+              {user.userType === 'both' && (
+                <>
+                  <Link to="/host/dashboard" className="navbar-link">
+                    Host Dashboard
+                  </Link>
+                  <Link to="/my-bookings" className="navbar-link">
+                    My Bookings
+                  </Link>
+                </>
+              )}
+
               <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {user.profileImage ? (
                   <img
@@ -149,7 +160,7 @@ const Navbar = () => {
                       height: '32px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '2px solid #00FF66'
+                      border: '2px solid #10b981'
                     }}
                   />
                 ) : null}

@@ -61,9 +61,9 @@ const HostDashboard = () => {
 
   if (loading) {
     return (
-      <div>
+      <div className="host-page">
         <Navbar />
-        <div className="container" style={{ padding: '4rem 20px' }}>
+        <div className="container" style={{ padding: '4rem 20px', color: '#1f2937' }}>
           Loading...
         </div>
       </div>
@@ -71,7 +71,7 @@ const HostDashboard = () => {
   }
 
   return (
-    <div>
+    <div className="host-page">
       <Navbar />
       <div className="page">
         <div className="container">
