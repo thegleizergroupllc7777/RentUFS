@@ -79,10 +79,9 @@ const Navbar = () => {
   };
 
   // Determine what to show based on activeMode
-  const isHostMode = activeMode === 'host';
-  const isDriverMode = activeMode === 'driver';
-  const canSwitchToHost = user && (user.userType === 'both' || user.userType === 'driver');
-  const canSwitchToDriver = user && (user.userType === 'both' || user.userType === 'host');
+  const isHostMode = user && activeMode === 'host';
+  const isDriverMode = !user || activeMode === 'driver';
+  const canSwitch = user && user.userType === 'both';
 
   return (
     <nav className="navbar">
@@ -92,64 +91,70 @@ const Navbar = () => {
         </Link>
 
         <div className="navbar-links">
-          {/* Browse Cars only shows for non-logged in users or drivers */}
-          {(!user || isDriverMode) && (
-            <Link to="/marketplace" className="navbar-link">
-              Browse Cars
-            </Link>
+          {!user && (
+            <>
+              <Link to="/marketplace" className="navbar-link">
+                Browse Cars
+              </Link>
+              <Link to="/login" className="navbar-link">
+                Login
+              </Link>
+              <Link to="/register">
+                <button className="btn btn-primary">Sign Up</button>
+              </Link>
+            </>
           )}
 
-          {user ? (
+          {user && isDriverMode && (
             <>
-              {/* Host Mode Navigation */}
-              {isHostMode && (
-                <>
-                  <Link to="/host/dashboard" className="navbar-link">
-                    Host Dashboard
-                  </Link>
-                  {canSwitchToDriver && (
-                    <button
-                      onClick={handleSwitchToDriver}
-                      className="btn btn-secondary"
-                      disabled={switching}
-                      style={{ marginRight: '10px', fontSize: '0.875rem' }}
-                    >
-                      {switching ? 'Switching...' : 'Switch to Driver'}
-                    </button>
-                  )}
-                </>
+              <Link to="/marketplace" className="navbar-link">
+                Browse Cars
+              </Link>
+              <Link to="/my-bookings" className="navbar-link">
+                My Bookings
+              </Link>
+              {canSwitch ? (
+                <button
+                  onClick={handleSwitchToHost}
+                  className="btn btn-secondary"
+                  disabled={switching}
+                  style={{ marginRight: '10px', fontSize: '0.875rem' }}
+                >
+                  {switching ? 'Switching...' : 'Switch to Host'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSwitchToHost}
+                  className="btn btn-secondary"
+                  disabled={switching}
+                  style={{ marginRight: '10px', fontSize: '0.875rem' }}
+                >
+                  {switching ? 'Switching...' : 'Become a Host'}
+                </button>
               )}
+            </>
+          )}
 
-              {/* Driver Mode Navigation */}
-              {isDriverMode && (
-                <>
-                  <Link to="/my-bookings" className="navbar-link">
-                    My Bookings
-                  </Link>
-                  {canSwitchToHost && (
-                    <button
-                      onClick={handleSwitchToHost}
-                      className="btn btn-secondary"
-                      disabled={switching}
-                      style={{ marginRight: '10px', fontSize: '0.875rem' }}
-                    >
-                      {switching ? 'Switching...' : (user.userType === 'driver' ? 'Become a Host' : 'Switch to Host')}
-                    </button>
-                  )}
-                </>
+          {user && isHostMode && (
+            <>
+              <Link to="/host/dashboard" className="navbar-link">
+                Host Dashboard
+              </Link>
+              {canSwitch && (
+                <button
+                  onClick={handleSwitchToDriver}
+                  className="btn btn-secondary"
+                  disabled={switching}
+                  style={{ marginRight: '10px', fontSize: '0.875rem' }}
+                >
+                  {switching ? 'Switching...' : 'Switch to Driver'}
+                </button>
               )}
+            </>
+          )}
 
-              {user.userType === 'both' && (
-                <>
-                  <Link to="/host/dashboard" className="navbar-link">
-                    Host Dashboard
-                  </Link>
-                  <Link to="/my-bookings" className="navbar-link">
-                    My Bookings
-                  </Link>
-                </>
-              )}
-
+          {user && (
+            <>
               <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {user.profileImage ? (
                   <img
@@ -170,15 +175,6 @@ const Navbar = () => {
               <button onClick={handleLogout} className="btn btn-secondary">
                 Logout
               </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="navbar-link">
-                Login
-              </Link>
-              <Link to="/register">
-                <button className="btn btn-primary">Sign Up</button>
-              </Link>
             </>
           )}
         </div>
