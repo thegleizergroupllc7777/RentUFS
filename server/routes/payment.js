@@ -336,4 +336,282 @@ router.get('/session/:sessionId', auth, async (req, res) => {
   }
 });
 
+// Stripe Webhook Handler - handles payment events directly from Stripe
+// This ensures payments are recorded even if client-side confirmation fails
+router.post('/webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    // If webhook secret is configured, verify the signature
+    if (webhookSecret && sig) {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } else {
+      // For development without webhook secret, parse the body directly
+      event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      console.log('⚠️ Webhook signature verification skipped (no STRIPE_WEBHOOK_SECRET configured)');
+    }
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object;
+      console.log('💰 Payment succeeded via webhook:', paymentIntent.id);
+
+      // Get bookingId from metadata
+      const bookingId = paymentIntent.metadata?.bookingId;
+      if (!bookingId) {
+        console.log('No bookingId in payment metadata, skipping');
+        break;
+      }
+
+      try {
+        // Check if booking already updated (idempotency)
+        const existingBooking = await Booking.findById(bookingId);
+        if (existingBooking && existingBooking.paymentStatus === 'paid') {
+          console.log('Booking already marked as paid, skipping duplicate webhook');
+          break;
+        }
+
+        // Check if this is an extension payment
+        if (paymentIntent.metadata?.type === 'extension') {
+          const extensionDays = parseInt(paymentIntent.metadata.extensionDays, 10);
+          if (existingBooking && extensionDays) {
+            const extensionCost = extensionDays * existingBooking.pricePerDay;
+            const newEndDate = new Date(existingBooking.endDate);
+            newEndDate.setDate(newEndDate.getDate() + extensionDays);
+
+            existingBooking.endDate = newEndDate;
+            existingBooking.totalDays = existingBooking.totalDays + extensionDays;
+            existingBooking.totalPrice = existingBooking.totalPrice + extensionCost;
+
+            if (!existingBooking.extensions) {
+              existingBooking.extensions = [];
+            }
+            existingBooking.extensions.push({
+              days: extensionDays,
+              cost: extensionCost,
+              paymentId: paymentIntent.id,
+              extendedAt: new Date()
+            });
+
+            await existingBooking.save();
+            console.log(`✅ Extension processed via webhook: ${extensionDays} days added to booking ${bookingId}`);
+          }
+          break;
+        }
+
+        // Update booking status for regular payments
+        const booking = await Booking.findByIdAndUpdate(
+          bookingId,
+          {
+            status: 'confirmed',
+            paymentStatus: 'paid',
+            paymentSessionId: paymentIntent.id,
+          },
+          { new: true }
+        ).populate('vehicle').populate('driver').populate('host');
+
+        if (booking) {
+          console.log(`✅ Booking ${bookingId} confirmed via webhook`);
+
+          // Send confirmation emails
+          if (booking.driver && booking.host && booking.vehicle) {
+            sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
+              .catch(err => console.error('Failed to send driver confirmation email:', err));
+            sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
+              .catch(err => console.error('Failed to send host notification email:', err));
+          }
+        }
+      } catch (err) {
+        console.error('Error updating booking from webhook:', err);
+      }
+      break;
+    }
+
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      console.log('💰 Checkout session completed via webhook:', session.id);
+
+      const bookingId = session.metadata?.bookingId;
+      if (!bookingId) {
+        console.log('No bookingId in session metadata, skipping');
+        break;
+      }
+
+      try {
+        // Check if booking already updated (idempotency)
+        const existingBooking = await Booking.findById(bookingId);
+        if (existingBooking && existingBooking.paymentStatus === 'paid') {
+          console.log('Booking already marked as paid, skipping duplicate webhook');
+          break;
+        }
+
+        if (session.payment_status === 'paid') {
+          const booking = await Booking.findByIdAndUpdate(
+            bookingId,
+            {
+              status: 'confirmed',
+              paymentStatus: 'paid',
+              paymentSessionId: session.id,
+            },
+            { new: true }
+          ).populate('vehicle').populate('driver').populate('host');
+
+          if (booking) {
+            console.log(`✅ Booking ${bookingId} confirmed via checkout session webhook`);
+
+            // Send confirmation emails
+            if (booking.driver && booking.host && booking.vehicle) {
+              sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
+                .catch(err => console.error('Failed to send driver confirmation email:', err));
+              sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
+                .catch(err => console.error('Failed to send host notification email:', err));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error updating booking from checkout webhook:', err);
+      }
+      break;
+    }
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+
+  // Return 200 to acknowledge receipt of the event
+  res.json({ received: true });
+});
+
+// Reconcile payment - check Stripe and update booking if payment succeeded
+// Use this to fix bookings where payment succeeded but status wasn't updated
+router.post('/reconcile/:bookingId', auth, async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    // Fetch the booking
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicle')
+      .populate('driver')
+      .populate('host');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Ensure the booking belongs to the authenticated user
+    if (booking.driver._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // If already paid, no need to reconcile
+    if (booking.paymentStatus === 'paid') {
+      return res.json({
+        success: true,
+        message: 'Booking is already marked as paid',
+        booking,
+        reconciled: false
+      });
+    }
+
+    // Search for payment intents with this booking's metadata
+    const paymentIntents = await stripe.paymentIntents.list({
+      limit: 10,
+    });
+
+    // Find a successful payment intent for this booking
+    const successfulPayment = paymentIntents.data.find(
+      pi => pi.metadata?.bookingId === bookingId && pi.status === 'succeeded'
+    );
+
+    if (successfulPayment) {
+      // Update booking status
+      booking.status = 'confirmed';
+      booking.paymentStatus = 'paid';
+      booking.paymentSessionId = successfulPayment.id;
+      await booking.save();
+
+      // Reload with populated fields
+      await booking.populate('vehicle');
+      await booking.populate('driver');
+      await booking.populate('host');
+
+      // Send confirmation emails
+      if (booking.driver && booking.host && booking.vehicle) {
+        sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation email:', err));
+        sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
+          .catch(err => console.error('Failed to send host notification email:', err));
+      }
+
+      console.log(`✅ Reconciled booking ${bookingId} - payment ${successfulPayment.id} found`);
+
+      return res.json({
+        success: true,
+        message: 'Payment found and booking updated successfully!',
+        booking,
+        reconciled: true,
+        paymentId: successfulPayment.id
+      });
+    }
+
+    // Also check checkout sessions
+    const sessions = await stripe.checkout.sessions.list({
+      limit: 10,
+    });
+
+    const successfulSession = sessions.data.find(
+      s => s.metadata?.bookingId === bookingId && s.payment_status === 'paid'
+    );
+
+    if (successfulSession) {
+      // Update booking status
+      booking.status = 'confirmed';
+      booking.paymentStatus = 'paid';
+      booking.paymentSessionId = successfulSession.id;
+      await booking.save();
+
+      // Reload with populated fields
+      await booking.populate('vehicle');
+      await booking.populate('driver');
+      await booking.populate('host');
+
+      // Send confirmation emails
+      if (booking.driver && booking.host && booking.vehicle) {
+        sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation email:', err));
+        sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
+          .catch(err => console.error('Failed to send host notification email:', err));
+      }
+
+      console.log(`✅ Reconciled booking ${bookingId} - checkout session ${successfulSession.id} found`);
+
+      return res.json({
+        success: true,
+        message: 'Payment found and booking updated successfully!',
+        booking,
+        reconciled: true,
+        paymentId: successfulSession.id
+      });
+    }
+
+    return res.json({
+      success: false,
+      message: 'No successful payment found for this booking in Stripe',
+      reconciled: false
+    });
+
+  } catch (error) {
+    console.error('Payment reconciliation error:', error);
+    res.status(500).json({ message: 'Failed to reconcile payment', error: error.message });
+  }
+});
+
 module.exports = router;
