@@ -681,13 +681,13 @@ const MyBookings = () => {
             <h2 style={{ marginBottom: '1.5rem', color: '#1f2937' }}>Extend Your Rental</h2>
 
             <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem' }}>
-              <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
+              <p style={{ fontWeight: '600', marginBottom: '0.5rem', color: '#1f2937' }}>
                 {extendModal.booking.vehicle?.year} {extendModal.booking.vehicle?.make} {extendModal.booking.vehicle?.model}
               </p>
-              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
                 Current return: {new Date(extendModal.booking.endDate).toLocaleDateString()}
               </p>
-              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
                 Daily rate: ${extendModal.booking.pricePerDay}
               </p>
             </div>
@@ -695,7 +695,7 @@ const MyBookings = () => {
             {!extensionClientSecret ? (
               <>
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#1f2937' }}>
                     How many days would you like to extend?
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -706,7 +706,7 @@ const MyBookings = () => {
                     >
                       -
                     </button>
-                    <span style={{ fontSize: '1.5rem', fontWeight: '600', minWidth: '3rem', textAlign: 'center' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '600', minWidth: '3rem', textAlign: 'center', color: '#1f2937' }}>
                       {extensionDays}
                     </span>
                     <button
@@ -716,7 +716,7 @@ const MyBookings = () => {
                     >
                       +
                     </button>
-                    <span style={{ color: '#6b7280' }}>day(s)</span>
+                    <span style={{ color: '#4b5563' }}>day(s)</span>
                   </div>
                 </div>
 
@@ -727,14 +727,14 @@ const MyBookings = () => {
                   marginBottom: '1.5rem'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span>New return date:</span>
-                    <span style={{ fontWeight: '600' }}>
+                    <span style={{ color: '#1e40af' }}>New return date:</span>
+                    <span style={{ fontWeight: '600', color: '#1e3a8a' }}>
                       {new Date(new Date(extendModal.booking.endDate).getTime() + extensionDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Extension cost:</span>
-                    <span style={{ fontWeight: '600', color: '#10b981', fontSize: '1.25rem' }}>
+                    <span style={{ color: '#1e40af' }}>Extension cost:</span>
+                    <span style={{ fontWeight: '600', color: '#059669', fontSize: '1.25rem' }}>
                       ${(extensionDays * extendModal.booking.pricePerDay).toFixed(2)}
                     </span>
                   </div>
