@@ -12,6 +12,7 @@ const uploadRoutes = require('./routes/upload');
 const paymentRoutes = require('./routes/payment');
 const reportRoutes = require('./routes/reports');
 const insuranceRoutes = require('./routes/insurance');
+const { startReturnReminderScheduler } = require('./utils/scheduler');
 
 const app = express();
 
@@ -38,7 +39,11 @@ app.use('/api/insurance', insuranceRoutes);
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
-  .then(() => console.log('✅ Connected to MongoDB'))
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+    // Start the return reminder scheduler after DB connection
+    startReturnReminderScheduler(10); // Check every 10 minutes
+  })
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Health check

@@ -160,6 +160,15 @@ const bookingSchema = new mongoose.Schema({
       roadsideAssistance: { type: Boolean, default: false }
     }
   },
+  // Track if return reminder email has been sent
+  returnReminderSent: {
+    type: Boolean,
+    default: false
+  },
+  returnReminderSentAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
