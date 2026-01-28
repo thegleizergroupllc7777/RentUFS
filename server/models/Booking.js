@@ -90,6 +90,22 @@ const bookingSchema = new mongoose.Schema({
     paymentId: String,
     extendedAt: { type: Date, default: Date.now }
   }],
+  // Vehicle switch history for when host transfers booking to another vehicle
+  vehicleSwitchHistory: [{
+    previousVehicle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vehicle'
+    },
+    newVehicle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vehicle'
+    },
+    previousPrice: Number,
+    newPrice: Number,
+    priceDifference: Number,
+    reason: String,
+    switchedAt: { type: Date, default: Date.now }
+  }],
   // Vehicle inspection photos at pickup
   pickupInspection: {
     completed: { type: Boolean, default: false },
