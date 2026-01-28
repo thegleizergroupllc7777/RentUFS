@@ -806,9 +806,216 @@ The RentUFS Team
   }
 };
 
+// Send return reminder email to driver (1 hour before reservation ends)
+const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
+  try {
+    const transporter = createTransporter();
+    const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dropoffTime = booking.dropoffTime || '10:00';
+
+    if (!transporter) {
+      console.log('📧 [DEV] Return Reminder Email to Driver:', driver.email);
+      console.log('-----------------------------------');
+      console.log(`To: ${driver.email}`);
+      console.log(`Subject: Reminder: Your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental ends soon!`);
+      console.log(`
+Hi ${driver.firstName},
+
+This is a friendly reminder that your rental period is ending soon!
+
+Reservation ID: ${booking.reservationId || booking._id}
+
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+Return Date: ${endDate}
+Return Time: ${dropoffTime}
+
+Return Location:
+${vehicle.location?.address || ''}, ${vehicle.location?.city || ''}, ${vehicle.location?.state || ''} ${vehicle.location?.zipCode || ''}
+
+Options:
+1. EXTEND YOUR RENTAL - Need more time? You can extend your booking from your dashboard.
+2. RETURN THE VEHICLE - Please return the vehicle on time to avoid late fees.
+
+Important Reminders:
+- Return the vehicle with the same fuel level
+- Complete the return inspection photos
+- Remove all personal belongings
+
+Need to extend? Visit: ${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings
+
+If you have any questions, contact your host:
+- Name: ${host.firstName} ${host.lastName}
+- Email: ${host.email}
+
+Thank you for choosing RentUFS!
+
+Best regards,
+The RentUFS Team
+      `);
+      console.log('-----------------------------------\n');
+      return { success: true, dev: true };
+    }
+
+    const mailOptions = {
+      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
+      to: driver.email,
+      subject: `Reminder: Your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental ends soon!`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .clock-icon { font-size: 3rem; margin-bottom: 10px; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .options { display: flex; gap: 15px; margin: 25px 0; }
+            .option-card { flex: 1; background: white; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e5e7eb; }
+            .option-card.extend { border-color: #10b981; }
+            .option-card.return { border-color: #3b82f6; }
+            .button { padding: 12px 25px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; }
+            .button-extend { background: #10b981; color: white; }
+            .button-return { background: #3b82f6; color: white; }
+            .host-info { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .reminders { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="clock-icon">⏰</div>
+              <h1 style="margin: 0;">Rental Ending Soon!</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your reservation ends in about 1 hour</p>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${driver.firstName},</h2>
+              <p>This is a friendly reminder that your rental period is ending soon!</p>
+
+              <div class="booking-card">
+                <div style="background: #fef3c7; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                  <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #d97706;">${booking.reservationId || booking._id}</span>
+                </div>
+                <h3 style="margin-top: 0; color: #d97706;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+
+                <div class="detail-row">
+                  <span class="label">Return Date</span>
+                  <span class="value">${endDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Time</span>
+                  <span class="value" style="color: #dc2626; font-size: 1.1rem;">${dropoffTime}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Location</span>
+                  <span class="value">${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}</span>
+                </div>
+              </div>
+
+              <h3 style="text-align: center; color: #374151;">What would you like to do?</h3>
+
+              <div class="options">
+                <div class="option-card extend">
+                  <h4 style="margin: 0 0 10px 0; color: #059669;">Need More Time?</h4>
+                  <p style="font-size: 0.9rem; color: #6b7280; margin: 0 0 15px 0;">Extend your rental from your dashboard</p>
+                  <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button button-extend">
+                    Extend Rental
+                  </a>
+                </div>
+                <div class="option-card return">
+                  <h4 style="margin: 0 0 10px 0; color: #1d4ed8;">Ready to Return?</h4>
+                  <p style="font-size: 0.9rem; color: #6b7280; margin: 0 0 15px 0;">Complete the return inspection</p>
+                  <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button button-return">
+                    Return Vehicle
+                  </a>
+                </div>
+              </div>
+
+              <div class="reminders">
+                <h4 style="margin-top: 0; color: #b45309;">Before You Return</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>Return the vehicle with the same fuel level</li>
+                  <li>Complete the return inspection photos in the app</li>
+                  <li>Remove all personal belongings from the vehicle</li>
+                  <li>Return on time to avoid late fees</li>
+                </ul>
+              </div>
+
+              <div class="host-info">
+                <h4 style="margin-top: 0; color: #1d4ed8;">Need Help? Contact Your Host</h4>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${host.firstName} ${host.lastName}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${host.email}</p>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p>Booking ID: ${booking._id}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${driver.firstName},
+
+This is a friendly reminder that your rental period is ending soon!
+
+Reservation ID: ${booking.reservationId || booking._id}
+
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+Return Date: ${endDate}
+Return Time: ${dropoffTime}
+
+Return Location:
+${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}
+
+Options:
+1. EXTEND YOUR RENTAL - Need more time? You can extend your booking from your dashboard.
+2. RETURN THE VEHICLE - Please return the vehicle on time to avoid late fees.
+
+Important Reminders:
+- Return the vehicle with the same fuel level
+- Complete the return inspection photos
+- Remove all personal belongings
+
+Need to extend? Visit: ${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings
+
+If you have any questions, contact your host:
+- Name: ${host.firstName} ${host.lastName}
+- Email: ${host.email}
+
+Thank you for choosing RentUFS!
+
+Best regards,
+The RentUFS Team
+      `
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log('✅ Return reminder email sent to driver:', driver.email);
+      if (result.messageId) console.log('Message ID:', result.messageId);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending return reminder email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
   sendBookingConfirmationToDriver,
-  sendBookingNotificationToHost
+  sendBookingNotificationToHost,
+  sendReturnReminderEmail
 };
