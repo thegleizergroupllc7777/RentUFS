@@ -203,6 +203,7 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
     } catch (err) {
       setError('Failed to create upload session. Please try again.');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
 
   const closePhoneUpload = useCallback(() => {

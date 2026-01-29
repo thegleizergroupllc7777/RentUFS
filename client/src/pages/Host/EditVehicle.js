@@ -42,6 +42,7 @@ const EditVehicle = () => {
 
   useEffect(() => {
     fetchVehicle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchVehicle = async () => {

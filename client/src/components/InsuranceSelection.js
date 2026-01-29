@@ -12,6 +12,7 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
 
   useEffect(() => {
     fetchInsurancePlans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalDays]);
 
   const fetchInsurancePlans = async () => {

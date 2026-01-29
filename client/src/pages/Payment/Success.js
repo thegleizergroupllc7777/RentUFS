@@ -21,6 +21,7 @@ const PaymentSuccess = () => {
       setError('Invalid booking ID');
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
 
   const fetchBooking = async () => {
