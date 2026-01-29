@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { formatTime } from '../../utils/formatTime';
 import Navbar from '../../components/Navbar';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
@@ -459,11 +460,11 @@ const VehicleDetail = () => {
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Pickup:</strong><br />
-                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
+                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {formatTime(activeBooking.pickupTime)}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Return:</strong><br />
-                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
+                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {formatTime(activeBooking.dropoffTime)}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Duration:</strong> {activeBooking.totalDays} day(s)
@@ -627,8 +628,8 @@ const VehicleDetail = () => {
                       marginBottom: '1rem',
                       fontSize: '0.9rem'
                     }}>
-                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {bookingData.pickupTime}</div>
-                      <div><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {bookingData.dropoffTime}</div>
+                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {formatTime(bookingData.pickupTime)}</div>
+                      <div><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {formatTime(bookingData.dropoffTime)}</div>
                     </div>
                   )}
 

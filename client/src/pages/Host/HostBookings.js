@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import { formatTime } from '../../utils/formatTime';
 import API_URL from '../../config/api';
 import './Host.css';
 
@@ -557,11 +558,11 @@ const HostBookings = () => {
                   <div className="booking-details">
                     <div className="booking-detail-item">
                       <strong>Pickup:</strong>{' '}
-                      {toLocalDate(booking.startDate).toLocaleDateString()} at {booking.pickupTime || '10:00 AM'}
+                      {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTime(booking.pickupTime)}
                     </div>
                     <div className="booking-detail-item">
                       <strong>Return:</strong>{' '}
-                      {toLocalDate(booking.endDate).toLocaleDateString()} by {booking.dropoffTime || '10:00 AM'}
+                      {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTime(booking.dropoffTime)}
                     </div>
                     <div className="booking-detail-item">
                       <strong>Duration:</strong> {booking.totalDays} days
