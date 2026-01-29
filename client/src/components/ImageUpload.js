@@ -1,11 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import './ImageUpload.css';
 
 const ImageUpload = ({ label, value, onChange, required = false }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const cameraInputRef = useRef(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment');
   const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -44,8 +48,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       setUploadError('');
       setUploading(false);
 
-      // Clear file inputs
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      // Clear file input
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -60,15 +63,80 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     reader.readAsDataURL(file);
   };
 
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setCameraOpen(false);
+  }, []);
+
+  const startCamera = async (mode) => {
+    setUploadError('');
+    const useMode = mode || facingMode;
+
+    try {
+      // Stop any existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: useMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      setCameraOpen(true);
+
+      // Need to wait for the video element to be rendered
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 50);
+    } catch (err) {
+      console.error('Camera access error:', err);
+      if (err.name === 'NotAllowedError') {
+        setUploadError('Camera access denied. Please allow camera access in your browser settings.');
+      } else if (err.name === 'NotFoundError') {
+        setUploadError('No camera found on this device. Please use "Choose from Computer" instead.');
+      } else {
+        setUploadError('Could not access camera. Please use "Choose from Computer" instead.');
+      }
+    }
+  };
+
+  const switchCamera = () => {
+    const newMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newMode);
+    startCamera(newMode);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    const base64 = canvas.toDataURL('image/jpeg', 0.85);
+    onChange(base64);
+    stopCamera();
+  };
+
   const handleClear = () => {
     onChange('');
     setUploadError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = '';
-    }
+    stopCamera();
   };
 
   return (
@@ -78,18 +146,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       </label>
 
       <div className="file-upload-section">
-        {/* Camera input for mobile devices */}
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileSelect}
-          style={{ display: 'none' }}
-          id={`camera-input-${label}`}
-        />
-
-        {/* File browser input for computer */}
+        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -99,27 +156,77 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
           id={`file-input-${label}`}
         />
 
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <label htmlFor={`camera-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
-            {uploading ? (
-              <span>📤 Uploading...</span>
-            ) : value ? (
-              <span>📷 Take New Photo</span>
-            ) : (
-              <span>📷 Use Camera</span>
-            )}
-          </label>
+        {/* Hidden canvas for photo capture */}
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-          <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
-            {uploading ? (
-              <span>📤 Uploading...</span>
-            ) : value ? (
-              <span>💻 Choose Different</span>
-            ) : (
-              <span>💻 Choose from Computer</span>
-            )}
-          </label>
-        </div>
+        {/* Camera viewfinder */}
+        {cameraOpen && (
+          <div className="camera-viewfinder">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="camera-video"
+            />
+            <div className="camera-controls">
+              <button
+                type="button"
+                className="camera-control-btn camera-switch-btn"
+                onClick={switchCamera}
+                title="Switch camera"
+              >
+                🔄
+              </button>
+              <button
+                type="button"
+                className="camera-control-btn camera-capture-btn"
+                onClick={capturePhoto}
+                title="Take photo"
+              >
+                <span className="capture-circle"></span>
+              </button>
+              <button
+                type="button"
+                className="camera-control-btn camera-close-btn"
+                onClick={stopCamera}
+                title="Close camera"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!cameraOpen && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="file-upload-btn"
+              style={{ flex: '1', minWidth: '140px', border: 'none', textAlign: 'center' }}
+              onClick={() => startCamera()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <span>📤 Uploading...</span>
+              ) : value ? (
+                <span>📷 Take New Photo</span>
+              ) : (
+                <span>📷 Use Camera</span>
+              )}
+            </button>
+
+            <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
+              {uploading ? (
+                <span>📤 Uploading...</span>
+              ) : value ? (
+                <span>💻 Choose Different</span>
+              ) : (
+                <span>💻 Choose from Computer</span>
+              )}
+            </label>
+          </div>
+        )}
 
         <p className="upload-hint">
           Use camera or select from your computer (Max 2MB)
