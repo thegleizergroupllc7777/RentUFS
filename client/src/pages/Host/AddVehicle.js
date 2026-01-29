@@ -37,6 +37,46 @@ const AddVehicle = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinDecoded, setVinDecoded] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+
+  const toggleCategory = (category) => {
+    setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  const handleDecodeVin = async () => {
+    const vin = formData.vin.trim().toUpperCase();
+    if (vin.length !== 17) {
+      setError('VIN must be exactly 17 characters');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setVinLoading(true);
+    setError('');
+
+    try {
+      const response = await axios.get(`${API_URL}/api/vehicles/decode-vin/${vin}`);
+      const decoded = response.data;
+
+      setFormData(prev => ({
+        ...prev,
+        vin: vin,
+        make: decoded.make || prev.make,
+        model: decoded.model || prev.model,
+        year: decoded.year || prev.year,
+        type: decoded.type || prev.type,
+        transmission: decoded.transmission || prev.transmission
+      }));
+      setVinDecoded(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to decode VIN. Please enter vehicle details manually.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setVinLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -161,6 +201,55 @@ const AddVehicle = () => {
               <div className="form-section">
                 <h2 className="form-section-title">Vehicle Details</h2>
 
+                {/* VIN First - with decode button */}
+                <div className="form-group">
+                  <label className="form-label">VIN (Vehicle Identification Number) *</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      name="vin"
+                      className="form-input"
+                      value={formData.vin}
+                      onChange={(e) => {
+                        handleChange(e);
+                        setVinDecoded(false);
+                      }}
+                      placeholder="Enter 17-character VIN"
+                      maxLength="17"
+                      style={{ textTransform: 'uppercase', flex: 1 }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleDecodeVin}
+                      disabled={vinLoading || formData.vin.length !== 17}
+                      className="btn btn-primary"
+                      style={{
+                        whiteSpace: 'nowrap',
+                        opacity: formData.vin.length !== 17 ? 0.5 : 1
+                      }}
+                    >
+                      {vinLoading ? 'Decoding...' : 'Decode VIN'}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Found on your dashboard or driver's door jamb. Enter VIN and click Decode to auto-fill vehicle details.
+                  </p>
+                  {vinDecoded && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem',
+                      backgroundColor: '#d1fae5',
+                      color: '#065f46',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #10b981',
+                      fontSize: '0.9rem'
+                    }}>
+                      VIN decoded successfully: {formData.year} {formData.make} {formData.model}. Please verify details below.
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Make *</label>
@@ -218,22 +307,33 @@ const AddVehicle = () => {
 
                   <div className="form-group">
                     <label className="form-label">Model *</label>
-                    <select
-                      name="model"
-                      className="form-select"
-                      value={formData.model}
-                      onChange={handleChange}
-                      required
-                      disabled={!formData.make}
-                    >
-                      <option value="">
-                        {formData.make ? 'Select a model' : 'Select brand first'}
-                      </option>
-                      {formData.make && vehicleModels[formData.make]?.map(model => (
-                        <option key={model} value={model}>{model}</option>
-                      ))}
-                    </select>
-                    {!formData.make && (
+                    {vinDecoded && formData.model ? (
+                      <input
+                        type="text"
+                        name="model"
+                        className="form-input"
+                        value={formData.model}
+                        onChange={handleChange}
+                        required
+                      />
+                    ) : (
+                      <select
+                        name="model"
+                        className="form-select"
+                        value={formData.model}
+                        onChange={handleChange}
+                        required
+                        disabled={!formData.make}
+                      >
+                        <option value="">
+                          {formData.make ? 'Select a model' : 'Select brand first'}
+                        </option>
+                        {formData.make && vehicleModels[formData.make]?.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                    )}
+                    {!formData.make && !vinDecoded && (
                       <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                         Please select a brand first
                       </p>
@@ -256,25 +356,6 @@ const AddVehicle = () => {
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">VIN (Vehicle Identification Number)</label>
-                    <input
-                      type="text"
-                      name="vin"
-                      className="form-input"
-                      value={formData.vin}
-                      onChange={handleChange}
-                      placeholder="17 characters"
-                      maxLength="17"
-                      style={{ textTransform: 'uppercase' }}
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      Optional - Found on dashboard or driver's door jamb
-                    </p>
-                  </div>
-                </div>
-
-                <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Vehicle Type *</label>
                     <select
@@ -342,75 +423,100 @@ const AddVehicle = () => {
 
               <div className="form-section">
                 <h2 className="form-section-title">Vehicle Features</h2>
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.5rem' }}>
                   Select all features that apply to your vehicle
                 </p>
-
-                {Object.entries(featuresByCategory).map(([category, features]) => (
-                  <div key={category} style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.75rem',
-                      borderBottom: '1px solid #e5e7eb',
-                      paddingBottom: '0.5rem'
-                    }}>
-                      {category}
-                    </h3>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '0.5rem'
-                    }}>
-                      {features.map(feature => (
-                        <label
-                          key={feature.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            cursor: 'pointer',
-                            backgroundColor: formData.features.includes(feature.label) ? '#d1fae5' : '#f9fafb',
-                            border: formData.features.includes(feature.label) ? '1px solid #10b981' : '1px solid #e5e7eb',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.features.includes(feature.label)}
-                            onChange={() => handleFeatureToggle(feature.label)}
-                            style={{
-                              width: '1rem',
-                              height: '1rem',
-                              accentColor: '#10b981'
-                            }}
-                          />
-                          <span style={{ fontSize: '0.9rem', color: '#374151' }}>
-                            {feature.label}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
                 {formData.features.length > 0 && (
                   <div style={{
-                    marginTop: '1rem',
-                    padding: '0.75rem',
+                    marginBottom: '1rem',
+                    padding: '0.5rem 0.75rem',
                     backgroundColor: '#f0fdf4',
                     borderRadius: '0.5rem',
-                    border: '1px solid #bbf7d0'
+                    border: '1px solid #bbf7d0',
+                    fontSize: '0.85rem'
                   }}>
-                    <strong style={{ color: '#166534' }}>Selected features ({formData.features.length}):</strong>
-                    <p style={{ marginTop: '0.5rem', color: '#15803d', fontSize: '0.9rem' }}>
-                      {formData.features.join(', ')}
-                    </p>
+                    <strong style={{ color: '#166534' }}>{formData.features.length} selected:</strong>{' '}
+                    <span style={{ color: '#15803d' }}>{formData.features.join(', ')}</span>
                   </div>
                 )}
+
+                {Object.entries(featuresByCategory).map(([category, features]) => {
+                  const selectedCount = features.filter(f => formData.features.includes(f.label)).length;
+                  const isExpanded = expandedCategories[category];
+                  return (
+                    <div key={category} style={{
+                      marginBottom: '0.5rem',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.5rem',
+                      overflow: 'hidden'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(category)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.75rem 1rem',
+                          background: isExpanded ? '#f0fdf4' : '#f9fafb',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.95rem',
+                          fontWeight: '600',
+                          color: '#374151'
+                        }}
+                      >
+                        <span>{isExpanded ? '▼' : '▶'} {category}</span>
+                        {selectedCount > 0 && (
+                          <span style={{
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            padding: '0.125rem 0.5rem',
+                            borderRadius: '1rem',
+                            fontSize: '0.75rem'
+                          }}>
+                            {selectedCount}
+                          </span>
+                        )}
+                      </button>
+                      {isExpanded && (
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                          gap: '0.375rem',
+                          padding: '0.75rem 1rem'
+                        }}>
+                          {features.map(feature => (
+                            <label
+                              key={feature.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.375rem 0.5rem',
+                                borderRadius: '0.375rem',
+                                cursor: 'pointer',
+                                backgroundColor: formData.features.includes(feature.label) ? '#d1fae5' : '#f9fafb',
+                                border: formData.features.includes(feature.label) ? '1px solid #10b981' : '1px solid #e5e7eb',
+                                transition: 'all 0.2s',
+                                fontSize: '0.85rem'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={formData.features.includes(feature.label)}
+                                onChange={() => handleFeatureToggle(feature.label)}
+                                style={{ accentColor: '#10b981' }}
+                              />
+                              <span style={{ color: '#374151' }}>{feature.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="form-section">

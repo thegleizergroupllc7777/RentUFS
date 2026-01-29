@@ -1,4 +1,5 @@
 const express = require('express');
+const axios = require('axios');
 const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
@@ -6,6 +7,86 @@ const { sendVehicleListedEmail } = require('../utils/emailService');
 const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
 
 const router = express.Router();
+
+// Decode VIN using NHTSA vPIC API (free, no key required)
+router.get('/decode-vin/:vin', async (req, res) => {
+  try {
+    const { vin } = req.params;
+    if (!vin || vin.length !== 17) {
+      return res.status(400).json({ message: 'VIN must be exactly 17 characters' });
+    }
+
+    const response = await axios.get(
+      `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`
+    );
+
+    const results = response.data.Results;
+    const getValue = (variableId) => {
+      const item = results.find(r => r.VariableId === variableId);
+      return item?.Value && item.Value.trim() !== '' ? item.Value.trim() : null;
+    };
+
+    // Check for decode errors
+    const errorCode = getValue(143); // Error Code
+    if (errorCode && !errorCode.includes('0')) {
+      const errorText = getValue(144); // Error Text
+      console.log('⚠️ VIN decode warnings:', errorText);
+    }
+
+    const make = getValue(26);       // Make
+    const model = getValue(28);      // Model
+    const year = getValue(29);       // Model Year
+    const bodyClass = getValue(5);   // Body Class
+    const doors = getValue(14);      // Number of Doors
+    const transmission = getValue(37); // Transmission Style
+    const driveType = getValue(15);  // Drive Type
+    const fuelType = getValue(24);   // Fuel Type - Primary
+    const engineCylinders = getValue(9); // Engine Number of Cylinders
+    const displacementL = getValue(11);  // Displacement (L)
+
+    // Map body class to our vehicle types
+    const mapBodyToType = (body) => {
+      if (!body) return 'sedan';
+      const b = body.toLowerCase();
+      if (b.includes('suv') || b.includes('sport utility')) return 'suv';
+      if (b.includes('truck') || b.includes('pickup')) return 'truck';
+      if (b.includes('van') || b.includes('minivan')) return 'van';
+      if (b.includes('convertible') || b.includes('cabriolet')) return 'convertible';
+      if (b.includes('coupe')) return 'coupe';
+      if (b.includes('wagon') || b.includes('hatchback')) return 'wagon';
+      if (b.includes('sedan')) return 'sedan';
+      return 'sedan';
+    };
+
+    // Map transmission
+    const mapTransmission = (trans) => {
+      if (!trans) return 'automatic';
+      const t = trans.toLowerCase();
+      if (t.includes('manual')) return 'manual';
+      return 'automatic';
+    };
+
+    const decoded = {
+      make: make || '',
+      model: model || '',
+      year: year ? parseInt(year) : new Date().getFullYear(),
+      type: mapBodyToType(bodyClass),
+      transmission: mapTransmission(transmission),
+      bodyClass: bodyClass || '',
+      doors: doors || '',
+      driveType: driveType || '',
+      fuelType: fuelType || '',
+      engineCylinders: engineCylinders || '',
+      displacementL: displacementL || ''
+    };
+
+    console.log(`🔍 VIN decoded: ${vin} → ${decoded.year} ${decoded.make} ${decoded.model}`);
+    res.json(decoded);
+  } catch (error) {
+    console.error('❌ VIN decode error:', error.message);
+    res.status(500).json({ message: 'Failed to decode VIN. Please try again or enter details manually.' });
+  }
+});
 
 // Geocode a location (for search)
 router.get('/geocode', async (req, res) => {
