@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './DatePicker.css';
 
+// Convert a Date to YYYY-MM-DD in local timezone (avoids UTC shift from toISOString)
+const toLocalDateStr = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const DatePicker = ({ label, name, value, onChange, min, required = false }) => {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => {
@@ -91,7 +99,7 @@ const DatePicker = ({ label, name, value, onChange, min, required = false }) => 
   const handleSelect = (day) => {
     if (isDisabled(day)) return;
     const selected = new Date(year, month, day.day);
-    const dateStr = selected.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(selected);
 
     // Simulate an input change event
     onChange({ target: { name, value: dateStr } });
@@ -203,13 +211,13 @@ const DatePicker = ({ label, name, value, onChange, min, required = false }) => 
               type="button"
               className="datepicker-today-btn"
               onClick={() => {
-                const todayStr = new Date().toISOString().split('T')[0];
+                const todayStr = toLocalDateStr(new Date());
                 if (!min || todayStr >= min) {
                   onChange({ target: { name, value: todayStr } });
                   setOpen(false);
                 }
               }}
-              disabled={min && new Date().toISOString().split('T')[0] < min}
+              disabled={min && toLocalDateStr(new Date()) < min}
             >
               Today
             </button>

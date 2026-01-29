@@ -114,6 +114,14 @@ const VehicleDetail = () => {
     }));
   };
 
+  // Convert Date to YYYY-MM-DD in local timezone (avoids UTC shift)
+  const toLocalDateStr = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   // Calculate end date based on rental type and quantity
   const calculateEndDate = (startDate, rentalType, quantity) => {
     if (!startDate) return '';
@@ -135,7 +143,7 @@ const VehicleDetail = () => {
         end.setDate(start.getDate() + qty);
     }
 
-    return end.toISOString().split('T')[0];
+    return toLocalDateStr(end);
   };
 
   // Update end date when start date, rental type, or quantity changes
@@ -519,7 +527,7 @@ const VehicleDetail = () => {
                       name="startDate"
                       value={bookingData.startDate}
                       onChange={handleBookingChange}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={toLocalDateStr(new Date())}
                       required
                     />
                   </div>
