@@ -171,12 +171,12 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
           const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
           if (pollRes.data.images && pollRes.data.images.length > lastCount) {
             lastCount = pollRes.data.images.length;
-            const latestBase64 = pollRes.data.images[pollRes.data.images.length - 1];
+            const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
 
-            // Convert base64 from phone to a server file URL
+            // Phone upload now returns server URLs directly
             try {
               setUploading(true);
-              const imageUrl = await uploadBase64AsFile(latestBase64);
+              const imageUrl = latestImage;
 
               setPhotos(prev => ({
                 ...prev,
