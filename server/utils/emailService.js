@@ -45,6 +45,13 @@ const createTransporter = () => {
   return null;
 };
 
+// Get the verified sender email/name for SendGrid
+const getSenderInfo = () => {
+  const email = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com';
+  const name = process.env.EMAIL_FROM_NAME || 'RentUFS';
+  return { email, name };
+};
+
 // Helper function to send email via SendGrid or Nodemailer
 const sendEmail = async (mailOptions) => {
   const transporter = createTransporter();
@@ -54,13 +61,36 @@ const sendEmail = async (mailOptions) => {
   }
 
   if (transporter.type === 'sendgrid') {
-    // Use SendGrid API
+    const sender = getSenderInfo();
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+    // Use SendGrid API with proper headers for inbox delivery
     const msg = {
       to: mailOptions.to,
-      from: mailOptions.from || process.env.EMAIL_FROM || 'noreply@rentufs.com',
+      from: {
+        email: sender.email,
+        name: sender.name
+      },
+      replyTo: {
+        email: process.env.EMAIL_REPLY_TO || sender.email,
+        name: sender.name
+      },
       subject: mailOptions.subject,
       text: mailOptions.text,
-      html: mailOptions.html
+      html: mailOptions.html,
+      headers: {
+        'X-Priority': '3',
+        'X-Mailer': 'RentUFS Notifications',
+        'List-Unsubscribe': `<${clientUrl}/unsubscribe>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+      },
+      trackingSettings: {
+        clickTracking: { enable: false },
+        openTracking: { enable: false }
+      },
+      mailSettings: {
+        bypassListManagement: { enable: false }
+      }
     };
 
     const response = await sgMail.send(msg);
@@ -403,6 +433,7 @@ The UFS Team
 
             <div class="footer">
               <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
@@ -587,6 +618,7 @@ The RentUFS Team
             <div class="footer">
               <p>© ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
               <p>Booking ID: ${booking._id}</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
@@ -771,6 +803,7 @@ The RentUFS Team
             <div class="footer">
               <p>© ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
               <p>Booking ID: ${booking._id}</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
@@ -977,6 +1010,7 @@ The RentUFS Team
             <div class="footer">
               <p>© ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
               <p>Booking ID: ${booking._id}</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
@@ -1192,6 +1226,7 @@ Updated Booking Details:
             </div>
             <div class="footer">
               <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
@@ -1244,6 +1279,7 @@ Updated Booking Details:
             </div>
             <div class="footer">
               <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
@@ -1391,6 +1427,7 @@ Dates: ${startDate} - ${endDate}
 
             <div class="footer">
               <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
