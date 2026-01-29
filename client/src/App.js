@@ -27,6 +27,9 @@ import Checkout from './pages/Payment/Checkout';
 import PaymentSuccess from './pages/Payment/Success';
 import PaymentCancel from './pages/Payment/Cancel';
 
+// Mobile upload (QR code flow)
+import MobileUpload from './pages/MobileUpload';
+
 import './App.css';
 
 function App() {
@@ -129,6 +132,9 @@ function App() {
                 </PrivateRoute>
               }
             />
+
+            {/* Mobile Upload (QR code from phone) */}
+            <Route path="/mobile-upload/:sessionId" element={<MobileUpload />} />
 
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

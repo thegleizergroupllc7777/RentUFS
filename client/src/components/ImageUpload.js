@@ -1,4 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import axios from 'axios';
+import API_URL from '../config/api';
 import './ImageUpload.css';
 
 const ImageUpload = ({ label, value, onChange, required = false }) => {
@@ -6,10 +9,20 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
   const [uploadError, setUploadError] = useState('');
   const [cameraOpen, setCameraOpen] = useState(false);
   const [facingMode, setFacingMode] = useState('environment');
+  const [phoneSession, setPhoneSession] = useState(null);
+  const [phoneQrUrl, setPhoneQrUrl] = useState('');
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const pollRef = useRef(null);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -17,7 +30,6 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
 
     setUploadError('');
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       const errorMsg = 'Please select an image file (JPG, PNG, etc.)';
       setUploadError(errorMsg);
@@ -25,7 +37,6 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       return;
     }
 
-    // Validate file size (2MB for base64 to avoid huge strings)
     if (file.size > 2 * 1024 * 1024) {
       const errorMsg = 'Image size must be less than 2MB';
       setUploadError(errorMsg);
@@ -36,19 +47,14 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     setUploading(true);
     console.log(`Converting ${label} to base64...`);
 
-    // Convert image to base64 - this works WITHOUT any server!
     const reader = new FileReader();
 
     reader.onloadend = () => {
       const base64String = reader.result;
       console.log(`✅ Image converted successfully for ${label}`);
-
-      // Pass the base64 string directly
       onChange(base64String);
       setUploadError('');
       setUploading(false);
-
-      // Clear file input
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -59,7 +65,6 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       setUploading(false);
     };
 
-    // Start reading the file as base64
     reader.readAsDataURL(file);
   };
 
@@ -76,7 +81,6 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     const useMode = mode || facingMode;
 
     try {
-      // Stop any existing stream first
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -89,7 +93,6 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       streamRef.current = stream;
       setCameraOpen(true);
 
-      // Need to wait for the video element to be rendered
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -100,9 +103,9 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       if (err.name === 'NotAllowedError') {
         setUploadError('Camera access denied. Please allow camera access in your browser settings.');
       } else if (err.name === 'NotFoundError') {
-        setUploadError('No camera found on this device. Please use "Choose from Computer" instead.');
+        setUploadError('No camera found on this device. Use "Choose from Computer" or "Upload from Phone" instead.');
       } else {
-        setUploadError('Could not access camera. Please use "Choose from Computer" instead.');
+        setUploadError('Could not access camera. Use "Choose from Computer" or "Upload from Phone" instead.');
       }
     }
   };
@@ -130,6 +133,57 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     stopCamera();
   };
 
+  // Phone upload: create session and show QR code
+  const startPhoneUpload = async () => {
+    setUploadError('');
+    try {
+      const res = await axios.post(`${API_URL}/api/upload/create-session`, {
+        photoSlot: label
+      });
+      const { sessionId } = res.data;
+      setPhoneSession(sessionId);
+
+      // Build the QR URL using the frontend's current origin
+      const baseUrl = window.location.origin;
+      setPhoneQrUrl(`${baseUrl}/mobile-upload/${sessionId}`);
+
+      // Start polling for uploaded images
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(async () => {
+        try {
+          const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
+          if (pollRes.data.images && pollRes.data.images.length > 0) {
+            // Use the latest image
+            const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
+            onChange(latestImage);
+            // Keep polling in case they upload more - the latest will be used
+          }
+        } catch (err) {
+          // Session expired or error - stop polling
+          if (err.response?.status === 404) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        }
+      }, 2000);
+    } catch (err) {
+      setUploadError('Failed to create upload session. Please try again.');
+    }
+  };
+
+  const closePhoneUpload = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    // Clean up session on server
+    if (phoneSession) {
+      axios.delete(`${API_URL}/api/upload/session/${phoneSession}`).catch(() => {});
+    }
+    setPhoneSession(null);
+    setPhoneQrUrl('');
+  };
+
   const handleClear = () => {
     onChange('');
     setUploadError('');
@@ -137,6 +191,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       fileInputRef.current.value = '';
     }
     stopCamera();
+    closePhoneUpload();
   };
 
   return (
@@ -198,38 +253,81 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
           </div>
         )}
 
-        {!cameraOpen && (
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {/* QR Code for phone upload */}
+        {phoneQrUrl && !cameraOpen && (
+          <div className="phone-upload-qr">
+            <p className="qr-title">Scan with your phone</p>
+            <div className="qr-code-wrapper">
+              <QRCodeSVG
+                value={phoneQrUrl}
+                size={180}
+                bgColor="#ffffff"
+                fgColor="#000000"
+                level="M"
+              />
+            </div>
+            <p className="qr-instruction">
+              Open your phone's camera and point it at this QR code.
+              Photos you take will appear here automatically.
+            </p>
+            {value && (
+              <div className="qr-received">
+                ✅ Photo received from phone!
+              </div>
+            )}
             <button
               type="button"
-              className="file-upload-btn"
-              style={{ flex: '1', minWidth: '140px', border: 'none', textAlign: 'center' }}
-              onClick={() => startCamera()}
-              disabled={uploading}
+              className="qr-close-btn"
+              onClick={closePhoneUpload}
             >
-              {uploading ? (
-                <span>📤 Uploading...</span>
-              ) : value ? (
-                <span>📷 Take New Photo</span>
-              ) : (
-                <span>📷 Use Camera</span>
-              )}
+              Close QR Code
             </button>
-
-            <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
-              {uploading ? (
-                <span>📤 Uploading...</span>
-              ) : value ? (
-                <span>💻 Choose Different</span>
-              ) : (
-                <span>💻 Choose from Computer</span>
-              )}
-            </label>
           </div>
         )}
 
+        {!cameraOpen && !phoneQrUrl && (
+          <>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="file-upload-btn"
+                style={{ flex: '1', minWidth: '140px', border: 'none', textAlign: 'center' }}
+                onClick={() => startCamera()}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <span>📤 Uploading...</span>
+                ) : value ? (
+                  <span>📷 Take New Photo</span>
+                ) : (
+                  <span>📷 Use Camera</span>
+                )}
+              </button>
+
+              <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
+                {uploading ? (
+                  <span>📤 Uploading...</span>
+                ) : value ? (
+                  <span>💻 Choose Different</span>
+                ) : (
+                  <span>💻 Choose from Computer</span>
+                )}
+              </label>
+            </div>
+
+            <button
+              type="button"
+              className="phone-upload-btn"
+              onClick={startPhoneUpload}
+              disabled={uploading}
+            >
+              📱 Upload from Phone
+            </button>
+          </>
+        )}
+
         <p className="upload-hint">
-          Use camera or select from your computer (Max 2MB)
+          Use camera, select from computer, or scan QR code with your phone (Max 2MB)
         </p>
 
         {uploadError && (
