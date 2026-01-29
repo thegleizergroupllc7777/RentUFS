@@ -3,7 +3,9 @@ const Booking = require('../models/Booking');
 const { Counter } = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const auth = require('../middleware/auth');
-const { sendBookingExtensionEmail } = require('../utils/emailService');
+const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
+
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 
 const router = express.Router();
 
@@ -654,6 +656,89 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error switching vehicle:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Host cancel reservation with full refund
+router.post('/:id/host-cancel', auth, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('driver', 'firstName lastName email')
+      .populate('host', 'firstName lastName email');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only the host can use this endpoint
+    if (booking.host._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the host can cancel this reservation' });
+    }
+
+    // Can only cancel confirmed or active bookings
+    if (!['confirmed', 'active', 'pending'].includes(booking.status)) {
+      return res.status(400).json({ message: `Cannot cancel a booking with status "${booking.status}"` });
+    }
+
+    // Attempt Stripe refund if payment was made
+    let refundResult = null;
+    if (booking.paymentStatus === 'paid' && booking.paymentSessionId) {
+      try {
+        // Retrieve the checkout session to get the payment intent
+        const session = await stripe.checkout.sessions.retrieve(booking.paymentSessionId);
+        const paymentIntentId = session.payment_intent;
+
+        if (paymentIntentId) {
+          // Create a full refund
+          refundResult = await stripe.refunds.create({
+            payment_intent: paymentIntentId,
+            reason: 'requested_by_customer'
+          });
+          console.log('✅ Stripe refund created:', refundResult.id, 'Amount:', refundResult.amount);
+        }
+      } catch (stripeError) {
+        console.error('❌ Stripe refund error:', stripeError.message);
+        // If refund fails, still cancel the booking but note the refund failure
+        refundResult = { error: stripeError.message };
+      }
+    }
+
+    // Update booking status
+    booking.status = 'cancelled';
+    if (booking.paymentStatus === 'paid') {
+      booking.paymentStatus = 'refunded';
+    }
+    booking.cancellationReason = reason || 'Cancelled by host';
+    booking.cancelledBy = 'host';
+    booking.cancelledAt = new Date();
+    await booking.save();
+
+    // Send cancellation email to driver
+    try {
+      await sendBookingCancellationEmail(booking.driver, booking.host, booking, booking.vehicle, reason);
+    } catch (emailError) {
+      console.error('❌ Cancellation email failed (non-blocking):', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Reservation cancelled and refund initiated',
+      booking: {
+        _id: booking._id,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus
+      },
+      refund: refundResult ? {
+        id: refundResult.id,
+        amount: refundResult.amount,
+        status: refundResult.status
+      } : null
+    });
+  } catch (error) {
+    console.error('Host cancellation error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

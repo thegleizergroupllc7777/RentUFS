@@ -33,6 +33,12 @@ const HostBookings = () => {
   const [switchReason, setSwitchReason] = useState('');
   const [switching, setSwitching] = useState(false);
 
+  // Cancel reservation modal state
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelBooking, setCancelBooking] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -63,6 +69,43 @@ const HostBookings = () => {
     } catch (error) {
       console.error('Error updating booking status:', error);
       alert('Failed to update booking status');
+    }
+  };
+
+  // Open cancel reservation modal
+  const handleOpenCancelModal = (booking) => {
+    setCancelBooking(booking);
+    setCancelReason('');
+    setShowCancelModal(true);
+  };
+
+  // Confirm cancellation with refund
+  const handleConfirmCancel = async () => {
+    if (!cancelBooking) return;
+    setCancelling(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/bookings/${cancelBooking._id}/host-cancel`, {
+        reason: cancelReason
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        const refundMsg = response.data.refund?.id
+          ? `A full refund has been initiated.`
+          : (cancelBooking.paymentStatus === 'paid' ? 'Refund processing may be pending.' : '');
+        alert(`Reservation cancelled successfully. ${refundMsg}`);
+      }
+
+      setShowCancelModal(false);
+      setCancelBooking(null);
+      fetchBookings();
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      alert(error.response?.data?.message || 'Failed to cancel reservation');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -565,25 +608,41 @@ const HostBookings = () => {
                     )}
 
                     {booking.status === 'confirmed' && (
-                      <button
-                        onClick={() => handleOpenSwitchModal(booking)}
-                        className="btn btn-secondary"
-                        style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
-                      >
-                        Switch Vehicle
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleOpenSwitchModal(booking)}
+                          className="btn btn-secondary"
+                          style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                        >
+                          Switch Vehicle
+                        </button>
+                        <button
+                          onClick={() => handleOpenCancelModal(booking)}
+                          className="btn btn-danger"
+                        >
+                          Cancel Reservation
+                        </button>
+                      </>
                     )}
 
                     {booking.status === 'active' && (
-                      <span style={{
-                        padding: '0.5rem 1rem',
-                        background: '#dbeafe',
-                        color: '#1e40af',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem'
-                      }}>
-                        Driver will complete return inspection
-                      </span>
+                      <>
+                        <span style={{
+                          padding: '0.5rem 1rem',
+                          background: '#dbeafe',
+                          color: '#1e40af',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem'
+                        }}>
+                          Driver will complete return inspection
+                        </span>
+                        <button
+                          onClick={() => handleOpenCancelModal(booking)}
+                          className="btn btn-danger"
+                        >
+                          Cancel Reservation
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -594,6 +653,91 @@ const HostBookings = () => {
           )}
         </div>
       </div>
+
+      {/* Cancel Reservation Modal */}
+      {showCancelModal && cancelBooking && (
+        <div className="modal-overlay" onClick={() => !cancelling && setShowCancelModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <h2 style={{ color: '#dc2626', marginTop: 0 }}>Cancel Reservation</h2>
+            <p>Are you sure you want to cancel this reservation?</p>
+
+            <div style={{
+              background: '#1a1a1a',
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              marginBottom: '1rem',
+              border: '1px solid #333'
+            }}>
+              <p style={{ margin: '0.25rem 0', fontWeight: '600' }}>
+                {cancelBooking.reservationId || cancelBooking._id.slice(-8).toUpperCase()}
+              </p>
+              <p style={{ margin: '0.25rem 0' }}>
+                {cancelBooking.vehicle?.year} {cancelBooking.vehicle?.make} {cancelBooking.vehicle?.model}
+              </p>
+              <p style={{ margin: '0.25rem 0', color: '#9ca3af' }}>
+                Renter: {cancelBooking.driver?.firstName} {cancelBooking.driver?.lastName}
+              </p>
+              <p style={{ margin: '0.25rem 0', color: '#10b981', fontWeight: '600' }}>
+                Total: ${cancelBooking.totalPrice}
+              </p>
+            </div>
+
+            {cancelBooking.paymentStatus === 'paid' && (
+              <div style={{
+                background: '#fef2f2',
+                padding: '0.75rem 1rem',
+                borderRadius: '0.5rem',
+                marginBottom: '1rem',
+                border: '1px solid #fecaca',
+                color: '#dc2626',
+                fontSize: '0.9rem'
+              }}>
+                A full refund of <strong>${cancelBooking.totalPrice}</strong> will be processed to the driver's original payment method.
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+                Reason for cancellation (optional):
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Vehicle maintenance required, scheduling conflict..."
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #333',
+                  background: '#1a1a1a',
+                  color: '#e5e7eb',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  fontSize: '0.9rem'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="btn btn-secondary"
+                disabled={cancelling}
+              >
+                Keep Reservation
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                className="btn btn-danger"
+                disabled={cancelling}
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel & Refund'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Switch Vehicle Modal */}
       {showSwitchModal && (
