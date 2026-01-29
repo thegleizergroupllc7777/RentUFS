@@ -47,6 +47,14 @@ const userSchema = new mongoose.Schema({
     expirationDate: {
       type: Date
     },
+    licenseImage: {
+      type: String,
+      default: ''
+    },
+    verificationSelfie: {
+      type: String,
+      default: ''
+    },
     verified: {
       type: Boolean,
       default: false

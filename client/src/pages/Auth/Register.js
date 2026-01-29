@@ -22,7 +22,9 @@ const Register = () => {
     driverLicense: {
       licenseNumber: '',
       state: '',
-      expirationDate: ''
+      expirationDate: '',
+      licenseImage: '',
+      verificationSelfie: ''
     }
   });
   const [vehicleData, setVehicleData] = useState({
@@ -116,6 +118,22 @@ const Register = () => {
 
       if (exactAge < 21) {
         setError('You must be at least 21 years old to register as a driver.');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    // Validate license photo and verification selfie for drivers
+    if (formData.userType === 'driver' || formData.userType === 'both') {
+      if (!formData.driverLicense.licenseImage || formData.driverLicense.licenseImage.trim() === '') {
+        setError('Please upload a photo of your driver\'s license.');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      if (!formData.driverLicense.verificationSelfie || formData.driverLicense.verificationSelfie.trim() === '') {
+        setError('Please upload a verification selfie holding your driver\'s license.');
         setLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -385,8 +403,40 @@ const Register = () => {
                           </div>
                         </div>
 
-                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                          ℹ️ Your license information is required to rent vehicles and will be verified for your safety.
+                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#1f2937' }}>
+                          License Photo *
+                        </h4>
+                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
+                          Upload a clear photo of the front of your driver's license.
+                        </p>
+                        <ImageUpload
+                          label="Driver's License Photo"
+                          value={formData.driverLicense.licenseImage}
+                          onChange={(url) => setFormData(prev => ({
+                            ...prev,
+                            driverLicense: { ...prev.driverLicense, licenseImage: url }
+                          }))}
+                          required={true}
+                        />
+
+                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#1f2937' }}>
+                          Verification Selfie *
+                        </h4>
+                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
+                          Take a selfie holding your driver's license next to your face. This helps us verify your identity.
+                        </p>
+                        <ImageUpload
+                          label="Selfie with License"
+                          value={formData.driverLicense.verificationSelfie}
+                          onChange={(url) => setFormData(prev => ({
+                            ...prev,
+                            driverLicense: { ...prev.driverLicense, verificationSelfie: url }
+                          }))}
+                          required={true}
+                        />
+
+                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '1rem' }}>
+                          ℹ️ Your license information and photos are required to rent vehicles and will be verified for your safety.
                         </p>
                       </div>
                     </>
