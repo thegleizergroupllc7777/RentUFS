@@ -3,7 +3,7 @@ services:
   - type: web
     name: rentufs-api
     env: node
-    buildCommand: npm install
+    buildCommand: npm install && cd client && npm install && npm run build
     startCommand: npm run server
     envVars:
       - key: NODE_ENV
