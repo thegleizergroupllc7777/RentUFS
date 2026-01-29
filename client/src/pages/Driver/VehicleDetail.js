@@ -46,12 +46,22 @@ const VehicleDetail = () => {
       const userIsHost = vehicleData && user && vehicleData.host?._id === user._id;
       setIsHost(userIsHost);
 
+      // Only show bookings whose end date hasn't passed yet
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      const isNotPast = (booking) => {
+        const endStr = booking.endDate?.split('T')[0] || '';
+        return endStr >= todayStr;
+      };
+
       if (userIsHost) {
         // Host viewing their own vehicle - fetch bookings on this vehicle
         const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, { headers });
         const activeOrConfirmed = response.data.find(
           booking => booking.vehicle?._id === id &&
-          ['active', 'confirmed', 'pending'].includes(booking.status)
+          ['active', 'confirmed', 'pending'].includes(booking.status) &&
+          isNotPast(booking)
         );
         if (activeOrConfirmed) {
           setActiveBooking(activeOrConfirmed);
@@ -61,7 +71,8 @@ const VehicleDetail = () => {
         const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, { headers });
         const activeOrConfirmed = response.data.find(
           booking => booking.vehicle?._id === id &&
-          ['active', 'confirmed'].includes(booking.status)
+          ['active', 'confirmed'].includes(booking.status) &&
+          isNotPast(booking)
         );
         if (activeOrConfirmed) {
           setActiveBooking(activeOrConfirmed);
@@ -467,12 +478,12 @@ const VehicleDetail = () => {
                       className="btn btn-primary"
                       style={{ width: '100%', marginBottom: '0.5rem' }}
                     >
-                      Manage Reservation
+                      {isHost ? 'Manage Reservation' : 'View My Reservation'}
                     </button>
                     <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: 0 }}>
                       {isHost
                         ? 'Go to Host Bookings to manage this reservation'
-                        : 'Go to My Reservations to start, extend, or return this vehicle'}
+                        : 'Go to My Bookings to view this reservation'}
                     </p>
                   </>
                 ) : (
