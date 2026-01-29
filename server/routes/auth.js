@@ -10,7 +10,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense } = req.body;
+    const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -42,7 +42,8 @@ router.post('/register', async (req, res) => {
       lastName,
       phone,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-      userType: userType || 'driver'
+      userType: userType || 'driver',
+      profileImage: profileImage || undefined
     };
 
     // Add driver license info if provided (for drivers and both)
@@ -78,7 +79,8 @@ router.post('/register', async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        userType: user.userType
+        userType: user.userType,
+        profileImage: user.profileImage
       }
     });
   } catch (error) {
@@ -114,7 +116,8 @@ router.post('/login', async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        userType: user.userType
+        userType: user.userType,
+        profileImage: user.profileImage
       }
     });
   } catch (error) {
