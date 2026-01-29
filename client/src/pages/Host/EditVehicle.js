@@ -127,10 +127,14 @@ const EditVehicle = () => {
         images: formData.images.length > 0 ? formData.images : undefined
       };
 
-      await axios.put(`${API_URL}/api/vehicles/${id}`, vehicleData);
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/api/vehicles/${id}`, vehicleData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       navigate('/host/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update vehicle');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
     }
@@ -628,6 +632,12 @@ const EditVehicle = () => {
                   </p>
                 </div>
               </div>
+
+              {error && (
+                <div className="error-message" style={{ marginBottom: '1rem' }}>
+                  {error}
+                </div>
+              )}
 
               <div className="form-actions">
                 <button
