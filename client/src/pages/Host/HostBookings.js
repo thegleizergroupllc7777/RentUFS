@@ -347,7 +347,7 @@ const HostBookings = () => {
 
                       {/* Dates */}
                       <div className="compact-booking-dates">
-                        {formatUTCDate(booking.startDate)} - {formatUTCDate(booking.endDate)}
+                        {toLocalDate(booking.startDate).toLocaleDateString()} - {toLocalDate(booking.endDate).toLocaleDateString()}
                       </div>
 
                       {/* Duration & Price */}
