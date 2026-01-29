@@ -99,8 +99,46 @@ const HostDashboard = () => {
               </Link>
             </div>
           ) : (
-            <div className="host-vehicles-grid">
-              {vehicles.map(vehicle => (
+            (() => {
+              // Group vehicles by zip code
+              const grouped = {};
+              vehicles.forEach(v => {
+                const zip = v.location?.zipCode || 'No Zip Code';
+                if (!grouped[zip]) grouped[zip] = [];
+                grouped[zip].push(v);
+              });
+              const sortedZips = Object.keys(grouped).sort((a, b) => {
+                if (a === 'No Zip Code') return 1;
+                if (b === 'No Zip Code') return -1;
+                return a.localeCompare(b);
+              });
+
+              return sortedZips.map(zip => (
+                <div key={zip} style={{ marginBottom: '2rem' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    marginBottom: '1rem',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '2px solid #10b981'
+                  }}>
+                    <span style={{
+                      background: '#10b981',
+                      color: '#000',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '0.375rem',
+                      fontWeight: '700',
+                      fontSize: '1rem'
+                    }}>
+                      {zip}
+                    </span>
+                    <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                      {grouped[zip].length} vehicle{grouped[zip].length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="host-vehicles-grid">
+                    {grouped[zip].map(vehicle => (
                 <div key={vehicle._id} className="host-vehicle-card">
                   <div className="host-vehicle-image">
                     {vehicle.images?.[0] ? (
@@ -161,8 +199,11 @@ const HostDashboard = () => {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()
           )}
         </div>
       </div>

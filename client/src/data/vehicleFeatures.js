@@ -18,13 +18,6 @@ export const vehicleFeatures = [
   { id: 'android_auto', label: 'Android Auto', category: 'Technology' },
   { id: 'aux_input', label: 'AUX Input', category: 'Technology' },
 
-  // Safety
-  { id: 'airbags', label: 'Airbags', category: 'Safety' },
-  { id: 'abs', label: 'ABS Brakes', category: 'Safety' },
-  { id: 'blind_spot', label: 'Blind Spot Monitor', category: 'Safety' },
-  { id: 'lane_assist', label: 'Lane Departure Warning', category: 'Safety' },
-  { id: 'collision_warning', label: 'Collision Warning', category: 'Safety' },
-
   // Drivetrain
   { id: 'four_wheel_drive', label: '4WD/AWD', category: 'Drivetrain' },
   { id: 'turbo', label: 'Turbocharged', category: 'Drivetrain' },
