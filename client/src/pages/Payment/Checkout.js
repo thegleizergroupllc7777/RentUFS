@@ -179,24 +179,34 @@ const Checkout = () => {
               <div className="summary-item">
                 <span className="label">Pickup Date:</span>
                 <span className="value">
-                  {new Date(booking.startDate).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+                  {(() => {
+                    const d = new Date(booking.startDate);
+                    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+                      .toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      });
+                  })()}
+                  {booking.pickupTime ? ` at ${booking.pickupTime}` : ''}
                 </span>
               </div>
 
               <div className="summary-item">
                 <span className="label">Return Date:</span>
                 <span className="value">
-                  {new Date(booking.endDate).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+                  {(() => {
+                    const d = new Date(booking.endDate);
+                    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+                      .toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      });
+                  })()}
+                  {` by ${booking.dropoffTime || booking.pickupTime || '10:00'}`}
                 </span>
               </div>
 
