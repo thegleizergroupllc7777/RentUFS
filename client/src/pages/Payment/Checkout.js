@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
+import { formatTime } from '../../utils/formatTime';
 import Navbar from '../../components/Navbar';
 import CheckoutForm from './CheckoutForm';
 import InsuranceSelection from '../../components/InsuranceSelection';
@@ -190,7 +191,7 @@ const Checkout = () => {
                         year: 'numeric'
                       });
                   })()}
-                  {booking.pickupTime ? ` at ${booking.pickupTime}` : ''}
+                  {booking.pickupTime ? ` at ${formatTime(booking.pickupTime)}` : ''}
                 </span>
               </div>
 
@@ -207,7 +208,7 @@ const Checkout = () => {
                         year: 'numeric'
                       });
                   })()}
-                  {` by ${booking.dropoffTime || booking.pickupTime || '10:00'}`}
+                  {` by ${formatTime(booking.dropoffTime || booking.pickupTime)}`}
                 </span>
               </div>
 

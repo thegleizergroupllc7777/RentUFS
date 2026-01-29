@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { formatTime } from '../../utils/formatTime';
 import Navbar from '../../components/Navbar';
 import VehicleInspection from '../../components/VehicleInspection';
 import API_URL from '../../config/api';
@@ -549,11 +550,11 @@ const MyBookings = () => {
                       <div className="booking-details">
                         <div className="booking-detail-item">
                           <strong>Pickup:</strong>{' '}
-                          {toLocalDate(booking.startDate).toLocaleDateString()} at {booking.pickupTime || '10:00 AM'}
+                          {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTime(booking.pickupTime)}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Return:</strong>{' '}
-                          {toLocalDate(booking.endDate).toLocaleDateString()} by {booking.dropoffTime || '10:00 AM'}
+                          {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTime(booking.dropoffTime)}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Duration:</strong> {booking.totalDays} days
