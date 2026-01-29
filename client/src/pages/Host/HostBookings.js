@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import ChatBox from '../../components/ChatBox';
+import { useAuth } from '../../context/AuthContext';
 import { formatTime } from '../../utils/formatTime';
 import API_URL from '../../config/api';
 import './Host.css';
@@ -22,9 +24,11 @@ const toLocalDate = (dateVal) => {
 };
 
 const HostBookings = () => {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current'); // current, upcoming, past
+  const [openChatBookingId, setOpenChatBookingId] = useState(null);
 
   // Switch vehicle modal state
   const [showSwitchModal, setShowSwitchModal] = useState(false);
@@ -645,7 +649,31 @@ const HostBookings = () => {
                         </button>
                       </>
                     )}
+
+                    {['confirmed', 'active'].includes(booking.status) && (
+                      <button
+                        onClick={() => setOpenChatBookingId(openChatBookingId === booking._id ? null : booking._id)}
+                        className="btn btn-secondary"
+                        style={{
+                          background: openChatBookingId === booking._id ? '#059669' : '#10b981',
+                          color: '#000',
+                          border: 'none'
+                        }}
+                      >
+                        {openChatBookingId === booking._id ? 'Close Chat' : 'Message Driver'}
+                      </button>
+                    )}
                   </div>
+
+                  {/* Chat Box */}
+                  {openChatBookingId === booking._id && user && (
+                    <ChatBox
+                      bookingId={booking._id}
+                      currentUserId={user._id || user.id}
+                      otherUserName={`${booking.driver?.firstName || ''} ${booking.driver?.lastName || ''}`.trim()}
+                      onClose={() => setOpenChatBookingId(null)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
