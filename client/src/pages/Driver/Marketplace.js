@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
+import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
 import './Driver.css';
 
@@ -295,9 +296,8 @@ const Marketplace = () => {
               </select>
             </div>
             <div className="filter-item">
-              <label>Pick-up Date</label>
-              <input
-                type="date"
+              <DatePicker
+                label="Pick-up Date"
                 name="startDate"
                 value={filters.startDate}
                 onChange={handleFilterChange}
@@ -305,9 +305,8 @@ const Marketplace = () => {
               />
             </div>
             <div className="filter-item">
-              <label>Return Date</label>
-              <input
-                type="date"
+              <DatePicker
+                label="Return Date"
                 name="endDate"
                 value={filters.endDate}
                 onChange={handleFilterChange}
