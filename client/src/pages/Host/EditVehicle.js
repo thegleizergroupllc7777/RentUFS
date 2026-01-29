@@ -36,6 +36,29 @@ const EditVehicle = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [zipLoading, setZipLoading] = useState(false);
+
+  const handleZipLookup = async (zip) => {
+    if (!/^\d{5}$/.test(zip)) return;
+    setZipLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/api/vehicles/lookup-zip/${zip}`);
+      setFormData(prev => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          city: response.data.city,
+          state: response.data.state
+        }
+      }));
+    } catch (err) {
+      // Silently fail - user can still type manually
+    } finally {
+      setZipLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchVehicle();
@@ -124,7 +147,9 @@ const EditVehicle = () => {
       const vehicleData = {
         ...formData,
         features: formData.features,
-        images: formData.images.length > 0 ? formData.images : undefined
+        images: formData.images.length > 0 ? formData.images : undefined,
+        pricePerWeek: formData.pricePerWeek !== '' ? formData.pricePerWeek : undefined,
+        pricePerMonth: formData.pricePerMonth !== '' ? formData.pricePerMonth : undefined
       };
 
       const token = localStorage.getItem('token');
@@ -422,11 +447,16 @@ const EditVehicle = () => {
                 <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.5rem' }}>
                   📸 Upload photos of your vehicle
                 </p>
-                <p style={{ fontSize: '0.85rem', color: formData.images.length >= 4 ? '#10b981' : '#f59e0b', marginBottom: '1rem', fontWeight: '500' }}>
+                <p style={{ fontSize: '0.85rem', color: formData.images.length >= 4 ? '#10b981' : '#f59e0b', marginBottom: '0.5rem', fontWeight: '500' }}>
                   {formData.images.length} photo{formData.images.length !== 1 ? 's' : ''} uploaded
                 </p>
+                {formData.images.length > 1 && (
+                  <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1rem' }}>
+                    Drag and drop photos to reorder. Photo #1 will be the main listing image.
+                  </p>
+                )}
 
-                {/* Photo grid */}
+                {/* Photo grid with drag-and-drop reorder */}
                 {formData.images.length > 0 && (
                   <div style={{
                     display: 'grid',
@@ -435,17 +465,52 @@ const EditVehicle = () => {
                     marginBottom: '1rem'
                   }}>
                     {formData.images.map((img, idx) => (
-                      <div key={idx} style={{
-                        position: 'relative',
-                        borderRadius: '0.5rem',
-                        overflow: 'hidden',
-                        border: '2px solid #333',
-                        aspectRatio: '4/3'
-                      }}>
+                      <div
+                        key={img}
+                        draggable
+                        onDragStart={(e) => {
+                          setDragIndex(idx);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverIndex(idx);
+                        }}
+                        onDragLeave={() => setDragOverIndex(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragIndex === null || dragIndex === idx) return;
+                          setFormData(prev => {
+                            const newImages = [...prev.images];
+                            const [moved] = newImages.splice(dragIndex, 1);
+                            newImages.splice(idx, 0, moved);
+                            return { ...prev, images: newImages };
+                          });
+                          setDragIndex(null);
+                          setDragOverIndex(null);
+                        }}
+                        onDragEnd={() => {
+                          setDragIndex(null);
+                          setDragOverIndex(null);
+                        }}
+                        style={{
+                          position: 'relative',
+                          borderRadius: '0.5rem',
+                          overflow: 'hidden',
+                          border: dragOverIndex === idx ? '2px solid #10b981' : '2px solid #333',
+                          aspectRatio: '4/3',
+                          cursor: 'grab',
+                          opacity: dragIndex === idx ? 0.4 : 1,
+                          transform: dragOverIndex === idx ? 'scale(1.03)' : 'none',
+                          transition: 'border 0.2s, opacity 0.2s, transform 0.2s'
+                        }}
+                      >
                         <img src={img} alt={`Vehicle photo ${idx + 1}`} style={{
                           width: '100%',
                           height: '100%',
-                          objectFit: 'cover'
+                          objectFit: 'cover',
+                          pointerEvents: 'none'
                         }} />
                         <button
                           type="button"
@@ -529,14 +594,25 @@ const EditVehicle = () => {
                 <h2 className="form-section-title">Location</h2>
 
                 <div className="form-group">
-                  <label className="form-label">Address</label>
+                  <label className="form-label">Zip Code *</label>
                   <input
                     type="text"
-                    name="location.address"
+                    name="location.zipCode"
                     className="form-input"
-                    value={formData.location.address}
-                    onChange={handleChange}
+                    value={formData.location.zipCode}
+                    onChange={(e) => {
+                      handleChange(e);
+                      handleZipLookup(e.target.value.trim());
+                    }}
+                    placeholder="Enter zip code to auto-fill city & state"
+                    maxLength="5"
+                    required
                   />
+                  {zipLoading && (
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Looking up city and state...
+                    </p>
+                  )}
                 </div>
 
                 <div className="form-row">
@@ -566,13 +642,14 @@ const EditVehicle = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Zip Code</label>
+                  <label className="form-label">Address</label>
                   <input
                     type="text"
-                    name="location.zipCode"
+                    name="location.address"
                     className="form-input"
-                    value={formData.location.zipCode}
+                    value={formData.location.address}
                     onChange={handleChange}
+                    placeholder="Street address (optional)"
                   />
                 </div>
               </div>

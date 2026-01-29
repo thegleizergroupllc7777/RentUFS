@@ -8,6 +8,32 @@ const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
 
 const router = express.Router();
 
+// Lookup city/state from zip code using free Zippopotam API
+router.get('/lookup-zip/:zip', async (req, res) => {
+  try {
+    const { zip } = req.params;
+    if (!zip || !/^\d{5}$/.test(zip)) {
+      return res.status(400).json({ message: 'Zip code must be exactly 5 digits' });
+    }
+
+    const response = await axios.get(`https://api.zippopotam.us/us/${zip}`);
+    const place = response.data.places?.[0];
+    if (!place) {
+      return res.status(404).json({ message: 'Zip code not found' });
+    }
+
+    res.json({
+      city: place['place name'],
+      state: place['state']
+    });
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return res.status(404).json({ message: 'Zip code not found' });
+    }
+    res.status(500).json({ message: 'Failed to lookup zip code' });
+  }
+});
+
 // Decode VIN using NHTSA vPIC API (free, no key required)
 router.get('/decode-vin/:vin', async (req, res) => {
   try {
@@ -326,6 +352,10 @@ router.post('/', auth, async (req, res) => {
 // Update vehicle
 router.put('/:id', auth, async (req, res) => {
   try {
+    // Clean empty strings from optional numeric fields to prevent Mongoose cast errors
+    if (req.body.pricePerWeek === '' || req.body.pricePerWeek === null) delete req.body.pricePerWeek;
+    if (req.body.pricePerMonth === '' || req.body.pricePerMonth === null) delete req.body.pricePerMonth;
+
     const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id });
 
     if (!vehicle) {
