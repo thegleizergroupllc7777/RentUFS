@@ -24,10 +24,7 @@ const EditVehicle = () => {
     pricePerDay: '',
     pricePerWeek: '',
     pricePerMonth: '',
-    image1: '',
-    image2: '',
-    image3: '',
-    image4: '',
+    images: [],
     registrationImage: '',
     location: {
       address: '',
@@ -63,10 +60,7 @@ const EditVehicle = () => {
         pricePerDay: vehicle.pricePerDay,
         pricePerWeek: vehicle.pricePerWeek || '',
         pricePerMonth: vehicle.pricePerMonth || '',
-        image1: vehicle.images?.[0] || '',
-        image2: vehicle.images?.[1] || '',
-        image3: vehicle.images?.[2] || '',
-        image4: vehicle.images?.[3] || '',
+        images: vehicle.images || [],
         registrationImage: vehicle.registrationImage || '',
         location: vehicle.location || {
           address: '',
@@ -127,25 +121,11 @@ const EditVehicle = () => {
     setSaving(true);
 
     try {
-      // Prepare images array from individual image fields
-      const images = [
-        formData.image1,
-        formData.image2,
-        formData.image3,
-        formData.image4
-      ].filter(img => img && img.trim() !== ''); // Only include non-empty image URLs
-
       const vehicleData = {
         ...formData,
         features: formData.features,
-        images: images.length > 0 ? images : undefined
+        images: formData.images.length > 0 ? formData.images : undefined
       };
-
-      // Remove image fields from formData before sending
-      delete vehicleData.image1;
-      delete vehicleData.image2;
-      delete vehicleData.image3;
-      delete vehicleData.image4;
 
       await axios.put(`${API_URL}/api/vehicles/${id}`, vehicleData);
       navigate('/host/dashboard');
@@ -435,37 +415,139 @@ const EditVehicle = () => {
 
               <div className="form-section">
                 <h2 className="form-section-title">Vehicle Photos</h2>
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-                  📸 Upload photos from your device
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.5rem' }}>
+                  📸 Upload photos of your vehicle
+                </p>
+                <p style={{ fontSize: '0.85rem', color: formData.images.length >= 4 ? '#10b981' : '#f59e0b', marginBottom: '1rem', fontWeight: '500' }}>
+                  {formData.images.length} photo{formData.images.length !== 1 ? 's' : ''} uploaded
                 </p>
 
-                <ImageUpload
-                  label="Photo 1"
-                  value={formData.image1}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image1: url }))}
-                  required={false}
+                {/* Photo grid */}
+                {formData.images.length > 0 && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                    gap: '0.75rem',
+                    marginBottom: '1rem'
+                  }}>
+                    {formData.images.map((img, idx) => (
+                      <div key={idx} style={{
+                        position: 'relative',
+                        borderRadius: '0.5rem',
+                        overflow: 'hidden',
+                        border: '2px solid #333',
+                        aspectRatio: '4/3'
+                      }}>
+                        <img src={img} alt={`Vehicle photo ${idx + 1}`} style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }} />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              images: prev.images.filter((_, i) => i !== idx)
+                            }));
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '24px',
+                            height: '24px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          X
+                        </button>
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '4px',
+                          left: '4px',
+                          background: 'rgba(0,0,0,0.7)',
+                          color: 'white',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem'
+                        }}>
+                          {idx + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Multi-file upload input */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files);
+                    if (files.length === 0) return;
+
+                    const validFiles = files.filter(f => {
+                      if (!f.type.startsWith('image/')) return false;
+                      if (f.size > 2 * 1024 * 1024) return false;
+                      return true;
+                    });
+
+                    if (validFiles.length < files.length) {
+                      setError('Some files were skipped (must be images under 2MB each)');
+                    } else {
+                      setError('');
+                    }
+
+                    validFiles.forEach(file => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setFormData(prev => ({
+                          ...prev,
+                          images: [...prev.images, reader.result]
+                        }));
+                      };
+                      reader.readAsDataURL(file);
+                    });
+
+                    e.target.value = '';
+                  }}
+                  style={{ display: 'none' }}
+                  id="vehicle-photos-input"
                 />
 
-                <ImageUpload
-                  label="Photo 2"
-                  value={formData.image2}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image2: url }))}
-                  required={false}
-                />
+                <label
+                  htmlFor="vehicle-photos-input"
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '1rem',
+                    background: '#10b981',
+                    color: 'white',
+                    borderRadius: '0.5rem',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '1rem',
+                    border: 'none'
+                  }}
+                >
+                  {formData.images.length === 0 ? '📸 Select Photos' : '📸 Add More Photos'}
+                </label>
 
-                <ImageUpload
-                  label="Photo 3"
-                  value={formData.image3}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image3: url }))}
-                  required={false}
-                />
-
-                <ImageUpload
-                  label="Photo 4"
-                  value={formData.image4}
-                  onChange={(url) => setFormData(prev => ({ ...prev, image4: url }))}
-                  required={false}
-                />
+                <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.5rem', textAlign: 'center' }}>
+                  Select multiple photos at once. Each image must be under 2MB.
+                </p>
               </div>
 
               <div className="form-section">
