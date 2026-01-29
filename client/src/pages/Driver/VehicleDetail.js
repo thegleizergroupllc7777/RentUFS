@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
+import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
 import './Driver.css';
 
@@ -513,11 +514,9 @@ const VehicleDetail = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Pick-up Date</label>
-                    <input
-                      type="date"
+                    <DatePicker
+                      label="Pick-up Date"
                       name="startDate"
-                      className="form-input"
                       value={bookingData.startDate}
                       onChange={handleBookingChange}
                       min={new Date().toISOString().split('T')[0]}
