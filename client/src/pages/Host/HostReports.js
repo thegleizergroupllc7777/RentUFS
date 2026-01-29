@@ -14,6 +14,7 @@ const HostReports = () => {
 
   useEffect(() => {
     fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
   const fetchReports = async () => {

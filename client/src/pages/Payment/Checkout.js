@@ -23,7 +23,7 @@ const Checkout = () => {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [insuranceSelected, setInsuranceSelected] = useState(false);
+  const [, setInsuranceSelected] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -33,6 +33,7 @@ const Checkout = () => {
     }
 
     initializePayment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
 
   const initializePayment = async () => {

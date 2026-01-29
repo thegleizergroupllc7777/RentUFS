@@ -32,6 +32,7 @@ const VehicleDetail = () => {
   useEffect(() => {
     fetchVehicle();
     fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
 
   const fetchActiveBooking = async (vehicleData) => {
@@ -156,6 +157,7 @@ const VehicleDetail = () => {
       const endDate = calculateEndDate(bookingData.startDate, bookingData.rentalType, bookingData.quantity);
       setBookingData(prev => ({ ...prev, endDate }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingData.startDate, bookingData.rentalType, bookingData.quantity]);
 
   const calculateTotal = () => {
