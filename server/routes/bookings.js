@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 const { Counter } = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const auth = require('../middleware/auth');
+const { sendBookingExtensionEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -300,6 +301,13 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
     });
 
     await booking.save();
+
+    // Send extension confirmation emails to driver and host
+    try {
+      await sendBookingExtensionEmail(booking.driver, booking.host, booking, booking.vehicle);
+    } catch (emailError) {
+      console.error('❌ Extension email failed (non-blocking):', emailError);
+    }
 
     res.json({
       success: true,

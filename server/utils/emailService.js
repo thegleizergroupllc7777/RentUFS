@@ -452,6 +452,7 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
     const transporter = createTransporter();
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!transporter) {
       console.log('📧 [DEV] Booking Confirmation Email to Driver:', driver.email);
@@ -534,6 +535,11 @@ The RentUFS Team
                   <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
                   <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId || booking._id}</span>
                 </div>
+                ${vehicleImageUrl ? `
+                <div style="text-align: center; margin-bottom: 15px;">
+                  <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
+                </div>
+                ` : ''}
                 <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
@@ -637,6 +643,7 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
     const transporter = createTransporter();
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!transporter) {
       console.log('📧 [DEV] Booking Notification Email to Host:', host.email);
@@ -716,6 +723,11 @@ The RentUFS Team
                   <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
                   <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId || booking._id}</span>
                 </div>
+                ${vehicleImageUrl ? `
+                <div style="text-align: center; margin-bottom: 15px;">
+                  <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
+                </div>
+                ` : ''}
                 <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
@@ -812,6 +824,7 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
     const transporter = createTransporter();
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const dropoffTime = booking.dropoffTime || '10:00';
+    const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!transporter) {
       console.log('📧 [DEV] Return Reminder Email to Driver:', driver.email);
@@ -904,6 +917,11 @@ The RentUFS Team
                   <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
                   <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #d97706;">${booking.reservationId || booking._id}</span>
                 </div>
+                ${vehicleImageUrl ? `
+                <div style="text-align: center; margin-bottom: 15px;">
+                  <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
+                </div>
+                ` : ''}
                 <h3 style="margin-top: 0; color: #d97706;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
@@ -1012,10 +1030,252 @@ The RentUFS Team
   }
 };
 
+// Helper to get absolute vehicle image URL
+const getVehicleImageUrl = (vehicle) => {
+  const img = vehicle?.images?.[0];
+  if (!img) return null;
+  if (img.startsWith('http')) return img;
+  const apiUrl = process.env.API_URL || process.env.CLIENT_URL?.replace(/:\d+$/, ':5000') || 'http://localhost:5000';
+  return `${apiUrl}${img}`;
+};
+
+// Send booking extension confirmation email to driver and host
+const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
+  try {
+    const transporter = createTransporter();
+    const newEndDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const vehicleImageUrl = getVehicleImageUrl(vehicle);
+    const lastExtension = booking.extensions?.[booking.extensions.length - 1];
+    const extensionDays = lastExtension?.days || 0;
+    const extensionCost = lastExtension?.cost || 0;
+
+    if (!transporter) {
+      console.log('📧 [DEV] Booking Extension Email to Driver:', driver.email);
+      console.log('📧 [DEV] Booking Extension Email to Host:', host.email);
+      console.log('-----------------------------------');
+      console.log(`Subject: Booking Extended - ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
+      console.log(`
+Reservation ${booking.reservationId || booking._id} has been extended by ${extensionDays} day(s).
+
+Updated Booking Details:
+- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- Pick-up Date: ${startDate}
+- New Return Date: ${newEndDate}
+- Total Duration: ${booking.totalDays} day(s)
+- Extension Cost: $${extensionCost.toFixed(2)}
+- New Total: $${booking.totalPrice.toFixed(2)}
+      `);
+      console.log('-----------------------------------\n');
+      return { success: true, dev: true };
+    }
+
+    const emailStyles = `
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+      .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+      .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+      .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+      .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+      .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+      .detail-row:last-child { border-bottom: none; }
+      .label { color: #6b7280; }
+      .value { font-weight: bold; color: #111827; }
+      .extension-badge { background: #dbeafe; color: #1d4ed8; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: bold; font-size: 0.9rem; }
+      .updated { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+      .button { background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
+      .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+    `;
+
+    const bookingDetailsHtml = `
+      <div class="booking-card">
+        <div style="background: #dbeafe; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+          <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+          <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #1d4ed8;">${booking.reservationId || booking._id}</span>
+        </div>
+        ${vehicleImageUrl ? `
+        <div style="text-align: center; margin-bottom: 15px;">
+          <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
+        </div>
+        ` : ''}
+        <h3 style="margin-top: 0; color: #1d4ed8;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+
+        <div class="detail-row">
+          <span class="label">Pick-up Date</span>
+          <span class="value">${startDate}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">New Return Date</span>
+          <span class="value" style="color: #2563eb;">${newEndDate}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Pick-up Time</span>
+          <span class="value">${booking.pickupTime || '10:00'}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Drop-off Time</span>
+          <span class="value">${booking.dropoffTime || booking.pickupTime || '10:00'}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Total Duration</span>
+          <span class="value">${booking.totalDays} day(s)</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Extension Added</span>
+          <span class="value" style="color: #2563eb;">+${extensionDays} day(s)</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Extension Cost</span>
+          <span class="value">$${extensionCost.toFixed(2)}</span>
+        </div>
+        <div style="font-size: 1.3rem; color: #10b981; font-weight: bold; text-align: right; margin-top: 15px; padding-top: 10px; border-top: 2px solid #e5e7eb;">
+          New Total: $${booking.totalPrice.toFixed(2)}
+        </div>
+      </div>
+    `;
+
+    const textContent = `
+Reservation ${booking.reservationId || booking._id} has been extended.
+
+Updated Booking Details:
+- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- Pick-up Date: ${startDate}
+- New Return Date: ${newEndDate}
+- Pick-up Time: ${booking.pickupTime || '10:00'}
+- Drop-off Time: ${booking.dropoffTime || booking.pickupTime || '10:00'}
+- Total Duration: ${booking.totalDays} day(s)
+- Extension: +${extensionDays} day(s)
+- Extension Cost: $${extensionCost.toFixed(2)}
+- New Total: $${booking.totalPrice.toFixed(2)}
+    `;
+
+    // Email to driver
+    const driverMail = {
+      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
+      to: driver.email,
+      subject: `Booking Extended - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head><style>${emailStyles}</style></head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Booking Extended!</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your rental has been extended by ${extensionDays} day(s)</p>
+            </div>
+            <div class="content">
+              <h2>Hi ${driver.firstName},</h2>
+              <p>Your booking extension has been confirmed and payment processed!</p>
+              <div style="text-align: center; margin: 15px 0;">
+                <span class="extension-badge">+${extensionDays} Day(s) Added</span>
+              </div>
+
+              ${bookingDetailsHtml}
+
+              <div class="updated">
+                <h4 style="margin-top: 0; color: #059669;">Updated Information</h4>
+                <p style="margin: 5px 0;">Your new return date is <strong>${newEndDate}</strong>.</p>
+                <p style="margin: 5px 0;">Please return the vehicle by <strong>${booking.dropoffTime || booking.pickupTime || '10:00'}</strong> on the new return date.</p>
+              </div>
+
+              <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin-top: 0; color: #1d4ed8;">Host Contact</h4>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${host.firstName} ${host.lastName}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${host.email}</p>
+              </div>
+
+              <center>
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button">
+                  View My Bookings
+                </a>
+              </center>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Hi ${driver.firstName},\n\nYour booking has been extended by ${extensionDays} day(s).\n${textContent}\nHost: ${host.firstName} ${host.lastName} (${host.email})\n\nThank you for choosing RentUFS!\nThe RentUFS Team`
+    };
+
+    // Email to host
+    const hostMail = {
+      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
+      to: host.email,
+      subject: `Booking Extended - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head><style>${emailStyles}</style></head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Booking Extended!</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">A rental has been extended by ${extensionDays} day(s)</p>
+            </div>
+            <div class="content">
+              <h2>Hi ${host.firstName},</h2>
+              <p>Your renter has extended their booking. Payment has been processed.</p>
+              <div style="text-align: center; margin: 15px 0;">
+                <span class="extension-badge">+${extensionDays} Day(s) Added</span>
+              </div>
+
+              ${bookingDetailsHtml}
+
+              <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin-top: 0; color: #1d4ed8;">Driver Information</h4>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${driver.firstName} ${driver.lastName}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${driver.email}</p>
+              </div>
+
+              <div class="updated">
+                <h4 style="margin-top: 0; color: #059669;">What This Means</h4>
+                <p style="margin: 5px 0;">The vehicle will now be returned on <strong>${newEndDate}</strong> by <strong>${booking.dropoffTime || booking.pickupTime || '10:00'}</strong>.</p>
+                <p style="margin: 5px 0;">Additional earnings: <strong>$${extensionCost.toFixed(2)}</strong></p>
+              </div>
+
+              <center>
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/bookings" class="button">
+                  View Bookings
+                </a>
+              </center>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Hi ${host.firstName},\n\nA booking for your ${vehicle.year} ${vehicle.make} ${vehicle.model} has been extended by ${extensionDays} day(s).\n${textContent}\nDriver: ${driver.firstName} ${driver.lastName} (${driver.email})\n\nThe RentUFS Team`
+    };
+
+    // Send both emails
+    const [driverResult, hostResult] = await Promise.all([
+      sendEmail(driverMail),
+      sendEmail(hostMail)
+    ]);
+
+    if (driverResult.success) {
+      console.log('✅ Extension email sent to driver:', driver.email);
+    }
+    if (hostResult.success) {
+      console.log('✅ Extension email sent to host:', host.email);
+    }
+    return { success: true, driverResult, hostResult };
+  } catch (error) {
+    console.error('❌ Error sending extension email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
   sendBookingConfirmationToDriver,
   sendBookingNotificationToHost,
-  sendReturnReminderEmail
+  sendReturnReminderEmail,
+  sendBookingExtensionEmail
 };
