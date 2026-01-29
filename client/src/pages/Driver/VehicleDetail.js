@@ -15,6 +15,7 @@ const VehicleDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeBooking, setActiveBooking] = useState(null);
+  const [isHost, setIsHost] = useState(false);
   const [bookingData, setBookingData] = useState({
     startDate: '',
     endDate: '',
@@ -30,28 +31,39 @@ const VehicleDetail = () => {
   useEffect(() => {
     fetchVehicle();
     fetchReviews();
-    if (user) {
-      fetchActiveBooking();
-    }
   }, [id, user]);
 
-  const fetchActiveBooking = async () => {
+  const fetchActiveBooking = async (vehicleData) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const headers = { Authorization: `Bearer ${token}` };
 
-      // Find an active or confirmed booking for this vehicle
-      const activeOrConfirmed = response.data.find(
-        booking => booking.vehicle?._id === id &&
-        ['active', 'confirmed'].includes(booking.status)
-      );
+      // Check if user is the host of this vehicle
+      const userIsHost = vehicleData && user && vehicleData.host?._id === user._id;
+      setIsHost(userIsHost);
 
-      if (activeOrConfirmed) {
-        setActiveBooking(activeOrConfirmed);
+      if (userIsHost) {
+        // Host viewing their own vehicle - fetch bookings on this vehicle
+        const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, { headers });
+        const activeOrConfirmed = response.data.find(
+          booking => booking.vehicle?._id === id &&
+          ['active', 'confirmed', 'pending'].includes(booking.status)
+        );
+        if (activeOrConfirmed) {
+          setActiveBooking(activeOrConfirmed);
+        }
+      } else {
+        // Driver viewing - fetch their own bookings
+        const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, { headers });
+        const activeOrConfirmed = response.data.find(
+          booking => booking.vehicle?._id === id &&
+          ['active', 'confirmed'].includes(booking.status)
+        );
+        if (activeOrConfirmed) {
+          setActiveBooking(activeOrConfirmed);
+        }
       }
     } catch (error) {
       console.error('Error fetching active booking:', error);
@@ -62,6 +74,10 @@ const VehicleDetail = () => {
     try {
       const response = await axios.get(`${API_URL}/api/vehicles/${id}`);
       setVehicle(response.data);
+      // Fetch active booking after we have vehicle data to determine if user is host
+      if (user) {
+        fetchActiveBooking(response.data);
+      }
     } catch (error) {
       console.error('Error fetching vehicle:', error);
     } finally {
@@ -339,7 +355,7 @@ const VehicleDetail = () => {
               <div className="booking-card">
                 {activeBooking ? (
                   <>
-                    <h3>Your Current Reservation</h3>
+                    <h3>{isHost ? 'Current Booking' : 'Your Current Reservation'}</h3>
                     <div style={{
                       backgroundColor: '#1e3a5f',
                       padding: '1rem',
@@ -347,9 +363,58 @@ const VehicleDetail = () => {
                       marginBottom: '1rem',
                       border: '1px solid #3b82f6'
                     }}>
+                      {/* Driver info for hosts */}
+                      {isHost && activeBooking.driver && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          marginBottom: '1rem',
+                          paddingBottom: '0.75rem',
+                          borderBottom: '1px solid #3b82f6'
+                        }}>
+                          {activeBooking.driver.profileImage ? (
+                            <img
+                              src={activeBooking.driver.profileImage.startsWith('http')
+                                ? activeBooking.driver.profileImage
+                                : `${API_URL}${activeBooking.driver.profileImage}`}
+                              alt={`${activeBooking.driver.firstName}'s profile`}
+                              style={{
+                                width: '50px',
+                                height: '50px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: '2px solid #3b82f6'
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '50px',
+                              height: '50px',
+                              borderRadius: '50%',
+                              backgroundColor: '#3b82f6',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              fontSize: '1.25rem'
+                            }}>
+                              {activeBooking.driver.firstName?.charAt(0)?.toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ color: '#ffffff', fontWeight: '600' }}>
+                              {activeBooking.driver.firstName} {activeBooking.driver.lastName}
+                            </div>
+                            <div style={{ color: '#93c5fd', fontSize: '0.75rem' }}>Driver</div>
+                          </div>
+                        </div>
+                      )}
                       <div style={{
                         display: 'inline-block',
-                        background: activeBooking.status === 'active' ? '#3b82f6' : '#10b981',
+                        background: activeBooking.status === 'active' ? '#3b82f6' :
+                                   activeBooking.status === 'pending' ? '#f59e0b' : '#10b981',
                         color: 'white',
                         padding: '0.25rem 0.75rem',
                         borderRadius: '1rem',
@@ -383,14 +448,16 @@ const VehicleDetail = () => {
                     </div>
 
                     <button
-                      onClick={() => navigate('/my-bookings')}
+                      onClick={() => navigate(isHost ? '/host/bookings' : '/my-bookings')}
                       className="btn btn-primary"
                       style={{ width: '100%', marginBottom: '0.5rem' }}
                     >
                       Manage Reservation
                     </button>
                     <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: 0 }}>
-                      Go to My Reservations to start, extend, or return this vehicle
+                      {isHost
+                        ? 'Go to Host Bookings to manage this reservation'
+                        : 'Go to My Reservations to start, extend, or return this vehicle'}
                     </p>
                   </>
                 ) : (
