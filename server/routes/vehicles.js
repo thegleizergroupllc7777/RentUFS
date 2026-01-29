@@ -300,13 +300,27 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Helper: clean vehicle data before saving
+function cleanVehicleData(data) {
+  // Remove empty strings from optional numeric fields to prevent Mongoose cast errors
+  if (data.pricePerWeek === '' || data.pricePerWeek === null || data.pricePerWeek === undefined) delete data.pricePerWeek;
+  if (data.pricePerMonth === '' || data.pricePerMonth === null || data.pricePerMonth === undefined) delete data.pricePerMonth;
+  // Remove internal fields that shouldn't be set by client
+  delete data._id;
+  delete data.__v;
+  delete data.host;
+  delete data.rating;
+  delete data.reviewCount;
+  delete data.tripCount;
+  delete data.createdAt;
+  return data;
+}
+
 // Create vehicle (host only)
 router.post('/', auth, async (req, res) => {
   try {
-    const vehicleData = {
-      ...req.body,
-      host: req.user._id
-    };
+    const vehicleData = cleanVehicleData({ ...req.body });
+    vehicleData.host = req.user._id;
 
     // Geocode the vehicle location to get coordinates
     if (vehicleData.location) {
@@ -345,16 +359,18 @@ router.post('/', auth, async (req, res) => {
 
     res.status(201).json(vehicle);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Create vehicle error:', error.message);
+    const msg = error.name === 'ValidationError'
+      ? Object.values(error.errors).map(e => e.message).join(', ')
+      : error.message || 'Server error';
+    res.status(500).json({ message: msg });
   }
 });
 
 // Update vehicle
 router.put('/:id', auth, async (req, res) => {
   try {
-    // Clean empty strings from optional numeric fields to prevent Mongoose cast errors
-    if (req.body.pricePerWeek === '' || req.body.pricePerWeek === null) delete req.body.pricePerWeek;
-    if (req.body.pricePerMonth === '' || req.body.pricePerMonth === null) delete req.body.pricePerMonth;
+    const updateData = cleanVehicleData({ ...req.body });
 
     const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id });
 
@@ -363,9 +379,9 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Check if location changed, if so re-geocode
-    if (req.body.location) {
+    if (updateData.location) {
       const oldLocation = vehicle.location || {};
-      const newLocation = req.body.location;
+      const newLocation = updateData.location;
 
       const locationChanged =
         oldLocation.city !== newLocation.city ||
@@ -376,9 +392,9 @@ router.put('/:id', auth, async (req, res) => {
         const addressString = buildAddressString(newLocation);
         const coords = await geocodeAddress(addressString);
         if (coords) {
-          req.body.location.coordinates = [coords.lng, coords.lat];
+          updateData.location.coordinates = [coords.lng, coords.lat];
           // Set GeoJSON format for geospatial queries
-          req.body.geoLocation = {
+          updateData.geoLocation = {
             type: 'Point',
             coordinates: [coords.lng, coords.lat]
           };
@@ -386,12 +402,16 @@ router.put('/:id', auth, async (req, res) => {
       }
     }
 
-    Object.assign(vehicle, req.body);
+    Object.assign(vehicle, updateData);
     await vehicle.save();
 
     res.json(vehicle);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Update vehicle error:', error.message);
+    const msg = error.name === 'ValidationError'
+      ? Object.values(error.errors).map(e => e.message).join(', ')
+      : error.message || 'Server error';
+    res.status(500).json({ message: msg });
   }
 });
 

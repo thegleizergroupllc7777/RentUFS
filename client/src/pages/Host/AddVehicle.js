@@ -665,25 +665,15 @@ const AddVehicle = () => {
                 <h2 className="form-section-title">Location</h2>
 
                 <div className="form-group">
-                  <label className="form-label">Zip Code *</label>
+                  <label className="form-label">Address</label>
                   <input
                     type="text"
-                    name="location.zipCode"
+                    name="location.address"
                     className="form-input"
-                    value={formData.location.zipCode}
-                    onChange={(e) => {
-                      handleChange(e);
-                      handleZipLookup(e.target.value.trim());
-                    }}
-                    placeholder="Enter zip code to auto-fill city & state"
-                    maxLength="5"
-                    required
+                    value={formData.location.address}
+                    onChange={handleChange}
+                    placeholder="Street address (optional)"
                   />
-                  {zipLoading && (
-                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      Looking up city and state...
-                    </p>
-                  )}
                 </div>
 
                 <div className="form-row">
@@ -710,18 +700,28 @@ const AddVehicle = () => {
                       required
                     />
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label className="form-label">Address</label>
-                  <input
-                    type="text"
-                    name="location.address"
-                    className="form-input"
-                    value={formData.location.address}
-                    onChange={handleChange}
-                    placeholder="Street address (optional)"
-                  />
+                  <div className="form-group">
+                    <label className="form-label">Zip Code *</label>
+                    <input
+                      type="text"
+                      name="location.zipCode"
+                      className="form-input"
+                      value={formData.location.zipCode}
+                      onChange={(e) => {
+                        handleChange(e);
+                        handleZipLookup(e.target.value.trim());
+                      }}
+                      placeholder="Auto-fills city & state"
+                      maxLength="5"
+                      required
+                    />
+                    {zipLoading && (
+                      <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        Looking up city and state...
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
