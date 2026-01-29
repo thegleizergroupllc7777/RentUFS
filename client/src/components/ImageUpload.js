@@ -143,8 +143,9 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       const { sessionId } = res.data;
       setPhoneSession(sessionId);
 
-      // Build QR URL from the current browser origin so the phone can always reach it
-      setPhoneQrUrl(`${window.location.origin}/mobile-upload/${sessionId}`);
+      // Build QR URL from the current browser origin and pass API URL so the phone
+      // knows where to send uploads regardless of frontend/backend domain setup
+      setPhoneQrUrl(`${window.location.origin}/mobile-upload/${sessionId}?api=${encodeURIComponent(API_URL)}`);
 
       // Start polling for uploaded images
       if (pollRef.current) clearInterval(pollRef.current);
