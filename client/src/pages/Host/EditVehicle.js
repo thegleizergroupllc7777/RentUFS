@@ -488,7 +488,23 @@ const EditVehicle = () => {
                   </div>
                 )}
 
-                {/* Multi-file upload input */}
+                {/* Add photo using ImageUpload (camera, computer, phone) */}
+                <ImageUpload
+                  label="Add Vehicle Photos"
+                  value=""
+                  onChange={(url) => {
+                    if (url) {
+                      setFormData(prev => ({
+                        ...prev,
+                        images: [...prev.images, url]
+                      }));
+                      setError('');
+                    }
+                  }}
+                  required={false}
+                />
+
+                {/* Also allow multi-file selection from computer */}
                 <input
                   type="file"
                   accept="image/*"
@@ -523,31 +539,20 @@ const EditVehicle = () => {
                     e.target.value = '';
                   }}
                   style={{ display: 'none' }}
-                  id="vehicle-photos-input"
+                  id="vehicle-photos-multi-input"
                 />
-
                 <label
-                  htmlFor="vehicle-photos-input"
+                  htmlFor="vehicle-photos-multi-input"
+                  className="file-upload-btn"
                   style={{
                     display: 'block',
                     width: '100%',
-                    padding: '1rem',
-                    background: '#10b981',
-                    color: 'white',
-                    borderRadius: '0.5rem',
                     textAlign: 'center',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '1rem',
-                    border: 'none'
+                    marginTop: '0.5rem'
                   }}
                 >
-                  {formData.images.length === 0 ? '📸 Select Photos' : '📸 Add More Photos'}
+                  <span>📁 Select Multiple Photos at Once</span>
                 </label>
-
-                <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.5rem', textAlign: 'center' }}>
-                  Select multiple photos at once. Each image must be under 2MB.
-                </p>
               </div>
 
               <div className="form-section">
