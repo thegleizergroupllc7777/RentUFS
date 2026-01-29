@@ -318,16 +318,28 @@ const HostBookings = () => {
                       key={booking._id}
                       className="compact-booking-row"
                     >
-                      {/* Small vehicle thumbnail */}
-                      <div className="compact-booking-thumb">
-                        {booking.vehicle?.images?.[0] ? (
-                          <img
-                            src={booking.vehicle.images[0]}
-                            alt={`${booking.vehicle?.make} ${booking.vehicle?.model}`}
-                          />
-                        ) : (
-                          <span>No Img</span>
-                        )}
+                      {/* Vehicle thumbnail + driver avatar */}
+                      <div className="compact-booking-images">
+                        <div className="compact-booking-thumb">
+                          {booking.vehicle?.images?.[0] ? (
+                            <img
+                              src={booking.vehicle.images[0]}
+                              alt={`${booking.vehicle?.make} ${booking.vehicle?.model}`}
+                            />
+                          ) : (
+                            <span>No Img</span>
+                          )}
+                        </div>
+                        <div className="compact-booking-avatar">
+                          {booking.driver?.profileImage ? (
+                            <img
+                              src={booking.driver.profileImage}
+                              alt={`${booking.driver?.firstName}`}
+                            />
+                          ) : (
+                            <span>{booking.driver?.firstName?.charAt(0) || '?'}</span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Reservation ID */}
