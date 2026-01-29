@@ -40,6 +40,7 @@ const AddVehicle = () => {
     pricePerMonth: '',
     images: [],
     registrationImage: '',
+    registrationExpiration: '',
     location: {
       address: '',
       city: '',
@@ -659,6 +660,21 @@ const AddVehicle = () => {
                     ✅ Registration document uploaded successfully
                   </div>
                 )}
+
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label className="form-label">Registration Expiration Date *</label>
+                  <input
+                    type="date"
+                    name="registrationExpiration"
+                    className="form-input"
+                    value={formData.registrationExpiration}
+                    onChange={handleChange}
+                    required
+                  />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    You will receive an email reminder 30 days before expiration
+                  </p>
+                </div>
               </div>
 
               <div className="form-section">

@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
-const { sendReturnReminderEmail } = require('./emailService');
+const Vehicle = require('../models/Vehicle');
+const { sendReturnReminderEmail, sendRegistrationExpirationReminder } = require('./emailService');
 
 // Check for bookings ending soon and send reminder emails
 const checkAndSendReturnReminders = async () => {
@@ -68,8 +69,54 @@ const checkAndSendReturnReminders = async () => {
   }
 };
 
+// Check for vehicles with registration expiring within 30 days and send reminder emails
+const checkRegistrationExpirations = async () => {
+  try {
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    // Find vehicles where registration expires within 30 days and reminder not yet sent
+    const expiringVehicles = await Vehicle.find({
+      registrationExpiration: { $lte: thirtyDaysFromNow, $gte: now },
+      registrationReminderSent: { $ne: true }
+    }).populate('host', 'firstName lastName email');
+
+    let remindersSent = 0;
+
+    for (const vehicle of expiringVehicles) {
+      if (!vehicle.host || !vehicle.host.email) continue;
+
+      console.log(`📋 Sending registration expiration reminder for ${vehicle.year} ${vehicle.make} ${vehicle.model} (expires ${vehicle.registrationExpiration.toISOString().substring(0, 10)})`);
+
+      const result = await sendRegistrationExpirationReminder(
+        vehicle.host,
+        vehicle
+      );
+
+      if (result.success) {
+        vehicle.registrationReminderSent = true;
+        await vehicle.save();
+        remindersSent++;
+        console.log(`✅ Registration expiration reminder sent for vehicle ${vehicle._id}`);
+      } else {
+        console.error(`❌ Failed to send registration expiration reminder for vehicle ${vehicle._id}`);
+      }
+    }
+
+    if (remindersSent > 0) {
+      console.log(`📧 Sent ${remindersSent} registration expiration reminder(s)`);
+    }
+
+    return { success: true, remindersSent };
+  } catch (error) {
+    console.error('❌ Error in registration expiration scheduler:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Start the scheduler
 let schedulerInterval = null;
+let registrationCheckInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run immediately on startup
@@ -82,6 +129,16 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
 
   console.log(`⏱️  Return reminder scheduler running every ${intervalMinutes} minutes`);
 
+  // Also start the daily registration expiration check
+  console.log('🚀 Starting registration expiration scheduler...');
+  checkRegistrationExpirations();
+
+  // Run registration check once every 24 hours
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  registrationCheckInterval = setInterval(checkRegistrationExpirations, oneDayMs);
+
+  console.log('⏱️  Registration expiration scheduler running every 24 hours');
+
   return schedulerInterval;
 };
 
@@ -91,10 +148,16 @@ const stopReturnReminderScheduler = () => {
     schedulerInterval = null;
     console.log('🛑 Return reminder scheduler stopped');
   }
+  if (registrationCheckInterval) {
+    clearInterval(registrationCheckInterval);
+    registrationCheckInterval = null;
+    console.log('🛑 Registration expiration scheduler stopped');
+  }
 };
 
 module.exports = {
   checkAndSendReturnReminders,
+  checkRegistrationExpirations,
   startReturnReminderScheduler,
   stopReturnReminderScheduler
 };

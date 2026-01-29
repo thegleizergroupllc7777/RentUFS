@@ -26,6 +26,7 @@ const EditVehicle = () => {
     pricePerMonth: '',
     images: [],
     registrationImage: '',
+    registrationExpiration: '',
     location: {
       address: '',
       city: '',
@@ -85,6 +86,7 @@ const EditVehicle = () => {
         pricePerMonth: vehicle.pricePerMonth || '',
         images: vehicle.images || [],
         registrationImage: vehicle.registrationImage || '',
+        registrationExpiration: vehicle.registrationExpiration ? vehicle.registrationExpiration.substring(0, 10) : '',
         location: vehicle.location || {
           address: '',
           city: '',
@@ -588,6 +590,21 @@ const EditVehicle = () => {
                   onChange={(url) => setFormData(prev => ({ ...prev, registrationImage: url }))}
                   required={true}
                 />
+
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label className="form-label">Registration Expiration Date *</label>
+                  <input
+                    type="date"
+                    name="registrationExpiration"
+                    className="form-input"
+                    value={formData.registrationExpiration}
+                    onChange={handleChange}
+                    required
+                  />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    You will receive an email reminder 30 days before expiration
+                  </p>
+                </div>
               </div>
 
               <div className="form-section">

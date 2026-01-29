@@ -89,6 +89,13 @@ const vehicleSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  registrationExpiration: {
+    type: Date
+  },
+  registrationReminderSent: {
+    type: Boolean,
+    default: false
+  },
   availability: {
     type: Boolean,
     default: true

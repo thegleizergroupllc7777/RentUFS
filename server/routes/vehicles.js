@@ -402,6 +402,12 @@ router.put('/:id', auth, async (req, res) => {
       }
     }
 
+    // Reset registration reminder if expiration date changed
+    if (updateData.registrationExpiration &&
+        updateData.registrationExpiration !== vehicle.registrationExpiration?.toISOString()?.substring(0, 10)) {
+      updateData.registrationReminderSent = false;
+    }
+
     Object.assign(vehicle, updateData);
     await vehicle.save();
 

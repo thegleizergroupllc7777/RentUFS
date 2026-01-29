@@ -1504,6 +1504,78 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
   }
 };
 
+const sendRegistrationExpirationReminder = async (host, vehicle) => {
+  try {
+    const transporter = createTransporter();
+    const expirationDate = new Date(vehicle.registrationExpiration).toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    const vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+    const dashboardUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/host/edit-vehicle/${vehicle._id}`;
+
+    if (!transporter) {
+      console.log('📧 [DEV] Registration Expiration Reminder to Host:', host.email);
+      console.log(`Vehicle: ${vehicleName}, Expires: ${expirationDate}`);
+      return { success: true };
+    }
+
+    const subject = `Registration Expiring Soon: ${vehicleName}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; border-radius: 12px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px; color: #fff;">RentUFS</h1>
+          <p style="margin: 10px 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Registration Expiration Reminder</p>
+        </div>
+        <div style="padding: 30px;">
+          <h2 style="color: #f59e0b; margin-top: 0;">⚠️ Registration Expiring Soon</h2>
+          <p style="color: #d1d5db; line-height: 1.6;">
+            Hi ${host.firstName},
+          </p>
+          <p style="color: #d1d5db; line-height: 1.6;">
+            The vehicle registration for your <strong style="color: #fff;">${vehicleName}</strong> is expiring on <strong style="color: #f59e0b;">${expirationDate}</strong>.
+          </p>
+          <p style="color: #d1d5db; line-height: 1.6;">
+            Please renew your registration and upload the updated document to keep your vehicle listing active on RentUFS.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${dashboardUrl}" style="background: #10b981; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
+              Update Registration
+            </a>
+          </div>
+          <div style="background: #1a1a2e; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h3 style="color: #10b981; margin-top: 0; font-size: 14px; text-transform: uppercase;">Vehicle Details</h3>
+            <p style="color: #d1d5db; margin: 5px 0;"><strong>Vehicle:</strong> ${vehicleName}</p>
+            <p style="color: #d1d5db; margin: 5px 0;"><strong>VIN:</strong> ${vehicle.vin || 'N/A'}</p>
+            <p style="color: #d1d5db; margin: 5px 0;"><strong>Registration Expires:</strong> <span style="color: #f59e0b;">${expirationDate}</span></p>
+          </div>
+          <p style="color: #9ca3af; font-size: 13px; line-height: 1.5;">
+            Vehicles with expired registrations may be temporarily delisted from the marketplace. Please update your registration as soon as possible.
+          </p>
+        </div>
+        <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #222;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com',
+      to: host.email,
+      subject,
+      html
+    };
+
+    const result = await sendEmail(mailOptions);
+    console.log(`📧 Registration expiration reminder sent to ${host.email} for ${vehicleName}`);
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending registration expiration reminder:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
@@ -1512,5 +1584,6 @@ module.exports = {
   sendReturnReminderEmail,
   sendBookingExtensionEmail,
   sendBookingCancellationEmail,
-  sendEmailVerificationCode
+  sendEmailVerificationCode,
+  sendRegistrationExpirationReminder
 };
