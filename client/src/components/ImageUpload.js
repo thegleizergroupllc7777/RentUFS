@@ -24,7 +24,27 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     };
   }, []);
 
-  const handleFileSelect = (e) => {
+  // Helper: upload a file (File or Blob) to the server and return the full URL
+  const uploadToServer = async (fileOrBlob, filename) => {
+    const formData = new FormData();
+    formData.append('image', fileOrBlob, filename || 'photo.jpg');
+
+    const token = localStorage.getItem('token');
+    const endpoint = token ? `${API_URL}/api/upload/image` : `${API_URL}/api/upload/image-public`;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    const res = await axios.post(endpoint, formData, {
+      headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+    });
+
+    if (res.data.success && res.data.imageUrl) {
+      // Return the full URL (API_URL + relative path)
+      return `${API_URL}${res.data.imageUrl}`;
+    }
+    throw new Error(res.data.message || 'Upload failed');
+  };
+
+  const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -37,35 +57,26 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      const errorMsg = 'Image size must be less than 2MB';
+    if (file.size > 5 * 1024 * 1024) {
+      const errorMsg = 'Image size must be less than 5MB';
       setUploadError(errorMsg);
       alert(errorMsg);
       return;
     }
 
     setUploading(true);
-    console.log(`Converting ${label} to base64...`);
-
-    const reader = new FileReader();
-
-    reader.onloadend = () => {
-      const base64String = reader.result;
-      console.log(`✅ Image converted successfully for ${label}`);
-      onChange(base64String);
+    try {
+      const url = await uploadToServer(file, file.name);
+      console.log(`✅ Image uploaded for ${label}: ${url}`);
+      onChange(url);
       setUploadError('');
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setUploadError('Failed to upload image. Please try again.');
+    } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    reader.onerror = () => {
-      console.error('Failed to read file');
-      setUploadError('Failed to read image file');
-      alert('Failed to read image file. Please try again.');
-      setUploading(false);
-    };
-
-    reader.readAsDataURL(file);
+    }
   };
 
   const stopCamera = useCallback(() => {
@@ -116,7 +127,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     startCamera(newMode);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
@@ -128,9 +139,21 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
 
-    const base64 = canvas.toDataURL('image/jpeg', 0.85);
-    onChange(base64);
     stopCamera();
+    setUploading(true);
+
+    try {
+      // Convert canvas to blob and upload to server
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      const url = await uploadToServer(blob, 'camera-photo.jpg');
+      console.log(`✅ Camera photo uploaded for ${label}: ${url}`);
+      onChange(url);
+    } catch (err) {
+      console.error('Camera upload failed:', err);
+      setUploadError('Failed to upload photo. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   // Phone upload: create session and show QR code
@@ -153,7 +176,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         try {
           const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
           if (pollRes.data.images && pollRes.data.images.length > 0) {
-            // Use the latest image
+            // Use the latest image URL
             const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
             onChange(latestImage);
             // Keep polling in case they upload more - the latest will be used
@@ -327,7 +350,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         )}
 
         <p className="upload-hint">
-          Use camera, select from computer, or scan QR code with your phone (Max 2MB)
+          Use camera, select from computer, or scan QR code with your phone (Max 5MB)
         </p>
 
         {uploadError && (

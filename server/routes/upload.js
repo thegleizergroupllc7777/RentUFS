@@ -224,16 +224,15 @@ router.post('/mobile/:sessionId', (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Convert to base64 so the desktop can use it directly
-    const filePath = path.join(uploadsDir, req.file.filename);
-    const fileBuffer = fs.readFileSync(filePath);
-    const base64 = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
+    // Store the file URL instead of base64 to avoid MongoDB 16MB limit
+    const imageUrl = `/uploads/${req.file.filename}`;
+    // Build full URL using the API base URL from environment or request
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const fullUrl = `${protocol}://${host}${imageUrl}`;
 
-    session.images.push(base64);
-    console.log(`📱 Image added to session ${sessionId} (${session.images.length} total)`);
-
-    // Clean up the temp file
-    fs.unlinkSync(filePath);
+    session.images.push(fullUrl);
+    console.log(`📱 Image added to session ${sessionId}: ${imageUrl} (${session.images.length} total)`);
 
     res.json({ success: true, count: session.images.length });
   });
