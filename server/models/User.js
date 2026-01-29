@@ -58,6 +58,14 @@ const userSchema = new mongoose.Schema({
     verified: {
       type: Boolean,
       default: false
+    },
+    faceMatchScore: {
+      type: Number,
+      default: null
+    },
+    faceVerified: {
+      type: Boolean,
+      default: false
     }
   },
   profileImage: {
@@ -77,6 +85,18 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   resetPasswordExpires: {
+    type: Date,
+    default: null
+  },
+  pendingEmail: {
+    type: String,
+    default: null
+  },
+  emailVerificationCode: {
+    type: String,
+    default: null
+  },
+  emailVerificationExpires: {
     type: Date,
     default: null
   },

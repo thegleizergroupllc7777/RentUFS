@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
+import FaceVerification from '../../components/FaceVerification';
 import { vehicleModels } from '../../data/vehicleModels';
 import API_URL from '../../config/api';
 import './Auth.css';
@@ -53,6 +54,11 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [vinLoading, setVinLoading] = useState(false);
   const [vinDecoded, setVinDecoded] = useState(false);
+  const [faceVerification, setFaceVerification] = useState(null);
+
+  const handleFaceVerificationResult = useCallback((result) => {
+    setFaceVerification(result);
+  }, []);
 
   const handleDecodeVin = async () => {
     const vin = vehicleData.vin.trim().toUpperCase();
@@ -171,10 +177,32 @@ const Register = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
+
+      // Check face verification result
+      if (faceVerification && !faceVerification.verified && faceVerification.reason !== 'error') {
+        const proceed = window.confirm(
+          'Face verification did not find a match between your selfie and driver\'s license photo. ' +
+          'This may affect your account verification.\n\n' +
+          'Do you still want to proceed with registration?'
+        );
+        if (!proceed) {
+          setLoading(false);
+          return;
+        }
+      }
     }
 
     try {
-      await register(formData);
+      // Include face verification score in registration data
+      const registrationData = {
+        ...formData,
+        driverLicense: {
+          ...formData.driverLicense,
+          faceMatchScore: faceVerification?.score || null,
+          faceVerified: faceVerification?.verified || false
+        }
+      };
+      await register(registrationData);
 
       // If user is host or both, show vehicle form
       if (formData.userType === 'host' || formData.userType === 'both') {
@@ -477,8 +505,14 @@ const Register = () => {
                           required={true}
                         />
 
+                        <FaceVerification
+                          licenseImage={formData.driverLicense.licenseImage}
+                          selfieImage={formData.driverLicense.verificationSelfie}
+                          onVerificationResult={handleFaceVerificationResult}
+                        />
+
                         <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '1rem' }}>
-                          ℹ️ Your license information and photos are required to rent vehicles and will be verified for your safety.
+                          ℹ️ Your license information and photos are required to rent vehicles. Face verification compares your selfie to your license photo for identity confirmation.
                         </p>
                       </div>
                     </>
