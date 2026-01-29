@@ -8,6 +8,21 @@ import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import API_URL from '../../config/api';
 import './Host.css';
 
+const BRANDS = [
+  'Acura', 'Alfa Romeo', 'Audi', 'BMW', 'Buick', 'Cadillac', 'Chevrolet',
+  'Chrysler', 'Dodge', 'Ferrari', 'Fiat', 'Ford', 'Genesis', 'GMC', 'Honda',
+  'Hyundai', 'Infiniti', 'Jaguar', 'Jeep', 'Kia', 'Lamborghini', 'Land Rover',
+  'Lexus', 'Lincoln', 'Maserati', 'Mazda', 'McLaren', 'Mercedes-Benz', 'Mini',
+  'Mitsubishi', 'Nissan', 'Porsche', 'Ram', 'Rivian', 'Rolls-Royce', 'Subaru',
+  'Tesla', 'Toyota', 'Volkswagen', 'Volvo'
+];
+
+const matchBrand = (decodedMake) => {
+  if (!decodedMake) return '';
+  const lower = decodedMake.toLowerCase().trim();
+  return BRANDS.find(b => b.toLowerCase() === lower) || '';
+};
+
 const AddVehicle = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -63,7 +78,7 @@ const AddVehicle = () => {
       setFormData(prev => ({
         ...prev,
         vin: vin,
-        make: decoded.make || prev.make,
+        make: matchBrand(decoded.make) || prev.make,
         model: decoded.model || prev.model,
         year: decoded.year || prev.year,
         type: decoded.type || prev.type,
@@ -261,46 +276,9 @@ const AddVehicle = () => {
                       required
                     >
                       <option value="">Select a brand</option>
-                      <option value="Acura">Acura</option>
-                      <option value="Alfa Romeo">Alfa Romeo</option>
-                      <option value="Audi">Audi</option>
-                      <option value="BMW">BMW</option>
-                      <option value="Buick">Buick</option>
-                      <option value="Cadillac">Cadillac</option>
-                      <option value="Chevrolet">Chevrolet</option>
-                      <option value="Chrysler">Chrysler</option>
-                      <option value="Dodge">Dodge</option>
-                      <option value="Ferrari">Ferrari</option>
-                      <option value="Fiat">Fiat</option>
-                      <option value="Ford">Ford</option>
-                      <option value="Genesis">Genesis</option>
-                      <option value="GMC">GMC</option>
-                      <option value="Honda">Honda</option>
-                      <option value="Hyundai">Hyundai</option>
-                      <option value="Infiniti">Infiniti</option>
-                      <option value="Jaguar">Jaguar</option>
-                      <option value="Jeep">Jeep</option>
-                      <option value="Kia">Kia</option>
-                      <option value="Lamborghini">Lamborghini</option>
-                      <option value="Land Rover">Land Rover</option>
-                      <option value="Lexus">Lexus</option>
-                      <option value="Lincoln">Lincoln</option>
-                      <option value="Maserati">Maserati</option>
-                      <option value="Mazda">Mazda</option>
-                      <option value="McLaren">McLaren</option>
-                      <option value="Mercedes-Benz">Mercedes-Benz</option>
-                      <option value="Mini">Mini</option>
-                      <option value="Mitsubishi">Mitsubishi</option>
-                      <option value="Nissan">Nissan</option>
-                      <option value="Porsche">Porsche</option>
-                      <option value="Ram">Ram</option>
-                      <option value="Rivian">Rivian</option>
-                      <option value="Rolls-Royce">Rolls-Royce</option>
-                      <option value="Subaru">Subaru</option>
-                      <option value="Tesla">Tesla</option>
-                      <option value="Toyota">Toyota</option>
-                      <option value="Volkswagen">Volkswagen</option>
-                      <option value="Volvo">Volvo</option>
+                      {BRANDS.map(brand => (
+                        <option key={brand} value={brand}>{brand}</option>
+                      ))}
                       <option value="Other">Other</option>
                     </select>
                   </div>
