@@ -14,6 +14,10 @@ services:
         sync: false  # Set this manually in Render dashboard
       - key: CLIENT_URL
         sync: false  # Set to your frontend URL
+      - key: SENDGRID_API_KEY
+        sync: false  # Set your SendGrid API key for reliable email delivery
+      - key: EMAIL_FROM
+        sync: false  # Set verified sender email (e.g., noreply@yourdomain.com)
 
   # Frontend Static Site
   - type: web
