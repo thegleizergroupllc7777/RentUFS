@@ -621,6 +621,7 @@ const VehicleDetail = () => {
                   {bookingData.startDate && bookingData.endDate && (
                     <div style={{
                       backgroundColor: '#f3f4f6',
+                      color: '#1f2937',
                       padding: '0.75rem',
                       borderRadius: '0.5rem',
                       marginBottom: '1rem',

@@ -53,7 +53,9 @@ router.post('/register', async (req, res) => {
         state: driverLicense.state,
         expirationDate: driverLicense.expirationDate ? new Date(driverLicense.expirationDate) : undefined,
         licenseImage: driverLicense.licenseImage || undefined,
-        verificationSelfie: driverLicense.verificationSelfie || undefined
+        verificationSelfie: driverLicense.verificationSelfie || undefined,
+        faceMatchScore: typeof driverLicense.faceMatchScore === 'number' ? driverLicense.faceMatchScore : null,
+        faceVerified: driverLicense.faceVerified === true
       };
     }
 

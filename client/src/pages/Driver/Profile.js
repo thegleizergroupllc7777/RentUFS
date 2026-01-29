@@ -25,6 +25,13 @@ const DriverProfile = () => {
   const [stream, setStream] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  // Email change state
+  const [emailEditing, setEmailEditing] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [emailStep, setEmailStep] = useState('edit'); // edit, verify
+  const [emailLoading, setEmailLoading] = useState(false);
+
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -212,6 +219,64 @@ const DriverProfile = () => {
     }
   };
 
+  const handleRequestEmailChange = async () => {
+    if (!newEmail || !newEmail.trim()) {
+      setMessage({ type: 'error', text: 'Please enter a new email address' });
+      return;
+    }
+    setEmailLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/api/users/request-email-change`,
+        { newEmail: newEmail.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setEmailStep('verify');
+      setMessage({ type: 'success', text: response.data.message });
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to send verification code' });
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleConfirmEmailChange = async () => {
+    if (!verificationCode || !verificationCode.trim()) {
+      setMessage({ type: 'error', text: 'Please enter the verification code' });
+      return;
+    }
+    setEmailLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/api/users/confirm-email-change`,
+        { code: verificationCode.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProfileData(prev => ({ ...prev, email: response.data.user.email }));
+      setUser(prev => ({ ...prev, email: response.data.user.email }));
+      setMessage({ type: 'success', text: 'Email address updated successfully!' });
+      setEmailEditing(false);
+      setEmailStep('edit');
+      setNewEmail('');
+      setVerificationCode('');
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to verify code' });
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const cancelEmailChange = () => {
+    setEmailEditing(false);
+    setEmailStep('edit');
+    setNewEmail('');
+    setVerificationCode('');
+  };
+
   return (
     <div>
       <Navbar />
@@ -385,13 +450,170 @@ const DriverProfile = () => {
 
               <div className="form-group">
                 <label className="form-label">Email</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={profileData.email}
-                  disabled
-                  style={{ background: '#1a1a1a', cursor: 'not-allowed', color: '#6b7280' }}
-                />
+                {!emailEditing ? (
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="email"
+                      className="form-input"
+                      value={profileData.email}
+                      disabled
+                      style={{ background: '#1a1a1a', cursor: 'not-allowed', color: '#6b7280', flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setEmailEditing(true); setNewEmail(''); setEmailStep('edit'); }}
+                      style={{
+                        background: 'none',
+                        border: '1px solid #4b5563',
+                        color: '#10b981',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : emailStep === 'edit' ? (
+                  <div>
+                    <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                      Current: <strong style={{ color: '#e5e7eb' }}>{profileData.email}</strong>
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <input
+                        type="email"
+                        className="form-input"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="Enter new email address"
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRequestEmailChange}
+                        disabled={emailLoading}
+                        style={{
+                          background: '#10b981',
+                          border: 'none',
+                          color: '#000',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '6px',
+                          cursor: emailLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          whiteSpace: 'nowrap',
+                          opacity: emailLoading ? 0.7 : 1
+                        }}
+                      >
+                        {emailLoading ? 'Sending...' : 'Send Code'}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={cancelEmailChange}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#6b7280',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        marginTop: '0.5rem',
+                        padding: 0
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                      A 6-digit code was sent to <strong style={{ color: '#10b981' }}>{newEmail}</strong>
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="Enter 6-digit code"
+                        maxLength={6}
+                        style={{
+                          flex: 1,
+                          letterSpacing: '0.3em',
+                          textAlign: 'center',
+                          fontSize: '1.2rem',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleConfirmEmailChange}
+                        disabled={emailLoading || verificationCode.length !== 6}
+                        style={{
+                          background: '#10b981',
+                          border: 'none',
+                          color: '#000',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '6px',
+                          cursor: (emailLoading || verificationCode.length !== 6) ? 'not-allowed' : 'pointer',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          whiteSpace: 'nowrap',
+                          opacity: (emailLoading || verificationCode.length !== 6) ? 0.7 : 1
+                        }}
+                      >
+                        {emailLoading ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => { setEmailStep('edit'); setVerificationCode(''); }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#6b7280',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          padding: 0
+                        }}
+                      >
+                        Use different email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRequestEmailChange}
+                        disabled={emailLoading}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#10b981',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          padding: 0
+                        }}
+                      >
+                        Resend code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEmailChange}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#6b7280',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          padding: 0
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
