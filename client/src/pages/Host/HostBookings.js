@@ -305,7 +305,64 @@ const HostBookings = () => {
                 <div className="empty-state">
                   <p>No {activeTab} bookings.</p>
                 </div>
+              ) : activeTab === 'past' ? (
+                /* Compact list view for past bookings */
+                <div className="compact-bookings-list">
+                  {activeBookings.map(booking => (
+                    <Link
+                      to={`/vehicle/${booking.vehicle?._id}`}
+                      key={booking._id}
+                      className="compact-booking-row"
+                    >
+                      {/* Small vehicle thumbnail */}
+                      <div className="compact-booking-thumb">
+                        {booking.vehicle?.images?.[0] ? (
+                          <img
+                            src={booking.vehicle.images[0]}
+                            alt={`${booking.vehicle?.make} ${booking.vehicle?.model}`}
+                          />
+                        ) : (
+                          <span>No Img</span>
+                        )}
+                      </div>
+
+                      {/* Reservation ID */}
+                      <div className="compact-booking-id">
+                        {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                      </div>
+
+                      {/* Vehicle name */}
+                      <div className="compact-booking-vehicle">
+                        {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                      </div>
+
+                      {/* Renter */}
+                      <div className="compact-booking-renter">
+                        {booking.driver?.firstName} {booking.driver?.lastName}
+                      </div>
+
+                      {/* Dates */}
+                      <div className="compact-booking-dates">
+                        {formatUTCDate(booking.startDate)} - {formatUTCDate(booking.endDate)}
+                      </div>
+
+                      {/* Duration & Price */}
+                      <div className="compact-booking-price">
+                        {booking.totalDays}d &middot; ${booking.totalPrice}
+                      </div>
+
+                      {/* Status badge */}
+                      <div
+                        className="compact-booking-status"
+                        style={{ backgroundColor: getStatusColor(booking.status) }}
+                      >
+                        {booking.status}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               ) : (
+                /* Full card view for current and upcoming bookings */
                 <div className="bookings-list">
                   {activeBookings.map(booking => (
                 <div
