@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
@@ -52,6 +53,17 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'RentUFS API is running' });
 });
+
+// Serve React frontend in production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuild = path.join(__dirname, '..', 'client', 'build');
+  app.use(express.static(clientBuild));
+
+  // SPA catch-all: any non-API route serves index.html so React Router handles it
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientBuild, 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
