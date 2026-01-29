@@ -28,6 +28,7 @@ const Register = () => {
     }
   });
   const [vehicleData, setVehicleData] = useState({
+    vin: '',
     make: '',
     model: '',
     year: '',
@@ -50,6 +51,38 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinDecoded, setVinDecoded] = useState(false);
+
+  const handleDecodeVin = async () => {
+    const vin = vehicleData.vin.trim().toUpperCase();
+    if (vin.length !== 17) {
+      setError('VIN must be exactly 17 characters');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setVinLoading(true);
+    setError('');
+    try {
+      const response = await axios.get(`${API_URL}/api/vehicles/decode-vin/${vin}`);
+      const decoded = response.data;
+      setVehicleData(prev => ({
+        ...prev,
+        vin: vin,
+        make: decoded.make || prev.make,
+        model: decoded.model || prev.model,
+        year: decoded.year || prev.year,
+        type: decoded.type || prev.type,
+        transmission: decoded.transmission || prev.transmission
+      }));
+      setVinDecoded(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to decode VIN. Please enter vehicle details manually.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setVinLoading(false);
+    }
+  };
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -163,6 +196,14 @@ const Register = () => {
     setError('');
     setLoading(true);
 
+    // Validate VIN
+    if (!vehicleData.vin || vehicleData.vin.trim().length !== 17) {
+      setError('Please enter a valid 17-character VIN');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     // Validate that at least Photo 1 is uploaded
     if (!vehicleData.image1 || vehicleData.image1.trim() === '') {
       setError('Please upload at least one photo (Photo 1 is required)');
@@ -191,6 +232,7 @@ const Register = () => {
       ].filter(img => img && img.trim() !== ''); // Only include non-empty image URLs
 
       const vehiclePayload = {
+        vin: vehicleData.vin.trim().toUpperCase(),
         make: vehicleData.make,
         model: vehicleData.model,
         year: parseInt(vehicleData.year),
@@ -467,6 +509,55 @@ const Register = () => {
                 {error && <div className="error-message">{error}</div>}
 
                 <form onSubmit={handleVehicleSubmit} className="auth-form">
+                  {/* VIN with decode */}
+                  <div className="form-group">
+                    <label className="form-label">VIN (Vehicle Identification Number) *</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        type="text"
+                        name="vin"
+                        className="form-input"
+                        value={vehicleData.vin}
+                        onChange={(e) => {
+                          handleVehicleChange(e);
+                          setVinDecoded(false);
+                        }}
+                        placeholder="Enter 17-character VIN"
+                        maxLength="17"
+                        style={{ textTransform: 'uppercase', flex: 1 }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={handleDecodeVin}
+                        disabled={vinLoading || vehicleData.vin.length !== 17}
+                        className="btn btn-primary"
+                        style={{
+                          whiteSpace: 'nowrap',
+                          opacity: vehicleData.vin.length !== 17 ? 0.5 : 1
+                        }}
+                      >
+                        {vinLoading ? 'Decoding...' : 'Decode VIN'}
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Enter VIN and click Decode to auto-fill vehicle details
+                    </p>
+                    {vinDecoded && (
+                      <div style={{
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        backgroundColor: '#d1fae5',
+                        color: '#065f46',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #10b981',
+                        fontSize: '0.9rem'
+                      }}>
+                        VIN decoded: {vehicleData.year} {vehicleData.make} {vehicleData.model}. Verify details below.
+                      </div>
+                    )}
+                  </div>
+
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">Make</label>
@@ -524,22 +615,33 @@ const Register = () => {
 
                     <div className="form-group">
                       <label className="form-label">Model</label>
-                      <select
-                        name="model"
-                        className="form-select"
-                        value={vehicleData.model}
-                        onChange={handleVehicleChange}
-                        required
-                        disabled={!vehicleData.make}
-                      >
-                        <option value="">
-                          {vehicleData.make ? 'Select a model' : 'Select brand first'}
-                        </option>
-                        {vehicleData.make && vehicleModels[vehicleData.make]?.map(model => (
-                          <option key={model} value={model}>{model}</option>
-                        ))}
-                      </select>
-                      {!vehicleData.make && (
+                      {vinDecoded && vehicleData.model ? (
+                        <input
+                          type="text"
+                          name="model"
+                          className="form-input"
+                          value={vehicleData.model}
+                          onChange={handleVehicleChange}
+                          required
+                        />
+                      ) : (
+                        <select
+                          name="model"
+                          className="form-select"
+                          value={vehicleData.model}
+                          onChange={handleVehicleChange}
+                          required
+                          disabled={!vehicleData.make}
+                        >
+                          <option value="">
+                            {vehicleData.make ? 'Select a model' : 'Select brand first'}
+                          </option>
+                          {vehicleData.make && vehicleModels[vehicleData.make]?.map(model => (
+                            <option key={model} value={model}>{model}</option>
+                          ))}
+                        </select>
+                      )}
+                      {!vehicleData.make && !vinDecoded && (
                         <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                           Please select a brand first
                         </p>

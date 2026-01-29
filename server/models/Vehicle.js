@@ -22,6 +22,7 @@ const vehicleSchema = new mongoose.Schema({
   },
   vin: {
     type: String,
+    required: true,
     trim: true,
     uppercase: true,
     minlength: 17,
