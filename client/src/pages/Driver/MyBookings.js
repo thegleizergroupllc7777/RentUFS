@@ -6,6 +6,8 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { formatTime } from '../../utils/formatTime';
 import Navbar from '../../components/Navbar';
 import VehicleInspection from '../../components/VehicleInspection';
+import ChatBox from '../../components/ChatBox';
+import { useAuth } from '../../context/AuthContext';
 import API_URL from '../../config/api';
 import './Driver.css';
 
@@ -107,6 +109,7 @@ const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, onSucce
 };
 
 const MyBookings = () => {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current');
@@ -119,6 +122,7 @@ const MyBookings = () => {
   const [inspectionModal, setInspectionModal] = useState({ open: false, booking: null, type: null });
   const [reconciling, setReconciling] = useState({});
   const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
+  const [openChatBookingId, setOpenChatBookingId] = useState(null);
 
   useEffect(() => {
     fetchBookings();
@@ -692,7 +696,31 @@ const MyBookings = () => {
                             {reconciling[booking._id] ? 'Checking...' : 'Check Payment Status'}
                           </button>
                         )}
+
+                        {['confirmed', 'active'].includes(booking.status) && booking.paymentStatus === 'paid' && (
+                          <button
+                            onClick={() => setOpenChatBookingId(openChatBookingId === booking._id ? null : booking._id)}
+                            className="btn btn-secondary"
+                            style={{
+                              background: openChatBookingId === booking._id ? '#059669' : '#10b981',
+                              color: '#000',
+                              border: 'none'
+                            }}
+                          >
+                            {openChatBookingId === booking._id ? 'Close Chat' : 'Message Host'}
+                          </button>
+                        )}
                       </div>
+
+                      {/* Chat Box */}
+                      {openChatBookingId === booking._id && user && (
+                        <ChatBox
+                          bookingId={booking._id}
+                          currentUserId={user._id || user.id}
+                          otherUserName={`${booking.host?.firstName || ''} ${booking.host?.lastName || ''}`.trim()}
+                          onClose={() => setOpenChatBookingId(null)}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
