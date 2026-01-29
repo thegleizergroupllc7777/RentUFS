@@ -157,8 +157,9 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
         photoSlot: positionLabel
       });
       const { sessionId } = res.data;
-      // Build QR URL from the current browser origin so the phone can always reach it
-      const qrUrl = `${window.location.origin}/mobile-upload/${sessionId}`;
+      // Build QR URL from the current browser origin and pass API URL so the phone
+      // knows where to send uploads regardless of frontend/backend domain setup
+      const qrUrl = `${window.location.origin}/mobile-upload/${sessionId}?api=${encodeURIComponent(API_URL)}`;
       setPhoneSession(sessionId);
       setPhoneQrUrl(qrUrl);
 

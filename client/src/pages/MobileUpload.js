@@ -1,10 +1,16 @@
-import React, { useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useRef, useMemo } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import API_URL from '../config/api';
 
 const MobileUpload = () => {
   const { sessionId } = useParams();
+  const [searchParams] = useSearchParams();
+  // Use the API URL passed via QR code query param if available, otherwise fall back to config
+  const uploadApiUrl = useMemo(() => {
+    const paramApi = searchParams.get('api');
+    return paramApi ? decodeURIComponent(paramApi) : API_URL;
+  }, [searchParams]);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(0);
   const [error, setError] = useState('');
@@ -34,7 +40,7 @@ const MobileUpload = () => {
       formData.append('image', file);
 
       const res = await axios.post(
-        `${API_URL}/api/upload/mobile/${sessionId}`,
+        `${uploadApiUrl}/api/upload/mobile/${sessionId}`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
