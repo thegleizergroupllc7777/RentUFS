@@ -171,4 +171,92 @@ router.delete('/image/:filename', auth, (req, res) => {
   }
 });
 
+// ============================================
+// Phone Upload Sessions (QR code flow)
+// ============================================
+const crypto = require('crypto');
+
+// In-memory session store: { sessionId: { images: [base64...], createdAt, photoSlot } }
+const uploadSessions = new Map();
+
+// Clean up expired sessions every 5 minutes (sessions expire after 15 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of uploadSessions) {
+    if (now - session.createdAt > 15 * 60 * 1000) {
+      uploadSessions.delete(id);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// Create a new upload session
+router.post('/create-session', (req, res) => {
+  const sessionId = crypto.randomBytes(16).toString('hex');
+  const { photoSlot } = req.body;
+  uploadSessions.set(sessionId, {
+    images: [],
+    createdAt: Date.now(),
+    photoSlot: photoSlot || null
+  });
+  console.log(`📱 Upload session created: ${sessionId}`);
+  res.json({ sessionId });
+});
+
+// Phone uploads an image to a session
+router.post('/mobile/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const session = uploadSessions.get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ message: 'Session expired or not found' });
+  }
+
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error('📱 Mobile upload error:', err);
+      return res.status(400).json({ message: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Convert to base64 so the desktop can use it directly
+    const filePath = path.join(uploadsDir, req.file.filename);
+    const fileBuffer = fs.readFileSync(filePath);
+    const base64 = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
+
+    session.images.push(base64);
+    console.log(`📱 Image added to session ${sessionId} (${session.images.length} total)`);
+
+    // Clean up the temp file
+    fs.unlinkSync(filePath);
+
+    res.json({ success: true, count: session.images.length });
+  });
+});
+
+// Desktop polls for uploaded images
+router.get('/session/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const session = uploadSessions.get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ message: 'Session expired or not found' });
+  }
+
+  res.json({
+    images: session.images,
+    photoSlot: session.photoSlot,
+    count: session.images.length
+  });
+});
+
+// Delete a session
+router.delete('/session/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  uploadSessions.delete(sessionId);
+  res.json({ success: true });
+});
+
 module.exports = router;
