@@ -8,6 +8,22 @@ import VehicleInspection from '../../components/VehicleInspection';
 import API_URL from '../../config/api';
 import './Driver.css';
 
+// Convert a Date to YYYY-MM-DD in local timezone (avoids UTC shift)
+const toLocalDateStr = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Parse a date string or ISO date to local midnight (avoids UTC shift)
+const toLocalDate = (dateVal) => {
+  const str = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
+  // Extract just the date part YYYY-MM-DD and force local interpretation
+  const datePart = str.split('T')[0];
+  return new Date(datePart + 'T00:00:00');
+};
+
 // Initialize Stripe
 const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
@@ -242,19 +258,10 @@ const MyBookings = () => {
     return booking.status === 'confirmed' && booking.paymentStatus !== 'paid';
   };
 
-  // Format a UTC date string for display without timezone shift
-  const formatUTCDate = (dateStr) => {
-    const d = new Date(dateStr);
-    return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
-  };
-
   const canStartReservation = (booking) => {
     // Can start if: confirmed, paid, pickup inspection not done, and within rental period
-    // Use UTC dates to avoid timezone issues
-    const now = new Date();
-    const startDate = new Date(booking.startDate);
-    const todayStr = now.toISOString().split('T')[0];
-    const startStr = startDate.toISOString().split('T')[0];
+    const todayStr = toLocalDateStr(new Date());
+    const startStr = toLocalDateStr(toLocalDate(booking.startDate));
     return booking.status === 'confirmed' &&
            booking.paymentStatus === 'paid' &&
            !booking.pickupInspection?.completed &&
@@ -278,32 +285,22 @@ const MyBookings = () => {
   };
 
   const categorizeBookings = () => {
-    // Use UTC date strings to avoid timezone issues
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = toLocalDateStr(new Date());
 
     const current = bookings.filter(booking => {
-      const startDate = new Date(booking.startDate);
-      const endDate = new Date(booking.endDate);
-      const startStr = startDate.toISOString().split('T')[0];
-      const endStr = endDate.toISOString().split('T')[0];
-      // Current = active rentals where we're within the rental period
-      // Include both 'active' and 'confirmed' status (confirmed = paid, ready for pickup)
+      const startStr = toLocalDateStr(toLocalDate(booking.startDate));
+      const endStr = toLocalDateStr(toLocalDate(booking.endDate));
       return startStr <= todayStr && endStr >= todayStr &&
              (booking.status === 'active' || booking.status === 'confirmed');
     });
 
     const upcoming = bookings.filter(booking => {
-      const startDate = new Date(booking.startDate);
-      const startStr = startDate.toISOString().split('T')[0];
-      // Upcoming = future bookings that are pending or confirmed
+      const startStr = toLocalDateStr(toLocalDate(booking.startDate));
       return startStr > todayStr && (booking.status === 'pending' || booking.status === 'confirmed');
     });
 
     const past = bookings.filter(booking => {
-      const endDate = new Date(booking.endDate);
-      const endStr = endDate.toISOString().split('T')[0];
-      // Past = ended rentals or cancelled/completed
+      const endStr = toLocalDateStr(toLocalDate(booking.endDate));
       return endStr < todayStr || booking.status === 'completed' || booking.status === 'cancelled';
     });
 
@@ -330,32 +327,30 @@ const MyBookings = () => {
     return ['active', 'confirmed'].includes(booking.status) && booking.paymentStatus === 'paid';
   };
 
-  // Build the correct return deadline by combining UTC date with local dropoff time
-  const getReturnDeadline = (booking) => {
-    const endDate = new Date(booking.endDate);
-    const dropoffTime = booking.dropoffTime || booking.pickupTime || '10:00';
-    const [hours, minutes] = dropoffTime.split(':').map(Number);
-    // Use UTC date components to avoid timezone shift, combine with local time
-    return new Date(
-      endDate.getUTCFullYear(),
-      endDate.getUTCMonth(),
-      endDate.getUTCDate(),
-      hours, minutes, 0, 0
-    );
-  };
-
   // Check if a booking is overdue (past return date/time)
   const isOverdue = (booking) => {
     if (!['active', 'confirmed'].includes(booking.status)) return false;
-    return new Date() > getReturnDeadline(booking);
+
+    const now = new Date();
+    const endDate = toLocalDate(booking.endDate);
+
+    // Parse dropoff time (default to 10:00 if not set)
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endDate.setHours(hours, minutes, 0, 0);
+
+    return now > endDate;
   };
 
   // Calculate how overdue a booking is
   const getOverdueInfo = (booking) => {
     const now = new Date();
-    const deadline = getReturnDeadline(booking);
+    const endDate = toLocalDate(booking.endDate);
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endDate.setHours(hours, minutes, 0, 0);
 
-    const diffMs = now - deadline;
+    const diffMs = now - endDate;
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
@@ -554,11 +549,11 @@ const MyBookings = () => {
                       <div className="booking-details">
                         <div className="booking-detail-item">
                           <strong>Pickup:</strong>{' '}
-                          {formatUTCDate(booking.startDate)} at {booking.pickupTime || '10:00'}
+                          {toLocalDate(booking.startDate).toLocaleDateString()} at {booking.pickupTime || '10:00 AM'}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Return:</strong>{' '}
-                          {formatUTCDate(booking.endDate)} by {booking.dropoffTime || booking.pickupTime || '10:00'}
+                          {toLocalDate(booking.endDate).toLocaleDateString()} by {booking.dropoffTime || '10:00 AM'}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Duration:</strong> {booking.totalDays} days
@@ -737,7 +732,7 @@ const MyBookings = () => {
                 {extendModal.booking.vehicle?.year} {extendModal.booking.vehicle?.make} {extendModal.booking.vehicle?.model}
               </p>
               <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
-                Current return: {formatUTCDate(extendModal.booking.endDate)}
+                Current return: {toLocalDate(extendModal.booking.endDate).toLocaleDateString()}
               </p>
               <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
                 Daily rate: ${extendModal.booking.pricePerDay}
@@ -781,7 +776,7 @@ const MyBookings = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span style={{ color: '#1e40af' }}>New return date:</span>
                     <span style={{ fontWeight: '600', color: '#1e3a8a' }}>
-                      {new Date(new Date(extendModal.booking.endDate).getTime() + extensionDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                      {new Date(toLocalDate(extendModal.booking.endDate).getTime() + extensionDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>

@@ -57,8 +57,8 @@ router.post('/', auth, async (req, res) => {
       return res.status(404).json({ message: 'Vehicle not found' });
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
     if (totalDays < 1) {
