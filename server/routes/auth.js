@@ -51,7 +51,9 @@ router.post('/register', async (req, res) => {
       userData.driverLicense = {
         licenseNumber: driverLicense.licenseNumber,
         state: driverLicense.state,
-        expirationDate: driverLicense.expirationDate ? new Date(driverLicense.expirationDate) : undefined
+        expirationDate: driverLicense.expirationDate ? new Date(driverLicense.expirationDate) : undefined,
+        licenseImage: driverLicense.licenseImage || undefined,
+        verificationSelfie: driverLicense.verificationSelfie || undefined
       };
     }
 
