@@ -494,10 +494,11 @@ const EditVehicle = () => {
                   value=""
                   onChange={(url) => {
                     if (url) {
-                      setFormData(prev => ({
-                        ...prev,
-                        images: [...prev.images, url]
-                      }));
+                      setFormData(prev => {
+                        // Avoid duplicates from polling
+                        if (prev.images.includes(url)) return prev;
+                        return { ...prev, images: [...prev.images, url] };
+                      });
                       setError('');
                     }
                   }}
