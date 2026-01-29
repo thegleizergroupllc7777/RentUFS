@@ -551,65 +551,17 @@ const AddVehicle = () => {
                   value=""
                   onChange={(url) => {
                     if (url) {
-                      setFormData(prev => ({
-                        ...prev,
-                        images: [...prev.images, url]
-                      }));
+                      setFormData(prev => {
+                        // Avoid duplicates from polling
+                        if (prev.images.includes(url)) return prev;
+                        return { ...prev, images: [...prev.images, url] };
+                      });
                       setError('');
                     }
                   }}
                   required={false}
                 />
 
-                {/* Also allow multi-file selection from computer */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files);
-                    if (files.length === 0) return;
-
-                    const validFiles = files.filter(f => {
-                      if (!f.type.startsWith('image/')) return false;
-                      if (f.size > 2 * 1024 * 1024) return false;
-                      return true;
-                    });
-
-                    if (validFiles.length < files.length) {
-                      setError('Some files were skipped (must be images under 2MB each)');
-                    } else {
-                      setError('');
-                    }
-
-                    validFiles.forEach(file => {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setFormData(prev => ({
-                          ...prev,
-                          images: [...prev.images, reader.result]
-                        }));
-                      };
-                      reader.readAsDataURL(file);
-                    });
-
-                    e.target.value = '';
-                  }}
-                  style={{ display: 'none' }}
-                  id="vehicle-photos-multi-input"
-                />
-                <label
-                  htmlFor="vehicle-photos-multi-input"
-                  className="file-upload-btn"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'center',
-                    marginTop: '0.5rem'
-                  }}
-                >
-                  <span>📁 Select Multiple Photos at Once</span>
-                </label>
               </div>
 
               <div className="form-section">
