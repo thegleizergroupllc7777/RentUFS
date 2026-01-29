@@ -66,8 +66,29 @@ router.get('/decode-vin/:vin', async (req, res) => {
       return 'automatic';
     };
 
+    // Normalize make to title case to match dropdown options (e.g., "FORD" → "Ford")
+    const normalizeMake = (rawMake) => {
+      if (!rawMake) return '';
+      // Known multi-word or special-case brands
+      const specialCases = {
+        'BMW': 'BMW',
+        'GMC': 'GMC',
+        'MINI': 'Mini',
+        'MERCEDES-BENZ': 'Mercedes-Benz',
+        'LAND ROVER': 'Land Rover',
+        'ALFA ROMEO': 'Alfa Romeo',
+        'ROLLS-ROYCE': 'Rolls-Royce',
+        'MCLAREN': 'McLaren',
+        'ROLLS ROYCE': 'Rolls-Royce'
+      };
+      const upper = rawMake.toUpperCase();
+      if (specialCases[upper]) return specialCases[upper];
+      // Default: title case (first letter upper, rest lower)
+      return rawMake.charAt(0).toUpperCase() + rawMake.slice(1).toLowerCase();
+    };
+
     const decoded = {
-      make: make || '',
+      make: normalizeMake(make),
       model: model || '',
       year: year ? parseInt(year) : new Date().getFullYear(),
       type: mapBodyToType(bodyClass),
