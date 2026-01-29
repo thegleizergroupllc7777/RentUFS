@@ -198,8 +198,11 @@ router.post('/create-session', (req, res) => {
     createdAt: Date.now(),
     photoSlot: photoSlot || null
   });
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  const qrUrl = `${clientUrl}/mobile-upload/${sessionId}`;
   console.log(`📱 Upload session created: ${sessionId}`);
-  res.json({ sessionId });
+  console.log(`📱 QR URL: ${qrUrl}`);
+  res.json({ sessionId, qrUrl });
 });
 
 // Phone uploads an image to a session
