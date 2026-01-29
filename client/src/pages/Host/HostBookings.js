@@ -5,6 +5,21 @@ import Navbar from '../../components/Navbar';
 import API_URL from '../../config/api';
 import './Host.css';
 
+// Convert a Date to YYYY-MM-DD in local timezone (avoids UTC shift)
+const toLocalDateStr = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Parse a date string or ISO date to local midnight (avoids UTC shift)
+const toLocalDate = (dateVal) => {
+  const str = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
+  const datePart = str.split('T')[0];
+  return new Date(datePart + 'T00:00:00');
+};
+
 const HostBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,32 +140,24 @@ const HostBookings = () => {
     return colors[status] || '#6b7280';
   };
 
-  // Format a UTC date string for display without timezone shift
-  const formatUTCDate = (dateStr) => {
-    const d = new Date(dateStr);
-    return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
-  };
-
   // Categorize bookings into current, upcoming, and past
-  // Use UTC date strings to avoid timezone shift issues
   const categorizeBookings = () => {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = toLocalDateStr(new Date());
 
     const current = bookings.filter(booking => {
-      const startStr = new Date(booking.startDate).toISOString().split('T')[0];
-      const endStr = new Date(booking.endDate).toISOString().split('T')[0];
+      const startStr = toLocalDateStr(toLocalDate(booking.startDate));
+      const endStr = toLocalDateStr(toLocalDate(booking.endDate));
       return startStr <= todayStr && endStr >= todayStr &&
              (booking.status === 'active' || booking.status === 'confirmed');
     });
 
     const upcoming = bookings.filter(booking => {
-      const startStr = new Date(booking.startDate).toISOString().split('T')[0];
+      const startStr = toLocalDateStr(toLocalDate(booking.startDate));
       return startStr > todayStr && (booking.status === 'pending' || booking.status === 'confirmed');
     });
 
     const past = bookings.filter(booking => {
-      const endStr = new Date(booking.endDate).toISOString().split('T')[0];
+      const endStr = toLocalDateStr(toLocalDate(booking.endDate));
       return endStr < todayStr || booking.status === 'completed' || booking.status === 'cancelled';
     });
 
@@ -159,32 +166,29 @@ const HostBookings = () => {
 
   const { current, upcoming, past } = categorizeBookings();
 
-  // Build the correct return deadline by combining UTC date with local dropoff time
-  const getReturnDeadline = (booking) => {
-    const endDate = new Date(booking.endDate);
-    const dropoffTime = booking.dropoffTime || booking.pickupTime || '10:00';
-    const [hours, minutes] = dropoffTime.split(':').map(Number);
-    // Use UTC date components to avoid timezone shift, combine with local time
-    return new Date(
-      endDate.getUTCFullYear(),
-      endDate.getUTCMonth(),
-      endDate.getUTCDate(),
-      hours, minutes, 0, 0
-    );
-  };
-
   // Check if a booking is overdue (past return date/time)
   const isOverdue = (booking) => {
     if (!['active', 'confirmed'].includes(booking.status)) return false;
-    return new Date() > getReturnDeadline(booking);
+
+    const now = new Date();
+    const endDate = toLocalDate(booking.endDate);
+
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endDate.setHours(hours, minutes, 0, 0);
+
+    return now > endDate;
   };
 
   // Calculate how overdue a booking is
   const getOverdueInfo = (booking) => {
     const now = new Date();
-    const deadline = getReturnDeadline(booking);
+    const endDate = toLocalDate(booking.endDate);
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endDate.setHours(hours, minutes, 0, 0);
 
-    const diffMs = now - deadline;
+    const diffMs = now - endDate;
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
@@ -498,11 +502,11 @@ const HostBookings = () => {
                   <div className="booking-details">
                     <div className="booking-detail-item">
                       <strong>Pickup:</strong>{' '}
-                      {formatUTCDate(booking.startDate)} at {booking.pickupTime || '10:00'}
+                      {toLocalDate(booking.startDate).toLocaleDateString()} at {booking.pickupTime || '10:00 AM'}
                     </div>
                     <div className="booking-detail-item">
                       <strong>Return:</strong>{' '}
-                      {formatUTCDate(booking.endDate)} by {booking.dropoffTime || booking.pickupTime || '10:00'}
+                      {toLocalDate(booking.endDate).toLocaleDateString()} by {booking.dropoffTime || '10:00 AM'}
                     </div>
                     <div className="booking-detail-item">
                       <strong>Duration:</strong> {booking.totalDays} days
@@ -596,7 +600,7 @@ const HostBookings = () => {
                   <h3>Current Booking</h3>
                   <p><strong>Reservation:</strong> {selectedBooking.reservationId}</p>
                   <p><strong>Vehicle:</strong> {selectedBooking.vehicle?.year} {selectedBooking.vehicle?.make} {selectedBooking.vehicle?.model}</p>
-                  <p><strong>Dates:</strong> {formatUTCDate(selectedBooking.startDate)} - {formatUTCDate(selectedBooking.endDate)}</p>
+                  <p><strong>Dates:</strong> {toLocalDate(selectedBooking.startDate).toLocaleDateString()} - {toLocalDate(selectedBooking.endDate).toLocaleDateString()}</p>
                   <p><strong>Current Price:</strong> ${selectedBooking.totalPrice}</p>
                 </div>
 
