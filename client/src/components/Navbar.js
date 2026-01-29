@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import API_URL from '../config/api';
 
 const Navbar = () => {
   const { user, logout, updateUserType } = useAuth();
@@ -158,7 +159,7 @@ const Navbar = () => {
               <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {user.profileImage ? (
                   <img
-                    src={user.profileImage}
+                    src={user.profileImage.startsWith('http') ? user.profileImage : `${API_URL}${user.profileImage}`}
                     alt="Profile"
                     style={{
                       width: '32px',
@@ -168,7 +169,23 @@ const Navbar = () => {
                       border: '2px solid #10b981'
                     }}
                   />
-                ) : null}
+                ) : (
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10b981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.875rem',
+                    border: '2px solid #10b981'
+                  }}>
+                    {user.firstName?.charAt(0)?.toUpperCase()}
+                  </div>
+                )}
                 {user.firstName}
               </Link>
 
