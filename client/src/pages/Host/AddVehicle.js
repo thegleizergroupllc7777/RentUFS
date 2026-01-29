@@ -704,6 +704,12 @@ const AddVehicle = () => {
                 </div>
               </div>
 
+              {error && (
+                <div className="error-message" style={{ marginBottom: '1rem' }}>
+                  {error}
+                </div>
+              )}
+
               <div className="form-actions">
                 <button
                   type="button"
