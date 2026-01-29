@@ -90,6 +90,10 @@ const bookingSchema = new mongoose.Schema({
     paymentId: String,
     extendedAt: { type: Date, default: Date.now }
   }],
+  // Cancellation tracking
+  cancellationReason: { type: String, default: null },
+  cancelledBy: { type: String, enum: ['host', 'driver', null], default: null },
+  cancelledAt: { type: Date, default: null },
   // Vehicle switch history for when host transfers booking to another vehicle
   vehicleSwitchHistory: [{
     previousVehicle: {

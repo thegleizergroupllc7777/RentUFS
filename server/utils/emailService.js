@@ -1271,11 +1271,151 @@ Updated Booking Details:
   }
 };
 
+// Send booking cancellation email to driver (cancelled by host with full refund)
+const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reason) => {
+  try {
+    const transporter = createTransporter();
+    const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const vehicleImageUrl = getVehicleImageUrl(vehicle);
+    const wasRefunded = booking.paymentStatus === 'refunded';
+
+    if (!transporter) {
+      console.log('📧 [DEV] Booking Cancellation Email to Driver:', driver.email);
+      console.log('-----------------------------------');
+      console.log(`Subject: Reservation Cancelled - ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
+      console.log(`
+Reservation ${booking.reservationId || booking._id} has been cancelled by the host.
+${reason ? `Reason: ${reason}` : ''}
+${wasRefunded ? `A full refund of $${booking.totalPrice.toFixed(2)} has been processed.` : ''}
+
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+Dates: ${startDate} - ${endDate}
+      `);
+      console.log('-----------------------------------\n');
+      return { success: true, dev: true };
+    }
+
+    const mailOptions = {
+      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
+      to: driver.email,
+      subject: `Reservation Cancelled - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .refund-notice { background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; text-align: center; }
+            .reason-box { background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444; }
+            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
+            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Reservation Cancelled</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking has been cancelled by the host</p>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${driver.firstName},</h2>
+              <p>We're sorry to inform you that the host has cancelled your reservation.</p>
+
+              ${wasRefunded ? `
+              <div class="refund-notice">
+                <h3 style="margin: 0 0 10px 0; color: #059669;">Full Refund Processed</h3>
+                <p style="font-size: 1.5rem; font-weight: bold; color: #10b981; margin: 0;">$${booking.totalPrice.toFixed(2)}</p>
+                <p style="font-size: 0.85rem; color: #6b7280; margin: 10px 0 0 0;">The refund will appear on your original payment method within 5-10 business days.</p>
+              </div>
+              ` : ''}
+
+              ${reason ? `
+              <div class="reason-box">
+                <h4 style="margin-top: 0; color: #dc2626;">Cancellation Reason</h4>
+                <p style="margin: 0;">${reason}</p>
+              </div>
+              ` : ''}
+
+              <div class="booking-card">
+                <div style="background: #fef2f2; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                  <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #dc2626;">${booking.reservationId || booking._id}</span>
+                </div>
+                ${vehicleImageUrl ? `
+                <div style="text-align: center; margin-bottom: 15px;">
+                  <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
+                </div>
+                ` : ''}
+                <h3 style="margin-top: 0; color: #dc2626;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+
+                <div class="detail-row">
+                  <span class="label">Pick-up Date</span>
+                  <span class="value" style="text-decoration: line-through; color: #9ca3af;">${startDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Date</span>
+                  <span class="value" style="text-decoration: line-through; color: #9ca3af;">${endDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Duration</span>
+                  <span class="value">${booking.totalDays} day(s)</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Status</span>
+                  <span class="value" style="color: #dc2626;">Cancelled</span>
+                </div>
+              </div>
+
+              <p>We apologize for the inconvenience. You're welcome to browse other vehicles on our marketplace and book a new rental.</p>
+
+              <center>
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/marketplace" class="button">
+                  Browse Vehicles
+                </a>
+              </center>
+
+              <p style="margin-top: 30px; font-size: 0.9rem; color: #6b7280;">
+                If you have any questions about the cancellation or refund, please contact us.
+              </p>
+            </div>
+
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Hi ${driver.firstName},\n\nYour reservation (${booking.reservationId || booking._id}) for ${vehicle.year} ${vehicle.make} ${vehicle.model} has been cancelled by the host.\n${reason ? `Reason: ${reason}\n` : ''}${wasRefunded ? `A full refund of $${booking.totalPrice.toFixed(2)} has been processed and will appear within 5-10 business days.\n` : ''}\nDates: ${startDate} - ${endDate}\n\nYou can browse other vehicles at: ${process.env.CLIENT_URL || 'http://localhost:3000'}/marketplace\n\nThe RentUFS Team`
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log('✅ Cancellation email sent to driver:', driver.email);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending cancellation email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
   sendBookingConfirmationToDriver,
   sendBookingNotificationToHost,
   sendReturnReminderEmail,
-  sendBookingExtensionEmail
+  sendBookingExtensionEmail,
+  sendBookingCancellationEmail
 };
