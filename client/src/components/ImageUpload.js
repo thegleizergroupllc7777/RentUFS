@@ -140,11 +140,11 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       const res = await axios.post(`${API_URL}/api/upload/create-session`, {
         photoSlot: label
       });
-      const { sessionId, qrUrl } = res.data;
+      const { sessionId } = res.data;
       setPhoneSession(sessionId);
 
-      // Use server-provided URL (uses CLIENT_URL env var for production)
-      setPhoneQrUrl(qrUrl);
+      // Build QR URL from the current browser origin so the phone can always reach it
+      setPhoneQrUrl(`${window.location.origin}/mobile-upload/${sessionId}`);
 
       // Start polling for uploaded images
       if (pollRef.current) clearInterval(pollRef.current);
