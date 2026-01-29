@@ -156,7 +156,9 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
       const res = await axios.post(`${API_URL}/api/upload/create-session`, {
         photoSlot: positionLabel
       });
-      const { sessionId, qrUrl } = res.data;
+      const { sessionId } = res.data;
+      // Build QR URL from the current browser origin so the phone can always reach it
+      const qrUrl = `${window.location.origin}/mobile-upload/${sessionId}`;
       setPhoneSession(sessionId);
       setPhoneQrUrl(qrUrl);
 
