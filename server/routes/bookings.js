@@ -82,14 +82,18 @@ router.post('/', auth, async (req, res) => {
       totalPrice = totalDays * vehicle.pricePerDay;
     }
 
+    // Drop-off time always matches pickup time (24-hour rental periods)
+    const resolvedPickupTime = pickupTime || '10:00';
+    const resolvedDropoffTime = resolvedPickupTime;
+
     const booking = new Booking({
       vehicle: vehicleId,
       driver: req.user._id,
       host: vehicle.host,
       startDate: start,
       endDate: end,
-      pickupTime: pickupTime || '10:00',
-      dropoffTime: dropoffTime || '10:00',
+      pickupTime: resolvedPickupTime,
+      dropoffTime: resolvedDropoffTime,
       totalDays,
       rentalType: rentalType || 'daily',
       quantity: quantity || totalDays,

@@ -21,7 +21,7 @@ const VehicleDetail = () => {
     startDate: '',
     endDate: '',
     pickupTime: '10:00',
-    dropoffTime: '10:00',
+    dropoffTime: '10:00', // Auto-synced with pickupTime
     rentalType: 'daily',
     quantity: 1,
     message: ''
@@ -95,11 +95,22 @@ const VehicleDetail = () => {
     }
   };
 
+  // Format a UTC date string for display without timezone shift
+  const formatUTCDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+  };
+
   const handleBookingChange = (e) => {
     const { name, value } = e.target;
+    const updates = { [name]: value };
+    // Auto-sync dropoffTime with pickupTime
+    if (name === 'pickupTime') {
+      updates.dropoffTime = value;
+    }
     setBookingData(prev => ({
       ...prev,
-      [name]: value
+      ...updates
     }));
   };
 
@@ -442,11 +453,11 @@ const VehicleDetail = () => {
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Pickup:</strong><br />
-                        {new Date(activeBooking.startDate).toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
+                        {formatUTCDate(activeBooking.startDate)} at {activeBooking.pickupTime || '10:00'}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Return:</strong><br />
-                        {new Date(activeBooking.endDate).toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
+                        {formatUTCDate(activeBooking.endDate)} by {activeBooking.dropoffTime || activeBooking.pickupTime || '10:00'}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Duration:</strong> {activeBooking.totalDays} day(s)
@@ -581,41 +592,6 @@ const VehicleDetail = () => {
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">Drop-off Time</label>
-                    <select
-                      name="dropoffTime"
-                      className="form-select"
-                      value={bookingData.dropoffTime}
-                      onChange={handleBookingChange}
-                    >
-                      <option value="00:00">12:00 AM</option>
-                      <option value="01:00">1:00 AM</option>
-                      <option value="02:00">2:00 AM</option>
-                      <option value="03:00">3:00 AM</option>
-                      <option value="04:00">4:00 AM</option>
-                      <option value="05:00">5:00 AM</option>
-                      <option value="06:00">6:00 AM</option>
-                      <option value="07:00">7:00 AM</option>
-                      <option value="08:00">8:00 AM</option>
-                      <option value="09:00">9:00 AM</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="13:00">1:00 PM</option>
-                      <option value="14:00">2:00 PM</option>
-                      <option value="15:00">3:00 PM</option>
-                      <option value="16:00">4:00 PM</option>
-                      <option value="17:00">5:00 PM</option>
-                      <option value="18:00">6:00 PM</option>
-                      <option value="19:00">7:00 PM</option>
-                      <option value="20:00">8:00 PM</option>
-                      <option value="21:00">9:00 PM</option>
-                      <option value="22:00">10:00 PM</option>
-                      <option value="23:00">11:00 PM</option>
-                    </select>
-                  </div>
-
                   {bookingData.startDate && bookingData.endDate && (
                     <div style={{
                       backgroundColor: '#f3f4f6',
@@ -624,8 +600,11 @@ const VehicleDetail = () => {
                       marginBottom: '1rem',
                       fontSize: '0.9rem'
                     }}>
-                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate).toLocaleDateString()} at {bookingData.pickupTime}</div>
-                      <div><strong>Return:</strong> {new Date(bookingData.endDate).toLocaleDateString()} by {bookingData.dropoffTime}</div>
+                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {bookingData.pickupTime}</div>
+                      <div><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {bookingData.pickupTime}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        Drop-off time matches pick-up time (24-hour rental periods)
+                      </div>
                     </div>
                   )}
 
