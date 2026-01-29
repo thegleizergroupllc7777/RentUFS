@@ -7,6 +7,14 @@ import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
 import './Driver.css';
 
+// Convert Date to YYYY-MM-DD in local timezone (avoids UTC shift)
+const toLocalDateStr = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 // Error Boundary for Map component
 class MapErrorBoundary extends Component {
   constructor(props) {
@@ -301,7 +309,7 @@ const Marketplace = () => {
                 name="startDate"
                 value={filters.startDate}
                 onChange={handleFilterChange}
-                min={new Date().toISOString().split('T')[0]}
+                min={toLocalDateStr(new Date())}
               />
             </div>
             <div className="filter-item">
@@ -310,7 +318,7 @@ const Marketplace = () => {
                 name="endDate"
                 value={filters.endDate}
                 onChange={handleFilterChange}
-                min={filters.startDate || new Date().toISOString().split('T')[0]}
+                min={filters.startDate || toLocalDateStr(new Date())}
               />
             </div>
             <div className="filter-actions">
