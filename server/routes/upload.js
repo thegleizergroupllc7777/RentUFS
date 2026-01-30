@@ -203,7 +203,10 @@ router.post('/create-session', (req, res) => {
     req.headers.origin ||
     (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
     'http://localhost:3000';
-  const apiUrl = `${req.protocol}://${req.headers['x-forwarded-host'] || req.get('host')}`;
+  // Build API URL using forwarded headers (works behind reverse proxies like Render)
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  const apiUrl = `${proto}://${host}`;
   const qrUrl = `${clientUrl}/mobile-upload/${sessionId}?api=${encodeURIComponent(apiUrl)}`;
   console.log(`📱 Upload session created: ${sessionId}`);
   console.log(`📱 QR URL: ${qrUrl}`);
