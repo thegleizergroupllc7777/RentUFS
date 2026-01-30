@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
-import ImageUpload, { resolveImageUrl } from '../../components/ImageUpload';
+import ImageUpload, { resolveImageUrl, recompressBase64 } from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import API_URL from '../../config/api';
@@ -146,10 +146,19 @@ const EditVehicle = () => {
     setSaving(true);
 
     try {
+      // Re-compress any large existing base64 images to avoid 413 errors
+      const compressedImages = formData.images.length > 0
+        ? await Promise.all(formData.images.map(img => recompressBase64(img)))
+        : undefined;
+      const compressedRegImage = formData.registrationImage
+        ? await recompressBase64(formData.registrationImage)
+        : undefined;
+
       const vehicleData = {
         ...formData,
         features: formData.features,
-        images: formData.images.length > 0 ? formData.images : undefined,
+        images: compressedImages,
+        registrationImage: compressedRegImage,
         pricePerWeek: formData.pricePerWeek !== '' ? formData.pricePerWeek : undefined,
         pricePerMonth: formData.pricePerMonth !== '' ? formData.pricePerMonth : undefined
       };

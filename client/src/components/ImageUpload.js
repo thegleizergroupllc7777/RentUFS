@@ -14,8 +14,8 @@ const resolveImageUrl = (url) => {
 };
 
 // Compress an image file/blob to a base64 data URL
-// Resizes to max 1200px wide and compresses as JPEG quality 0.7
-// Result is typically 100-300KB instead of 3-5MB
+// Resizes to max 800px wide and compresses as JPEG quality 0.5
+// Result is typically 30-80KB instead of 3-5MB
 const compressImage = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -23,8 +23,8 @@ const compressImage = (file) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 900;
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 600;
 
         let width = img.width;
         let height = img.height;
@@ -45,8 +45,8 @@ const compressImage = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Compress as JPEG
-        const base64 = canvas.toDataURL('image/jpeg', 0.7);
+        // Compress as JPEG with lower quality to keep payload small
+        const base64 = canvas.toDataURL('image/jpeg', 0.5);
         const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
         console.log(`📸 Compressed image: ${img.width}x${img.height} → ${width}x${height}, ~${sizeKB}KB`);
         resolve(base64);
@@ -168,13 +168,18 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    // Resize capture to max 1200px
-    const MAX_WIDTH = 1200;
+    // Resize capture to max 800px to keep payload small
+    const MAX_WIDTH = 800;
+    const MAX_HEIGHT = 600;
     let width = video.videoWidth;
     let height = video.videoHeight;
     if (width > MAX_WIDTH) {
       height = Math.round((height * MAX_WIDTH) / width);
       width = MAX_WIDTH;
+    }
+    if (height > MAX_HEIGHT) {
+      width = Math.round((width * MAX_HEIGHT) / height);
+      height = MAX_HEIGHT;
     }
 
     canvas.width = width;
@@ -186,7 +191,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     stopCamera();
 
     // Get compressed base64 directly from canvas
-    const base64 = canvas.toDataURL('image/jpeg', 0.7);
+    const base64 = canvas.toDataURL('image/jpeg', 0.5);
     console.log(`✅ Camera photo captured for ${label}`);
     onChange(base64);
   };
@@ -423,5 +428,48 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
   );
 };
 
-export { resolveImageUrl };
+// Re-compress a base64 data URL if it's too large (over targetMaxKB)
+// Used to shrink existing images before sending to server
+const recompressBase64 = (dataUrl, targetMaxKB = 100) => {
+  return new Promise((resolve) => {
+    if (!dataUrl || !dataUrl.startsWith('data:')) {
+      resolve(dataUrl); // not base64, return as-is
+      return;
+    }
+    // Estimate current size
+    const currentKB = Math.round((dataUrl.length * 3) / 4 / 1024);
+    if (currentKB <= targetMaxKB) {
+      resolve(dataUrl); // already small enough
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 600;
+      let width = img.width;
+      let height = img.height;
+      if (width > MAX_WIDTH) {
+        height = Math.round((height * MAX_WIDTH) / width);
+        width = MAX_WIDTH;
+      }
+      if (height > MAX_HEIGHT) {
+        width = Math.round((width * MAX_HEIGHT) / height);
+        height = MAX_HEIGHT;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.5);
+      const newKB = Math.round((compressed.length * 3) / 4 / 1024);
+      console.log(`📸 Re-compressed image: ${currentKB}KB → ${newKB}KB`);
+      resolve(compressed);
+    };
+    img.onerror = () => resolve(dataUrl); // fallback to original on error
+    img.src = dataUrl;
+  });
+};
+
+export { resolveImageUrl, recompressBase64 };
 export default ImageUpload;
