@@ -197,10 +197,9 @@ const Register = () => {
 
       await register(registrationData);
 
-      // If user is host or both, show vehicle form
+      // If user is host or both, go to host dashboard
       if (formData.userType === 'host' || formData.userType === 'both') {
-        setStep(2);
-        setLoading(false);
+        navigate('/host/dashboard');
       } else {
         // If just a driver, go to driver dashboard
         navigate('/driver/my-bookings');
