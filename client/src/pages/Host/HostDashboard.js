@@ -134,6 +134,15 @@ const HostDashboard = () => {
                     }}>
                       {zip}
                     </span>
+                    {(() => {
+                      const loc = grouped[zip][0]?.location;
+                      const cityState = [loc?.city, loc?.state].filter(Boolean).join(', ');
+                      return cityState ? (
+                        <span style={{ color: '#e5e7eb', fontSize: '0.95rem', fontWeight: '500' }}>
+                          {cityState}
+                        </span>
+                      ) : null;
+                    })()}
                     <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
                       {grouped[zip].length} vehicle{grouped[zip].length !== 1 ? 's' : ''}
                     </span>
