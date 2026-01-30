@@ -5,7 +5,7 @@ import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
-import { resolveImageUrl } from '../../components/ImageUpload';
+import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
 
 // Convert Date to YYYY-MM-DD in local timezone (avoids UTC shift)
@@ -86,7 +86,6 @@ const Marketplace = () => {
 
   useEffect(() => {
     fetchVehicles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchVehicles = async () => {
@@ -178,15 +177,7 @@ const Marketplace = () => {
             >
               <div className="vehicle-card-image">
                 {vehicle.images?.[0] ? (
-                  <img
-                    src={resolveImageUrl(vehicle.images[0])}
-                    alt={`${vehicle.make} ${vehicle.model}`}
-                    loading="lazy"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.parentElement.insertAdjacentHTML('afterbegin', '<div class="vehicle-placeholder">No Image</div>');
-                    }}
-                  />
+                  <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
                 ) : (
                   <div className="vehicle-placeholder">No Image</div>
                 )}
@@ -376,17 +367,9 @@ const Marketplace = () => {
                     >
                       <div className="floating-card-image">
                         {vehicle.images?.[0] ? (
-                          <img
-                            src={resolveImageUrl(vehicle.images[0])}
-                            alt={`${vehicle.make} ${vehicle.model}`}
-                            loading="lazy"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement.insertAdjacentHTML('afterbegin', '<div class="no-image">No Image</div>');
-                            }}
-                          />
+                          <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
                         ) : (
-                          <div className="no-image">No Image</div>
+                          <div className="no-image">🚗</div>
                         )}
                       </div>
                       <div className="floating-card-info">

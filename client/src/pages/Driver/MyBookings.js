@@ -9,6 +9,7 @@ import VehicleInspection from '../../components/VehicleInspection';
 import ChatBox from '../../components/ChatBox';
 import { useAuth } from '../../context/AuthContext';
 import API_URL from '../../config/api';
+import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
 
 // Convert a Date to YYYY-MM-DD in local timezone (avoids UTC shift)
@@ -494,7 +495,7 @@ const MyBookings = () => {
                         }}>
                           {booking.vehicle?.images && booking.vehicle.images.length > 0 ? (
                             <img
-                              src={booking.vehicle.images[0]}
+                              src={getImageUrl(booking.vehicle.images[0])}
                               alt={`${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
                               style={{
                                 width: '100%',
@@ -930,7 +931,7 @@ const MyBookings = () => {
               background: '#f3f4f6'
             }}>
               <img
-                src={registrationModal.booking.vehicle?.registrationImage}
+                src={getImageUrl(registrationModal.booking.vehicle?.registrationImage)}
                 alt="Vehicle Registration"
                 style={{
                   width: '100%',

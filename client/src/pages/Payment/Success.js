@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import API_URL from '../../config/api';
+import getImageUrl from '../../config/imageUrl';
 import './Payment.css';
 
 const PaymentSuccess = () => {
@@ -105,7 +106,7 @@ const PaymentSuccess = () => {
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
                   }}>
                     <img
-                      src={booking.vehicle.images[0]}
+                      src={getImageUrl(booking.vehicle.images[0])}
                       alt={`${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`}
                       style={{
                         width: '100%',

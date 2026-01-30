@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { formatTime } from '../../utils/formatTime';
 import Navbar from '../../components/Navbar';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
-import { resolveImageUrl } from '../../components/ImageUpload';
+import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
 
 const VehicleDetail = () => {
@@ -34,7 +33,6 @@ const VehicleDetail = () => {
   useEffect(() => {
     fetchVehicle();
     fetchReviews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
 
   const fetchActiveBooking = async (vehicleData) => {
@@ -48,22 +46,12 @@ const VehicleDetail = () => {
       const userIsHost = vehicleData && user && vehicleData.host?._id === user._id;
       setIsHost(userIsHost);
 
-      // Only show bookings whose end date hasn't passed yet
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-      const isNotPast = (booking) => {
-        const endStr = booking.endDate?.split('T')[0] || '';
-        return endStr >= todayStr;
-      };
-
       if (userIsHost) {
         // Host viewing their own vehicle - fetch bookings on this vehicle
         const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, { headers });
         const activeOrConfirmed = response.data.find(
           booking => booking.vehicle?._id === id &&
-          ['active', 'confirmed', 'pending'].includes(booking.status) &&
-          isNotPast(booking)
+          ['active', 'confirmed', 'pending'].includes(booking.status)
         );
         if (activeOrConfirmed) {
           setActiveBooking(activeOrConfirmed);
@@ -73,8 +61,7 @@ const VehicleDetail = () => {
         const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, { headers });
         const activeOrConfirmed = response.data.find(
           booking => booking.vehicle?._id === id &&
-          ['active', 'confirmed'].includes(booking.status) &&
-          isNotPast(booking)
+          ['active', 'confirmed'].includes(booking.status)
         );
         if (activeOrConfirmed) {
           setActiveBooking(activeOrConfirmed);
@@ -170,7 +157,6 @@ const VehicleDetail = () => {
       const endDate = calculateEndDate(bookingData.startDate, bookingData.rentalType, bookingData.quantity);
       setBookingData(prev => ({ ...prev, endDate }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingData.startDate, bookingData.rentalType, bookingData.quantity]);
 
   const calculateTotal = () => {
@@ -313,7 +299,7 @@ const VehicleDetail = () => {
               <div className="vehicle-images">
                 {vehicle.images?.length > 0 ? (
                   vehicle.images.map((img, index) => (
-                    <img key={index} src={resolveImageUrl(img)} alt={`${vehicle.make} ${vehicle.model}`} />
+                    <img key={index} src={getImageUrl(img)} alt={`${vehicle.make} ${vehicle.model}`} />
                   ))
                 ) : (
                   <div className="vehicle-placeholder-large">No Images Available</div>
@@ -461,11 +447,11 @@ const VehicleDetail = () => {
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Pickup:</strong><br />
-                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {formatTime(activeBooking.pickupTime)}
+                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Return:</strong><br />
-                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {formatTime(activeBooking.dropoffTime)}
+                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#93c5fd' }}>Duration:</strong> {activeBooking.totalDays} day(s)
@@ -480,12 +466,12 @@ const VehicleDetail = () => {
                       className="btn btn-primary"
                       style={{ width: '100%', marginBottom: '0.5rem' }}
                     >
-                      {isHost ? 'Manage Reservation' : 'View My Reservation'}
+                      Manage Reservation
                     </button>
                     <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: 0 }}>
                       {isHost
                         ? 'Go to Host Bookings to manage this reservation'
-                        : 'Go to My Bookings to view this reservation'}
+                        : 'Go to My Reservations to start, extend, or return this vehicle'}
                     </p>
                   </>
                 ) : (
@@ -623,14 +609,13 @@ const VehicleDetail = () => {
                   {bookingData.startDate && bookingData.endDate && (
                     <div style={{
                       backgroundColor: '#f3f4f6',
-                      color: '#1f2937',
                       padding: '0.75rem',
                       borderRadius: '0.5rem',
                       marginBottom: '1rem',
                       fontSize: '0.9rem'
                     }}>
-                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {formatTime(bookingData.pickupTime)}</div>
-                      <div><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {formatTime(bookingData.dropoffTime)}</div>
+                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {bookingData.pickupTime}</div>
+                      <div><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {bookingData.dropoffTime}</div>
                     </div>
                   )}
 
