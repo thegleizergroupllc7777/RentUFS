@@ -177,7 +177,15 @@ const Marketplace = () => {
             >
               <div className="vehicle-card-image">
                 {vehicle.images?.[0] ? (
-                  <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
+                  <img
+                    src={vehicle.images[0]}
+                    alt={`${vehicle.make} ${vehicle.model}`}
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.parentElement.insertAdjacentHTML('afterbegin', '<div class="vehicle-placeholder">No Image</div>');
+                    }}
+                  />
                 ) : (
                   <div className="vehicle-placeholder">No Image</div>
                 )}
@@ -367,9 +375,17 @@ const Marketplace = () => {
                     >
                       <div className="floating-card-image">
                         {vehicle.images?.[0] ? (
-                          <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
+                          <img
+                            src={vehicle.images[0]}
+                            alt={`${vehicle.make} ${vehicle.model}`}
+                            loading="lazy"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentElement.insertAdjacentHTML('afterbegin', '<div class="no-image">No Image</div>');
+                            }}
+                          />
                         ) : (
-                          <div className="no-image">🚗</div>
+                          <div className="no-image">No Image</div>
                         )}
                       </div>
                       <div className="floating-card-info">
