@@ -198,8 +198,13 @@ router.post('/create-session', (req, res) => {
     createdAt: Date.now(),
     photoSlot: photoSlot || null
   });
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-  const qrUrl = `${clientUrl}/mobile-upload/${sessionId}`;
+  // Use CLIENT_URL env var, or derive from the request Origin/Referer header
+  const clientUrl = process.env.CLIENT_URL ||
+    req.headers.origin ||
+    (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
+    'http://localhost:3000';
+  const apiUrl = `${req.protocol}://${req.headers['x-forwarded-host'] || req.get('host')}`;
+  const qrUrl = `${clientUrl}/mobile-upload/${sessionId}?api=${encodeURIComponent(apiUrl)}`;
   console.log(`📱 Upload session created: ${sessionId}`);
   console.log(`📱 QR URL: ${qrUrl}`);
   res.json({ sessionId, qrUrl });
