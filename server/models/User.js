@@ -69,6 +69,25 @@ const userSchema = new mongoose.Schema({
       default: false
     }
   },
+  hostInfo: {
+    accountType: {
+      type: String,
+      enum: ['individual', 'business'],
+      default: 'individual'
+    },
+    taxId: {
+      type: String,
+      trim: true
+    },
+    taxIdLast4: {
+      type: String,
+      trim: true
+    },
+    businessName: {
+      type: String,
+      trim: true
+    }
+  },
   profileImage: {
     type: String,
     default: ''
