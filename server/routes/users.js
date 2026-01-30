@@ -185,7 +185,7 @@ router.get('/host-tax-info', auth, async (req, res) => {
       accountType: user.hostInfo?.accountType || 'individual',
       taxIdLast4: user.hostInfo?.taxIdLast4 || '',
       businessName: user.hostInfo?.businessName || '',
-      hasSubmitted: !!(user.hostInfo?.taxId)
+      hasSubmitted: !!(user.hostInfo?.taxIdLast4)
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
