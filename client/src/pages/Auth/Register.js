@@ -19,11 +19,6 @@ const Register = () => {
     phone: '',
     dateOfBirth: '',
     userType: 'driver',
-    hostInfo: {
-      accountType: 'individual',
-      taxId: '',
-      businessName: ''
-    },
     profileImage: '',
     driverLicense: {
       licenseNumber: '',
@@ -110,15 +105,6 @@ const Register = () => {
           [licenseField]: value
         }
       });
-    } else if (name.startsWith('hostInfo.')) {
-      const hostField = name.split('.')[1];
-      setFormData({
-        ...formData,
-        hostInfo: {
-          ...formData.hostInfo,
-          [hostField]: value
-        }
-      });
     } else {
       setFormData({
         ...formData,
@@ -145,56 +131,10 @@ const Register = () => {
     }
   };
 
-  const formatSSN = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 9);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
-  };
-
-  const formatEIN = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 9);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0, 2)}-${digits.slice(2)}`;
-  };
-
-  const handleTaxIdChange = (e) => {
-    const { value } = e.target;
-    const formatted = formData.hostInfo.accountType === 'individual' ? formatSSN(value) : formatEIN(value);
-    setFormData({
-      ...formData,
-      hostInfo: {
-        ...formData.hostInfo,
-        taxId: formatted
-      }
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    // Validate host info for hosts
-    if (formData.userType === 'host' || formData.userType === 'both') {
-      const taxDigits = formData.hostInfo.taxId.replace(/\D/g, '');
-      if (taxDigits.length !== 9) {
-        setError(
-          formData.hostInfo.accountType === 'individual'
-            ? 'Please enter a valid 9-digit Social Security Number'
-            : 'Please enter a valid 9-digit EIN'
-        );
-        setLoading(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-      if (formData.hostInfo.accountType === 'business' && !formData.hostInfo.businessName.trim()) {
-        setError('Business name is required for business accounts');
-        setLoading(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-    }
 
     // Validate profile picture is uploaded
     if (!formData.profileImage || formData.profileImage.trim() === '') {
@@ -262,15 +202,6 @@ const Register = () => {
           faceVerified: faceVerification?.verified || false
         }
       };
-
-      // Include host info for hosts
-      if (formData.userType === 'host' || formData.userType === 'both') {
-        registrationData.hostInfo = {
-          accountType: formData.hostInfo.accountType,
-          taxId: formData.hostInfo.taxId,
-          businessName: formData.hostInfo.accountType === 'business' ? formData.hostInfo.businessName : undefined
-        };
-      }
 
       await register(registrationData);
 
@@ -478,123 +409,6 @@ const Register = () => {
                       <option value="both">Both rent and list cars</option>
                     </select>
                   </div>
-
-                  {/* Host Account Type - Only for hosts */}
-                  {(formData.userType === 'host' || formData.userType === 'both') && (
-                    <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                      <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#1f2937' }}>
-                        Host Account Information *
-                      </h3>
-                      <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-                        This information is required for tax reporting and payouts.
-                      </p>
-
-                      <div className="form-group">
-                        <label className="form-label">Account Type *</label>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                          <label style={{
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            border: formData.hostInfo.accountType === 'individual' ? '2px solid #10b981' : '2px solid #e5e7eb',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            background: formData.hostInfo.accountType === 'individual' ? '#f0fdf4' : '#fff',
-                            transition: 'all 0.2s'
-                          }}>
-                            <input
-                              type="radio"
-                              name="hostInfo.accountType"
-                              value="individual"
-                              checked={formData.hostInfo.accountType === 'individual'}
-                              onChange={(e) => {
-                                handleChange(e);
-                                setFormData(prev => ({
-                                  ...prev,
-                                  hostInfo: { ...prev.hostInfo, accountType: 'individual', taxId: '', businessName: '' }
-                                }));
-                              }}
-                              style={{ accentColor: '#10b981' }}
-                            />
-                            <div>
-                              <span style={{ fontWeight: '600', color: '#1f2937' }}>Individual</span>
-                              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Personal SSN</p>
-                            </div>
-                          </label>
-                          <label style={{
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            border: formData.hostInfo.accountType === 'business' ? '2px solid #10b981' : '2px solid #e5e7eb',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            background: formData.hostInfo.accountType === 'business' ? '#f0fdf4' : '#fff',
-                            transition: 'all 0.2s'
-                          }}>
-                            <input
-                              type="radio"
-                              name="hostInfo.accountType"
-                              value="business"
-                              checked={formData.hostInfo.accountType === 'business'}
-                              onChange={(e) => {
-                                handleChange(e);
-                                setFormData(prev => ({
-                                  ...prev,
-                                  hostInfo: { ...prev.hostInfo, accountType: 'business', taxId: '', businessName: '' }
-                                }));
-                              }}
-                              style={{ accentColor: '#10b981' }}
-                            />
-                            <div>
-                              <span style={{ fontWeight: '600', color: '#1f2937' }}>Business / LLC</span>
-                              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Company EIN</p>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-
-                      {formData.hostInfo.accountType === 'business' && (
-                        <div className="form-group">
-                          <label className="form-label">Business Name *</label>
-                          <input
-                            type="text"
-                            name="hostInfo.businessName"
-                            className="form-input"
-                            value={formData.hostInfo.businessName}
-                            onChange={handleChange}
-                            placeholder="e.g., United Fleet Services LLC"
-                            required
-                          />
-                        </div>
-                      )}
-
-                      <div className="form-group">
-                        <label className="form-label">
-                          {formData.hostInfo.accountType === 'individual'
-                            ? 'Social Security Number (SSN) *'
-                            : 'Employer Identification Number (EIN) *'}
-                        </label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={formData.hostInfo.taxId}
-                          onChange={handleTaxIdChange}
-                          placeholder={formData.hostInfo.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
-                          maxLength={formData.hostInfo.accountType === 'individual' ? 11 : 10}
-                          required
-                        />
-                        <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                          {formData.hostInfo.accountType === 'individual'
-                            ? 'Required for 1099 tax reporting. Stored securely - only last 4 digits are visible.'
-                            : 'Required for business tax reporting. Stored securely - only last 4 digits are visible.'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Profile Picture Upload - Required */}
                   <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
