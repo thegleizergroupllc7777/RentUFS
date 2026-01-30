@@ -402,6 +402,23 @@ const Register = () => {
                     </select>
                   </div>
 
+                  {/* Profile Picture / Business Logo */}
+                  {(formData.userType === 'host' || formData.userType === 'both') && (
+                    <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
+                      <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#1f2937' }}>
+                        Profile Picture or Business Logo
+                      </h3>
+                      <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
+                        Upload a photo of yourself or your business logo. This is displayed on your vehicle listings.
+                      </p>
+                      <ImageUpload
+                        label="Your Photo / Logo"
+                        value={formData.profileImage}
+                        onChange={(url) => setFormData(prev => ({ ...prev, profileImage: url }))}
+                      />
+                    </div>
+                  )}
+
                   {/* Driver License Information - Only for drivers and both */}
                   {(formData.userType === 'driver' || formData.userType === 'both') && (
                     <>
