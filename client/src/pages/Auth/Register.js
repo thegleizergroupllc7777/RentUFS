@@ -136,14 +136,6 @@ const Register = () => {
     setError('');
     setLoading(true);
 
-    // Validate profile picture is uploaded
-    if (!formData.profileImage || formData.profileImage.trim() === '') {
-      setError('Please upload a profile picture to continue.');
-      setLoading(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
     // Validate age for drivers and both (must be at least 21)
     if ((formData.userType === 'driver' || formData.userType === 'both') && formData.dateOfBirth) {
       const birthDate = new Date(formData.dateOfBirth);
@@ -408,22 +400,6 @@ const Register = () => {
                       <option value="host">List my car (Host)</option>
                       <option value="both">Both rent and list cars</option>
                     </select>
-                  </div>
-
-                  {/* Profile Picture Upload - Required */}
-                  <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#1f2937' }}>
-                      Profile Picture *
-                    </h3>
-                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-                      Upload a clear photo of yourself. This helps hosts and drivers identify you.
-                    </p>
-                    <ImageUpload
-                      label="Your Photo"
-                      value={formData.profileImage}
-                      onChange={(url) => setFormData(prev => ({ ...prev, profileImage: url }))}
-                      required={true}
-                    />
                   </div>
 
                   {/* Driver License Information - Only for drivers and both */}
