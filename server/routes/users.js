@@ -173,4 +173,86 @@ router.post('/confirm-email-change', auth, async (req, res) => {
   }
 });
 
+// Get host tax info (only last 4 digits visible)
+router.get('/host-tax-info', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      accountType: user.hostInfo?.accountType || 'individual',
+      taxIdLast4: user.hostInfo?.taxIdLast4 || '',
+      businessName: user.hostInfo?.businessName || '',
+      hasSubmitted: !!(user.hostInfo?.taxId)
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update host tax info
+router.put('/host-tax-info', auth, async (req, res) => {
+  try {
+    const { accountType, taxId, businessName } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!['host', 'both'].includes(user.userType)) {
+      return res.status(403).json({ message: 'Only hosts can update tax information' });
+    }
+
+    if (!accountType || !['individual', 'business'].includes(accountType)) {
+      return res.status(400).json({ message: 'Please select Individual or Business account type' });
+    }
+
+    if (!taxId || !taxId.trim()) {
+      return res.status(400).json({
+        message: accountType === 'individual'
+          ? 'Social Security Number is required'
+          : 'Business Tax ID (EIN) is required'
+      });
+    }
+
+    const taxIdDigits = taxId.replace(/\D/g, '');
+    if (taxIdDigits.length !== 9) {
+      return res.status(400).json({
+        message: accountType === 'individual'
+          ? 'Please enter a valid 9-digit Social Security Number'
+          : 'Please enter a valid 9-digit EIN (XX-XXXXXXX)'
+      });
+    }
+
+    if (accountType === 'business' && (!businessName || !businessName.trim())) {
+      return res.status(400).json({ message: 'Business name is required for business accounts' });
+    }
+
+    user.hostInfo = {
+      accountType,
+      taxId: taxIdDigits,
+      taxIdLast4: taxIdDigits.slice(-4),
+      businessName: accountType === 'business' ? businessName.trim() : undefined
+    };
+
+    await user.save();
+
+    console.log('✅ Host tax info updated for:', user.email, '- Type:', accountType);
+
+    res.json({
+      message: 'Tax information saved successfully',
+      accountType: user.hostInfo.accountType,
+      taxIdLast4: user.hostInfo.taxIdLast4,
+      businessName: user.hostInfo.businessName || '',
+      hasSubmitted: true
+    });
+  } catch (error) {
+    console.error('❌ Error updating host tax info:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

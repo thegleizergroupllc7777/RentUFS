@@ -16,10 +16,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Phone number is required' });
     }
 
-    if (!phone || !phone.trim()) {
-      return res.status(400).json({ message: 'Phone number is required' });
-    }
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
@@ -41,36 +37,6 @@ router.post('/register', async (req, res) => {
           message: 'You must be at least 21 years old to register as a driver.'
         });
       }
-    }
-
-    // Validate host info for hosts
-    if ((userType === 'host' || userType === 'both') && hostInfo) {
-      if (!hostInfo.accountType || !['individual', 'business'].includes(hostInfo.accountType)) {
-        return res.status(400).json({ message: 'Please select Individual or Business account type' });
-      }
-      if (!hostInfo.taxId || !hostInfo.taxId.trim()) {
-        return res.status(400).json({
-          message: hostInfo.accountType === 'individual'
-            ? 'Social Security Number is required for individual hosts'
-            : 'Business Tax ID (EIN) is required for business hosts'
-        });
-      }
-      if (hostInfo.accountType === 'individual') {
-        const ssnDigits = hostInfo.taxId.replace(/\D/g, '');
-        if (ssnDigits.length !== 9) {
-          return res.status(400).json({ message: 'Please enter a valid 9-digit Social Security Number' });
-        }
-      } else {
-        const einDigits = hostInfo.taxId.replace(/\D/g, '');
-        if (einDigits.length !== 9) {
-          return res.status(400).json({ message: 'Please enter a valid 9-digit EIN (XX-XXXXXXX)' });
-        }
-        if (!hostInfo.businessName || !hostInfo.businessName.trim()) {
-          return res.status(400).json({ message: 'Business name is required for business accounts' });
-        }
-      }
-    } else if ((userType === 'host' || userType === 'both') && !hostInfo) {
-      return res.status(400).json({ message: 'Host account information is required' });
     }
 
     const userData = {
