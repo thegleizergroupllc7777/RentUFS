@@ -224,17 +224,10 @@ router.post('/mobile/:sessionId', (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Convert uploaded file to compressed base64 for MongoDB storage
-    const sharp = null; // Not using sharp - read raw file and let frontend handle it
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const mimeType = req.file.mimetype || 'image/jpeg';
-    const base64Data = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
-
-    // Clean up the temp file
-    fs.unlinkSync(req.file.path);
-
-    session.images.push(base64Data);
-    console.log(`📱 Image added to session ${sessionId}: base64 (${Math.round(fileBuffer.length / 1024)}KB, ${session.images.length} total)`);
+    // Store the file URL path (not base64) so the desktop can use it directly
+    const imageUrl = `/uploads/${req.file.filename}`;
+    session.images.push(imageUrl);
+    console.log(`📱 Image added to session ${sessionId}: ${imageUrl} (${session.images.length} total)`);
 
     res.json({ success: true, count: session.images.length });
   });

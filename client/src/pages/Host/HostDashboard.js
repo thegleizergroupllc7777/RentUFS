@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import API_URL from '../../config/api';
+import getImageUrl from '../../config/imageUrl';
 import './Host.css';
 
 const HostDashboard = () => {
@@ -142,7 +143,7 @@ const HostDashboard = () => {
                 <div key={vehicle._id} className="host-vehicle-card">
                   <div className="host-vehicle-image">
                     {vehicle.images?.[0] ? (
-                      <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
+                      <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
                     ) : (
                       <div className="vehicle-placeholder">No Image</div>
                     )}

@@ -6,6 +6,7 @@ import ChatBox from '../../components/ChatBox';
 import { useAuth } from '../../context/AuthContext';
 import { formatTime } from '../../utils/formatTime';
 import API_URL from '../../config/api';
+import getImageUrl from '../../config/imageUrl';
 import './Host.css';
 
 // Convert a Date to YYYY-MM-DD in local timezone (avoids UTC shift)
@@ -469,7 +470,7 @@ const HostBookings = () => {
                     }}>
                       {booking.vehicle?.images?.[0] ? (
                         <img
-                          src={booking.vehicle.images[0]}
+                          src={getImageUrl(booking.vehicle.images[0])}
                           alt={`${booking.vehicle.make} ${booking.vehicle.model}`}
                           style={{
                             width: '100%',
@@ -813,7 +814,7 @@ const HostBookings = () => {
                         <div key={vehicle._id} className="available-vehicle-card">
                           <div className="available-vehicle-image">
                             {vehicle.images?.[0] ? (
-                              <img src={vehicle.images[0]} alt={`${vehicle.make} ${vehicle.model}`} />
+                              <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
                             ) : (
                               <div className="no-image-placeholder">No Image</div>
                             )}

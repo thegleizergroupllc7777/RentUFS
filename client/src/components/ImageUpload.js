@@ -2,62 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import API_URL from '../config/api';
+import getImageUrl from '../config/imageUrl';
 import './ImageUpload.css';
-
-// Resolve image URL - handles relative paths, full URLs, and base64
-const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('data:')) return url; // base64
-  if (url.startsWith('http')) return url; // already full URL
-  if (url.startsWith('/uploads/')) return `${API_URL}${url}`; // relative path
-  return url;
-};
-
-// Compress an image file/blob to a base64 data URL
-// Resizes to max 1200px wide and compresses as JPEG quality 0.7
-// Result is typically 100-300KB instead of 3-5MB
-const compressImage = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 900;
-
-        let width = img.width;
-        let height = img.height;
-
-        // Scale down if larger than max
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
-        if (height > MAX_HEIGHT) {
-          width = Math.round((width * MAX_HEIGHT) / height);
-          height = MAX_HEIGHT;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Compress as JPEG
-        const base64 = canvas.toDataURL('image/jpeg', 0.7);
-        const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
-        console.log(`📸 Compressed image: ${img.width}x${img.height} → ${width}x${height}, ~${sizeKB}KB`);
-        resolve(base64);
-      };
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsDataURL(file);
-  });
-};
 
 const ImageUpload = ({ label, value, onChange, required = false }) => {
   const [uploading, setUploading] = useState(false);
@@ -79,6 +25,19 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     };
   }, []);
 
+  const uploadFileToServer = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'multipart/form-data' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const endpoint = token ? '/api/upload/image' : '/api/upload/image-public';
+    const res = await axios.post(`${API_URL}${endpoint}`, formData, { headers });
+    return res.data.imageUrl;
+  };
+
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -92,22 +51,26 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      const errorMsg = 'Image size must be less than 10MB';
+    if (file.size > 5 * 1024 * 1024) {
+      const errorMsg = 'Image size must be less than 5MB';
       setUploadError(errorMsg);
       alert(errorMsg);
       return;
     }
 
     setUploading(true);
+    console.log(`📤 Uploading ${label} to server...`);
+
     try {
-      const base64 = await compressImage(file);
-      console.log(`✅ Image compressed for ${label}`);
-      onChange(base64);
+      const imageUrl = await uploadFileToServer(file);
+      console.log(`✅ Image uploaded successfully for ${label}: ${imageUrl}`);
+      onChange(imageUrl);
       setUploadError('');
     } catch (err) {
-      console.error('Compression failed:', err);
-      setUploadError('Failed to process image. Please try again.');
+      console.error('Upload failed:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to upload image. Please try again.';
+      setUploadError(errorMsg);
+      alert(errorMsg);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -168,27 +131,28 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    // Resize capture to max 1200px
-    const MAX_WIDTH = 1200;
-    let width = video.videoWidth;
-    let height = video.videoHeight;
-    if (width > MAX_WIDTH) {
-      height = Math.round((height * MAX_WIDTH) / width);
-      width = MAX_WIDTH;
-    }
-
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, width, height);
+    ctx.drawImage(video, 0, 0);
 
     stopCamera();
+    setUploading(true);
 
-    // Get compressed base64 directly from canvas
-    const base64 = canvas.toDataURL('image/jpeg', 0.7);
-    console.log(`✅ Camera photo captured for ${label}`);
-    onChange(base64);
+    try {
+      // Convert canvas to blob and upload to server
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const imageUrl = await uploadFileToServer(file);
+      console.log(`✅ Camera photo uploaded for ${label}: ${imageUrl}`);
+      onChange(imageUrl);
+    } catch (err) {
+      console.error('Camera upload failed:', err);
+      setUploadError('Failed to upload photo. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   // Phone upload: create session and show QR code
@@ -198,12 +162,11 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       const res = await axios.post(`${API_URL}/api/upload/create-session`, {
         photoSlot: label
       });
-      const { sessionId } = res.data;
+      const { sessionId, qrUrl } = res.data;
       setPhoneSession(sessionId);
 
-      // Build QR URL from the current browser origin and pass API URL so the phone
-      // knows where to send uploads regardless of frontend/backend domain setup
-      setPhoneQrUrl(`${window.location.origin}/mobile-upload/${sessionId}?api=${encodeURIComponent(API_URL)}`);
+      // Use server-provided URL (uses CLIENT_URL env var for production)
+      setPhoneQrUrl(qrUrl);
 
       // Start polling for uploaded images
       if (pollRef.current) clearInterval(pollRef.current);
@@ -211,9 +174,10 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         try {
           const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
           if (pollRes.data.images && pollRes.data.images.length > 0) {
-            // Use the latest image - phone uploads store base64 now
+            // Use the latest image
             const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
             onChange(latestImage);
+            // Keep polling in case they upload more - the latest will be used
           }
         } catch (err) {
           // Session expired or error - stop polling
@@ -353,7 +317,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
                 disabled={uploading}
               >
                 {uploading ? (
-                  <span>📤 Processing...</span>
+                  <span>📤 Uploading...</span>
                 ) : value ? (
                   <span>📷 Take New Photo</span>
                 ) : (
@@ -363,7 +327,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
 
               <label htmlFor={`file-input-${label}`} className="file-upload-btn" style={{ flex: '1', minWidth: '140px' }}>
                 {uploading ? (
-                  <span>📤 Processing...</span>
+                  <span>📤 Uploading...</span>
                 ) : value ? (
                   <span>💻 Choose Different</span>
                 ) : (
@@ -384,7 +348,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         )}
 
         <p className="upload-hint">
-          Use camera, select from computer, or scan QR code with your phone (Max 10MB, auto-compressed)
+          Use camera, select from computer, or scan QR code with your phone (Max 5MB)
         </p>
 
         {uploadError && (
@@ -405,7 +369,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       {value && (
         <div className="image-preview-container">
           <div className="image-preview">
-            <img src={resolveImageUrl(value)} alt="Preview" onError={(e) => {
+            <img src={getImageUrl(value)} alt="Preview" onError={(e) => {
               e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150"><rect fill="%23ddd" width="200" height="150"/><text x="50%" y="50%" fill="%23999" text-anchor="middle" dy=".3em">Image unavailable</text></svg>';
             }} />
             <button
@@ -423,5 +387,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
   );
 };
 
-export { resolveImageUrl };
+// Named export for resolving image URLs (used by EditVehicle)
+export const resolveImageUrl = getImageUrl;
+
 export default ImageUpload;

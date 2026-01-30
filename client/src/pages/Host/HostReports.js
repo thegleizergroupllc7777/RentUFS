@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import API_URL from '../../config/api';
+import getImageUrl from '../../config/imageUrl';
 import './Host.css';
 
 const HostReports = () => {
@@ -257,7 +258,7 @@ const HostReports = () => {
                       <div key={vehicle.vehicleId} className="vehicle-stat-card">
                         <div className="vehicle-stat-header">
                           {vehicle.vehicleImage ? (
-                            <img src={vehicle.vehicleImage} alt={vehicle.vehicleName} className="vehicle-stat-image" />
+                            <img src={getImageUrl(vehicle.vehicleImage)} alt={vehicle.vehicleName} className="vehicle-stat-image" />
                           ) : (
                             <div className="vehicle-stat-image-placeholder">No Image</div>
                           )}
