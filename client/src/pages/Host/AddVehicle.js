@@ -188,7 +188,10 @@ const AddVehicle = () => {
       await axios.post(`${API_URL}/api/vehicles`, vehicleData, {
         headers: {
           Authorization: `Bearer ${token}`
-        }
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 30000
       });
 
       // Success! Navigate to dashboard
