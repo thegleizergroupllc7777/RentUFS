@@ -34,10 +34,6 @@ const DriverProfile = () => {
 
   // Tax info state (hosts only)
   const [taxInfo, setTaxInfo] = useState(null);
-  const [showTaxForm, setShowTaxForm] = useState(false);
-  const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', businessName: '' });
-  const [taxSaving, setTaxSaving] = useState(false);
-  const [taxMessage, setTaxMessage] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -289,53 +285,9 @@ const DriverProfile = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTaxInfo(response.data);
-      if (response.data.hasSubmitted) {
-        setTaxFormData({
-          accountType: response.data.accountType,
-          taxId: '',
-          businessName: response.data.businessName || ''
-        });
-      }
     } catch (error) {
       console.error('Error fetching tax info:', error);
-    }
-  };
-
-  const formatSSN = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 9);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
-  };
-
-  const formatEIN = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 9);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0, 2)}-${digits.slice(2)}`;
-  };
-
-  const handleTaxIdInput = (e) => {
-    const formatted = taxFormData.accountType === 'individual' ? formatSSN(e.target.value) : formatEIN(e.target.value);
-    setTaxFormData({ ...taxFormData, taxId: formatted });
-  };
-
-  const handleSaveTaxInfo = async (e) => {
-    e.preventDefault();
-    setTaxSaving(true);
-    setTaxMessage('');
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/users/host-tax-info`, taxFormData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setTaxInfo(response.data);
-      setTaxMessage('Tax information saved successfully!');
-      setShowTaxForm(false);
-      setTaxFormData(prev => ({ ...prev, taxId: '' }));
-    } catch (error) {
-      setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
-    } finally {
-      setTaxSaving(false);
+      setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', hasSubmitted: false });
     }
   };
 
@@ -708,142 +660,69 @@ const DriverProfile = () => {
           </div>
 
           {/* Tax Information Section - Hosts Only */}
-          {(user?.userType === 'host' || user?.userType === 'both') && taxInfo && (
+          {(user?.userType === 'host' || user?.userType === 'both') && (
             <div style={{
               background: '#000',
               borderRadius: '1rem',
               padding: '2rem',
               marginTop: '1.5rem',
-              border: taxInfo.hasSubmitted ? '1px solid #333' : '2px solid #f59e0b'
+              border: taxInfo?.hasSubmitted ? '1px solid #333' : '2px solid #f59e0b'
             }}>
-              <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Tax Information</h3>
+              <h3 style={{ marginBottom: '0.75rem', color: '#fff' }}>Tax Information</h3>
 
-              {!taxInfo.hasSubmitted && (
-                <div style={{
-                  background: '#78350f',
-                  border: '1px solid #f59e0b',
-                  borderRadius: '0.5rem',
-                  padding: '0.75rem 1rem',
-                  marginBottom: '1.25rem',
-                  fontSize: '0.85rem',
-                  color: '#fde68a'
-                }}>
-                  Tax information is required before you can receive payouts. Funds will be withheld until this is completed.
-                </div>
-              )}
-
-              {taxInfo.hasSubmitted && !showTaxForm && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <p style={{ fontSize: '0.9rem', color: '#9ca3af', margin: '0.25rem 0' }}>
-                    Account Type: <span style={{ color: '#e5e7eb', fontWeight: '500' }}>{taxInfo.accountType === 'business' ? 'Business / LLC' : 'Individual'}</span>
-                  </p>
-                  {taxInfo.accountType === 'business' && taxInfo.businessName && (
+              {taxInfo?.hasSubmitted ? (
+                <>
+                  <div style={{
+                    background: '#111',
+                    borderRadius: '0.5rem',
+                    padding: '1rem 1.25rem',
+                    marginBottom: '1rem',
+                    border: '1px solid #333'
+                  }}>
                     <p style={{ fontSize: '0.9rem', color: '#9ca3af', margin: '0.25rem 0' }}>
-                      Business: <span style={{ color: '#e5e7eb', fontWeight: '500' }}>{taxInfo.businessName}</span>
+                      Account Type: <span style={{ color: '#e5e7eb', fontWeight: '500' }}>{taxInfo.accountType === 'business' ? 'Business / LLC' : 'Individual'}</span>
                     </p>
-                  )}
-                  <p style={{ fontSize: '0.9rem', color: '#9ca3af', margin: '0.25rem 0' }}>
-                    {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'}: <span style={{ color: '#e5e7eb', fontWeight: '500' }}>****{taxInfo.taxIdLast4}</span>
-                  </p>
-                  <p style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.5rem' }}>
-                    Tax information on file
-                  </p>
-                </div>
-              )}
-
-              {taxMessage && !showTaxForm && (
-                <p style={{ fontSize: '0.85rem', color: taxMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '0.75rem' }}>{taxMessage}</p>
-              )}
-
-              {!showTaxForm && (
-                <button
-                  onClick={() => { setShowTaxForm(true); setTaxMessage(''); }}
-                  className="btn btn-primary"
-                  style={{ background: taxInfo.hasSubmitted ? '#4b5563' : '#10b981', width: '100%' }}
-                >
-                  {taxInfo.hasSubmitted ? 'Update Tax Information' : 'Add Tax Information'}
-                </button>
-              )}
-
-              {showTaxForm && (
-                <form onSubmit={handleSaveTaxInfo} style={{ marginTop: '0.5rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Account Type</label>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <label style={{
-                        flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        padding: '0.75rem',
-                        border: taxFormData.accountType === 'individual' ? '2px solid #10b981' : '2px solid #333',
-                        borderRadius: '8px', cursor: 'pointer',
-                        background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent'
-                      }}>
-                        <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
-                          onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', businessName: '' })}
-                          style={{ accentColor: '#10b981' }} />
-                        <div>
-                          <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Individual</span>
-                          <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Personal SSN</p>
-                        </div>
-                      </label>
-                      <label style={{
-                        flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        padding: '0.75rem',
-                        border: taxFormData.accountType === 'business' ? '2px solid #10b981' : '2px solid #333',
-                        borderRadius: '8px', cursor: 'pointer',
-                        background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent'
-                      }}>
-                        <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
-                          onChange={() => setTaxFormData({ accountType: 'business', taxId: '', businessName: '' })}
-                          style={{ accentColor: '#10b981' }} />
-                        <div>
-                          <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Business / LLC</span>
-                          <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Company EIN</p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {taxFormData.accountType === 'business' && (
-                    <div className="form-group">
-                      <label className="form-label">Business Name</label>
-                      <input type="text" className="form-input"
-                        value={taxFormData.businessName}
-                        onChange={(e) => setTaxFormData({ ...taxFormData, businessName: e.target.value })}
-                        placeholder="e.g., United Fleet Services LLC"
-                        required />
-                    </div>
-                  )}
-
-                  <div className="form-group">
-                    <label className="form-label">
-                      {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
-                    </label>
-                    <input type="text" className="form-input"
-                      value={taxFormData.taxId}
-                      onChange={handleTaxIdInput}
-                      placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
-                      maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
-                      required />
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      Stored securely. Only the last 4 digits will be visible.
+                    {taxInfo.accountType === 'business' && taxInfo.businessName && (
+                      <p style={{ fontSize: '0.9rem', color: '#9ca3af', margin: '0.25rem 0' }}>
+                        Business: <span style={{ color: '#e5e7eb', fontWeight: '500' }}>{taxInfo.businessName}</span>
+                      </p>
+                    )}
+                    <p style={{ fontSize: '0.9rem', color: '#9ca3af', margin: '0.25rem 0' }}>
+                      {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'}: <span style={{ color: '#e5e7eb', fontWeight: '500' }}>****{taxInfo.taxIdLast4}</span>
+                    </p>
+                    <p style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.5rem', marginBottom: 0 }}>
+                      Tax information on file
                     </p>
                   </div>
-
-                  {taxMessage && (
-                    <p style={{ fontSize: '0.85rem', color: taxMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '0.75rem' }}>{taxMessage}</p>
-                  )}
-
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button type="submit" className="btn btn-primary" disabled={taxSaving}
-                      style={{ flex: 1 }}>
-                      {taxSaving ? 'Saving...' : 'Save Tax Information'}
-                    </button>
-                    <button type="button" className="btn btn-secondary" onClick={() => { setShowTaxForm(false); setTaxMessage(''); }}
-                      style={{ flex: 0 }}>
-                      Cancel
-                    </button>
+                  <button
+                    onClick={() => navigate('/host/tax-settings')}
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                  >
+                    Update Tax Information
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{
+                    background: '#78350f',
+                    border: '1px solid #f59e0b',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1.25rem',
+                    fontSize: '0.85rem',
+                    color: '#fde68a'
+                  }}>
+                    Tax information is required before you can receive payouts. Please add your tax details.
                   </div>
-                </form>
+                  <button
+                    onClick={() => navigate('/host/tax-settings')}
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                  >
+                    Add Tax Information
+                  </button>
+                </>
               )}
             </div>
           )}
