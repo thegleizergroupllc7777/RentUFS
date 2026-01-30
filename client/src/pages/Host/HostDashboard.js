@@ -82,6 +82,7 @@ const HostDashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching tax info:', error);
+      setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', hasSubmitted: false });
     }
   };
 
