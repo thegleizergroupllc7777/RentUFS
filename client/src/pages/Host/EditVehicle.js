@@ -156,11 +156,15 @@ const EditVehicle = () => {
 
       const token = localStorage.getItem('token');
       await axios.put(`${API_URL}/api/vehicles/${id}`, vehicleData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 30000
       });
       navigate('/host/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update vehicle');
+      setError(err.response?.data?.message || err.message || 'Failed to update vehicle');
+      console.error('❌ Update vehicle error:', err.response?.status, err.response?.data || err.message);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
