@@ -1,7 +1,5 @@
 const express = require('express');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
@@ -10,74 +8,24 @@ const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Helper: convert a base64 data URL to a file and return the server URL path
-function saveBase64ToFile(base64DataUrl) {
-  try {
-    // Match data:image/TYPE;base64,DATA
-    const match = base64DataUrl.match(/^data:image\/([\w+]+);base64,(.+)$/);
-    if (!match) return null;
-
-    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
-    const data = match[2];
-    const filename = `migrated-${Date.now()}-${Math.round(Math.random() * 1E9)}.${ext}`;
-    const filePath = path.join(uploadsDir, filename);
-
-    fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
-    return `/uploads/${filename}`;
-  } catch (err) {
-    console.error('❌ Failed to save base64 image:', err.message);
-    return null;
-  }
-}
-
-// Helper: convert any base64 images in a vehicle's images/registrationImage to file URLs
-async function migrateVehicleImages(vehicle, req) {
-  let changed = false;
+// Helper: resolve image URLs - converts relative paths to full URLs
+function resolveImageUrls(vehicle, req) {
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
   const host = req.headers['x-forwarded-host'] || req.get('host');
   const baseUrl = `${protocol}://${host}`;
 
-  // Migrate images array
   if (vehicle.images && vehicle.images.length > 0) {
-    const newImages = [];
-    for (const img of vehicle.images) {
-      if (typeof img === 'string' && img.startsWith('data:image/')) {
-        const filePath = saveBase64ToFile(img);
-        if (filePath) {
-          newImages.push(`${baseUrl}${filePath}`);
-          changed = true;
-        }
-        // Skip broken base64 images
-      } else {
-        newImages.push(img);
+    vehicle.images = vehicle.images.map(img => {
+      if (typeof img === 'string' && img.startsWith('/uploads/')) {
+        return `${baseUrl}${img}`;
       }
-    }
-    if (changed) {
-      vehicle.images = newImages;
-    }
+      return img;
+    });
   }
-
-  // Migrate registrationImage
-  if (vehicle.registrationImage && typeof vehicle.registrationImage === 'string' && vehicle.registrationImage.startsWith('data:image/')) {
-    const filePath = saveBase64ToFile(vehicle.registrationImage);
-    if (filePath) {
-      vehicle.registrationImage = `${baseUrl}${filePath}`;
-      changed = true;
-    }
+  if (vehicle.registrationImage && typeof vehicle.registrationImage === 'string' && vehicle.registrationImage.startsWith('/uploads/')) {
+    vehicle.registrationImage = `${baseUrl}${vehicle.registrationImage}`;
   }
-
-  if (changed) {
-    await vehicle.save();
-    console.log(`✅ Migrated base64 images for vehicle ${vehicle._id} (${vehicle.year} ${vehicle.make} ${vehicle.model})`);
-  }
-
-  return changed;
+  return vehicle;
 }
 
 // Lookup city/state from zip code using free Zippopotam API
@@ -313,23 +261,8 @@ router.get('/', async (req, res) => {
         .sort({ createdAt: -1 });
     }
 
-    // Auto-migrate any base64 images to server files (background, non-blocking)
-    for (const v of vehicles) {
-      const doc = v._id && !v.__v && v.images ? v : null; // aggregation results are plain objects
-      if (doc && Array.isArray(doc.images) && doc.images.some(img => typeof img === 'string' && img.startsWith('data:image/'))) {
-        // Load full Mongoose doc for save
-        const vDoc = await Vehicle.findById(doc._id);
-        if (vDoc) {
-          await migrateVehicleImages(vDoc, req);
-          // Update the in-memory result with new URLs
-          const updated = await Vehicle.findById(doc._id).lean();
-          if (updated) {
-            doc.images = updated.images;
-            doc.registrationImage = updated.registrationImage;
-          }
-        }
-      }
-    }
+    // Resolve relative image paths to full URLs
+    vehicles = vehicles.map(v => resolveImageUrls(v, req));
 
     // Filter by date availability if dates are provided
     if (startDate && endDate) {
@@ -368,12 +301,8 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
     const vehicles = await Vehicle.find({ host: req.user._id })
       .sort({ createdAt: -1 });
 
-    // Auto-migrate any base64 images
-    for (const vehicle of vehicles) {
-      if (vehicle.images && vehicle.images.some(img => typeof img === 'string' && img.startsWith('data:image/'))) {
-        await migrateVehicleImages(vehicle, req);
-      }
-    }
+    // Resolve relative image paths to full URLs
+    vehicles.forEach(v => resolveImageUrls(v, req));
 
     res.json(vehicles);
   } catch (error) {
@@ -391,10 +320,8 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Vehicle not found' });
     }
 
-    // Auto-migrate base64 images on fetch
-    if (vehicle.images && vehicle.images.some(img => typeof img === 'string' && img.startsWith('data:image/'))) {
-      await migrateVehicleImages(vehicle, req);
-    }
+    // Resolve relative image paths to full URLs
+    resolveImageUrls(vehicle, req);
 
     res.json(vehicle);
   } catch (error) {
@@ -526,22 +453,9 @@ router.put('/:id', auth, async (req, res) => {
 // Migrate all base64 images to server files (one-time migration)
 router.post('/migrate-images', async (req, res) => {
   try {
-    const vehicles = await Vehicle.find({});
-    let migrated = 0;
-    let skipped = 0;
-
-    for (const vehicle of vehicles) {
-      const changed = await migrateVehicleImages(vehicle, req);
-      if (changed) migrated++;
-      else skipped++;
-    }
-
-    res.json({
-      message: `Migrated ${migrated} vehicles, ${skipped} already up to date`,
-      migrated,
-      skipped,
-      total: vehicles.length
-    });
+    const { migrateBase64Images } = require('../utils/imageMigration');
+    const result = await migrateBase64Images();
+    res.json(result);
   } catch (error) {
     console.error('❌ Image migration error:', error);
     res.status(500).json({ message: 'Migration error', error: error.message });

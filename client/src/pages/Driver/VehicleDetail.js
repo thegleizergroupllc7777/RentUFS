@@ -6,6 +6,7 @@ import { formatTime } from '../../utils/formatTime';
 import Navbar from '../../components/Navbar';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
+import { resolveImageUrl } from '../../components/ImageUpload';
 import './Driver.css';
 
 const VehicleDetail = () => {
@@ -312,7 +313,7 @@ const VehicleDetail = () => {
               <div className="vehicle-images">
                 {vehicle.images?.length > 0 ? (
                   vehicle.images.map((img, index) => (
-                    <img key={index} src={img} alt={`${vehicle.make} ${vehicle.model}`} />
+                    <img key={index} src={resolveImageUrl(img)} alt={`${vehicle.make} ${vehicle.model}`} />
                   ))
                 ) : (
                   <div className="vehicle-placeholder-large">No Images Available</div>

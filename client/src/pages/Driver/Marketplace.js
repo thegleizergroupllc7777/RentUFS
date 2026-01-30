@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
+import { resolveImageUrl } from '../../components/ImageUpload';
 import './Driver.css';
 
 // Convert Date to YYYY-MM-DD in local timezone (avoids UTC shift)
@@ -178,7 +179,7 @@ const Marketplace = () => {
               <div className="vehicle-card-image">
                 {vehicle.images?.[0] ? (
                   <img
-                    src={vehicle.images[0]}
+                    src={resolveImageUrl(vehicle.images[0])}
                     alt={`${vehicle.make} ${vehicle.model}`}
                     loading="lazy"
                     onError={(e) => {
@@ -376,7 +377,7 @@ const Marketplace = () => {
                       <div className="floating-card-image">
                         {vehicle.images?.[0] ? (
                           <img
-                            src={vehicle.images[0]}
+                            src={resolveImageUrl(vehicle.images[0])}
                             alt={`${vehicle.make} ${vehicle.model}`}
                             loading="lazy"
                             onError={(e) => {

@@ -15,6 +15,7 @@ const reportRoutes = require('./routes/reports');
 const insuranceRoutes = require('./routes/insurance');
 const messageRoutes = require('./routes/messages');
 const { startReturnReminderScheduler } = require('./utils/scheduler');
+const { migrateBase64Images } = require('./utils/imageMigration');
 
 const app = express();
 
@@ -44,6 +45,8 @@ app.use('/api/messages', messageRoutes);
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
   .then(() => {
     console.log('✅ Connected to MongoDB');
+    // Migrate any base64 images to server files on startup
+    migrateBase64Images().catch(err => console.error('❌ Image migration error:', err));
     // Start the return reminder scheduler after DB connection
     startReturnReminderScheduler(10); // Check every 10 minutes
   })

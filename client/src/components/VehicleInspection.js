@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import API_URL from '../config/api';
+import { resolveImageUrl } from './ImageUpload';
 import './VehicleInspection.css';
 
 const PHOTO_POSITIONS = [
@@ -298,7 +299,7 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
 
             {photos[currentPosition.key] ? (
               <div className="photo-preview">
-                <img src={photos[currentPosition.key]} alt={currentPosition.label} />
+                <img src={resolveImageUrl(photos[currentPosition.key])} alt={currentPosition.label} />
                 <button
                   className="btn btn-secondary retake-btn"
                   onClick={() => handleRetakePhoto(currentPosition.key)}
@@ -384,7 +385,7 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
               onClick={() => setCurrentStep(PHOTO_POSITIONS.findIndex(p => p.key === pos.key))}
             >
               {photos[pos.key] ? (
-                <img src={photos[pos.key]} alt={pos.label} />
+                <img src={resolveImageUrl(photos[pos.key])} alt={pos.label} />
               ) : (
                 <div className="thumbnail-placeholder">
                   <span className="camera-icon">📷</span>
