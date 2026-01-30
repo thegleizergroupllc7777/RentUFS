@@ -507,6 +507,7 @@ Booking Details:
 Host Information:
 - Name: ${host.firstName} ${host.lastName}
 - Email: ${host.email}
+- Phone: ${host.phone || 'Not provided'}
 
 Pick-up Location:
 ${vehicle.location?.address || ''}, ${vehicle.location?.city || ''}, ${vehicle.location?.state || ''} ${vehicle.location?.zipCode || ''}
@@ -597,6 +598,7 @@ The RentUFS Team
                 <h4 style="margin-top: 0; color: #059669;">Host Information</h4>
                 <p style="margin: 5px 0;"><strong>Name:</strong> ${host.firstName} ${host.lastName}</p>
                 <p style="margin: 5px 0;"><strong>Email:</strong> ${host.email}</p>
+                ${host.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${host.phone}</p>` : ''}
               </div>
 
               <div class="reminders">
@@ -641,6 +643,7 @@ Booking Details:
 Host Information:
 - Name: ${host.firstName} ${host.lastName}
 - Email: ${host.email}
+- Phone: ${host.phone || 'Not provided'}
 
 Pick-up Location:
 ${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}
@@ -892,6 +895,7 @@ Need to extend? Visit: ${process.env.CLIENT_URL || 'http://localhost:3000'}/my-b
 If you have any questions, contact your host:
 - Name: ${host.firstName} ${host.lastName}
 - Email: ${host.email}
+- Phone: ${host.phone || 'Not provided'}
 
 Thank you for choosing RentUFS!
 
@@ -1004,6 +1008,7 @@ The RentUFS Team
                 <h4 style="margin-top: 0; color: #1d4ed8;">Need Help? Contact Your Host</h4>
                 <p style="margin: 5px 0;"><strong>Name:</strong> ${host.firstName} ${host.lastName}</p>
                 <p style="margin: 5px 0;"><strong>Email:</strong> ${host.email}</p>
+                ${host.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${host.phone}</p>` : ''}
               </div>
             </div>
 
@@ -1044,6 +1049,7 @@ Need to extend? Visit: ${process.env.CLIENT_URL || 'http://localhost:3000'}/my-b
 If you have any questions, contact your host:
 - Name: ${host.firstName} ${host.lastName}
 - Email: ${host.email}
+- Phone: ${host.phone || 'Not provided'}
 
 Thank you for choosing RentUFS!
 
@@ -1216,6 +1222,7 @@ Updated Booking Details:
                 <h4 style="margin-top: 0; color: #1d4ed8;">Host Contact</h4>
                 <p style="margin: 5px 0;"><strong>Name:</strong> ${host.firstName} ${host.lastName}</p>
                 <p style="margin: 5px 0;"><strong>Email:</strong> ${host.email}</p>
+                ${host.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${host.phone}</p>` : ''}
               </div>
 
               <center>
@@ -1232,7 +1239,7 @@ Updated Booking Details:
         </body>
         </html>
       `,
-      text: `Hi ${driver.firstName},\n\nYour booking has been extended by ${extensionDays} day(s).\n${textContent}\nHost: ${host.firstName} ${host.lastName} (${host.email})\n\nThank you for choosing RentUFS!\nThe RentUFS Team`
+      text: `Hi ${driver.firstName},\n\nYour booking has been extended by ${extensionDays} day(s).\n${textContent}\nHost: ${host.firstName} ${host.lastName} (${host.email})${host.phone ? `\nPhone: ${host.phone}` : ''}\n\nThank you for choosing RentUFS!\nThe RentUFS Team`
     };
 
     // Email to host
