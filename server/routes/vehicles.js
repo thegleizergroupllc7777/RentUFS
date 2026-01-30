@@ -450,18 +450,6 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// Migrate all base64 images to server files (one-time migration)
-router.post('/migrate-images', async (req, res) => {
-  try {
-    const { migrateBase64Images } = require('../utils/imageMigration');
-    const result = await migrateBase64Images();
-    res.json(result);
-  } catch (error) {
-    console.error('❌ Image migration error:', error);
-    res.status(500).json({ message: 'Migration error', error: error.message });
-  }
-});
-
 // Geocode all existing vehicles (migration endpoint)
 router.post('/geocode-all', async (req, res) => {
   try {
