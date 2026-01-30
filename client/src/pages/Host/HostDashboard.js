@@ -316,7 +316,7 @@ const HostDashboard = () => {
                       const loc = grouped[zip][0]?.location;
                       const cityState = [loc?.city, loc?.state].filter(Boolean).join(', ');
                       return cityState ? (
-                        <span style={{ color: '#e5e7eb', fontSize: '0.95rem', fontWeight: '500' }}>
+                        <span style={{ color: '#4b5563', fontSize: '0.95rem', fontWeight: '500' }}>
                           {cityState}
                         </span>
                       ) : null;
