@@ -94,9 +94,6 @@ const HostDashboard = () => {
           <div className="host-header">
             <h1 className="page-title">My Vehicles</h1>
             <div className="host-actions">
-              <Link to="/host/reports">
-                <button className="btn btn-secondary">View Reports</button>
-              </Link>
               <Link to="/host/bookings">
                 <button className="btn btn-secondary">View Bookings</button>
               </Link>
@@ -132,7 +129,7 @@ const HostDashboard = () => {
                 </p>
               )}
             </div>
-            <Link to="/host/tax-settings">
+            <Link to="/driver/profile?tab=tax">
               <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
                 {taxInfo?.hasSubmitted ? 'Manage' : 'Add Tax Info'}
               </button>
