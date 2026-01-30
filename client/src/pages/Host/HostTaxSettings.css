@@ -1,0 +1,280 @@
+.tax-settings-header {
+  margin-bottom: 2rem;
+}
+
+.tax-back-link {
+  display: inline-block;
+  color: #10b981;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  transition: color 0.2s;
+}
+
+.tax-back-link:hover {
+  color: #059669;
+}
+
+.tax-subtitle {
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.tax-status-card {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.tax-status-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.tax-status-indicator {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.tax-status-indicator.submitted {
+  background: #065f46;
+  color: #10b981;
+  border: 2px solid #10b981;
+}
+
+.tax-status-indicator.pending {
+  background: #78350f;
+  color: #fbbf24;
+  border: 2px solid #fbbf24;
+}
+
+.tax-status-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f9fafb;
+  margin-bottom: 0.25rem;
+}
+
+.tax-status-description {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.tax-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #1a1a1a;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.tax-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tax-detail-label {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.tax-detail-value {
+  font-size: 1rem;
+  color: #f9fafb;
+  font-weight: 600;
+}
+
+.tax-success-message {
+  color: #10b981;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+.tax-form-card {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.tax-form-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f9fafb;
+  margin-bottom: 1.5rem;
+}
+
+.tax-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.tax-form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #d1d5db;
+  margin-bottom: 0.5rem;
+}
+
+.tax-account-type-options {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.tax-account-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 2px solid #333;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #1a1a1a;
+  transition: all 0.2s;
+}
+
+.tax-account-option:hover {
+  border-color: #555;
+}
+
+.tax-account-option.selected {
+  border-color: #10b981;
+  background: #064e3b;
+}
+
+.tax-account-option input[type="radio"] {
+  accent-color: #10b981;
+}
+
+.tax-account-option-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.tax-account-option-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #f9fafb;
+}
+
+.tax-account-option-desc {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.tax-form-input {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #333;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #1a1a1a;
+  color: #f9fafb;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.tax-form-input:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.tax-form-input::placeholder {
+  color: #6b7280;
+}
+
+.tax-form-hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.35rem;
+}
+
+.tax-form-message {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.tax-form-message.success {
+  color: #10b981;
+}
+
+.tax-form-message.error {
+  color: #ef4444;
+}
+
+.tax-info-card {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+}
+
+.tax-info-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f9fafb;
+  margin-bottom: 0.75rem;
+}
+
+.tax-info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tax-info-list li {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+.tax-info-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: bold;
+}
+
+@media (max-width: 600px) {
+  .tax-account-type-options {
+    flex-direction: column;
+  }
+
+  .tax-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tax-status-card,
+  .tax-form-card,
+  .tax-info-card {
+    padding: 1.25rem;
+  }
+}
