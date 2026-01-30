@@ -232,12 +232,23 @@ router.post('/mobile/:sessionId', (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Store the file URL path (not base64) so the desktop can use it directly
-    const imageUrl = `/uploads/${req.file.filename}`;
-    session.images.push(imageUrl);
-    console.log(`📱 Image added to session ${sessionId}: ${imageUrl} (${session.images.length} total)`);
+    try {
+      // Read file and convert to base64 for persistent storage in MongoDB
+      const filePath = req.file.path;
+      const fileData = fs.readFileSync(filePath);
+      const base64 = `data:${req.file.mimetype};base64,${fileData.toString('base64')}`;
 
-    res.json({ success: true, count: session.images.length });
+      // Delete the temp file since we have the base64
+      fs.unlinkSync(filePath);
+
+      session.images.push(base64);
+      console.log(`📱 Image added to session ${sessionId} as base64 (~${Math.round(base64.length / 1024)}KB, ${session.images.length} total)`);
+
+      res.json({ success: true, count: session.images.length });
+    } catch (readErr) {
+      console.error('📱 Failed to convert uploaded file to base64:', readErr);
+      res.status(500).json({ message: 'Failed to process uploaded image' });
+    }
   });
 });
 
