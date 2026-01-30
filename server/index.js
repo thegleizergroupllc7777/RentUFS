@@ -18,6 +18,9 @@ const { startReturnReminderScheduler } = require('./utils/scheduler');
 
 const app = express();
 
+// Trust proxy (Render, Heroku, etc.) so req.protocol reflects the actual scheme
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
 
