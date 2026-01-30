@@ -12,6 +12,10 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage } = req.body;
 
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({ message: 'Phone number is required' });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });

@@ -365,13 +365,15 @@ const Register = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Phone</label>
+                    <label className="form-label">Phone *</label>
                     <input
                       type="tel"
                       name="phone"
                       className="form-input"
                       value={formData.phone}
                       onChange={handleChange}
+                      placeholder="(555) 555-5555"
+                      required
                     />
                   </div>
 
