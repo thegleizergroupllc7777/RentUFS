@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { Link } from 'react-router-dom';
+import getImageUrl from '../config/imageUrl';
 
 const mapContainerStyle = {
   width: '100%',
@@ -163,7 +164,7 @@ const MapView = ({
                   <div style={{ minWidth: '200px', padding: '4px' }}>
                     {vehicle.images && vehicle.images[0] && (
                       <img
-                        src={vehicle.images[0]}
+                        src={getImageUrl(vehicle.images[0])}
                         alt={`${vehicle.make} ${vehicle.model}`}
                         style={{
                           width: '100%',
