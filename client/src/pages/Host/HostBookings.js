@@ -633,15 +633,12 @@ const HostBookings = () => {
 
                     {booking.status === 'active' && (
                       <>
-                        <span style={{
-                          padding: '0.5rem 1rem',
-                          background: '#dbeafe',
-                          color: '#1e40af',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem'
-                        }}>
-                          Driver will complete return inspection
-                        </span>
+                        <button
+                          onClick={() => handleUpdateStatus(booking._id, 'completed')}
+                          className="btn btn-success"
+                        >
+                          Complete Reservation
+                        </button>
                         <button
                           onClick={() => handleOpenCancelModal(booking)}
                           className="btn btn-danger"
