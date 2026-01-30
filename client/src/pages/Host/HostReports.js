@@ -12,6 +12,7 @@ const HostReports = () => {
   const [period, setPeriod] = useState('month');
   const [customRange, setCustomRange] = useState({ startDate: '', endDate: '' });
   const [reportData, setReportData] = useState(null);
+  const [openSections, setOpenSections] = useState({ income: true, bookings: false, fleet: false, recent: false });
 
   useEffect(() => {
     fetchReports();
@@ -64,6 +65,22 @@ const HostReports = () => {
     });
   };
 
+  const toggleSection = (section) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const getPeriodLabel = () => {
+    switch (period) {
+      case 'today': return 'Today';
+      case 'week': return 'Last 7 Days';
+      case 'month': return 'Last 30 Days';
+      case 'year': return 'Last Year';
+      case 'all': return 'All Time';
+      case 'custom': return 'Custom Range';
+      default: return '';
+    }
+  };
+
   if (loading) {
     return (
       <div>
@@ -84,7 +101,7 @@ const HostReports = () => {
     <div>
       <Navbar />
       <div className="page">
-        <div className="container">
+        <div className="container" style={{ maxWidth: '900px', margin: '0 auto' }}>
           <div className="host-header">
             <h1 className="page-title">Reports & Analytics</h1>
             <div className="host-actions">
@@ -97,245 +114,223 @@ const HostReports = () => {
           {error && <div className="error-message">{error}</div>}
 
           {/* Period Filter */}
-          <div className="reports-filter-section">
-            <div className="period-buttons">
+          <div className="report-period-bar">
+            {['today', 'week', 'month', 'year', 'all', 'custom'].map(p => (
               <button
-                className={`period-btn ${period === 'today' ? 'active' : ''}`}
-                onClick={() => setPeriod('today')}
+                key={p}
+                className={`report-period-pill ${period === p ? 'active' : ''}`}
+                onClick={() => setPeriod(p)}
               >
-                Today
+                {p === 'today' ? 'Today' : p === 'week' ? '7 Days' : p === 'month' ? '30 Days' : p === 'year' ? '1 Year' : p === 'all' ? 'All Time' : 'Custom'}
               </button>
-              <button
-                className={`period-btn ${period === 'week' ? 'active' : ''}`}
-                onClick={() => setPeriod('week')}
-              >
-                Last 7 Days
-              </button>
-              <button
-                className={`period-btn ${period === 'month' ? 'active' : ''}`}
-                onClick={() => setPeriod('month')}
-              >
-                Last 30 Days
-              </button>
-              <button
-                className={`period-btn ${period === 'year' ? 'active' : ''}`}
-                onClick={() => setPeriod('year')}
-              >
-                Last Year
-              </button>
-              <button
-                className={`period-btn ${period === 'all' ? 'active' : ''}`}
-                onClick={() => setPeriod('all')}
-              >
-                All Time
-              </button>
-              <button
-                className={`period-btn ${period === 'custom' ? 'active' : ''}`}
-                onClick={() => setPeriod('custom')}
-              >
-                Custom
-              </button>
-            </div>
-
-            {period === 'custom' && (
-              <form onSubmit={handleCustomRangeSubmit} className="custom-range-form">
-                <div className="form-group">
-                  <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={customRange.startDate}
-                    onChange={(e) => setCustomRange({ ...customRange, startDate: e.target.value })}
-                    className="form-control"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    value={customRange.endDate}
-                    onChange={(e) => setCustomRange({ ...customRange, endDate: e.target.value })}
-                    className="form-control"
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary">Apply</button>
-              </form>
-            )}
+            ))}
           </div>
 
+          {period === 'custom' && (
+            <form onSubmit={handleCustomRangeSubmit} className="report-custom-range">
+              <input
+                type="date"
+                value={customRange.startDate}
+                onChange={(e) => setCustomRange({ ...customRange, startDate: e.target.value })}
+                className="report-date-input"
+              />
+              <span style={{ color: '#9ca3af' }}>to</span>
+              <input
+                type="date"
+                value={customRange.endDate}
+                onChange={(e) => setCustomRange({ ...customRange, endDate: e.target.value })}
+                className="report-date-input"
+              />
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }}>Apply</button>
+            </form>
+          )}
+
           {reportData && (
-            <>
-              {/* Summary Cards */}
-              <div className="reports-summary-grid">
-                <div className="summary-card">
-                  <div className="summary-icon revenue-icon">$</div>
-                  <div className="summary-content">
-                    <h3>Total Revenue</h3>
-                    <p className="summary-value">{formatCurrency(reportData.summary.totalRevenue)}</p>
-                    <span className="summary-sub">From paid bookings</span>
-                  </div>
-                </div>
+            <div className="report-accordion">
 
-                <div className="summary-card">
-                  <div className="summary-icon pending-icon">$</div>
-                  <div className="summary-content">
-                    <h3>Pending Revenue</h3>
-                    <p className="summary-value pending">{formatCurrency(reportData.summary.pendingRevenue)}</p>
-                    <span className="summary-sub">
-                      {reportData.summary.pendingBookingsCount || 0} confirmed awaiting payment
-                      {reportData.summary.abandonedPendingCount > 0 && (
-                        <span style={{ display: 'block', marginTop: '4px', color: '#9ca3af', fontSize: '0.75rem' }}>
-                          {reportData.summary.abandonedPendingCount} incomplete checkouts
-                        </span>
-                      )}
-                    </span>
+              {/* INCOME REPORTS */}
+              <div className="report-accordion-item">
+                <button className={`report-accordion-header ${openSections.income ? 'open' : ''}`} onClick={() => toggleSection('income')}>
+                  <div className="report-accordion-title">
+                    <span className="report-accordion-icon">$</span>
+                    <span>Income Reports</span>
                   </div>
-                </div>
+                  <span className="report-accordion-arrow">{openSections.income ? '\u25B2' : '\u25BC'}</span>
+                </button>
+                {openSections.income && (
+                  <div className="report-accordion-body">
+                    <p className="report-period-label">{getPeriodLabel()}</p>
 
-                <div className="summary-card">
-                  <div className="summary-icon bookings-icon">#</div>
-                  <div className="summary-content">
-                    <h3>Total Bookings</h3>
-                    <p className="summary-value">{reportData.summary.totalBookings}</p>
-                    <span className="summary-sub">
-                      {reportData.summary.confirmedBookings} confirmed, {reportData.summary.cancelledBookings} cancelled
-                    </span>
-                  </div>
-                </div>
-
-                <div className="summary-card">
-                  <div className="summary-icon days-icon">D</div>
-                  <div className="summary-content">
-                    <h3>Days Booked</h3>
-                    <p className="summary-value">{reportData.summary.totalDaysBooked}</p>
-                    <span className="summary-sub">
-                      Avg: {formatCurrency(reportData.summary.averageBookingValue)} per booking
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Revenue Chart */}
-              {reportData.dailyRevenue && reportData.dailyRevenue.length > 0 && (
-                <div className="reports-section">
-                  <h2 className="section-title">Daily Revenue</h2>
-                  <div className="revenue-chart">
-                    <div className="chart-container">
-                      {reportData.dailyRevenue.slice(-30).map((day, index) => {
-                        const maxRevenue = Math.max(...reportData.dailyRevenue.map(d => d.revenue), 1);
-                        const height = (day.revenue / maxRevenue) * 100;
-                        return (
-                          <div key={index} className="chart-bar-container">
-                            <div
-                              className="chart-bar"
-                              style={{ height: `${Math.max(height, 2)}%` }}
-                              title={`${day.date}: ${formatCurrency(day.revenue)}`}
-                            >
-                              {day.revenue > 0 && (
-                                <span className="bar-tooltip">{formatCurrency(day.revenue)}</span>
-                              )}
-                            </div>
-                            <span className="chart-label">
-                              {new Date(day.date).getDate()}
-                            </span>
-                          </div>
-                        );
-                      })}
+                    <div className="report-income-grid">
+                      <div className="report-income-card main">
+                        <span className="report-income-label">Total Earned</span>
+                        <span className="report-income-amount">{formatCurrency(reportData.summary.totalRevenue)}</span>
+                        <span className="report-income-sub">From {reportData.summary.confirmedBookings} paid booking{reportData.summary.confirmedBookings !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="report-income-card">
+                        <span className="report-income-label">Pending</span>
+                        <span className="report-income-amount pending">{formatCurrency(reportData.summary.pendingRevenue)}</span>
+                        <span className="report-income-sub">{reportData.summary.pendingBookingsCount || 0} awaiting payment</span>
+                      </div>
+                      <div className="report-income-card">
+                        <span className="report-income-label">Avg per Booking</span>
+                        <span className="report-income-amount">{formatCurrency(reportData.summary.averageBookingValue)}</span>
+                        <span className="report-income-sub">{reportData.summary.totalDaysBooked} total days booked</span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Per-Vehicle Stats */}
-              <div className="reports-section">
-                <h2 className="section-title">Performance by Vehicle</h2>
-                {reportData.vehicleStats.length === 0 ? (
-                  <div className="empty-state">
-                    <p>No vehicle data for this period</p>
-                  </div>
-                ) : (
-                  <div className="vehicle-stats-grid">
-                    {reportData.vehicleStats.map((vehicle) => (
-                      <div key={vehicle.vehicleId} className="vehicle-stat-card">
-                        <div className="vehicle-stat-header">
-                          {vehicle.vehicleImage ? (
-                            <img src={getImageUrl(vehicle.vehicleImage)} alt={vehicle.vehicleName} className="vehicle-stat-image" />
-                          ) : (
-                            <div className="vehicle-stat-image-placeholder">No Image</div>
-                          )}
-                          <div className="vehicle-stat-info">
-                            <h3>{vehicle.vehicleName}</h3>
-                            <p>{vehicle.totalBookings} bookings ({vehicle.confirmedBookings} confirmed)</p>
-                          </div>
-                        </div>
-                        <div className="vehicle-stat-metrics">
-                          <div className="metric">
-                            <span className="metric-label">Revenue</span>
-                            <span className="metric-value">{formatCurrency(vehicle.totalRevenue)}</span>
-                          </div>
-                          <div className="metric">
-                            <span className="metric-label">Pending</span>
-                            <span className="metric-value pending">{formatCurrency(vehicle.pendingRevenue)}</span>
-                          </div>
-                          <div className="metric">
-                            <span className="metric-label">Days Rented</span>
-                            <span className="metric-value">{vehicle.totalDays}</span>
+                    {/* Revenue Chart */}
+                    {reportData.dailyRevenue && reportData.dailyRevenue.length > 0 && (
+                      <div className="report-chart-section">
+                        <h4 className="report-subsection-title">Daily Earnings</h4>
+                        <div className="revenue-chart">
+                          <div className="chart-container">
+                            {reportData.dailyRevenue.slice(-30).map((day, index) => {
+                              const maxRevenue = Math.max(...reportData.dailyRevenue.map(d => d.revenue), 1);
+                              const height = (day.revenue / maxRevenue) * 100;
+                              return (
+                                <div key={index} className="chart-bar-container">
+                                  <div
+                                    className="chart-bar"
+                                    style={{ height: `${Math.max(height, 2)}%` }}
+                                    title={`${day.date}: ${formatCurrency(day.revenue)}`}
+                                  >
+                                    {day.revenue > 0 && (
+                                      <span className="bar-tooltip">{formatCurrency(day.revenue)}</span>
+                                    )}
+                                  </div>
+                                  <span className="chart-label">
+                                    {new Date(day.date).getDate()}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Recent Bookings */}
-              <div className="reports-section">
-                <h2 className="section-title">Recent Bookings</h2>
-                {reportData.recentBookings.length === 0 ? (
-                  <div className="empty-state">
-                    <p>No bookings for this period</p>
+              {/* BOOKING REPORTS */}
+              <div className="report-accordion-item">
+                <button className={`report-accordion-header ${openSections.bookings ? 'open' : ''}`} onClick={() => toggleSection('bookings')}>
+                  <div className="report-accordion-title">
+                    <span className="report-accordion-icon">#</span>
+                    <span>Booking Reports</span>
                   </div>
-                ) : (
-                  <div className="recent-bookings-table">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Vehicle</th>
-                          <th>Driver</th>
-                          <th>Dates</th>
-                          <th>Amount</th>
-                          <th>Status</th>
-                          <th>Payment</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.recentBookings.map((booking) => (
-                          <tr key={booking.id}>
-                            <td>{booking.vehicleName}</td>
-                            <td>{booking.driverName}</td>
-                            <td>
-                              {formatDate(booking.startDate)} - {formatDate(booking.endDate)}
-                              <br />
-                              <small>({booking.totalDays} days)</small>
-                            </td>
-                            <td>{formatCurrency(booking.totalPrice)}</td>
-                            <td>
-                              <span className={`status-badge status-${booking.status}`}>
-                                {booking.status}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`status-badge payment-${booking.paymentStatus}`}>
-                                {booking.paymentStatus}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <span className="report-accordion-arrow">{openSections.bookings ? '\u25B2' : '\u25BC'}</span>
+                </button>
+                {openSections.bookings && (
+                  <div className="report-accordion-body">
+                    <p className="report-period-label">{getPeriodLabel()}</p>
+
+                    <div className="report-booking-stats">
+                      <div className="report-stat-row">
+                        <span className="report-stat-label">Total Bookings</span>
+                        <span className="report-stat-value">{reportData.summary.totalBookings}</span>
+                      </div>
+                      <div className="report-stat-row">
+                        <span className="report-stat-label">Confirmed / Active / Completed</span>
+                        <span className="report-stat-value" style={{ color: '#10b981' }}>{reportData.summary.confirmedBookings}</span>
+                      </div>
+                      <div className="report-stat-row">
+                        <span className="report-stat-label">Cancelled</span>
+                        <span className="report-stat-value" style={{ color: '#ef4444' }}>{reportData.summary.cancelledBookings}</span>
+                      </div>
+                      <div className="report-stat-row">
+                        <span className="report-stat-label">Total Days Booked</span>
+                        <span className="report-stat-value">{reportData.summary.totalDaysBooked}</span>
+                      </div>
+                      {reportData.summary.abandonedPendingCount > 0 && (
+                        <div className="report-stat-row">
+                          <span className="report-stat-label">Incomplete Checkouts</span>
+                          <span className="report-stat-value" style={{ color: '#9ca3af' }}>{reportData.summary.abandonedPendingCount}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recent Bookings Table */}
+                    {reportData.recentBookings.length > 0 && (
+                      <div style={{ marginTop: '1.5rem' }}>
+                        <h4 className="report-subsection-title">Recent Bookings</h4>
+                        <div className="report-bookings-list">
+                          {reportData.recentBookings.map((booking) => (
+                            <div key={booking.id} className="report-booking-row">
+                              <div className="report-booking-info">
+                                <span className="report-booking-vehicle">{booking.vehicleName}</span>
+                                <span className="report-booking-detail">{booking.driverName} &middot; {formatDate(booking.startDate)} - {formatDate(booking.endDate)} ({booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''})</span>
+                              </div>
+                              <div className="report-booking-right">
+                                <span className="report-booking-price">{formatCurrency(booking.totalPrice)}</span>
+                                <div className="report-booking-badges">
+                                  <span className={`status-badge status-${booking.status}`}>{booking.status}</span>
+                                  <span className={`status-badge payment-${booking.paymentStatus}`}>{booking.paymentStatus}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            </>
+
+              {/* FLEET PERFORMANCE */}
+              <div className="report-accordion-item">
+                <button className={`report-accordion-header ${openSections.fleet ? 'open' : ''}`} onClick={() => toggleSection('fleet')}>
+                  <div className="report-accordion-title">
+                    <span className="report-accordion-icon">&#9881;</span>
+                    <span>Fleet Performance</span>
+                  </div>
+                  <span className="report-accordion-arrow">{openSections.fleet ? '\u25B2' : '\u25BC'}</span>
+                </button>
+                {openSections.fleet && (
+                  <div className="report-accordion-body">
+                    <p className="report-period-label">{getPeriodLabel()}</p>
+
+                    {reportData.vehicleStats.length === 0 ? (
+                      <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem 0' }}>No vehicle data for this period</p>
+                    ) : (
+                      <div className="report-fleet-list">
+                        {reportData.vehicleStats.map((vehicle) => (
+                          <div key={vehicle.vehicleId} className="report-fleet-card">
+                            <div className="report-fleet-header">
+                              {vehicle.vehicleImage ? (
+                                <img src={getImageUrl(vehicle.vehicleImage)} alt={vehicle.vehicleName} className="report-fleet-img" />
+                              ) : (
+                                <div className="report-fleet-img-placeholder">No Image</div>
+                              )}
+                              <div className="report-fleet-info">
+                                <span className="report-fleet-name">{vehicle.vehicleName}</span>
+                                <span className="report-fleet-bookings">{vehicle.totalBookings} booking{vehicle.totalBookings !== 1 ? 's' : ''} ({vehicle.confirmedBookings} confirmed)</span>
+                              </div>
+                            </div>
+                            <div className="report-fleet-metrics">
+                              <div className="report-fleet-metric">
+                                <span className="report-fleet-metric-label">Earned</span>
+                                <span className="report-fleet-metric-value">{formatCurrency(vehicle.totalRevenue)}</span>
+                              </div>
+                              <div className="report-fleet-metric">
+                                <span className="report-fleet-metric-label">Pending</span>
+                                <span className="report-fleet-metric-value" style={{ color: '#f59e0b' }}>{formatCurrency(vehicle.pendingRevenue)}</span>
+                              </div>
+                              <div className="report-fleet-metric">
+                                <span className="report-fleet-metric-label">Days Rented</span>
+                                <span className="report-fleet-metric-value">{vehicle.totalDays}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+            </div>
           )}
         </div>
       </div>

@@ -1133,6 +1133,440 @@
 .payment-failed { background: #fee2e2; color: #991b1b; }
 .payment-refunded { background: #e5e7eb; color: #374151; }
 
+/* ====== Redesigned Reports - Accordion Layout ====== */
+
+.report-period-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: #f9fafb;
+  padding: 0.5rem;
+  border-radius: 10px;
+}
+
+.report-period-pill {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.report-period-pill:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.report-period-pill.active {
+  background: #10b981;
+  color: #fff;
+}
+
+.report-custom-range {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.report-date-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: #fff;
+  color: #374151;
+}
+
+/* Accordion */
+.report-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.report-accordion-item {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.report-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.report-accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.report-accordion-header:hover {
+  background: #f9fafb;
+}
+
+.report-accordion-header.open {
+  background: #f0fdf4;
+  border-left: 3px solid #10b981;
+}
+
+.report-accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.report-accordion-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.report-accordion-header.open .report-accordion-icon {
+  background: #10b981;
+  color: #fff;
+}
+
+.report-accordion-arrow {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.report-accordion-body {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  background: #fff;
+}
+
+.report-period-label {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.report-subsection-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 1rem;
+}
+
+/* Income Cards */
+.report-income-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.report-income-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid #e5e7eb;
+}
+
+.report-income-card.main {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.report-income-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.report-income-amount {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.report-income-amount.pending {
+  color: #f59e0b;
+}
+
+.report-income-sub {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.report-chart-section {
+  margin-top: 0.5rem;
+}
+
+/* Booking Stats */
+.report-booking-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #f9fafb;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.report-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.report-stat-row:last-child {
+  border-bottom: none;
+}
+
+.report-stat-label {
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.report-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Recent Bookings List */
+.report-bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.report-booking-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 1rem;
+}
+
+.report-booking-row:last-child {
+  border-bottom: none;
+}
+
+.report-booking-row:hover {
+  background: #f9fafb;
+}
+
+.report-booking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.report-booking-vehicle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.report-booking-detail {
+  font-size: 0.8rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-booking-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.report-booking-price {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.report-booking-badges {
+  display: flex;
+  gap: 0.35rem;
+}
+
+/* Fleet Performance */
+.report-fleet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.report-fleet-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e5e7eb;
+}
+
+.report-fleet-card:hover {
+  border-color: #d1d5db;
+}
+
+.report-fleet-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.report-fleet-img {
+  width: 64px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.report-fleet-img-placeholder {
+  width: 64px;
+  height: 48px;
+  border-radius: 6px;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.report-fleet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.report-fleet-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.report-fleet-bookings {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.report-fleet-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.report-fleet-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.report-fleet-metric-label {
+  font-size: 0.7rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+
+.report-fleet-metric-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Responsive for reports accordion */
+@media (max-width: 640px) {
+  .report-income-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-income-amount {
+    font-size: 1.35rem;
+  }
+
+  .report-accordion-header {
+    padding: 1rem;
+  }
+
+  .report-accordion-body {
+    padding: 0 1rem 1rem 1rem;
+  }
+
+  .report-booking-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .report-booking-right {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+
+  .report-fleet-metrics {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .report-period-bar {
+    gap: 0.25rem;
+  }
+
+  .report-period-pill {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
 .loading-spinner {
   display: flex;
   flex-direction: column;
