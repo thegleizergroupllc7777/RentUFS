@@ -21,6 +21,7 @@ import AddVehicle from './pages/Host/AddVehicle';
 import EditVehicle from './pages/Host/EditVehicle';
 import HostBookings from './pages/Host/HostBookings';
 import HostReports from './pages/Host/HostReports';
+import HostTaxSettings from './pages/Host/HostTaxSettings';
 
 // Payment pages
 import Checkout from './pages/Payment/Checkout';
@@ -94,6 +95,15 @@ function App() {
               element={
                 <PrivateRoute>
                   <HostReports />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/host/tax-settings"
+              element={
+                <PrivateRoute>
+                  <HostTaxSettings />
                 </PrivateRoute>
               }
             />

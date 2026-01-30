@@ -10,10 +10,6 @@ const HostDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [taxInfo, setTaxInfo] = useState(null);
-  const [showTaxForm, setShowTaxForm] = useState(false);
-  const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', businessName: '' });
-  const [taxSaving, setTaxSaving] = useState(false);
-  const [taxMessage, setTaxMessage] = useState('');
 
   useEffect(() => {
     fetchVehicles();
@@ -73,54 +69,9 @@ const HostDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTaxInfo(response.data);
-      if (response.data.hasSubmitted) {
-        setTaxFormData({
-          accountType: response.data.accountType,
-          taxId: '',
-          businessName: response.data.businessName || ''
-        });
-      }
     } catch (error) {
       console.error('Error fetching tax info:', error);
       setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', hasSubmitted: false });
-    }
-  };
-
-  const formatSSN = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 9);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
-  };
-
-  const formatEIN = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 9);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0, 2)}-${digits.slice(2)}`;
-  };
-
-  const handleTaxIdInput = (e) => {
-    const formatted = taxFormData.accountType === 'individual' ? formatSSN(e.target.value) : formatEIN(e.target.value);
-    setTaxFormData({ ...taxFormData, taxId: formatted });
-  };
-
-  const handleSaveTaxInfo = async (e) => {
-    e.preventDefault();
-    setTaxSaving(true);
-    setTaxMessage('');
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/users/host-tax-info`, taxFormData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setTaxInfo(response.data);
-      setTaxMessage('Tax information saved successfully');
-      setShowTaxForm(false);
-      setTaxFormData({ ...taxFormData, taxId: '' });
-    } catch (error) {
-      setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
-    } finally {
-      setTaxSaving(false);
     }
   };
 
@@ -155,120 +106,38 @@ const HostDashboard = () => {
             </div>
           </div>
 
-          {/* Tax Info Section */}
-          {taxInfo && (
-            <div style={{
-              background: taxInfo.hasSubmitted ? '#f0fdf4' : '#fffbeb',
-              border: `1px solid ${taxInfo.hasSubmitted ? '#bbf7d0' : '#fde68a'}`,
-              borderRadius: '12px',
-              padding: '1.25rem 1.5rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.25rem' }}>
-                    Tax Information
-                  </h3>
-                  {taxInfo.hasSubmitted ? (
-                    <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0 }}>
-                      {taxInfo.accountType === 'business' ? `Business: ${taxInfo.businessName} | ` : 'Individual | '}
-                      {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'} ending in ****{taxInfo.taxIdLast4}
-                    </p>
-                  ) : (
-                    <p style={{ fontSize: '0.85rem', color: '#92400e', margin: 0 }}>
-                      Please add your tax information for 1099 reporting and payouts.
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => { setShowTaxForm(!showTaxForm); setTaxMessage(''); }}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
-                >
-                  {showTaxForm ? 'Cancel' : taxInfo.hasSubmitted ? 'Update' : 'Add Tax Info'}
-                </button>
-              </div>
-
-              {taxMessage && !showTaxForm && (
-                <p style={{ fontSize: '0.85rem', color: '#10b981', marginTop: '0.5rem', marginBottom: 0 }}>{taxMessage}</p>
-              )}
-
-              {showTaxForm && (
-                <form onSubmit={handleSaveTaxInfo} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#374151', marginBottom: '0.5rem' }}>Account Type</label>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <label style={{
-                        flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        padding: '0.6rem 0.75rem',
-                        border: taxFormData.accountType === 'individual' ? '2px solid #10b981' : '2px solid #d1d5db',
-                        borderRadius: '8px', cursor: 'pointer',
-                        background: taxFormData.accountType === 'individual' ? '#f0fdf4' : '#fff'
-                      }}>
-                        <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
-                          onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', businessName: '' })}
-                          style={{ accentColor: '#10b981' }} />
-                        <div>
-                          <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#1f2937' }}>Individual</span>
-                          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>Personal SSN</p>
-                        </div>
-                      </label>
-                      <label style={{
-                        flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        padding: '0.6rem 0.75rem',
-                        border: taxFormData.accountType === 'business' ? '2px solid #10b981' : '2px solid #d1d5db',
-                        borderRadius: '8px', cursor: 'pointer',
-                        background: taxFormData.accountType === 'business' ? '#f0fdf4' : '#fff'
-                      }}>
-                        <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
-                          onChange={() => setTaxFormData({ accountType: 'business', taxId: '', businessName: '' })}
-                          style={{ accentColor: '#10b981' }} />
-                        <div>
-                          <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#1f2937' }}>Business / LLC</span>
-                          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>Company EIN</p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {taxFormData.accountType === 'business' && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#374151', marginBottom: '0.35rem' }}>Business Name</label>
-                      <input type="text" value={taxFormData.businessName}
-                        onChange={(e) => setTaxFormData({ ...taxFormData, businessName: e.target.value })}
-                        placeholder="e.g., United Fleet Services LLC"
-                        style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', background: '#fff', color: '#374151' }}
-                        required />
-                    </div>
-                  )}
-
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#374151', marginBottom: '0.35rem' }}>
-                      {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
-                    </label>
-                    <input type="text" value={taxFormData.taxId}
-                      onChange={handleTaxIdInput}
-                      placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
-                      maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
-                      style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', background: '#fff', color: '#374151' }}
-                      required />
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                      Stored securely. Only the last 4 digits will be visible on your account.
-                    </p>
-                  </div>
-
-                  {taxMessage && (
-                    <p style={{ fontSize: '0.85rem', color: taxMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '0.75rem' }}>{taxMessage}</p>
-                  )}
-
-                  <button type="submit" className="btn btn-primary" disabled={taxSaving}
-                    style={{ padding: '0.5rem 1.5rem', fontSize: '0.9rem' }}>
-                    {taxSaving ? 'Saving...' : 'Save Tax Information'}
-                  </button>
-                </form>
+          {/* Tax Info Link */}
+          <div style={{
+            background: taxInfo?.hasSubmitted ? '#111' : '#1a1200',
+            border: `1px solid ${taxInfo?.hasSubmitted ? '#333' : '#fde68a'}`,
+            borderRadius: '12px',
+            padding: '1rem 1.5rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#f9fafb', marginBottom: '0.25rem' }}>
+                Tax Information
+              </h3>
+              {taxInfo?.hasSubmitted ? (
+                <p style={{ fontSize: '0.85rem', color: '#9ca3af', margin: 0 }}>
+                  {taxInfo.accountType === 'business' ? `Business: ${taxInfo.businessName} | ` : 'Individual | '}
+                  {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'} ending in ****{taxInfo.taxIdLast4}
+                </p>
+              ) : (
+                <p style={{ fontSize: '0.85rem', color: '#fbbf24', margin: 0 }}>
+                  Please add your tax information for 1099 reporting and payouts.
+                </p>
               )}
             </div>
-          )}
+            <Link to="/host/tax-settings">
+              <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                {taxInfo?.hasSubmitted ? 'Manage' : 'Add Tax Info'}
+              </button>
+            </Link>
+          </div>
 
           {vehicles.length === 0 ? (
             <div className="empty-state">
