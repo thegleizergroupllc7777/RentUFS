@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
-import ImageUpload from '../../components/ImageUpload';
+import ImageUpload, { resolveImageUrl } from '../../components/ImageUpload';
 import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import API_URL from '../../config/api';
@@ -508,7 +508,7 @@ const EditVehicle = () => {
                           transition: 'border 0.2s, opacity 0.2s, transform 0.2s'
                         }}
                       >
-                        <img src={img} alt={`Vehicle photo ${idx + 1}`} style={{
+                        <img src={resolveImageUrl(img)} alt={`Vehicle photo ${idx + 1}`} style={{
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',

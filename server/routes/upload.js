@@ -224,14 +224,9 @@ router.post('/mobile/:sessionId', (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Store the file URL instead of base64 to avoid MongoDB 16MB limit
+    // Store the relative file path - frontend will resolve to full URL
     const imageUrl = `/uploads/${req.file.filename}`;
-    // Build full URL using the API base URL from environment or request
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const fullUrl = `${protocol}://${host}${imageUrl}`;
-
-    session.images.push(fullUrl);
+    session.images.push(imageUrl);
     console.log(`📱 Image added to session ${sessionId}: ${imageUrl} (${session.images.length} total)`);
 
     res.json({ success: true, count: session.images.length });

@@ -4,6 +4,15 @@ import axios from 'axios';
 import API_URL from '../config/api';
 import './ImageUpload.css';
 
+// Resolve image URL - handles relative paths, full URLs, and base64
+const resolveImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url; // base64
+  if (url.startsWith('http')) return url; // already full URL
+  if (url.startsWith('/uploads/')) return `${API_URL}${url}`; // relative path
+  return url;
+};
+
 const ImageUpload = ({ label, value, onChange, required = false }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -38,8 +47,8 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     });
 
     if (res.data.success && res.data.imageUrl) {
-      // Return the full URL (API_URL + relative path)
-      return `${API_URL}${res.data.imageUrl}`;
+      // Return the relative path - API will resolve to full URL when serving
+      return res.data.imageUrl;
     }
     throw new Error(res.data.message || 'Upload failed');
   };
@@ -371,7 +380,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       {value && (
         <div className="image-preview-container">
           <div className="image-preview">
-            <img src={value} alt="Preview" onError={(e) => {
+            <img src={resolveImageUrl(value)} alt="Preview" onError={(e) => {
               e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150"><rect fill="%23ddd" width="200" height="150"/><text x="50%" y="50%" fill="%23999" text-anchor="middle" dy=".3em">Image unavailable</text></svg>';
             }} />
             <button
@@ -389,4 +398,5 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
   );
 };
 
+export { resolveImageUrl };
 export default ImageUpload;
