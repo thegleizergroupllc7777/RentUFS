@@ -8,6 +8,42 @@ import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import API_URL from '../../config/api';
 import './Host.css';
 
+// Re-compress a base64 image if it's larger than the threshold
+const recompressBase64 = (base64, maxSizeKB = 500) => {
+  return new Promise((resolve) => {
+    const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
+    if (sizeKB <= maxSizeKB) {
+      resolve(base64); // Already small enough
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 1200;
+      const MAX_HEIGHT = 900;
+      let width = img.width;
+      let height = img.height;
+      if (width > MAX_WIDTH) {
+        height = Math.round((height * MAX_WIDTH) / width);
+        width = MAX_WIDTH;
+      }
+      if (height > MAX_HEIGHT) {
+        width = Math.round((width * MAX_HEIGHT) / height);
+        height = MAX_HEIGHT;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7);
+      console.log(`🔄 Re-compressed image: ${sizeKB}KB → ${Math.round((compressed.length * 3) / 4 / 1024)}KB`);
+      resolve(compressed);
+    };
+    img.onerror = () => resolve(base64); // On error, keep original
+    img.src = base64;
+  });
+};
+
 const EditVehicle = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -146,13 +182,30 @@ const EditVehicle = () => {
     setSaving(true);
 
     try {
+      // Re-compress any oversized base64 images before sending
+      let processedImages = formData.images;
+      if (processedImages.length > 0) {
+        processedImages = await Promise.all(
+          processedImages.map(img =>
+            typeof img === 'string' && img.startsWith('data:')
+              ? recompressBase64(img)
+              : Promise.resolve(img)
+          )
+        );
+      }
+
       const vehicleData = {
         ...formData,
         features: formData.features,
-        images: formData.images.length > 0 ? formData.images : undefined,
+        images: processedImages.length > 0 ? processedImages : undefined,
         pricePerWeek: formData.pricePerWeek !== '' ? formData.pricePerWeek : undefined,
         pricePerMonth: formData.pricePerMonth !== '' ? formData.pricePerMonth : undefined
       };
+
+      // Re-compress registration image if it's oversized base64
+      if (vehicleData.registrationImage && typeof vehicleData.registrationImage === 'string' && vehicleData.registrationImage.startsWith('data:')) {
+        vehicleData.registrationImage = await recompressBase64(vehicleData.registrationImage);
+      }
 
       const token = localStorage.getItem('token');
       await axios.put(`${API_URL}/api/vehicles/${id}`, vehicleData, {

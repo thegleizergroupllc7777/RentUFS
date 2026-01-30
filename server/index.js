@@ -24,8 +24,8 @@ app.use(cors());
 // Stripe webhook needs raw body - must be before express.json()
 app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
 
-app.use(express.json({ limit: '16mb' }));
-app.use(express.urlencoded({ limit: '16mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
