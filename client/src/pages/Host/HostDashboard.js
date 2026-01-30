@@ -103,38 +103,33 @@ const HostDashboard = () => {
             </div>
           </div>
 
-          {/* Tax Info Link */}
-          <div style={{
-            background: taxInfo?.hasSubmitted ? '#111' : '#1a1200',
-            border: `1px solid ${taxInfo?.hasSubmitted ? '#333' : '#fde68a'}`,
-            borderRadius: '12px',
-            padding: '1rem 1.5rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#f9fafb', marginBottom: '0.25rem' }}>
-                Tax Information
-              </h3>
-              {taxInfo?.hasSubmitted ? (
-                <p style={{ fontSize: '0.85rem', color: '#9ca3af', margin: 0 }}>
-                  {taxInfo.accountType === 'business' ? `Business: ${taxInfo.businessName} | ` : 'Individual | '}
-                  {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'} ending in ****{taxInfo.taxIdLast4}
-                </p>
-              ) : (
+          {/* Tax Info Link - only show until host submits tax info */}
+          {taxInfo && !taxInfo.hasSubmitted && (
+            <div style={{
+              background: '#1a1200',
+              border: '1px solid #fde68a',
+              borderRadius: '12px',
+              padding: '1rem 1.5rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#f9fafb', marginBottom: '0.25rem' }}>
+                  Tax Information
+                </h3>
                 <p style={{ fontSize: '0.85rem', color: '#fbbf24', margin: 0 }}>
                   Please add your tax information for 1099 reporting and payouts.
                 </p>
-              )}
+              </div>
+              <Link to="/driver/profile?tab=tax">
+                <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                  Add Tax Info
+                </button>
+              </Link>
             </div>
-            <Link to="/driver/profile?tab=tax">
-              <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
-                {taxInfo?.hasSubmitted ? 'Manage' : 'Add Tax Info'}
-              </button>
-            </Link>
-          </div>
+          )}
 
           {vehicles.length === 0 ? (
             <div className="empty-state">
