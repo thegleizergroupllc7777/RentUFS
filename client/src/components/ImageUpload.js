@@ -387,4 +387,7 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
   );
 };
 
+// Named export for resolving image URLs (used by EditVehicle)
+export const resolveImageUrl = getImageUrl;
+
 export default ImageUpload;
