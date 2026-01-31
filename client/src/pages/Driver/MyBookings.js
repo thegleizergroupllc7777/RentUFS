@@ -293,16 +293,16 @@ const MyBookings = () => {
   const categorizeBookings = () => {
     const todayStr = toLocalDateStr(new Date());
 
+    // Current: only bookings that have been explicitly started (status 'active')
     const current = bookings.filter(booking => {
-      const startStr = toLocalDateStr(toLocalDate(booking.startDate));
       const endStr = toLocalDateStr(toLocalDate(booking.endDate));
-      return startStr <= todayStr && endStr >= todayStr &&
-             (booking.status === 'active' || booking.status === 'confirmed');
+      return booking.status === 'active' && endStr >= todayStr;
     });
 
+    // Upcoming: pending or confirmed bookings (even if pickup date has passed, stays here until started)
     const upcoming = bookings.filter(booking => {
-      const startStr = toLocalDateStr(toLocalDate(booking.startDate));
-      return startStr > todayStr && (booking.status === 'pending' || booking.status === 'confirmed');
+      const endStr = toLocalDateStr(toLocalDate(booking.endDate));
+      return (booking.status === 'pending' || booking.status === 'confirmed') && endStr >= todayStr;
     });
 
     const past = bookings.filter(booking => {
