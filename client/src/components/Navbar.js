@@ -178,7 +178,7 @@ const Navbar = () => {
 
           {user && (
             <>
-              <Link to={isHostMode ? '/host/bookings' : '/my-bookings'} className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
+              <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
                 <div style={{ position: 'relative' }}>
                   {user.profileImage ? (
                     <img
