@@ -51,7 +51,7 @@ const DriverProfile = () => {
   // Driver license state
   const [licenseData, setLicenseData] = useState(null);
   const [showLicenseForm, setShowLicenseForm] = useState(false);
-  const [licenseFormData, setLicenseFormData] = useState({ licenseNumber: '', state: '', expirationDate: '', licenseImage: '' });
+  const [licenseFormData, setLicenseFormData] = useState({ licenseNumber: '', state: '', expirationDate: '', licenseImage: '', verificationSelfie: '' });
   const [licenseSaving, setLicenseSaving] = useState(false);
   const [licenseMessage, setLicenseMessage] = useState('');
 
@@ -363,7 +363,8 @@ const DriverProfile = () => {
         licenseNumber: response.data.licenseNumber || '',
         state: response.data.state || '',
         expirationDate: response.data.expirationDate ? response.data.expirationDate.split('T')[0] : '',
-        licenseImage: response.data.licenseImage || ''
+        licenseImage: response.data.licenseImage || '',
+        verificationSelfie: response.data.verificationSelfie || ''
       });
     } catch (error) {
       console.error('Error fetching license data:', error);
@@ -372,6 +373,10 @@ const DriverProfile = () => {
 
   const handleSaveLicense = async (e) => {
     e.preventDefault();
+    if (!licenseFormData.verificationSelfie) {
+      setLicenseMessage('Please upload a verification selfie before saving');
+      return;
+    }
     setLicenseSaving(true);
     setLicenseMessage('');
     try {
@@ -974,14 +979,28 @@ const DriverProfile = () => {
                 </p>
               </div>
             </div>
-            {licenseData.licenseImage && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>License Photo</span>
-                <div style={{ marginTop: '0.5rem' }}>
-                  <img src={getImageUrl(licenseData.licenseImage)} alt="Driver's License"
-                    style={{ maxWidth: '200px', borderRadius: '8px', border: '1px solid #333' }}
-                    onError={(e) => { e.target.style.display = 'none'; }} />
-                </div>
+            {(licenseData.licenseImage || licenseData.verificationSelfie) && (
+              <div style={{ display: 'grid', gridTemplateColumns: licenseData.licenseImage && licenseData.verificationSelfie ? '1fr 1fr' : '1fr', gap: '1rem' }}>
+                {licenseData.licenseImage && (
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>License Photo</span>
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <img src={getImageUrl(licenseData.licenseImage)} alt="Driver's License"
+                        style={{ maxWidth: '200px', borderRadius: '8px', border: '1px solid #333' }}
+                        onError={(e) => { e.target.style.display = 'none'; }} />
+                    </div>
+                  </div>
+                )}
+                {licenseData.verificationSelfie && (
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Verification Selfie</span>
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <img src={getImageUrl(licenseData.verificationSelfie)} alt="Verification Selfie"
+                        style={{ maxWidth: '200px', borderRadius: '8px', border: '1px solid #333' }}
+                        onError={(e) => { e.target.style.display = 'none'; }} />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1035,6 +1054,43 @@ const DriverProfile = () => {
             value={licenseFormData.licenseImage}
             onChange={(url) => setLicenseFormData({ ...licenseFormData, licenseImage: url })}
           />
+
+          {/* Selfie Verification Section */}
+          <div style={{
+            marginTop: '1.25rem',
+            padding: '1.25rem',
+            background: '#0a0a0a',
+            borderRadius: '0.75rem',
+            border: '1px solid #333'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: licenseFormData.verificationSelfie ? '#10b981' : '#f59e0b',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.8rem', fontWeight: '700', color: '#000', flexShrink: 0
+              }}>
+                {licenseFormData.verificationSelfie ? '\u2713' : '!'}
+              </div>
+              <div>
+                <h4 style={{ color: '#d1d5db', margin: 0, fontSize: '0.95rem' }}>Selfie Verification</h4>
+                <p style={{ color: '#6b7280', margin: '0.15rem 0 0', fontSize: '0.75rem' }}>
+                  Required: Take a selfie to verify your identity matches your license
+                </p>
+              </div>
+            </div>
+
+            <ImageUpload
+              label="Verification Selfie"
+              value={licenseFormData.verificationSelfie}
+              onChange={(url) => setLicenseFormData({ ...licenseFormData, verificationSelfie: url })}
+            />
+
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem', lineHeight: '1.4' }}>
+              Your selfie will be compared to your driver's license photo for identity verification.
+              Please ensure your face is clearly visible and well-lit.
+            </p>
+          </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
             <button type="submit" className="btn btn-primary" disabled={licenseSaving} style={{ flex: 1 }}>
