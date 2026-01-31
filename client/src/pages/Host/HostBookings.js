@@ -30,6 +30,7 @@ const HostBookings = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current'); // current, upcoming, past
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
+  const [unreadCounts, setUnreadCounts] = useState({});
 
   // Switch vehicle modal state
   const [showSwitchModal, setShowSwitchModal] = useState(false);
@@ -47,7 +48,23 @@ const HostBookings = () => {
 
   useEffect(() => {
     fetchBookings();
+    fetchUnreadCounts();
+    const interval = setInterval(fetchUnreadCounts, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchUnreadCounts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const response = await axios.get(`${API_URL}/api/messages/unread/per-booking`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUnreadCounts(response.data.counts || {});
+    } catch (error) {
+      // Silently fail
+    }
+  };
 
   const fetchBookings = async () => {
     try {
@@ -436,8 +453,36 @@ const HostBookings = () => {
                   style={isOverdue(booking) ? {
                     border: '3px solid #ef4444',
                     boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)'
+                  } : unreadCounts[booking._id] > 0 ? {
+                    border: '2px solid #10b981',
+                    boxShadow: '0 0 12px rgba(16, 185, 129, 0.3)'
                   } : {}}
                 >
+                  {/* New Message Notification Banner */}
+                  {unreadCounts[booking._id] > 0 && (
+                    <div style={{
+                      background: 'linear-gradient(90deg, #10b981, #059669)',
+                      color: 'white',
+                      padding: '0.5rem 1rem',
+                      marginBottom: '1rem',
+                      borderRadius: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontWeight: '600',
+                      fontSize: '0.875rem'
+                    }}>
+                      <span>
+                        {unreadCounts[booking._id]} new message{unreadCounts[booking._id] > 1 ? 's' : ''} from driver
+                      </span>
+                      <span style={{
+                        background: 'rgba(255,255,255,0.3)',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem'
+                      }}>NEW</span>
+                    </div>
+                  )}
                   {/* Overdue Warning Banner */}
                   {isOverdue(booking) && (
                     <div style={{
@@ -650,15 +695,45 @@ const HostBookings = () => {
 
                     {['confirmed', 'active'].includes(booking.status) && (
                       <button
-                        onClick={() => setOpenChatBookingId(openChatBookingId === booking._id ? null : booking._id)}
+                        onClick={() => {
+                          const isOpening = openChatBookingId !== booking._id;
+                          setOpenChatBookingId(isOpening ? booking._id : null);
+                          if (isOpening) {
+                            setUnreadCounts(prev => ({ ...prev, [booking._id]: 0 }));
+                          }
+                        }}
                         className="btn btn-secondary"
                         style={{
                           background: openChatBookingId === booking._id ? '#059669' : '#10b981',
                           color: '#000',
-                          border: 'none'
+                          border: 'none',
+                          position: 'relative'
                         }}
                       >
                         {openChatBookingId === booking._id ? 'Close Chat' : 'Message Driver'}
+                        {unreadCounts[booking._id] > 0 && openChatBookingId !== booking._id && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-8px',
+                            background: '#ef4444',
+                            color: '#fff',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            minWidth: '20px',
+                            height: '20px',
+                            borderRadius: '9999px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 5px',
+                            border: '2px solid #1a1a2e',
+                            lineHeight: '1',
+                            animation: 'pulse 2s infinite'
+                          }}>
+                            {unreadCounts[booking._id]}
+                          </span>
+                        )}
                       </button>
                     )}
                   </div>

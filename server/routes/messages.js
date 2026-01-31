@@ -5,6 +5,72 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Get unread message count for current user across all bookings
+// IMPORTANT: This must be defined before /:bookingId to avoid being caught by the dynamic route
+router.get('/unread/count', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Find all bookings where user is driver or host
+    const userBookings = await Booking.find({
+      $or: [{ driver: userId }, { host: userId }]
+    }).select('_id');
+
+    const bookingIds = userBookings.map(b => b._id);
+
+    const count = await Message.countDocuments({
+      booking: { $in: bookingIds },
+      sender: { $ne: userId },
+      read: false
+    });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get per-booking unread message counts for current user
+router.get('/unread/per-booking', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Find all bookings where user is driver or host
+    const userBookings = await Booking.find({
+      $or: [{ driver: userId }, { host: userId }],
+      status: { $in: ['confirmed', 'active'] }
+    }).select('_id');
+
+    const bookingIds = userBookings.map(b => b._id);
+
+    // Aggregate unread counts per booking
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          booking: { $in: bookingIds },
+          sender: { $ne: userId },
+          read: false
+        }
+      },
+      {
+        $group: {
+          _id: '$booking',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Convert to a map of bookingId -> count
+    const counts = {};
+    unreadCounts.forEach(item => {
+      counts[item._id.toString()] = item.count;
+    });
+
+    res.json({ counts });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get messages for a booking
 router.get('/:bookingId', auth, async (req, res) => {
   try {
@@ -83,19 +149,6 @@ router.post('/:bookingId', auth, async (req, res) => {
     res.status(201).json(message);
   } catch (error) {
     console.error('❌ Error sending message:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get unread message count for current user across all bookings
-router.get('/unread/count', auth, async (req, res) => {
-  try {
-    const count = await Message.countDocuments({
-      sender: { $ne: req.user._id },
-      read: false
-    });
-    res.json({ count });
-  } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
