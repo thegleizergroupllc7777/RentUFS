@@ -44,3 +44,8 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
