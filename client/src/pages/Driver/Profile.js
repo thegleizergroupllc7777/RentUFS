@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
@@ -7,6 +9,107 @@ import ImageUpload from '../../components/ImageUpload';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
+
+const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+const isValidStripeKey = stripeKey && (stripeKey.startsWith('pk_live_') || stripeKey.startsWith('pk_test_'));
+const stripePromise = isValidStripeKey ? loadStripe(stripeKey) : null;
+
+// Stripe card form component (must be inside Elements provider)
+const StripeCardForm = ({ clientSecret, onSuccess, onCancel }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [nickname, setNickname] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const cardElement = elements.getElement(CardElement);
+      const { error: stripeError, setupIntent } = await stripe.confirmCardSetup(
+        clientSecret,
+        { payment_method: { card: cardElement } }
+      );
+
+      if (stripeError) {
+        setError(stripeError.message);
+        setSaving(false);
+        return;
+      }
+
+      if (setupIntent && setupIntent.payment_method) {
+        // Save to our backend
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/users/payment-methods`, {
+          paymentMethodId: setupIntent.payment_method,
+          nickname: nickname.trim()
+        }, { headers: { Authorization: `Bearer ${token}` } });
+
+        onSuccess(response.data);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save card');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333' }}>
+      <h4 style={{ color: '#d1d5db', marginBottom: '1rem', fontSize: '0.95rem' }}>Add New Card</h4>
+
+      <div className="form-group">
+        <label className="form-label">Nickname (optional)</label>
+        <input type="text" className="form-input" value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="e.g., Personal Visa, Work Card" />
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Card Details</label>
+        <div style={{
+          padding: '0.75rem',
+          background: '#1a1a1a',
+          border: '1px solid #333',
+          borderRadius: '6px'
+        }}>
+          <CardElement options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#e5e7eb',
+                '::placeholder': { color: '#6b7280' },
+              },
+              invalid: { color: '#ef4444' },
+            },
+          }} />
+        </div>
+      </div>
+
+      {error && (
+        <p style={{ fontSize: '0.85rem', color: '#ef4444', marginBottom: '0.75rem' }}>{error}</p>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+        <button type="submit" className="btn btn-primary" disabled={!stripe || saving} style={{ flex: 1 }}>
+          {saving ? 'Saving...' : 'Save Card'}
+        </button>
+        <button type="button" className="btn btn-secondary" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+
+      <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.75rem', lineHeight: '1.4' }}>
+        Your card is securely stored by Stripe. We never see or store your full card number.
+      </p>
+    </form>
+  );
+};
 
 const DriverProfile = () => {
   const { user, setUser } = useAuth();
@@ -58,8 +161,7 @@ const DriverProfile = () => {
   // Payment methods state
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
-  const [cardFormData, setCardFormData] = useState({ nickname: '', cardNumber: '', expMonth: '', expYear: '' });
-  const [cardSaving, setCardSaving] = useState(false);
+  const [setupIntentSecret, setSetupIntentSecret] = useState('');
   const [cardMessage, setCardMessage] = useState('');
 
   // Reports state (hosts only)
@@ -407,33 +509,25 @@ const DriverProfile = () => {
     }
   };
 
-  const formatCardNumber = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 16);
-    return digits.replace(/(.{4})/g, '$1 ').trim();
-  };
-
-  const handleAddCard = async (e) => {
-    e.preventDefault();
-    setCardSaving(true);
+  const handleShowCardForm = async () => {
     setCardMessage('');
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/api/users/payment-methods`, {
-        ...cardFormData,
-        expMonth: parseInt(cardFormData.expMonth),
-        expYear: parseInt(cardFormData.expYear)
-      }, {
+      const response = await axios.post(`${API_URL}/api/users/payment-methods/setup-intent`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPaymentMethods(response.data);
-      setShowCardForm(false);
-      setCardFormData({ nickname: '', cardNumber: '', expMonth: '', expYear: '' });
-      setCardMessage('Card added successfully');
+      setSetupIntentSecret(response.data.clientSecret);
+      setShowCardForm(true);
     } catch (error) {
-      setCardMessage(error.response?.data?.message || 'Error adding card');
-    } finally {
-      setCardSaving(false);
+      setCardMessage(error.response?.data?.message || 'Failed to initialize card setup');
     }
+  };
+
+  const handleCardSaved = (updatedMethods) => {
+    setPaymentMethods(updatedMethods);
+    setShowCardForm(false);
+    setSetupIntentSecret('');
+    setCardMessage('Card added successfully');
   };
 
   const handleDeleteCard = async (cardId) => {
@@ -1168,67 +1262,34 @@ const DriverProfile = () => {
       )}
 
       {!showCardForm && (
-        <button onClick={() => { setShowCardForm(true); setCardMessage(''); }}
+        <button onClick={handleShowCardForm}
           className="btn btn-primary" style={{ width: '100%' }}>
           Add Payment Method
         </button>
       )}
 
-      {showCardForm && (
-        <form onSubmit={handleAddCard} style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333' }}>
-          <h4 style={{ color: '#d1d5db', marginBottom: '1rem', fontSize: '0.95rem' }}>Add New Card</h4>
+      {showCardForm && setupIntentSecret && isValidStripeKey && (
+        <Elements stripe={stripePromise} options={{
+          clientSecret: setupIntentSecret,
+          appearance: { theme: 'night', variables: { colorPrimary: '#10b981' } }
+        }}>
+          <StripeCardForm
+            clientSecret={setupIntentSecret}
+            onSuccess={handleCardSaved}
+            onCancel={() => { setShowCardForm(false); setSetupIntentSecret(''); setCardMessage(''); }}
+          />
+        </Elements>
+      )}
 
-          <div className="form-group">
-            <label className="form-label">Nickname (optional)</label>
-            <input type="text" className="form-input" value={cardFormData.nickname}
-              onChange={(e) => setCardFormData({ ...cardFormData, nickname: e.target.value })}
-              placeholder="e.g., Personal Visa, Work Card" />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Card Number</label>
-            <input type="text" className="form-input" value={cardFormData.cardNumber}
-              onChange={(e) => setCardFormData({ ...cardFormData, cardNumber: formatCardNumber(e.target.value) })}
-              placeholder="1234 5678 9012 3456" maxLength={19} required />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="form-group">
-              <label className="form-label">Exp. Month</label>
-              <select className="form-input" value={cardFormData.expMonth}
-                onChange={(e) => setCardFormData({ ...cardFormData, expMonth: e.target.value })} required>
-                <option value="">MM</option>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                  <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Exp. Year</label>
-              <select className="form-input" value={cardFormData.expYear}
-                onChange={(e) => setCardFormData({ ...cardFormData, expYear: e.target.value })} required>
-                <option value="">YYYY</option>
-                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button type="submit" className="btn btn-primary" disabled={cardSaving} style={{ flex: 1 }}>
-              {cardSaving ? 'Saving...' : 'Save Card'}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => { setShowCardForm(false); setCardMessage(''); }}>
-              Cancel
-            </button>
-          </div>
-        </form>
+      {showCardForm && !isValidStripeKey && (
+        <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #ef4444' }}>
+          <p style={{ color: '#ef4444', margin: 0 }}>Payment system configuration error. Stripe key is missing or invalid.</p>
+        </div>
       )}
 
       <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#111', borderRadius: '0.5rem', border: '1px solid #333' }}>
         <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-          Card numbers are not stored in full. Only the last 4 digits and card brand are saved for your reference.
+          Your cards are securely stored by Stripe and can be used for faster checkout when booking vehicles.
         </p>
       </div>
     </div>

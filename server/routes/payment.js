@@ -7,10 +7,25 @@ const { sendBookingConfirmationToDriver, sendBookingNotificationToHost } = requi
 
 const router = express.Router();
 
+// Helper: get or create Stripe customer for a user
+const getOrCreateStripeCustomer = async (user) => {
+  if (user.stripeCustomerId) {
+    return user.stripeCustomerId;
+  }
+  const customer = await stripe.customers.create({
+    email: user.email,
+    name: `${user.firstName} ${user.lastName}`,
+    metadata: { userId: user._id.toString() }
+  });
+  user.stripeCustomerId = customer.id;
+  await user.save();
+  return customer.id;
+};
+
 // Create Payment Intent (for custom checkout form - stays on site)
 router.post('/create-payment-intent', auth, async (req, res) => {
   try {
-    const { bookingId } = req.body;
+    const { bookingId, savedPaymentMethodId } = req.body;
 
     // Fetch the booking
     const booking = await Booking.findById(bookingId)
@@ -26,24 +41,58 @@ router.post('/create-payment-intent', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    // Create a PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Get or create Stripe customer
+    const driver = await User.findById(req.user._id);
+    const customerId = await getOrCreateStripeCustomer(driver);
+
+    // Build PaymentIntent params
+    const intentParams = {
       amount: Math.round(booking.totalPrice * 100), // Convert to cents
       currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      customer: customerId,
       metadata: {
         bookingId: bookingId.toString(),
         driverId: booking.driver._id.toString(),
         vehicleId: booking.vehicle._id.toString(),
       },
       description: `${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model} - ${booking.totalDays} days`,
-    });
+    };
+
+    // If paying with a saved card, attach it and confirm immediately
+    if (savedPaymentMethodId) {
+      intentParams.payment_method = savedPaymentMethodId;
+      intentParams.confirm = true;
+      intentParams.automatic_payment_methods = {
+        enabled: true,
+        allow_redirects: 'never'
+      };
+    } else {
+      intentParams.automatic_payment_methods = {
+        enabled: true,
+      };
+    }
+
+    // Create a PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create(intentParams);
+
+    // Get saved payment methods for the response
+    const savedCards = driver.paymentMethods.filter(pm => pm.stripePaymentMethodId);
 
     res.json({
       clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      paymentIntentStatus: paymentIntent.status,
       booking,
+      savedCards: savedCards.map(c => ({
+        _id: c._id,
+        nickname: c.nickname,
+        cardBrand: c.cardBrand,
+        last4: c.last4,
+        expMonth: c.expMonth,
+        expYear: c.expYear,
+        isDefault: c.isDefault,
+        stripePaymentMethodId: c.stripePaymentMethodId
+      }))
     });
   } catch (error) {
     console.error('Payment intent creation error:', error);
