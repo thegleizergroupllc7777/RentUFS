@@ -748,10 +748,12 @@ const DriverProfile = () => {
     </div>
   );
 
+  const taxNeedsAttention = isHost && taxInfo && !taxInfo.hasSubmitted;
+
   const tabs = [
     { id: 'profile', label: 'My Profile' },
     ...(isHost ? [
-      { id: 'tax', label: 'Tax Settings' },
+      { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
       { id: 'reports', label: 'Reports' }
     ] : [])
   ];
@@ -780,7 +782,9 @@ const DriverProfile = () => {
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   style={{
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     width: '100%',
                     padding: '1rem 1.25rem',
                     border: 'none',
@@ -796,6 +800,21 @@ const DriverProfile = () => {
                   }}
                 >
                   {tab.label}
+                  {tab.alert && (
+                    <span style={{
+                      background: '#ef4444',
+                      color: '#fff',
+                      fontSize: '0.65rem',
+                      fontWeight: '700',
+                      padding: '2px 6px',
+                      borderRadius: '9999px',
+                      lineHeight: '1.2',
+                      animation: 'pulse 2s infinite',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      Action Needed
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
