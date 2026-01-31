@@ -15,7 +15,9 @@ const DriverProfile = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const isHost = user?.userType === 'host' || user?.userType === 'both';
+  const canBeHost = user?.userType === 'host' || user?.userType === 'both';
+  const activeMode = localStorage.getItem('activeMode') || 'driver';
+  const isHost = canBeHost && activeMode === 'host';
   const defaultTab = searchParams.get('tab') || 'profile';
   const [activeTab, setActiveTab] = useState(defaultTab);
 
