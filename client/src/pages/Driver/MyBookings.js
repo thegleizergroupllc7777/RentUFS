@@ -332,6 +332,26 @@ const MyBookings = () => {
 
   const { current, upcoming, past } = categorizeBookings();
 
+  // Calculate unread counts per tab
+  const getTabUnreadCount = (tabBookings) => {
+    return tabBookings.reduce((sum, b) => sum + (unreadCounts[b._id] || 0), 0);
+  };
+  const currentUnread = getTabUnreadCount(current);
+  const upcomingUnread = getTabUnreadCount(upcoming);
+
+  // Auto-switch to tab with unread messages on first load
+  const [hasAutoSwitched, setHasAutoSwitched] = useState(false);
+  useEffect(() => {
+    if (hasAutoSwitched || Object.keys(unreadCounts).length === 0) return;
+    if (currentUnread > 0) {
+      setActiveTab('current');
+      setHasAutoSwitched(true);
+    } else if (upcomingUnread > 0) {
+      setActiveTab('upcoming');
+      setHasAutoSwitched(true);
+    }
+  }, [unreadCounts, hasAutoSwitched, currentUnread, upcomingUnread]);
+
   const getActiveBookings = () => {
     switch(activeTab) {
       case 'current':
@@ -428,10 +448,33 @@ const MyBookings = () => {
                     borderRadius: '0.5rem 0.5rem 0 0',
                     cursor: 'pointer',
                     fontWeight: '500',
-                    fontSize: '1rem'
+                    fontSize: '1rem',
+                    position: 'relative'
                   }}
                 >
                   Current ({current.length})
+                  {currentUnread > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '2px',
+                      right: '2px',
+                      background: '#ef4444',
+                      color: '#fff',
+                      fontSize: '0.65rem',
+                      fontWeight: '700',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '9999px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      lineHeight: '1',
+                      animation: 'pulse 2s infinite'
+                    }}>
+                      {currentUnread}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab('upcoming')}
@@ -443,10 +486,33 @@ const MyBookings = () => {
                     borderRadius: '0.5rem 0.5rem 0 0',
                     cursor: 'pointer',
                     fontWeight: '500',
-                    fontSize: '1rem'
+                    fontSize: '1rem',
+                    position: 'relative'
                   }}
                 >
                   Upcoming ({upcoming.length})
+                  {upcomingUnread > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '2px',
+                      right: '2px',
+                      background: '#ef4444',
+                      color: '#fff',
+                      fontSize: '0.65rem',
+                      fontWeight: '700',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '9999px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      lineHeight: '1',
+                      animation: 'pulse 2s infinite'
+                    }}>
+                      {upcomingUnread}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab('past')}
