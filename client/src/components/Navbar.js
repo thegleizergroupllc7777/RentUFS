@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import API_URL from '../config/api';
 
@@ -7,6 +8,7 @@ const Navbar = () => {
   const { user, logout, updateUserType } = useAuth();
   const navigate = useNavigate();
   const [switching, setSwitching] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   // Active mode determines which UI to show (separate from userType which tracks capabilities)
   const [activeMode, setActiveMode] = useState(() => {
     return localStorage.getItem('activeMode') || 'driver';
@@ -27,6 +29,26 @@ const Navbar = () => {
         setActiveMode(savedMode === 'host' ? 'host' : 'driver');
       }
     }
+  }, [user]);
+
+  // Poll for unread messages
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await axios.get(`${API_URL}/api/messages/unread/count`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUnreadCount(response.data.count || 0);
+      } catch (error) {
+        // Silently fail - don't disrupt nav
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 15000); // Poll every 15 seconds
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleLogout = () => {
@@ -156,36 +178,60 @@ const Navbar = () => {
 
           {user && (
             <>
-              <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {user.profileImage ? (
-                  <img
-                    src={user.profileImage.startsWith('http') ? user.profileImage : `${API_URL}${user.profileImage}`}
-                    alt="Profile"
-                    style={{
+              <Link to={isHostMode ? '/host/bookings' : '/my-bookings'} className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
+                <div style={{ position: 'relative' }}>
+                  {user.profileImage ? (
+                    <img
+                      src={user.profileImage.startsWith('http') ? user.profileImage : `${API_URL}${user.profileImage}`}
+                      alt="Profile"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid #10b981'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
                       width: '32px',
                       height: '32px',
                       borderRadius: '50%',
-                      objectFit: 'cover',
+                      backgroundColor: '#10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '0.875rem',
                       border: '2px solid #10b981'
-                    }}
-                  />
-                ) : (
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: '#10b981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '0.875rem',
-                    border: '2px solid #10b981'
-                  }}>
-                    {user.firstName?.charAt(0)?.toUpperCase()}
-                  </div>
-                )}
+                    }}>
+                      {user.firstName?.charAt(0)?.toUpperCase()}
+                    </div>
+                  )}
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: '#ef4444',
+                      color: '#fff',
+                      fontSize: '0.6rem',
+                      fontWeight: '700',
+                      minWidth: '16px',
+                      height: '16px',
+                      borderRadius: '9999px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      border: '2px solid #000',
+                      lineHeight: '1'
+                    }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
                 {user.firstName}
               </Link>
 
