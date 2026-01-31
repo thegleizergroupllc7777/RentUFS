@@ -1,10 +1,26 @@
 const express = require('express');
 const crypto = require('crypto');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendEmailVerificationCode } = require('../utils/emailService');
 
 const router = express.Router();
+
+// Helper: get or create Stripe customer for a user
+const getOrCreateStripeCustomer = async (user) => {
+  if (user.stripeCustomerId) {
+    return user.stripeCustomerId;
+  }
+  const customer = await stripe.customers.create({
+    email: user.email,
+    name: `${user.firstName} ${user.lastName}`,
+    metadata: { userId: user._id.toString() }
+  });
+  user.stripeCustomerId = customer.id;
+  await user.save();
+  return customer.id;
+};
 
 // Get user profile
 router.get('/:id', async (req, res) => {
@@ -332,6 +348,26 @@ router.put('/driver-license', auth, async (req, res) => {
   }
 });
 
+// Create SetupIntent for saving a card via Stripe Elements
+router.post('/payment-methods/setup-intent', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const customerId = await getOrCreateStripeCustomer(user);
+
+    const setupIntent = await stripe.setupIntents.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+    });
+
+    res.json({ clientSecret: setupIntent.client_secret });
+  } catch (error) {
+    console.error('❌ Error creating setup intent:', error);
+    res.status(500).json({ message: 'Failed to initialize card setup', error: error.message });
+  }
+});
+
 // Get payment methods
 router.get('/payment-methods', auth, async (req, res) => {
   try {
@@ -343,47 +379,52 @@ router.get('/payment-methods', auth, async (req, res) => {
   }
 });
 
-// Add payment method
+// Save payment method after Stripe SetupIntent confirmation
 router.post('/payment-methods', auth, async (req, res) => {
   try {
-    const { nickname, cardNumber, expMonth, expYear } = req.body;
+    const { paymentMethodId, nickname } = req.body;
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const digits = cardNumber.replace(/\D/g, '');
-    if (digits.length < 13 || digits.length > 19) {
-      return res.status(400).json({ message: 'Please enter a valid card number' });
-    }
-    if (!expMonth || expMonth < 1 || expMonth > 12) {
-      return res.status(400).json({ message: 'Please enter a valid expiration month' });
-    }
-    if (!expYear || expYear < new Date().getFullYear()) {
-      return res.status(400).json({ message: 'Card has expired' });
+    if (!paymentMethodId) {
+      return res.status(400).json({ message: 'Payment method ID is required' });
     }
 
-    // Detect card brand from first digits
-    let cardBrand = 'Card';
-    if (/^4/.test(digits)) cardBrand = 'Visa';
-    else if (/^5[1-5]/.test(digits) || /^2[2-7]/.test(digits)) cardBrand = 'Mastercard';
-    else if (/^3[47]/.test(digits)) cardBrand = 'Amex';
-    else if (/^6(?:011|5)/.test(digits)) cardBrand = 'Discover';
+    // Retrieve the payment method from Stripe to get card details
+    const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+    if (!pm || pm.type !== 'card') {
+      return res.status(400).json({ message: 'Invalid payment method' });
+    }
 
+    // Check for duplicate (same last4 + brand + exp)
+    const isDuplicate = user.paymentMethods.some(
+      existing => existing.stripePaymentMethodId === paymentMethodId
+    );
+    if (isDuplicate) {
+      return res.status(400).json({ message: 'This card is already saved' });
+    }
+
+    const card = pm.card;
     const isDefault = user.paymentMethods.length === 0;
 
+    const brandMap = { visa: 'Visa', mastercard: 'Mastercard', amex: 'Amex', discover: 'Discover' };
+    const cardBrand = brandMap[card.brand] || card.brand || 'Card';
+
     user.paymentMethods.push({
-      nickname: nickname?.trim() || `${cardBrand} ending in ${digits.slice(-4)}`,
+      nickname: nickname?.trim() || `${cardBrand} ending in ${card.last4}`,
       cardBrand,
-      last4: digits.slice(-4),
-      expMonth,
-      expYear,
-      isDefault
+      last4: card.last4,
+      expMonth: card.exp_month,
+      expYear: card.exp_year,
+      isDefault,
+      stripePaymentMethodId: paymentMethodId
     });
 
     await user.save();
-    console.log('✅ Payment method added for:', user.email);
+    console.log('✅ Payment method saved via Stripe for:', user.email);
     res.json(user.paymentMethods);
   } catch (error) {
-    console.error('❌ Error adding payment method:', error);
+    console.error('❌ Error saving payment method:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -396,6 +437,15 @@ router.delete('/payment-methods/:cardId', auth, async (req, res) => {
 
     const card = user.paymentMethods.id(req.params.cardId);
     if (!card) return res.status(404).json({ message: 'Payment method not found' });
+
+    // Detach from Stripe if it has a Stripe ID
+    if (card.stripePaymentMethodId) {
+      try {
+        await stripe.paymentMethods.detach(card.stripePaymentMethodId);
+      } catch (stripeErr) {
+        console.error('⚠️ Could not detach from Stripe (may already be detached):', stripeErr.message);
+      }
+    }
 
     const wasDefault = card.isDefault;
     card.deleteOne();

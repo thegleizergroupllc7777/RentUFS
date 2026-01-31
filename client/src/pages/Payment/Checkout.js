@@ -25,6 +25,10 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [, setInsuranceSelected] = useState(false);
+  const [savedCards, setSavedCards] = useState([]);
+  const [paymentMode, setPaymentMode] = useState('new'); // 'new' or 'saved'
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [payingWithSaved, setPayingWithSaved] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -49,6 +53,14 @@ const Checkout = () => {
 
       setClientSecret(response.data.clientSecret);
       setBooking(response.data.booking);
+
+      // Set saved cards if available
+      if (response.data.savedCards && response.data.savedCards.length > 0) {
+        setSavedCards(response.data.savedCards);
+        setPaymentMode('saved');
+        const defaultCard = response.data.savedCards.find(c => c.isDefault) || response.data.savedCards[0];
+        setSelectedCard(defaultCard);
+      }
     } catch (err) {
       console.error('Payment initialization error:', err.response?.data || err);
       setError(err.response?.data?.message || err.response?.data?.error || 'Failed to initialize payment');
@@ -74,6 +86,35 @@ const Checkout = () => {
     }
   };
 
+  const handlePayWithSavedCard = async () => {
+    if (!selectedCard) return;
+    setPayingWithSaved(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/payment/create-payment-intent`,
+        { bookingId, savedPaymentMethodId: selectedCard.stripePaymentMethodId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+
+      if (response.data.paymentIntentStatus === 'succeeded') {
+        await handlePaymentSuccess(response.data.paymentIntentId);
+      } else if (response.data.paymentIntentStatus === 'requires_action') {
+        // Need 3D Secure - fall back to Elements flow
+        setClientSecret(response.data.clientSecret);
+        setPaymentMode('new');
+        setError('Additional authentication required. Please complete verification below.');
+      } else {
+        setError(`Payment status: ${response.data.paymentIntentStatus}. Please try a different card.`);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Payment failed. Please try a different card or enter new card details.');
+    } finally {
+      setPayingWithSaved(false);
+    }
+  };
+
   const handlePaymentError = (error) => {
     console.error('Payment error:', error);
   };
@@ -95,6 +136,9 @@ const Checkout = () => {
         { headers: { Authorization: `Bearer ${token}` }}
       );
       setClientSecret(response.data.clientSecret);
+      if (response.data.savedCards) {
+        setSavedCards(response.data.savedCards);
+      }
     } catch (err) {
       console.error('Error refreshing payment intent:', err);
     }
@@ -252,6 +296,91 @@ const Checkout = () => {
               initialSelection={booking.insurance?.type || 'none'}
             />
 
+            {/* Saved Cards Section */}
+            {savedCards.length > 0 && (
+              <div className="payment-form-section" style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0 }}>Payment Method</h3>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => setPaymentMode('saved')}
+                      style={{
+                        padding: '0.4rem 0.8rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer',
+                        border: paymentMode === 'saved' ? '1px solid #10b981' : '1px solid #333',
+                        background: paymentMode === 'saved' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                        color: paymentMode === 'saved' ? '#10b981' : '#9ca3af'
+                      }}>
+                      Saved Card
+                    </button>
+                    <button
+                      onClick={() => setPaymentMode('new')}
+                      style={{
+                        padding: '0.4rem 0.8rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer',
+                        border: paymentMode === 'new' ? '1px solid #10b981' : '1px solid #333',
+                        background: paymentMode === 'new' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                        color: paymentMode === 'new' ? '#10b981' : '#9ca3af'
+                      }}>
+                      New Card
+                    </button>
+                  </div>
+                </div>
+
+                {paymentMode === 'saved' && (
+                  <div>
+                    <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '1rem' }}>
+                      {savedCards.map(card => (
+                        <label key={card._id} style={{
+                          display: 'flex', alignItems: 'center', gap: '0.75rem',
+                          padding: '0.75rem 1rem', borderRadius: '8px', cursor: 'pointer',
+                          border: selectedCard?._id === card._id ? '2px solid #10b981' : '2px solid #333',
+                          background: selectedCard?._id === card._id ? 'rgba(16,185,129,0.05)' : 'transparent'
+                        }}>
+                          <input
+                            type="radio" name="savedCard"
+                            checked={selectedCard?._id === card._id}
+                            onChange={() => setSelectedCard(card)}
+                            style={{ accentColor: '#10b981' }}
+                          />
+                          <div style={{
+                            width: '42px', height: '28px', borderRadius: '4px', background: '#222',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.6rem', fontWeight: '700', color: '#9ca3af', border: '1px solid #333',
+                            flexShrink: 0
+                          }}>
+                            {card.cardBrand === 'Visa' ? 'VISA' : card.cardBrand === 'Mastercard' ? 'MC' : card.cardBrand === 'Amex' ? 'AMEX' : card.cardBrand === 'Discover' ? 'DISC' : 'CARD'}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ color: '#e5e7eb', fontSize: '0.9rem', fontWeight: '500' }}>
+                              {card.nickname || `${card.cardBrand} ending in ${card.last4}`}
+                            </span>
+                            <span style={{ color: '#6b7280', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                              **** {card.last4}
+                            </span>
+                          </div>
+                          {card.isDefault && (
+                            <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '600' }}>Default</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={handlePayWithSavedCard}
+                      disabled={!selectedCard || payingWithSaved}
+                      className="btn btn-primary btn-pay"
+                      style={{ width: '100%' }}
+                    >
+                      {payingWithSaved ? 'Processing payment...' : `Pay $${booking?.totalPrice?.toFixed(2)} with ${selectedCard?.cardBrand || 'Card'} ****${selectedCard?.last4 || ''}`}
+                    </button>
+
+                    <p className="payment-secure-notice" style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+                      Your payment is secure and encrypted
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {!isValidStripeKey && (
               <div className="error-message">
                 Payment system configuration error. The Stripe publishable key is missing or invalid.
@@ -259,7 +388,7 @@ const Checkout = () => {
               </div>
             )}
 
-            {clientSecret && isValidStripeKey && (
+            {clientSecret && isValidStripeKey && (paymentMode === 'new' || savedCards.length === 0) && (
               <Elements options={options} stripe={stripePromise}>
                 <CheckoutForm
                   booking={booking}

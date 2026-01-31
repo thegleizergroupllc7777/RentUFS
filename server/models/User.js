@@ -130,6 +130,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  stripeCustomerId: {
+    type: String,
+    default: null
+  },
   paymentMethods: [{
     nickname: { type: String, trim: true },
     cardBrand: { type: String, trim: true },
@@ -137,6 +141,7 @@ const userSchema = new mongoose.Schema({
     expMonth: { type: Number },
     expYear: { type: Number },
     isDefault: { type: Boolean, default: false },
+    stripePaymentMethodId: { type: String, default: null },
     addedAt: { type: Date, default: Date.now }
   }],
   createdAt: {
