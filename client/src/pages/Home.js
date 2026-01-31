@@ -24,7 +24,7 @@ const Home = () => {
                   Browse Cars
                 </button>
               </Link>
-              <Link to="/register">
+              <Link to="/register?type=host">
                 <button className="btn btn-secondary btn-lg">
                   List Your Car
                 </button>
