@@ -130,6 +130,15 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  paymentMethods: [{
+    nickname: { type: String, trim: true },
+    cardBrand: { type: String, trim: true },
+    last4: { type: String, trim: true },
+    expMonth: { type: Number },
+    expYear: { type: Number },
+    isDefault: { type: Boolean, default: false },
+    addedAt: { type: Date, default: Date.now }
+  }],
   createdAt: {
     type: Date,
     default: Date.now
