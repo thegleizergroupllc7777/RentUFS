@@ -185,6 +185,8 @@ router.get('/host-tax-info', auth, async (req, res) => {
       accountType: user.hostInfo?.accountType || 'individual',
       taxIdLast4: user.hostInfo?.taxIdLast4 || '',
       businessName: user.hostInfo?.businessName || '',
+      dba: user.hostInfo?.dba || '',
+      businessAddress: user.hostInfo?.businessAddress || {},
       hasSubmitted: !!(user.hostInfo?.taxIdLast4)
     });
   } catch (error) {
@@ -195,7 +197,7 @@ router.get('/host-tax-info', auth, async (req, res) => {
 // Update host tax info
 router.put('/host-tax-info', auth, async (req, res) => {
   try {
-    const { accountType, taxId, businessName } = req.body;
+    const { accountType, taxId, businessName, dba, businessAddress } = req.body;
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -235,7 +237,14 @@ router.put('/host-tax-info', auth, async (req, res) => {
       accountType,
       taxId: taxIdDigits,
       taxIdLast4: taxIdDigits.slice(-4),
-      businessName: accountType === 'business' ? businessName.trim() : undefined
+      businessName: accountType === 'business' ? businessName.trim() : undefined,
+      dba: accountType === 'business' && dba ? dba.trim() : undefined,
+      businessAddress: accountType === 'business' && businessAddress ? {
+        street: businessAddress.street?.trim() || '',
+        city: businessAddress.city?.trim() || '',
+        state: businessAddress.state?.trim() || '',
+        zipCode: businessAddress.zipCode?.trim() || ''
+      } : undefined
     };
 
     await user.save();
@@ -247,6 +256,8 @@ router.put('/host-tax-info', auth, async (req, res) => {
       accountType: user.hostInfo.accountType,
       taxIdLast4: user.hostInfo.taxIdLast4,
       businessName: user.hostInfo.businessName || '',
+      dba: user.hostInfo.dba || '',
+      businessAddress: user.hostInfo.businessAddress || {},
       hasSubmitted: true
     });
   } catch (error) {

@@ -43,7 +43,7 @@ const DriverProfile = () => {
   // Tax info state (hosts only)
   const [taxInfo, setTaxInfo] = useState(null);
   const [showTaxForm, setShowTaxForm] = useState(false);
-  const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', businessName: '' });
+  const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } });
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxMessage, setTaxMessage] = useState('');
 
@@ -285,12 +285,14 @@ const DriverProfile = () => {
         setTaxFormData({
           accountType: response.data.accountType,
           taxId: '',
-          businessName: response.data.businessName || ''
+          businessName: response.data.businessName || '',
+          dba: response.data.dba || '',
+          businessAddress: response.data.businessAddress || { street: '', city: '', state: '', zipCode: '' }
         });
       }
     } catch (error) {
       console.error('Error fetching tax info:', error);
-      setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', hasSubmitted: false });
+      setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', dba: '', businessAddress: {}, hasSubmitted: false });
     }
   };
 
@@ -546,6 +548,21 @@ const DriverProfile = () => {
                 <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{taxInfo.businessName}</p>
               </div>
             )}
+            {taxInfo.accountType === 'business' && taxInfo.dba && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>DBA</span>
+                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{taxInfo.dba}</p>
+              </div>
+            )}
+            {taxInfo.accountType === 'business' && taxInfo.businessAddress && taxInfo.businessAddress.street && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Business Address</span>
+                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
+                  {taxInfo.businessAddress.street}
+                  {taxInfo.businessAddress.city && <><br />{taxInfo.businessAddress.city}{taxInfo.businessAddress.state ? `, ${taxInfo.businessAddress.state}` : ''} {taxInfo.businessAddress.zipCode}</>}
+                </p>
+              </div>
+            )}
             <div>
               <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'}
@@ -579,7 +596,7 @@ const DriverProfile = () => {
                 background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent'
               }}>
                 <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
-                  onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', businessName: '' })}
+                  onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Individual</span>
@@ -593,7 +610,7 @@ const DriverProfile = () => {
                 background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent'
               }}>
                 <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
-                  onChange={() => setTaxFormData({ accountType: 'business', taxId: '', businessName: '' })}
+                  onChange={() => setTaxFormData({ accountType: 'business', taxId: '', businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Business / LLC</span>
@@ -604,12 +621,54 @@ const DriverProfile = () => {
           </div>
 
           {taxFormData.accountType === 'business' && (
-            <div className="form-group">
-              <label className="form-label">Business Name</label>
-              <input type="text" className="form-input" value={taxFormData.businessName}
-                onChange={(e) => setTaxFormData({ ...taxFormData, businessName: e.target.value })}
-                placeholder="e.g., United Fleet Services LLC" required />
-            </div>
+            <>
+              <div className="form-group">
+                <label className="form-label">Business Name</label>
+                <input type="text" className="form-input" value={taxFormData.businessName}
+                  onChange={(e) => setTaxFormData({ ...taxFormData, businessName: e.target.value })}
+                  placeholder="e.g., United Fleet Services LLC" required />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">DBA (Doing Business As)</label>
+                <input type="text" className="form-input" value={taxFormData.dba}
+                  onChange={(e) => setTaxFormData({ ...taxFormData, dba: e.target.value })}
+                  placeholder="e.g., UFS Car Rentals" />
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Optional. Enter if your business operates under a different name.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Business Address</label>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Street Address</label>
+                  <input type="text" className="form-input" value={taxFormData.businessAddress.street}
+                    onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, street: e.target.value } })}
+                    placeholder="123 Main St, Suite 100" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.8rem' }}>City</label>
+                    <input type="text" className="form-input" value={taxFormData.businessAddress.city}
+                      onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, city: e.target.value } })}
+                      placeholder="City" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.8rem' }}>State</label>
+                    <input type="text" className="form-input" value={taxFormData.businessAddress.state}
+                      onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, state: e.target.value } })}
+                      placeholder="State" maxLength={2} style={{ textTransform: 'uppercase' }} />
+                  </div>
+                </div>
+                <div className="form-group" style={{ maxWidth: '50%' }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>ZIP Code</label>
+                  <input type="text" className="form-input" value={taxFormData.businessAddress.zipCode}
+                    onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, zipCode: e.target.value } })}
+                    placeholder="ZIP Code" maxLength={10} />
+                </div>
+              </div>
+            </>
           )}
 
           <div className="form-group">
