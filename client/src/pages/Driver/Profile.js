@@ -640,32 +640,32 @@ const DriverProfile = () => {
               </div>
 
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Business Address</label>
+                <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Business Address *</label>
                 <div className="form-group">
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>Street Address</label>
                   <input type="text" className="form-input" value={taxFormData.businessAddress.street}
                     onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, street: e.target.value } })}
-                    placeholder="123 Main St, Suite 100" />
+                    placeholder="123 Main St, Suite 100" required />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div className="form-group">
                     <label className="form-label" style={{ fontSize: '0.8rem' }}>City</label>
                     <input type="text" className="form-input" value={taxFormData.businessAddress.city}
                       onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, city: e.target.value } })}
-                      placeholder="City" />
+                      placeholder="City" required />
                   </div>
                   <div className="form-group">
                     <label className="form-label" style={{ fontSize: '0.8rem' }}>State</label>
                     <input type="text" className="form-input" value={taxFormData.businessAddress.state}
                       onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, state: e.target.value } })}
-                      placeholder="State" maxLength={2} style={{ textTransform: 'uppercase' }} />
+                      placeholder="State" maxLength={2} style={{ textTransform: 'uppercase' }} required />
                   </div>
                 </div>
                 <div className="form-group" style={{ maxWidth: '50%' }}>
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>ZIP Code</label>
                   <input type="text" className="form-input" value={taxFormData.businessAddress.zipCode}
                     onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, zipCode: e.target.value } })}
-                    placeholder="ZIP Code" maxLength={10} />
+                    placeholder="ZIP Code" maxLength={10} required />
                 </div>
               </div>
             </>
