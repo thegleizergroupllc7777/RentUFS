@@ -233,6 +233,12 @@ router.put('/host-tax-info', auth, async (req, res) => {
       return res.status(400).json({ message: 'Business name is required for business accounts' });
     }
 
+    if (accountType === 'business') {
+      if (!businessAddress || !businessAddress.street?.trim() || !businessAddress.city?.trim() || !businessAddress.state?.trim() || !businessAddress.zipCode?.trim()) {
+        return res.status(400).json({ message: 'Complete business address is required for business accounts' });
+      }
+    }
+
     user.hostInfo = {
       accountType,
       taxId: taxIdDigits,
