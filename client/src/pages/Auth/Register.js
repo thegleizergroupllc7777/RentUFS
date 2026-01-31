@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
@@ -10,6 +10,8 @@ import API_URL from '../../config/api';
 import './Auth.css';
 
 const Register = () => {
+  const [searchParams] = useSearchParams();
+  const initialType = searchParams.get('type') === 'host' ? 'host' : 'driver';
   const [step, setStep] = useState(1); // 1 = user registration, 2 = vehicle details
   const [formData, setFormData] = useState({
     email: '',
@@ -18,7 +20,7 @@ const Register = () => {
     lastName: '',
     phone: '',
     dateOfBirth: '',
-    userType: 'driver',
+    userType: initialType,
     profileImage: '',
     driverLicense: {
       licenseNumber: '',
