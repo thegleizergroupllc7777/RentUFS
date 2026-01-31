@@ -272,4 +272,164 @@ router.put('/host-tax-info', auth, async (req, res) => {
   }
 });
 
+// Get driver license info
+router.get('/driver-license', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({
+      licenseNumber: user.driverLicense?.licenseNumber || '',
+      state: user.driverLicense?.state || '',
+      expirationDate: user.driverLicense?.expirationDate || '',
+      licenseImage: user.driverLicense?.licenseImage || '',
+      verificationSelfie: user.driverLicense?.verificationSelfie || '',
+      faceVerified: user.driverLicense?.faceVerified || false,
+      faceMatchScore: user.driverLicense?.faceMatchScore || null
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update driver license info
+router.put('/driver-license', auth, async (req, res) => {
+  try {
+    const { licenseNumber, state, expirationDate, licenseImage, verificationSelfie, faceMatchScore, faceVerified } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!['driver', 'both'].includes(user.userType)) {
+      return res.status(403).json({ message: 'Only drivers can update license information' });
+    }
+
+    user.driverLicense = {
+      ...user.driverLicense,
+      licenseNumber: licenseNumber || user.driverLicense?.licenseNumber,
+      state: state || user.driverLicense?.state,
+      expirationDate: expirationDate ? new Date(expirationDate) : user.driverLicense?.expirationDate,
+      licenseImage: licenseImage !== undefined ? licenseImage : user.driverLicense?.licenseImage,
+      verificationSelfie: verificationSelfie !== undefined ? verificationSelfie : user.driverLicense?.verificationSelfie,
+      faceMatchScore: typeof faceMatchScore === 'number' ? faceMatchScore : user.driverLicense?.faceMatchScore,
+      faceVerified: typeof faceVerified === 'boolean' ? faceVerified : user.driverLicense?.faceVerified
+    };
+
+    await user.save();
+    console.log('✅ Driver license updated for:', user.email);
+
+    res.json({
+      message: 'Driver license information updated successfully',
+      licenseNumber: user.driverLicense.licenseNumber,
+      state: user.driverLicense.state,
+      expirationDate: user.driverLicense.expirationDate,
+      licenseImage: user.driverLicense.licenseImage,
+      verificationSelfie: user.driverLicense.verificationSelfie,
+      faceVerified: user.driverLicense.faceVerified,
+      faceMatchScore: user.driverLicense.faceMatchScore
+    });
+  } catch (error) {
+    console.error('❌ Error updating driver license:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get payment methods
+router.get('/payment-methods', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user.paymentMethods || []);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Add payment method
+router.post('/payment-methods', auth, async (req, res) => {
+  try {
+    const { nickname, cardNumber, expMonth, expYear } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const digits = cardNumber.replace(/\D/g, '');
+    if (digits.length < 13 || digits.length > 19) {
+      return res.status(400).json({ message: 'Please enter a valid card number' });
+    }
+    if (!expMonth || expMonth < 1 || expMonth > 12) {
+      return res.status(400).json({ message: 'Please enter a valid expiration month' });
+    }
+    if (!expYear || expYear < new Date().getFullYear()) {
+      return res.status(400).json({ message: 'Card has expired' });
+    }
+
+    // Detect card brand from first digits
+    let cardBrand = 'Card';
+    if (/^4/.test(digits)) cardBrand = 'Visa';
+    else if (/^5[1-5]/.test(digits) || /^2[2-7]/.test(digits)) cardBrand = 'Mastercard';
+    else if (/^3[47]/.test(digits)) cardBrand = 'Amex';
+    else if (/^6(?:011|5)/.test(digits)) cardBrand = 'Discover';
+
+    const isDefault = user.paymentMethods.length === 0;
+
+    user.paymentMethods.push({
+      nickname: nickname?.trim() || `${cardBrand} ending in ${digits.slice(-4)}`,
+      cardBrand,
+      last4: digits.slice(-4),
+      expMonth,
+      expYear,
+      isDefault
+    });
+
+    await user.save();
+    console.log('✅ Payment method added for:', user.email);
+    res.json(user.paymentMethods);
+  } catch (error) {
+    console.error('❌ Error adding payment method:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete payment method
+router.delete('/payment-methods/:cardId', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const card = user.paymentMethods.id(req.params.cardId);
+    if (!card) return res.status(404).json({ message: 'Payment method not found' });
+
+    const wasDefault = card.isDefault;
+    card.deleteOne();
+
+    // If deleted card was default, make the first remaining card default
+    if (wasDefault && user.paymentMethods.length > 0) {
+      user.paymentMethods[0].isDefault = true;
+    }
+
+    await user.save();
+    console.log('✅ Payment method removed for:', user.email);
+    res.json(user.paymentMethods);
+  } catch (error) {
+    console.error('❌ Error removing payment method:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Set default payment method
+router.patch('/payment-methods/:cardId/default', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.paymentMethods.forEach(pm => { pm.isDefault = false; });
+    const card = user.paymentMethods.id(req.params.cardId);
+    if (!card) return res.status(404).json({ message: 'Payment method not found' });
+    card.isDefault = true;
+
+    await user.save();
+    res.json(user.paymentMethods);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

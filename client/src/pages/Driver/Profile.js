@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
+import ImageUpload from '../../components/ImageUpload';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
@@ -47,6 +48,20 @@ const DriverProfile = () => {
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxMessage, setTaxMessage] = useState('');
 
+  // Driver license state
+  const [licenseData, setLicenseData] = useState(null);
+  const [showLicenseForm, setShowLicenseForm] = useState(false);
+  const [licenseFormData, setLicenseFormData] = useState({ licenseNumber: '', state: '', expirationDate: '', licenseImage: '' });
+  const [licenseSaving, setLicenseSaving] = useState(false);
+  const [licenseMessage, setLicenseMessage] = useState('');
+
+  // Payment methods state
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [cardFormData, setCardFormData] = useState({ nickname: '', cardNumber: '', expMonth: '', expYear: '' });
+  const [cardSaving, setCardSaving] = useState(false);
+  const [cardMessage, setCardMessage] = useState('');
+
   // Reports state (hosts only)
   const [reportLoading, setReportLoading] = useState(false);
   const [reportPeriod, setReportPeriod] = useState('month');
@@ -65,6 +80,8 @@ const DriverProfile = () => {
       if (isHost) {
         fetchTaxInfo();
       }
+      fetchPaymentMethods();
+      fetchLicenseData();
     }
   }, [user]);
 
@@ -331,6 +348,112 @@ const DriverProfile = () => {
       setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
     } finally {
       setTaxSaving(false);
+    }
+  };
+
+  // === Driver license functions ===
+  const fetchLicenseData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/users/driver-license`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLicenseData(response.data);
+      setLicenseFormData({
+        licenseNumber: response.data.licenseNumber || '',
+        state: response.data.state || '',
+        expirationDate: response.data.expirationDate ? response.data.expirationDate.split('T')[0] : '',
+        licenseImage: response.data.licenseImage || ''
+      });
+    } catch (error) {
+      console.error('Error fetching license data:', error);
+    }
+  };
+
+  const handleSaveLicense = async (e) => {
+    e.preventDefault();
+    setLicenseSaving(true);
+    setLicenseMessage('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API_URL}/api/users/driver-license`, licenseFormData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLicenseData(response.data);
+      setShowLicenseForm(false);
+      setLicenseMessage('License information updated successfully');
+    } catch (error) {
+      setLicenseMessage(error.response?.data?.message || 'Error updating license');
+    } finally {
+      setLicenseSaving(false);
+    }
+  };
+
+  // === Payment methods functions ===
+  const fetchPaymentMethods = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/users/payment-methods`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPaymentMethods(response.data);
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+    }
+  };
+
+  const formatCardNumber = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 16);
+    return digits.replace(/(.{4})/g, '$1 ').trim();
+  };
+
+  const handleAddCard = async (e) => {
+    e.preventDefault();
+    setCardSaving(true);
+    setCardMessage('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/users/payment-methods`, {
+        ...cardFormData,
+        expMonth: parseInt(cardFormData.expMonth),
+        expYear: parseInt(cardFormData.expYear)
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPaymentMethods(response.data);
+      setShowCardForm(false);
+      setCardFormData({ nickname: '', cardNumber: '', expMonth: '', expYear: '' });
+      setCardMessage('Card added successfully');
+    } catch (error) {
+      setCardMessage(error.response?.data?.message || 'Error adding card');
+    } finally {
+      setCardSaving(false);
+    }
+  };
+
+  const handleDeleteCard = async (cardId) => {
+    if (!window.confirm('Remove this payment method?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.delete(`${API_URL}/api/users/payment-methods/${cardId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPaymentMethods(response.data);
+      setCardMessage('Card removed');
+    } catch (error) {
+      setCardMessage(error.response?.data?.message || 'Error removing card');
+    }
+  };
+
+  const handleSetDefault = async (cardId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.patch(`${API_URL}/api/users/payment-methods/${cardId}/default`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPaymentMethods(response.data);
+    } catch (error) {
+      setCardMessage(error.response?.data?.message || 'Error setting default');
     }
   };
 
@@ -809,10 +932,260 @@ const DriverProfile = () => {
     </div>
   );
 
+  const renderLicenseTab = () => (
+    <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333' }}>
+      <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Driver's License</h3>
+      <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
+        View and update your driver's license information.
+      </p>
+
+      {licenseMessage && (
+        <p style={{ fontSize: '0.85rem', color: licenseMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '1rem' }}>{licenseMessage}</p>
+      )}
+
+      {/* Current license info display */}
+      {licenseData && licenseData.licenseNumber && !showLicenseForm && (
+        <div style={{
+          padding: '1.25rem', background: '#111', borderRadius: '0.75rem',
+          border: '1px solid #333', marginBottom: '1.25rem'
+        }}>
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>License Number</span>
+                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{licenseData.licenseNumber}</p>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>State</span>
+                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{licenseData.state}</p>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Expiration Date</span>
+                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
+                  {licenseData.expirationDate ? new Date(licenseData.expirationDate).toLocaleDateString() : 'Not set'}
+                </p>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Verification</span>
+                <p style={{ fontSize: '0.95rem', fontWeight: '500', margin: '0.15rem 0 0', color: licenseData.faceVerified ? '#10b981' : '#f59e0b' }}>
+                  {licenseData.faceVerified ? 'Verified' : 'Pending'}
+                </p>
+              </div>
+            </div>
+            {licenseData.licenseImage && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>License Photo</span>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <img src={getImageUrl(licenseData.licenseImage)} alt="Driver's License"
+                    style={{ maxWidth: '200px', borderRadius: '8px', border: '1px solid #333' }}
+                    onError={(e) => { e.target.style.display = 'none'; }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!licenseData?.licenseNumber && !showLicenseForm && (
+        <div style={{ padding: '2rem', textAlign: 'center', background: '#111', borderRadius: '0.75rem', border: '1px solid #333', marginBottom: '1.25rem' }}>
+          <p style={{ fontSize: '0.9rem', color: '#6b7280', margin: '0 0 0.25rem' }}>No license information on file</p>
+          <p style={{ fontSize: '0.8rem', color: '#4b5563', margin: 0 }}>Add your driver's license details</p>
+        </div>
+      )}
+
+      {!showLicenseForm && (
+        <button onClick={() => { setShowLicenseForm(true); setLicenseMessage(''); }}
+          className={`btn ${licenseData?.licenseNumber ? 'btn-secondary' : 'btn-primary'}`} style={{ width: '100%' }}>
+          {licenseData?.licenseNumber ? 'Update License Information' : 'Add License Information'}
+        </button>
+      )}
+
+      {showLicenseForm && (
+        <form onSubmit={handleSaveLicense} style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333' }}>
+          <h4 style={{ color: '#d1d5db', marginBottom: '1rem', fontSize: '0.95rem' }}>
+            {licenseData?.licenseNumber ? 'Update License' : 'Add License'}
+          </h4>
+
+          <div className="form-group">
+            <label className="form-label">License Number</label>
+            <input type="text" className="form-input" value={licenseFormData.licenseNumber}
+              onChange={(e) => setLicenseFormData({ ...licenseFormData, licenseNumber: e.target.value })}
+              placeholder="Enter license number" required />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label className="form-label">State</label>
+              <input type="text" className="form-input" value={licenseFormData.state}
+                onChange={(e) => setLicenseFormData({ ...licenseFormData, state: e.target.value.toUpperCase() })}
+                placeholder="e.g., CA" maxLength={2} required style={{ textTransform: 'uppercase' }} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Expiration Date</label>
+              <input type="date" className="form-input" value={licenseFormData.expirationDate}
+                onChange={(e) => setLicenseFormData({ ...licenseFormData, expirationDate: e.target.value })}
+                required />
+            </div>
+          </div>
+
+          <ImageUpload
+            label="Driver's License Photo"
+            value={licenseFormData.licenseImage}
+            onChange={(url) => setLicenseFormData({ ...licenseFormData, licenseImage: url })}
+          />
+
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+            <button type="submit" className="btn btn-primary" disabled={licenseSaving} style={{ flex: 1 }}>
+              {licenseSaving ? 'Saving...' : 'Save License Info'}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => { setShowLicenseForm(false); setLicenseMessage(''); }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+
+  const renderPaymentTab = () => (
+    <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333' }}>
+      <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Payment Methods</h3>
+      <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
+        Manage your saved cards for faster checkout.
+      </p>
+
+      {cardMessage && (
+        <p style={{ fontSize: '0.85rem', color: cardMessage.includes('success') || cardMessage.includes('removed') ? '#10b981' : '#ef4444', marginBottom: '1rem' }}>{cardMessage}</p>
+      )}
+
+      {/* Saved cards */}
+      {paymentMethods.length > 0 && (
+        <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          {paymentMethods.map(card => (
+            <div key={card._id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '1rem 1.25rem', background: '#111', borderRadius: '0.75rem',
+              border: card.isDefault ? '1px solid #10b981' : '1px solid #333'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: '48px', height: '32px', borderRadius: '4px', background: '#222',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.65rem', fontWeight: '700', color: '#9ca3af', border: '1px solid #333'
+                }}>
+                  {card.cardBrand === 'Visa' ? 'VISA' : card.cardBrand === 'Mastercard' ? 'MC' : card.cardBrand === 'Amex' ? 'AMEX' : card.cardBrand === 'Discover' ? 'DISC' : 'CARD'}
+                </div>
+                <div>
+                  <p style={{ fontSize: '0.9rem', color: '#f9fafb', fontWeight: '500', margin: 0 }}>
+                    {card.nickname || `${card.cardBrand} ending in ${card.last4}`}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
+                    **** {card.last4} &middot; Expires {String(card.expMonth).padStart(2, '0')}/{card.expYear}
+                    {card.isDefault && <span style={{ color: '#10b981', marginLeft: '0.5rem' }}>Default</span>}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {!card.isDefault && (
+                  <button onClick={() => handleSetDefault(card._id)}
+                    style={{ background: 'transparent', border: '1px solid #333', color: '#9ca3af', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                    Set Default
+                  </button>
+                )}
+                <button onClick={() => handleDeleteCard(card._id)}
+                  style={{ background: 'transparent', border: '1px solid #333', color: '#ef4444', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {paymentMethods.length === 0 && !showCardForm && (
+        <div style={{ padding: '2rem', textAlign: 'center', background: '#111', borderRadius: '0.75rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '0.9rem', color: '#6b7280', margin: '0 0 0.25rem' }}>No payment methods saved</p>
+          <p style={{ fontSize: '0.8rem', color: '#4b5563', margin: 0 }}>Add a card for faster booking checkout</p>
+        </div>
+      )}
+
+      {!showCardForm && (
+        <button onClick={() => { setShowCardForm(true); setCardMessage(''); }}
+          className="btn btn-primary" style={{ width: '100%' }}>
+          Add Payment Method
+        </button>
+      )}
+
+      {showCardForm && (
+        <form onSubmit={handleAddCard} style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333' }}>
+          <h4 style={{ color: '#d1d5db', marginBottom: '1rem', fontSize: '0.95rem' }}>Add New Card</h4>
+
+          <div className="form-group">
+            <label className="form-label">Nickname (optional)</label>
+            <input type="text" className="form-input" value={cardFormData.nickname}
+              onChange={(e) => setCardFormData({ ...cardFormData, nickname: e.target.value })}
+              placeholder="e.g., Personal Visa, Work Card" />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Card Number</label>
+            <input type="text" className="form-input" value={cardFormData.cardNumber}
+              onChange={(e) => setCardFormData({ ...cardFormData, cardNumber: formatCardNumber(e.target.value) })}
+              placeholder="1234 5678 9012 3456" maxLength={19} required />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label className="form-label">Exp. Month</label>
+              <select className="form-input" value={cardFormData.expMonth}
+                onChange={(e) => setCardFormData({ ...cardFormData, expMonth: e.target.value })} required>
+                <option value="">MM</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Exp. Year</label>
+              <select className="form-input" value={cardFormData.expYear}
+                onChange={(e) => setCardFormData({ ...cardFormData, expYear: e.target.value })} required>
+                <option value="">YYYY</option>
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <button type="submit" className="btn btn-primary" disabled={cardSaving} style={{ flex: 1 }}>
+              {cardSaving ? 'Saving...' : 'Save Card'}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => { setShowCardForm(false); setCardMessage(''); }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#111', borderRadius: '0.5rem', border: '1px solid #333' }}>
+        <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
+          Card numbers are not stored in full. Only the last 4 digits and card brand are saved for your reference.
+        </p>
+      </div>
+    </div>
+  );
+
   const taxNeedsAttention = isHost && taxInfo && !taxInfo.hasSubmitted;
+
+  const isDriver = user?.userType === 'driver' || user?.userType === 'both';
 
   const tabs = [
     { id: 'profile', label: 'My Profile' },
+    ...(isDriver ? [{ id: 'license', label: "Driver's License" }] : []),
+    { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
       { id: 'reports', label: 'Reports' }
@@ -883,6 +1256,8 @@ const DriverProfile = () => {
             {/* Main Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
               {activeTab === 'profile' && renderProfileTab()}
+              {activeTab === 'license' && isDriver && renderLicenseTab()}
+              {activeTab === 'payment' && renderPaymentTab()}
               {activeTab === 'tax' && isHost && renderTaxTab()}
               {activeTab === 'reports' && isHost && renderReportsTab()}
             </div>
