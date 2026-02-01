@@ -17,6 +17,18 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Mark messages as read (separate from fetching)
+  const markAsRead = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/messages/${bookingId}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) {
+      // Silently fail - marking as read is not critical
+    }
+  }, [bookingId]);
+
   const fetchMessages = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -34,15 +46,17 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
     }
   }, [bookingId]);
 
-  // Initial load + polling
+  // Initial load: fetch messages AND mark as read
+  // Subsequent polls: only fetch messages (don't mark as read)
   useEffect(() => {
     fetchMessages();
-    // Poll every 5 seconds for new messages
+    markAsRead();
+    // Poll every 5 seconds for new messages (without marking as read)
     pollRef.current = setInterval(fetchMessages, 5000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [fetchMessages]);
+  }, [fetchMessages, markAsRead]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -69,6 +83,8 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
       setMessages(prev => [...prev, res.data]);
       setNewMessage('');
       setError('');
+      // Mark any unread messages as read since user is actively chatting
+      markAsRead();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send message');
     } finally {
