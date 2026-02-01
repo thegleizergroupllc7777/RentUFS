@@ -281,6 +281,7 @@ router.put('/host-tax-info', auth, async (req, res) => {
       } : undefined
     };
 
+    user.markModified('hostInfo');
     await user.save();
 
     console.log('✅ Host tax info updated for:', user.email, '- Type:', accountType);
