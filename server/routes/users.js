@@ -197,13 +197,25 @@ router.get('/host-tax-info', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const hostInfo = user.hostInfo || {};
+    const acctType = hostInfo.accountType || 'individual';
+    const hasTaxId = !!(hostInfo.taxIdLast4);
+    const bizAddr = hostInfo.businessAddress || {};
+    const hasBusinessInfo = !!(hostInfo.businessName) &&
+      !!(bizAddr.street) && !!(bizAddr.city) && !!(bizAddr.state) && !!(bizAddr.zipCode);
+
+    // For individual: just need tax ID; for business: also need business name + full address
+    const hasSubmitted = acctType === 'business'
+      ? (hasTaxId && hasBusinessInfo)
+      : hasTaxId;
+
     res.json({
-      accountType: user.hostInfo?.accountType || 'individual',
-      taxIdLast4: user.hostInfo?.taxIdLast4 || '',
-      businessName: user.hostInfo?.businessName || '',
-      dba: user.hostInfo?.dba || '',
-      businessAddress: user.hostInfo?.businessAddress || {},
-      hasSubmitted: !!(user.hostInfo?.taxIdLast4)
+      accountType: acctType,
+      taxIdLast4: hostInfo.taxIdLast4 || '',
+      businessName: hostInfo.businessName || '',
+      dba: hostInfo.dba || '',
+      businessAddress: bizAddr,
+      hasSubmitted
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
