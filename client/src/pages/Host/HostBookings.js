@@ -290,28 +290,16 @@ const HostBookings = () => {
   };
 
   const getActiveBookings = () => {
-    let bookings;
     switch(activeTab) {
       case 'current':
-        bookings = current;
-        break;
+        return current;
       case 'upcoming':
-        bookings = upcoming;
-        break;
+        return upcoming;
       case 'past':
-        bookings = past;
-        break;
+        return past;
       default:
-        bookings = [];
+        return [];
     }
-    // Sort bookings with unread messages to the top
-    return [...bookings].sort((a, b) => {
-      const aUnread = unreadCounts[a._id] || 0;
-      const bUnread = unreadCounts[b._id] || 0;
-      if (aUnread > 0 && bUnread === 0) return -1;
-      if (aUnread === 0 && bUnread > 0) return 1;
-      return 0;
-    });
   };
 
   const activeBookings = getActiveBookings();
