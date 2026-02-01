@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import API_URL from '../../config/api';
@@ -10,11 +10,12 @@ const HostDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [taxInfo, setTaxInfo] = useState(null);
+  const location = useLocation();
 
   useEffect(() => {
     fetchVehicles();
     fetchTaxInfo();
-  }, []);
+  }, [location.key]);
 
   const fetchVehicles = async () => {
     try {
