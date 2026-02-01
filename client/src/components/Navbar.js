@@ -47,7 +47,7 @@ const Navbar = () => {
       }
     };
     fetchUnread();
-    const interval = setInterval(fetchUnread, 15000); // Poll every 15 seconds
+    const interval = setInterval(fetchUnread, 8000); // Poll every 8 seconds
     return () => clearInterval(interval);
   }, [user]);
 
