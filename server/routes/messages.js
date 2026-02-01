@@ -128,9 +128,9 @@ router.post('/:bookingId', auth, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to send messages for this booking' });
     }
 
-    // Only allow messaging for confirmed or active bookings
-    if (!['confirmed', 'active'].includes(booking.status)) {
-      return res.status(400).json({ message: 'Messaging is only available for confirmed or active reservations' });
+    // Only block messaging for cancelled bookings
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ message: 'Messaging is not available for cancelled reservations' });
     }
 
     const message = new Message({

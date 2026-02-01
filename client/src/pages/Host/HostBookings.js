@@ -861,7 +861,7 @@ const HostBookings = () => {
                       </>
                     )}
 
-                    {['confirmed', 'active', 'completed'].includes(booking.status) && (
+                    {booking.status !== 'cancelled' && (
                       <button
                         onClick={() => {
                           const isOpening = openChatBookingId !== booking._id;
