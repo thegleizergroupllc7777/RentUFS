@@ -178,17 +178,17 @@ const Navbar = () => {
 
           {user && (
             <>
-              {/* Message notification icon - links to bookings page */}
-              {unreadCount > 0 && (
-                <Link
-                  to={isHostMode ? '/host/bookings' : '/my-bookings'}
-                  className="navbar-link"
-                  style={{ position: 'relative', display: 'flex', alignItems: 'center', marginRight: '0.25rem' }}
-                  title={`${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
+              {/* Message icon - always visible, links to bookings page */}
+              <Link
+                to={isHostMode ? '/host/bookings' : '/my-bookings'}
+                className="navbar-link"
+                style={{ position: 'relative', display: 'flex', alignItems: 'center', marginRight: '0.25rem' }}
+                title={unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Messages'}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={unreadCount > 0 ? '#10b981' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                {unreadCount > 0 && (
                   <span style={{
                     position: 'absolute',
                     top: '-6px',
@@ -210,8 +210,8 @@ const Navbar = () => {
                   }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
-                </Link>
-              )}
+                )}
+              </Link>
               <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
                 <div style={{ position: 'relative' }}>
                   {user.profileImage ? (

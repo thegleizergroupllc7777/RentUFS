@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
@@ -39,14 +40,16 @@ router.get('/unread/per-booking', auth, async (req, res) => {
       $or: [{ driver: userId }, { host: userId }]
     }).select('_id');
 
-    const bookingIds = userBookings.map(b => b._id);
+    // Ensure ObjectIds are properly typed for aggregate pipeline
+    const bookingIds = userBookings.map(b => new mongoose.Types.ObjectId(b._id));
+    const userObjectId = new mongoose.Types.ObjectId(userId);
 
     // Aggregate unread counts per booking
     const unreadCounts = await Message.aggregate([
       {
         $match: {
           booking: { $in: bookingIds },
-          sender: { $ne: userId },
+          sender: { $ne: userObjectId },
           read: false
         }
       },
@@ -70,7 +73,7 @@ router.get('/unread/per-booking', auth, async (req, res) => {
   }
 });
 
-// Get messages for a booking
+// Get messages for a booking (no longer auto-marks as read; use POST /:bookingId/read instead)
 router.get('/:bookingId', auth, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.bookingId);
@@ -88,8 +91,27 @@ router.get('/:bookingId', auth, async (req, res) => {
       .sort({ createdAt: 1 })
       .populate('sender', 'firstName lastName profileImage');
 
-    // Mark unread messages from the other party as read
-    await Message.updateMany(
+    res.json(messages);
+  } catch (error) {
+    console.error('❌ Error fetching messages:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark messages as read for a booking (call when user opens chat or sends a message)
+router.post('/:bookingId/read', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const userId = req.user._id.toString();
+    if (booking.driver.toString() !== userId && booking.host.toString() !== userId) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const result = await Message.updateMany(
       {
         booking: req.params.bookingId,
         sender: { $ne: req.user._id },
@@ -98,9 +120,9 @@ router.get('/:bookingId', auth, async (req, res) => {
       { read: true }
     );
 
-    res.json(messages);
+    res.json({ markedRead: result.modifiedCount });
   } catch (error) {
-    console.error('❌ Error fetching messages:', error);
+    console.error('❌ Error marking messages as read:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
