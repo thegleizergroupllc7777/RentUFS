@@ -11,6 +11,7 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
   const [error, setError] = useState('');
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
+  const markReadRef = useRef(null);
   const inputRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -47,14 +48,17 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
   }, [bookingId]);
 
   // Initial load: fetch messages AND mark as read
-  // Subsequent polls: only fetch messages (don't mark as read)
+  // Subsequent polls: fetch only; mark-as-read runs on a slower interval
   useEffect(() => {
     fetchMessages();
     markAsRead();
-    // Poll every 5 seconds for new messages (without marking as read)
+    // Poll for new messages every 5 seconds
     pollRef.current = setInterval(fetchMessages, 5000);
+    // Periodically mark messages as read while chat is open (every 20s)
+    markReadRef.current = setInterval(markAsRead, 20000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      if (markReadRef.current) clearInterval(markReadRef.current);
     };
   }, [fetchMessages, markAsRead]);
 
@@ -127,6 +131,7 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
         ) : (
           messages.map((msg) => {
             const isMine = msg.sender?._id === currentUserId || msg.sender === currentUserId;
+            const role = msg.senderRole === 'host' ? 'Host' : 'Driver';
             return (
               <div key={msg._id} className={`chatbox-msg ${isMine ? 'chatbox-msg-mine' : 'chatbox-msg-theirs'}`}>
                 {!isMine && (
@@ -139,7 +144,10 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
                   </div>
                 )}
                 <div className="chatbox-msg-content">
-                  <div className="chatbox-msg-bubble">
+                  <div className={`chatbox-msg-sender ${msg.senderRole === 'host' ? 'chatbox-role-host' : 'chatbox-role-driver'}`}>
+                    {isMine ? `You (${role})` : `${msg.sender?.firstName || role} (${role})`}
+                  </div>
+                  <div className={`chatbox-msg-bubble ${msg.senderRole === 'host' ? 'chatbox-bubble-host' : 'chatbox-bubble-driver'}`}>
                     {msg.text}
                   </div>
                   <div className="chatbox-msg-time">{formatTime(msg.createdAt)}</div>
