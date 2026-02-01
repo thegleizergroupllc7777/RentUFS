@@ -840,7 +840,7 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {(['confirmed', 'active'].includes(booking.status) && booking.paymentStatus === 'paid' || booking.status === 'completed') && (
+                        {booking.status !== 'cancelled' && (
                           <button
                             onClick={() => {
                               const isOpening = openChatBookingId !== booking._id;
