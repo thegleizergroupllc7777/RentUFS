@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Component } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
 import DatePicker from '../../components/DatePicker';
@@ -69,6 +70,7 @@ class MapErrorBoundary extends Component {
 }
 
 const Marketplace = () => {
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('list');
@@ -97,10 +99,16 @@ const Marketplace = () => {
       });
 
       const response = await axios.get(`${API_URL}/api/vehicles?${params}`);
-      setVehicles(response.data || []);
+      // Filter out the user's own vehicles when browsing as a driver
+      const allVehicles = response.data || [];
+      const filtered = user ? allVehicles.filter(v => {
+        const hostId = v.host?._id || v.host;
+        return hostId !== user._id;
+      }) : allVehicles;
+      setVehicles(filtered);
       setResultsInfo({
-        showing: Math.min(12, (response.data || []).length),
-        total: (response.data || []).length
+        showing: Math.min(12, filtered.length),
+        total: filtered.length
       });
     } catch (error) {
       console.error('Error fetching vehicles:', error);

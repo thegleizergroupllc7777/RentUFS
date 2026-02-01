@@ -379,9 +379,39 @@ const VehicleDetail = () => {
 
             <aside className="booking-sidebar">
               <div className="booking-card">
-                {activeBooking ? (
+                {isHost && !activeBooking ? (
                   <>
-                    <h3>{isHost ? 'Current Booking' : 'Your Current Reservation'}</h3>
+                    <h3>Your Vehicle Listing</h3>
+                    <div style={{
+                      backgroundColor: '#1e3a5f',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      border: '1px solid #3b82f6',
+                      textAlign: 'center'
+                    }}>
+                      <p style={{ color: '#93c5fd', margin: '0 0 0.75rem 0' }}>
+                        You are the host of this vehicle. You cannot book your own listing.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/host/edit-vehicle/${id}`)}
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    >
+                      Edit Listing
+                    </button>
+                    <button
+                      onClick={() => navigate('/host/dashboard')}
+                      className="btn"
+                      style={{ width: '100%', border: '1px solid #10b981', color: '#10b981', background: 'transparent' }}
+                    >
+                      Go to Host Dashboard
+                    </button>
+                  </>
+                ) : isHost && activeBooking ? (
+                  <>
+                    <h3>Current Booking</h3>
                     <div style={{
                       backgroundColor: '#1e3a5f',
                       padding: '1rem',
@@ -484,6 +514,62 @@ const VehicleDetail = () => {
                       {isHost
                         ? 'Go to Host Bookings to manage this reservation'
                         : 'Go to My Reservations to start, extend, or return this vehicle'}
+                    </p>
+                  </>
+                ) : activeBooking ? (
+                  <>
+                    <h3>Your Current Reservation</h3>
+                    <div style={{
+                      backgroundColor: '#064e3b',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      border: '1px solid #10b981'
+                    }}>
+                      <div style={{
+                        display: 'inline-block',
+                        background: activeBooking.status === 'active' ? '#3b82f6' :
+                                   activeBooking.status === 'pending' ? '#f59e0b' : '#10b981',
+                        color: 'white',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '1rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        marginBottom: '0.75rem',
+                        textTransform: 'capitalize'
+                      }}>
+                        {activeBooking.status}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Reservation ID:</strong><br />
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                          {activeBooking.reservationId || activeBooking._id.slice(-8).toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Pickup:</strong><br />
+                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Return:</strong><br />
+                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Duration:</strong> {activeBooking.totalDays} day(s)
+                      </div>
+                      <div style={{ color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Total Price:</strong> ${activeBooking.totalPrice}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate('/my-bookings')}
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    >
+                      Manage Reservation
+                    </button>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: 0 }}>
+                      Go to My Bookings to manage this reservation
                     </p>
                   </>
                 ) : (
