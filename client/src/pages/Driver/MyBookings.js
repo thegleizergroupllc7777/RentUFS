@@ -338,6 +338,7 @@ const MyBookings = () => {
   };
   const currentUnread = getTabUnreadCount(current);
   const upcomingUnread = getTabUnreadCount(upcoming);
+  const pastUnread = getTabUnreadCount(past);
 
   // Auto-switch to tab with unread messages on first load
   const [hasAutoSwitched, setHasAutoSwitched] = useState(false);
@@ -349,8 +350,11 @@ const MyBookings = () => {
     } else if (upcomingUnread > 0) {
       setActiveTab('upcoming');
       setHasAutoSwitched(true);
+    } else if (pastUnread > 0) {
+      setActiveTab('past');
+      setHasAutoSwitched(true);
     }
-  }, [unreadCounts, hasAutoSwitched, currentUnread, upcomingUnread]);
+  }, [unreadCounts, hasAutoSwitched, currentUnread, upcomingUnread, pastUnread]);
 
   const getActiveBookings = () => {
     switch(activeTab) {
@@ -524,10 +528,33 @@ const MyBookings = () => {
                     borderRadius: '0.5rem 0.5rem 0 0',
                     cursor: 'pointer',
                     fontWeight: '500',
-                    fontSize: '1rem'
+                    fontSize: '1rem',
+                    position: 'relative'
                   }}
                 >
                   Past ({past.length})
+                  {pastUnread > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '2px',
+                      right: '2px',
+                      background: '#ef4444',
+                      color: '#fff',
+                      fontSize: '0.65rem',
+                      fontWeight: '700',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '9999px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      lineHeight: '1',
+                      animation: 'pulse 2s infinite'
+                    }}>
+                      {pastUnread}
+                    </span>
+                  )}
                 </button>
               </div>
 

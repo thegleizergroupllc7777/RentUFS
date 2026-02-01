@@ -36,8 +36,7 @@ router.get('/unread/per-booking', auth, async (req, res) => {
 
     // Find all bookings where user is driver or host
     const userBookings = await Booking.find({
-      $or: [{ driver: userId }, { host: userId }],
-      status: { $in: ['confirmed', 'active'] }
+      $or: [{ driver: userId }, { host: userId }]
     }).select('_id');
 
     const bookingIds = userBookings.map(b => b._id);
