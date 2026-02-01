@@ -2,6 +2,7 @@ const express = require('express');
 const Booking = require('../models/Booking');
 const { Counter } = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
 
@@ -54,6 +55,15 @@ router.post('/migrate-reservation-ids', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { vehicleId, startDate, endDate, pickupTime, dropoffTime, rentalType, quantity, message } = req.body;
+
+    // Verify driver has a valid license on file
+    const driver = await User.findById(req.user._id);
+    if (!driver.driverLicense?.licenseNumber || !driver.driverLicense?.expirationDate) {
+      return res.status(400).json({ message: 'A valid driver\'s license is required to book a vehicle. Please add your license information in your profile.' });
+    }
+    if (new Date(driver.driverLicense.expirationDate) < new Date()) {
+      return res.status(400).json({ message: 'Your driver\'s license is expired. Please update your license information in your profile.' });
+    }
 
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
