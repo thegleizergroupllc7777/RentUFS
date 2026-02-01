@@ -9,7 +9,15 @@ const HostTaxSettings = () => {
   const [taxInfo, setTaxInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showTaxForm, setShowTaxForm] = useState(false);
-  const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', businessName: '' });
+  const [taxFormData, setTaxFormData] = useState({
+    accountType: 'individual',
+    taxId: '',
+    legalFirstName: '',
+    legalLastName: '',
+    legalAddress: { street: '', city: '', state: '', zipCode: '' },
+    businessName: '',
+    businessAddress: { street: '', city: '', state: '', zipCode: '' }
+  });
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxMessage, setTaxMessage] = useState('');
 
@@ -28,12 +36,16 @@ const HostTaxSettings = () => {
         setTaxFormData({
           accountType: response.data.accountType,
           taxId: '',
-          businessName: response.data.businessName || ''
+          legalFirstName: response.data.legalFirstName || '',
+          legalLastName: response.data.legalLastName || '',
+          legalAddress: response.data.legalAddress || { street: '', city: '', state: '', zipCode: '' },
+          businessName: response.data.businessName || '',
+          businessAddress: response.data.businessAddress || { street: '', city: '', state: '', zipCode: '' }
         });
       }
     } catch (error) {
       console.error('Error fetching tax info:', error);
-      setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', hasSubmitted: false });
+      setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', hasSubmitted: false, taxIdLocked: false });
     } finally {
       setLoading(false);
     }
@@ -63,7 +75,12 @@ const HostTaxSettings = () => {
     setTaxMessage('');
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/users/host-tax-info`, taxFormData, {
+      const payload = { ...taxFormData };
+      // Don't send taxId if it's locked (backend will reject it)
+      if (taxInfo?.taxIdLocked) {
+        delete payload.taxId;
+      }
+      const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTaxInfo(response.data);
@@ -95,7 +112,7 @@ const HostTaxSettings = () => {
         <div className="container">
           <div className="tax-settings-header">
             <Link to="/host/dashboard" className="tax-back-link">
-              ← Back to Dashboard
+              &larr; Back to Dashboard
             </Link>
             <h1 className="page-title">Tax Settings</h1>
             <p className="tax-subtitle">
@@ -107,7 +124,7 @@ const HostTaxSettings = () => {
           <div className="tax-status-card">
             <div className="tax-status-header">
               <div className={`tax-status-indicator ${taxInfo?.hasSubmitted ? 'submitted' : 'pending'}`}>
-                {taxInfo?.hasSubmitted ? '✓' : '!'}
+                {taxInfo?.hasSubmitted ? '\u2713' : '!'}
               </div>
               <div>
                 <h2 className="tax-status-title">
@@ -129,6 +146,20 @@ const HostTaxSettings = () => {
                     {taxInfo.accountType === 'business' ? 'Business / LLC' : 'Individual'}
                   </span>
                 </div>
+                {taxInfo.accountType === 'individual' && taxInfo.legalFirstName && (
+                  <div className="tax-detail-item">
+                    <span className="tax-detail-label">Legal Name</span>
+                    <span className="tax-detail-value">{taxInfo.legalFirstName} {taxInfo.legalLastName}</span>
+                  </div>
+                )}
+                {taxInfo.accountType === 'individual' && taxInfo.legalAddress?.street && (
+                  <div className="tax-detail-item">
+                    <span className="tax-detail-label">Address</span>
+                    <span className="tax-detail-value">
+                      {taxInfo.legalAddress.street}, {taxInfo.legalAddress.city}, {taxInfo.legalAddress.state} {taxInfo.legalAddress.zipCode}
+                    </span>
+                  </div>
+                )}
                 {taxInfo.accountType === 'business' && taxInfo.businessName && (
                   <div className="tax-detail-item">
                     <span className="tax-detail-label">Business Name</span>
@@ -139,7 +170,19 @@ const HostTaxSettings = () => {
                   <span className="tax-detail-label">
                     {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'}
                   </span>
-                  <span className="tax-detail-value">****{taxInfo.taxIdLast4}</span>
+                  <span className="tax-detail-value">
+                    ****{taxInfo.taxIdLast4}
+                    {taxInfo.taxIdLocked && (
+                      <span style={{
+                        marginLeft: '0.5rem',
+                        fontSize: '0.7rem',
+                        background: '#374151',
+                        color: '#9ca3af',
+                        padding: '0.15rem 0.4rem',
+                        borderRadius: '4px'
+                      }}>LOCKED</span>
+                    )}
+                  </span>
                 </div>
               </div>
             )}
@@ -169,7 +212,7 @@ const HostTaxSettings = () => {
                   <div className="tax-account-type-options">
                     <label className={`tax-account-option ${taxFormData.accountType === 'individual' ? 'selected' : ''}`}>
                       <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
-                        onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', businessName: '' })}
+                        onChange={() => setTaxFormData({ ...taxFormData, accountType: 'individual', taxId: '', businessName: '' })}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Individual</span>
@@ -178,7 +221,7 @@ const HostTaxSettings = () => {
                     </label>
                     <label className={`tax-account-option ${taxFormData.accountType === 'business' ? 'selected' : ''}`}>
                       <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
-                        onChange={() => setTaxFormData({ accountType: 'business', taxId: '', businessName: '' })}
+                        onChange={() => setTaxFormData({ ...taxFormData, accountType: 'business', taxId: '', businessName: '' })}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Business / LLC</span>
@@ -188,31 +231,133 @@ const HostTaxSettings = () => {
                   </div>
                 </div>
 
-                {taxFormData.accountType === 'business' && (
-                  <div className="tax-form-group">
-                    <label className="tax-form-label">Business Name</label>
-                    <input type="text" value={taxFormData.businessName}
-                      onChange={(e) => setTaxFormData({ ...taxFormData, businessName: e.target.value })}
-                      placeholder="e.g., United Fleet Services LLC"
-                      className="tax-form-input"
-                      required />
-                  </div>
+                {/* Individual: Legal name and address */}
+                {taxFormData.accountType === 'individual' && (
+                  <>
+                    <div className="tax-form-group">
+                      <label className="tax-form-label">Legal Name (as it appears on your tax documents)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <input type="text" value={taxFormData.legalFirstName}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, legalFirstName: e.target.value })}
+                          placeholder="First Name"
+                          className="tax-form-input"
+                          required />
+                        <input type="text" value={taxFormData.legalLastName}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, legalLastName: e.target.value })}
+                          placeholder="Last Name"
+                          className="tax-form-input"
+                          required />
+                      </div>
+                    </div>
+
+                    <div className="tax-form-group">
+                      <label className="tax-form-label">Legal Address (as it appears on your tax documents)</label>
+                      <input type="text" value={taxFormData.legalAddress.street}
+                        onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, street: e.target.value } })}
+                        placeholder="Street Address"
+                        className="tax-form-input"
+                        style={{ marginBottom: '0.5rem' }}
+                        required />
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+                        <input type="text" value={taxFormData.legalAddress.city}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, city: e.target.value } })}
+                          placeholder="City"
+                          className="tax-form-input"
+                          required />
+                        <input type="text" value={taxFormData.legalAddress.state}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, state: e.target.value } })}
+                          placeholder="State"
+                          className="tax-form-input"
+                          maxLength="2"
+                          style={{ textTransform: 'uppercase' }}
+                          required />
+                        <input type="text" value={taxFormData.legalAddress.zipCode}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, zipCode: e.target.value } })}
+                          placeholder="ZIP Code"
+                          className="tax-form-input"
+                          maxLength="5"
+                          required />
+                      </div>
+                    </div>
+                  </>
                 )}
 
-                <div className="tax-form-group">
-                  <label className="tax-form-label">
-                    {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
-                  </label>
-                  <input type="text" value={taxFormData.taxId}
-                    onChange={handleTaxIdInput}
-                    placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
-                    maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
-                    className="tax-form-input"
-                    required />
-                  <p className="tax-form-hint">
-                    Stored securely. Only the last 4 digits will be visible on your account.
-                  </p>
-                </div>
+                {/* Business fields */}
+                {taxFormData.accountType === 'business' && (
+                  <>
+                    <div className="tax-form-group">
+                      <label className="tax-form-label">Business Name</label>
+                      <input type="text" value={taxFormData.businessName}
+                        onChange={(e) => setTaxFormData({ ...taxFormData, businessName: e.target.value })}
+                        placeholder="e.g., United Fleet Services LLC"
+                        className="tax-form-input"
+                        required />
+                    </div>
+
+                    <div className="tax-form-group">
+                      <label className="tax-form-label">Business Address</label>
+                      <input type="text" value={taxFormData.businessAddress.street}
+                        onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, street: e.target.value } })}
+                        placeholder="Street Address"
+                        className="tax-form-input"
+                        style={{ marginBottom: '0.5rem' }}
+                        required />
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+                        <input type="text" value={taxFormData.businessAddress.city}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, city: e.target.value } })}
+                          placeholder="City"
+                          className="tax-form-input"
+                          required />
+                        <input type="text" value={taxFormData.businessAddress.state}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, state: e.target.value } })}
+                          placeholder="State"
+                          className="tax-form-input"
+                          maxLength="2"
+                          style={{ textTransform: 'uppercase' }}
+                          required />
+                        <input type="text" value={taxFormData.businessAddress.zipCode}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, zipCode: e.target.value } })}
+                          placeholder="ZIP Code"
+                          className="tax-form-input"
+                          maxLength="5"
+                          required />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* SSN/EIN field - locked after first submission */}
+                {taxInfo?.taxIdLocked ? (
+                  <div className="tax-form-group">
+                    <label className="tax-form-label">
+                      {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
+                    </label>
+                    <input type="text"
+                      value={`****${taxInfo.taxIdLast4}`}
+                      disabled
+                      className="tax-form-input"
+                      style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }}
+                    />
+                    <p className="tax-form-hint" style={{ color: '#f59e0b' }}>
+                      Your tax ID has been locked for security. Contact support if you need to change it.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="tax-form-group">
+                    <label className="tax-form-label">
+                      {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
+                    </label>
+                    <input type="text" value={taxFormData.taxId}
+                      onChange={handleTaxIdInput}
+                      placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
+                      maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
+                      className="tax-form-input"
+                      required />
+                    <p className="tax-form-hint">
+                      Stored securely. Only the last 4 digits will be visible. This cannot be changed after submission.
+                    </p>
+                  </div>
+                )}
 
                 {taxMessage && (
                   <p className={`tax-form-message ${taxMessage.includes('success') ? 'success' : 'error'}`}>
@@ -234,7 +379,7 @@ const HostTaxSettings = () => {
             <ul className="tax-info-list">
               <li>The IRS requires platforms to report earnings via Form 1099-K for hosts earning over $600/year.</li>
               <li>Your tax ID is encrypted and stored securely — only the last 4 digits are visible.</li>
-              <li>You can update your information at any time from this page.</li>
+              <li>Your SSN/EIN is locked after submission for security. Name and address can still be updated.</li>
             </ul>
           </div>
         </div>

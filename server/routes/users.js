@@ -201,17 +201,25 @@ router.get('/host-tax-info', auth, async (req, res) => {
     const acctType = hostInfo.accountType || 'individual';
     const hasTaxId = !!(hostInfo.taxIdLast4);
     const bizAddr = hostInfo.businessAddress || {};
+    const legalAddr = hostInfo.legalAddress || {};
     const hasBusinessInfo = !!(hostInfo.businessName) &&
       !!(bizAddr.street) && !!(bizAddr.city) && !!(bizAddr.state) && !!(bizAddr.zipCode);
+    const hasLegalName = !!(hostInfo.legalFirstName) && !!(hostInfo.legalLastName);
+    const hasLegalAddress = !!(legalAddr.street) && !!(legalAddr.city) && !!(legalAddr.state) && !!(legalAddr.zipCode);
 
-    // For individual: just need tax ID; for business: also need business name + full address
+    // For individual: need tax ID + legal name + legal address
+    // For business: need tax ID + business name + business address
     const hasSubmitted = acctType === 'business'
       ? (hasTaxId && hasBusinessInfo)
-      : hasTaxId;
+      : (hasTaxId && hasLegalName && hasLegalAddress);
 
     res.json({
       accountType: acctType,
+      legalFirstName: hostInfo.legalFirstName || '',
+      legalLastName: hostInfo.legalLastName || '',
+      legalAddress: legalAddr,
       taxIdLast4: hostInfo.taxIdLast4 || '',
+      taxIdLocked: hostInfo.taxIdLocked || false,
       businessName: hostInfo.businessName || '',
       dba: hostInfo.dba || '',
       businessAddress: bizAddr,
@@ -225,7 +233,7 @@ router.get('/host-tax-info', auth, async (req, res) => {
 // Update host tax info
 router.put('/host-tax-info', auth, async (req, res) => {
   try {
-    const { accountType, taxId, businessName, dba, businessAddress } = req.body;
+    const { accountType, taxId, legalFirstName, legalLastName, legalAddress, businessName, dba, businessAddress } = req.body;
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -240,37 +248,76 @@ router.put('/host-tax-info', auth, async (req, res) => {
       return res.status(400).json({ message: 'Please select Individual or Business account type' });
     }
 
-    if (!taxId || !taxId.trim()) {
-      return res.status(400).json({
-        message: accountType === 'individual'
-          ? 'Social Security Number is required'
-          : 'Business Tax ID (EIN) is required'
+    const existingHostInfo = user.hostInfo || {};
+
+    // If SSN/EIN is locked, reject attempts to change it
+    if (existingHostInfo.taxIdLocked && taxId && taxId.trim()) {
+      return res.status(403).json({
+        message: 'Your tax ID (SSN/EIN) has been locked after submission and cannot be changed. Contact support if you need to update it.'
       });
     }
 
-    const taxIdDigits = taxId.replace(/\D/g, '');
-    if (taxIdDigits.length !== 9) {
-      return res.status(400).json({
-        message: accountType === 'individual'
-          ? 'Please enter a valid 9-digit Social Security Number'
-          : 'Please enter a valid 9-digit EIN (XX-XXXXXXX)'
-      });
+    // Tax ID is required on first submission
+    if (!existingHostInfo.taxIdLocked) {
+      if (!taxId || !taxId.trim()) {
+        return res.status(400).json({
+          message: accountType === 'individual'
+            ? 'Social Security Number is required'
+            : 'Business Tax ID (EIN) is required'
+        });
+      }
+
+      const taxIdDigits = taxId.replace(/\D/g, '');
+      if (taxIdDigits.length !== 9) {
+        return res.status(400).json({
+          message: accountType === 'individual'
+            ? 'Please enter a valid 9-digit Social Security Number'
+            : 'Please enter a valid 9-digit EIN (XX-XXXXXXX)'
+        });
+      }
     }
 
-    if (accountType === 'business' && (!businessName || !businessName.trim())) {
-      return res.status(400).json({ message: 'Business name is required for business accounts' });
+    // Validate individual fields
+    if (accountType === 'individual') {
+      if (!legalFirstName || !legalFirstName.trim()) {
+        return res.status(400).json({ message: 'Legal first name is required' });
+      }
+      if (!legalLastName || !legalLastName.trim()) {
+        return res.status(400).json({ message: 'Legal last name is required' });
+      }
+      if (!legalAddress || !legalAddress.street?.trim() || !legalAddress.city?.trim() || !legalAddress.state?.trim() || !legalAddress.zipCode?.trim()) {
+        return res.status(400).json({ message: 'Complete legal address is required' });
+      }
     }
 
+    // Validate business fields
     if (accountType === 'business') {
+      if (!businessName || !businessName.trim()) {
+        return res.status(400).json({ message: 'Business name is required for business accounts' });
+      }
       if (!businessAddress || !businessAddress.street?.trim() || !businessAddress.city?.trim() || !businessAddress.state?.trim() || !businessAddress.zipCode?.trim()) {
         return res.status(400).json({ message: 'Complete business address is required for business accounts' });
       }
     }
 
+    // Build updated hostInfo, preserving locked taxId if already set
+    const taxIdDigits = existingHostInfo.taxIdLocked
+      ? existingHostInfo.taxId
+      : taxId.replace(/\D/g, '');
+
     user.hostInfo = {
       accountType,
+      legalFirstName: accountType === 'individual' ? legalFirstName.trim() : undefined,
+      legalLastName: accountType === 'individual' ? legalLastName.trim() : undefined,
+      legalAddress: accountType === 'individual' && legalAddress ? {
+        street: legalAddress.street?.trim() || '',
+        city: legalAddress.city?.trim() || '',
+        state: legalAddress.state?.trim() || '',
+        zipCode: legalAddress.zipCode?.trim() || ''
+      } : undefined,
       taxId: taxIdDigits,
       taxIdLast4: taxIdDigits.slice(-4),
+      taxIdLocked: true,
       businessName: accountType === 'business' ? businessName.trim() : undefined,
       dba: accountType === 'business' && dba ? dba.trim() : undefined,
       businessAddress: accountType === 'business' && businessAddress ? {
@@ -289,7 +336,11 @@ router.put('/host-tax-info', auth, async (req, res) => {
     res.json({
       message: 'Tax information saved successfully',
       accountType: user.hostInfo.accountType,
+      legalFirstName: user.hostInfo.legalFirstName || '',
+      legalLastName: user.hostInfo.legalLastName || '',
+      legalAddress: user.hostInfo.legalAddress || {},
       taxIdLast4: user.hostInfo.taxIdLast4,
+      taxIdLocked: true,
       businessName: user.hostInfo.businessName || '',
       dba: user.hostInfo.dba || '',
       businessAddress: user.hostInfo.businessAddress || {},
