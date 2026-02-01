@@ -75,6 +75,20 @@ const userSchema = new mongoose.Schema({
       enum: ['individual', 'business'],
       default: 'individual'
     },
+    legalFirstName: {
+      type: String,
+      trim: true
+    },
+    legalLastName: {
+      type: String,
+      trim: true
+    },
+    legalAddress: {
+      street: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      zipCode: { type: String, trim: true }
+    },
     taxId: {
       type: String,
       trim: true
@@ -82,6 +96,10 @@ const userSchema = new mongoose.Schema({
     taxIdLast4: {
       type: String,
       trim: true
+    },
+    taxIdLocked: {
+      type: Boolean,
+      default: false
     },
     businessName: {
       type: String,
