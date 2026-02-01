@@ -357,16 +357,28 @@ const MyBookings = () => {
   }, [unreadCounts, hasAutoSwitched, currentUnread, upcomingUnread, pastUnread]);
 
   const getActiveBookings = () => {
+    let bookings;
     switch(activeTab) {
       case 'current':
-        return current;
+        bookings = current;
+        break;
       case 'upcoming':
-        return upcoming;
+        bookings = upcoming;
+        break;
       case 'past':
-        return past;
+        bookings = past;
+        break;
       default:
-        return [];
+        bookings = [];
     }
+    // Sort bookings with unread messages to the top
+    return [...bookings].sort((a, b) => {
+      const aUnread = unreadCounts[a._id] || 0;
+      const bUnread = unreadCounts[b._id] || 0;
+      if (aUnread > 0 && bUnread === 0) return -1;
+      if (aUnread === 0 && bUnread > 0) return 1;
+      return 0;
+    });
   };
 
   const activeBookings = getActiveBookings();
