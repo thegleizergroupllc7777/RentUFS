@@ -19,13 +19,20 @@ router.get('/unread/count', auth, async (req, res) => {
 
     const bookingIds = userBookings.map(b => b._id);
 
+    if (bookingIds.length === 0) {
+      return res.json({ count: 0 });
+    }
+
     const count = await Message.countDocuments({
       booking: { $in: bookingIds },
       sender: { $ne: userId },
       read: false
     });
+
+    console.log(`📬 Unread count for user ${userId}: ${count} (across ${bookingIds.length} bookings)`);
     res.json({ count });
   } catch (error) {
+    console.error('❌ Error fetching unread count:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -120,6 +127,9 @@ router.post('/:bookingId/read', auth, async (req, res) => {
       { read: true }
     );
 
+    if (result.modifiedCount > 0) {
+      console.log(`✅ Marked ${result.modifiedCount} messages as read for booking ${req.params.bookingId} by user ${req.user._id}`);
+    }
     res.json({ markedRead: result.modifiedCount });
   } catch (error) {
     console.error('❌ Error marking messages as read:', error);

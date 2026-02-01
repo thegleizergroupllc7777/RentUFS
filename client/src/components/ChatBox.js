@@ -47,16 +47,18 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
     }
   }, [bookingId]);
 
-  // Initial load: fetch messages AND mark as read
-  // Subsequent polls: fetch only; mark-as-read runs on a slower interval
+  // Initial load: fetch messages, then mark as read after a short delay
+  // This delay lets the Navbar badge show briefly before clearing
   useEffect(() => {
     fetchMessages();
-    markAsRead();
+    // Delay initial mark-as-read by 3 seconds so Navbar can display the badge first
+    const initialMarkRead = setTimeout(() => markAsRead(), 3000);
     // Poll for new messages every 5 seconds
     pollRef.current = setInterval(fetchMessages, 5000);
-    // Periodically mark messages as read while chat is open (every 20s)
-    markReadRef.current = setInterval(markAsRead, 20000);
+    // Periodically mark messages as read while chat is open (every 15s)
+    markReadRef.current = setInterval(markAsRead, 15000);
     return () => {
+      clearTimeout(initialMarkRead);
       if (pollRef.current) clearInterval(pollRef.current);
       if (markReadRef.current) clearInterval(markReadRef.current);
     };
