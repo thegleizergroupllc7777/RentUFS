@@ -26,6 +26,7 @@ const matchBrand = (decodedMake) => {
 const AddVehicle = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    nickname: '',
     make: '',
     model: '',
     year: new Date().getFullYear(),
@@ -177,6 +178,7 @@ const AddVehicle = () => {
     try {
       const vehicleData = {
         ...formData,
+        nickname: formData.nickname.trim() || undefined,
         features: formData.features,
         images: formData.images.length > 0 ? formData.images : undefined,
         registrationImage: formData.registrationImage,
@@ -265,6 +267,22 @@ const AddVehicle = () => {
                       VIN decoded successfully: {formData.year} {formData.make} {formData.model}. Please verify details below.
                     </div>
                   )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Vehicle Nickname</label>
+                  <input
+                    type="text"
+                    name="nickname"
+                    className="form-input"
+                    value={formData.nickname}
+                    onChange={handleChange}
+                    placeholder="e.g., Big Red, The Beast, My Daily"
+                    maxLength="50"
+                  />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Optional - Give your vehicle a memorable name. This cannot be changed after listing.
+                  </p>
                 </div>
 
                 <div className="form-row">

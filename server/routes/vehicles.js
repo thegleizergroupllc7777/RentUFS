@@ -401,6 +401,9 @@ router.put('/:id', auth, async (req, res) => {
   try {
     const updateData = cleanVehicleData({ ...req.body });
 
+    // Nickname cannot be changed after creation
+    delete updateData.nickname;
+
     const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id });
 
     if (!vehicle) {

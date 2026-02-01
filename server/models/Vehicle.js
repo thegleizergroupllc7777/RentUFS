@@ -6,6 +6,11 @@ const vehicleSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  nickname: {
+    type: String,
+    trim: true,
+    maxlength: 50
+  },
   make: {
     type: String,
     required: true,

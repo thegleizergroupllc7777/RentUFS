@@ -249,6 +249,22 @@ const EditVehicle = () => {
               <div className="form-section">
                 <h2 className="form-section-title">Vehicle Details</h2>
 
+                {formData.nickname && (
+                  <div className="form-group">
+                    <label className="form-label">Vehicle Nickname</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.nickname}
+                      disabled
+                      style={{ backgroundColor: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed' }}
+                    />
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Nickname cannot be changed after listing creation.
+                    </p>
+                  </div>
+                )}
+
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Make *</label>
