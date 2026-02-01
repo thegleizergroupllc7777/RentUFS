@@ -209,6 +209,18 @@ const VehicleDetail = () => {
       return;
     }
 
+    // Check if driver has a valid license on file
+    if (!user.driverLicense?.licenseNumber || !user.driverLicense?.expirationDate) {
+      setError('LICENSE_REQUIRED');
+      return;
+    }
+
+    // Check if license is expired
+    if (new Date(user.driverLicense.expirationDate) < new Date()) {
+      setError('LICENSE_EXPIRED');
+      return;
+    }
+
     setError('');
     setBookingLoading(true);
 
@@ -504,7 +516,44 @@ const VehicleDetail = () => {
                   </div>
                 </div>
 
-                {error && <div className="error-message">{error}</div>}
+                {error && (error === 'LICENSE_REQUIRED' || error === 'LICENSE_EXPIRED') ? (
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid #ef4444',
+                    borderRadius: '0.5rem',
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <p style={{ color: '#ef4444', fontWeight: '600', margin: '0 0 0.5rem 0' }}>
+                      {error === 'LICENSE_REQUIRED'
+                        ? 'A valid driver\'s license is required to book a vehicle.'
+                        : 'Your driver\'s license has expired.'}
+                    </p>
+                    <p style={{ color: '#9ca3af', margin: '0 0 0.75rem 0', fontSize: '0.875rem' }}>
+                      {error === 'LICENSE_REQUIRED'
+                        ? 'Please add your driver\'s license details before making a reservation.'
+                        : 'Please update your license with a valid expiration date.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/driver/profile?tab=license')}
+                      style={{
+                        background: '#10b981',
+                        color: '#000',
+                        border: 'none',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.375rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      Go to Driver's License
+                    </button>
+                  </div>
+                ) : error ? (
+                  <div className="error-message">{error}</div>
+                ) : null}
 
                 <form onSubmit={handleBooking}>
                   <div className="form-group">
