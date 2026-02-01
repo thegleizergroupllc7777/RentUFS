@@ -472,68 +472,139 @@ const HostBookings = () => {
                 /* Compact list view for past bookings */
                 <div className="compact-bookings-list">
                   {activeBookings.map(booking => (
-                    <Link
-                      to={`/vehicle/${booking.vehicle?._id}`}
-                      key={booking._id}
-                      className="compact-booking-row"
-                    >
-                      {/* Vehicle thumbnail + driver avatar */}
-                      <div className="compact-booking-images">
-                        <div className="compact-booking-thumb">
-                          {booking.vehicle?.images?.[0] ? (
-                            <img
-                              src={booking.vehicle.images[0]}
-                              alt={`${booking.vehicle?.make} ${booking.vehicle?.model}`}
-                            />
-                          ) : (
-                            <span>No Img</span>
-                          )}
+                    <div key={booking._id} style={{ position: 'relative' }}>
+                      {/* Unread message indicator for compact row */}
+                      {unreadCounts[booking._id] > 0 && (
+                        <div style={{
+                          background: 'linear-gradient(90deg, #10b981, #059669)',
+                          color: 'white',
+                          padding: '0.4rem 1rem',
+                          borderRadius: '0.5rem 0.5rem 0 0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          fontWeight: '600',
+                          fontSize: '0.8rem'
+                        }}>
+                          <span>
+                            {unreadCounts[booking._id]} new message{unreadCounts[booking._id] > 1 ? 's' : ''} from driver
+                            {' '}&middot;{' '}
+                            <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                              {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                            </span>
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const isOpening = openChatBookingId !== booking._id;
+                                setOpenChatBookingId(isOpening ? booking._id : null);
+                                if (isOpening) {
+                                  setUnreadCounts(prev => ({ ...prev, [booking._id]: 0 }));
+                                }
+                              }}
+                              style={{
+                                background: 'rgba(255,255,255,0.3)',
+                                border: 'none',
+                                color: 'white',
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '9999px',
+                                fontSize: '0.7rem',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {openChatBookingId === booking._id ? 'Close Chat' : 'View Messages'}
+                            </button>
+                            <span style={{
+                              background: 'rgba(255,255,255,0.3)',
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.7rem'
+                            }}>NEW</span>
+                          </div>
                         </div>
-                        <div className="compact-booking-avatar">
-                          {booking.driver?.profileImage ? (
-                            <img
-                              src={booking.driver.profileImage}
-                              alt={`${booking.driver?.firstName}`}
-                            />
-                          ) : (
-                            <span>{booking.driver?.firstName?.charAt(0) || '?'}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Reservation ID */}
-                      <div className="compact-booking-id">
-                        {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
-                      </div>
-
-                      {/* Vehicle name */}
-                      <div className="compact-booking-vehicle">
-                        {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
-                      </div>
-
-                      {/* Renter */}
-                      <div className="compact-booking-renter">
-                        {booking.driver?.firstName} {booking.driver?.lastName}
-                      </div>
-
-                      {/* Dates */}
-                      <div className="compact-booking-dates">
-                        {toLocalDate(booking.startDate).toLocaleDateString()} - {toLocalDate(booking.endDate).toLocaleDateString()}
-                      </div>
-
-                      {/* Duration & Price */}
-                      <div className="compact-booking-price">
-                        {booking.totalDays}d &middot; ${booking.totalPrice}
-                      </div>
-
-                      {/* Status badge */}
-                      <div
-                        className="compact-booking-status"
-                        style={{ backgroundColor: getStatusColor(booking.status) }}
+                      )}
+                      <Link
+                        to={`/vehicle/${booking.vehicle?._id}`}
+                        className="compact-booking-row"
+                        style={unreadCounts[booking._id] > 0 ? {
+                          border: '2px solid #10b981',
+                          borderTop: 'none',
+                          boxShadow: '0 0 12px rgba(16, 185, 129, 0.3)',
+                          borderRadius: '0 0 0.5rem 0.5rem'
+                        } : {}}
                       >
-                        {booking.status}
-                      </div>
-                    </Link>
+                        {/* Vehicle thumbnail + driver avatar */}
+                        <div className="compact-booking-images">
+                          <div className="compact-booking-thumb">
+                            {booking.vehicle?.images?.[0] ? (
+                              <img
+                                src={booking.vehicle.images[0]}
+                                alt={`${booking.vehicle?.make} ${booking.vehicle?.model}`}
+                              />
+                            ) : (
+                              <span>No Img</span>
+                            )}
+                          </div>
+                          <div className="compact-booking-avatar">
+                            {booking.driver?.profileImage ? (
+                              <img
+                                src={booking.driver.profileImage}
+                                alt={`${booking.driver?.firstName}`}
+                              />
+                            ) : (
+                              <span>{booking.driver?.firstName?.charAt(0) || '?'}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Reservation ID */}
+                        <div className="compact-booking-id">
+                          {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                        </div>
+
+                        {/* Vehicle name */}
+                        <div className="compact-booking-vehicle">
+                          {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                        </div>
+
+                        {/* Renter */}
+                        <div className="compact-booking-renter">
+                          {booking.driver?.firstName} {booking.driver?.lastName}
+                        </div>
+
+                        {/* Dates */}
+                        <div className="compact-booking-dates">
+                          {toLocalDate(booking.startDate).toLocaleDateString()} - {toLocalDate(booking.endDate).toLocaleDateString()}
+                        </div>
+
+                        {/* Duration & Price */}
+                        <div className="compact-booking-price">
+                          {booking.totalDays}d &middot; ${booking.totalPrice}
+                        </div>
+
+                        {/* Status badge */}
+                        <div
+                          className="compact-booking-status"
+                          style={{ backgroundColor: getStatusColor(booking.status) }}
+                        >
+                          {booking.status}
+                        </div>
+                      </Link>
+                      {/* Chat Box for past bookings */}
+                      {openChatBookingId === booking._id && user && (
+                        <div style={{ marginTop: '-1px' }}>
+                          <ChatBox
+                            bookingId={booking._id}
+                            currentUserId={user._id || user.id}
+                            otherUserName={`${booking.driver?.firstName || ''} ${booking.driver?.lastName || ''}`.trim()}
+                            onClose={() => setOpenChatBookingId(null)}
+                          />
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -567,6 +638,10 @@ const HostBookings = () => {
                     }}>
                       <span>
                         {unreadCounts[booking._id]} new message{unreadCounts[booking._id] > 1 ? 's' : ''} from driver
+                        {' '}&middot;{' '}
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                          {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                        </span>
                       </span>
                       <span style={{
                         background: 'rgba(255,255,255,0.3)',
@@ -786,7 +861,7 @@ const HostBookings = () => {
                       </>
                     )}
 
-                    {['confirmed', 'active'].includes(booking.status) && (
+                    {['confirmed', 'active', 'completed'].includes(booking.status) && (
                       <button
                         onClick={() => {
                           const isOpening = openChatBookingId !== booking._id;

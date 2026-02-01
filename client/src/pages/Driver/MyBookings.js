@@ -593,6 +593,10 @@ const MyBookings = () => {
                         }}>
                           <span>
                             {unreadCounts[booking._id]} new message{unreadCounts[booking._id] > 1 ? 's' : ''} from host
+                            {' '}&middot;{' '}
+                            <span style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                              {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
+                            </span>
                           </span>
                           <span style={{
                             background: 'rgba(255,255,255,0.3)',
@@ -836,7 +840,7 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {['confirmed', 'active'].includes(booking.status) && booking.paymentStatus === 'paid' && (
+                        {(['confirmed', 'active'].includes(booking.status) && booking.paymentStatus === 'paid' || booking.status === 'completed') && (
                           <button
                             onClick={() => {
                               const isOpening = openChatBookingId !== booking._id;
