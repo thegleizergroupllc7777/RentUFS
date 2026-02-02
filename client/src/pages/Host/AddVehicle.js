@@ -178,7 +178,7 @@ const AddVehicle = () => {
     try {
       const vehicleData = {
         ...formData,
-        nickname: formData.nickname.trim() || undefined,
+        nickname: formData.nickname.trim(),
         features: formData.features,
         images: formData.images.length > 0 ? formData.images : undefined,
         registrationImage: formData.registrationImage,
@@ -270,7 +270,7 @@ const AddVehicle = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Vehicle Nickname</label>
+                  <label className="form-label">Vehicle Nickname *</label>
                   <input
                     type="text"
                     name="nickname"
@@ -279,9 +279,10 @@ const AddVehicle = () => {
                     onChange={handleChange}
                     placeholder="e.g., Big Red, The Beast, My Daily"
                     maxLength="50"
+                    required
                   />
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    Optional - Give your vehicle a memorable name. This cannot be changed after listing.
+                    Give your vehicle a memorable name. This cannot be changed after listing.
                   </p>
                 </div>
 

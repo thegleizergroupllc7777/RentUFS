@@ -127,7 +127,7 @@ const PaymentSuccess = () => {
               <div className="detail-item">
                 <span className="label">Vehicle:</span>
                 <span className="value">
-                  {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                  {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
                 </span>
               </div>
               <div className="detail-item">

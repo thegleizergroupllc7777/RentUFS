@@ -185,6 +185,12 @@
   color: #9ca3af;
 }
 
+.tax-account-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .tax-form-input {
   width: 100%;
   padding: 0.7rem 0.85rem;

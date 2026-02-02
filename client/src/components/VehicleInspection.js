@@ -270,7 +270,7 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
         </div>
 
         <div className="inspection-vehicle-info">
-          <strong>{booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}</strong>
+          <strong>{booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}</strong>
         </div>
 
         {/* Progress indicator */}

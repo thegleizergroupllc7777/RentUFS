@@ -211,19 +211,26 @@ const HostTaxSettings = () => {
               <form onSubmit={handleSaveTaxInfo}>
                 <div className="tax-form-group">
                   <label className="tax-form-label">Account Type</label>
+                  {taxInfo?.taxIdLocked && (
+                    <p className="tax-form-hint" style={{ color: '#f59e0b', marginBottom: '0.5rem' }}>
+                      Account type is locked because your tax ID has been submitted. Contact support to change it.
+                    </p>
+                  )}
                   <div className="tax-account-type-options">
-                    <label className={`tax-account-option ${taxFormData.accountType === 'individual' ? 'selected' : ''}`}>
+                    <label className={`tax-account-option ${taxFormData.accountType === 'individual' ? 'selected' : ''} ${taxInfo?.taxIdLocked ? 'disabled' : ''}`}>
                       <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
                         onChange={() => setTaxFormData({ ...taxFormData, accountType: 'individual', taxId: '', businessName: '' })}
+                        disabled={!!taxInfo?.taxIdLocked}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Individual</span>
                         <span className="tax-account-option-desc">Personal SSN</span>
                       </div>
                     </label>
-                    <label className={`tax-account-option ${taxFormData.accountType === 'business' ? 'selected' : ''}`}>
+                    <label className={`tax-account-option ${taxFormData.accountType === 'business' ? 'selected' : ''} ${taxInfo?.taxIdLocked ? 'disabled' : ''}`}>
                       <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
                         onChange={() => setTaxFormData({ ...taxFormData, accountType: 'business', taxId: '', businessName: '' })}
+                        disabled={!!taxInfo?.taxIdLocked}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Business / LLC</span>

@@ -176,7 +176,7 @@ const MapView = ({
                       />
                     )}
                     <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600' }}>
-                      {vehicle.year} {vehicle.make} {vehicle.model}
+                      {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                     </h3>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <span style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>

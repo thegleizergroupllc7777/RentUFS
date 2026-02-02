@@ -8,6 +8,7 @@ const vehicleSchema = new mongoose.Schema({
   },
   nickname: {
     type: String,
+    required: true,
     trim: true,
     maxlength: 50
   },

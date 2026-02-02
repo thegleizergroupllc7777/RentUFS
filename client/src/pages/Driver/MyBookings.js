@@ -765,7 +765,7 @@ const MyBookings = () => {
                                 {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
                               </div>
                               <h3 className="booking-vehicle">
-                                {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                                {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
                               </h3>
                               <p className="text-gray">
                                 Host: {booking.host?.firstName} {booking.host?.lastName}
@@ -1070,7 +1070,7 @@ const MyBookings = () => {
 
             <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem' }}>
               <p style={{ fontWeight: '600', marginBottom: '0.5rem', color: '#1f2937' }}>
-                {extendModal.booking.vehicle?.year} {extendModal.booking.vehicle?.make} {extendModal.booking.vehicle?.model}
+                {extendModal.booking.vehicle?.nickname || `${extendModal.booking.vehicle?.year} ${extendModal.booking.vehicle?.make} ${extendModal.booking.vehicle?.model}`}
               </p>
               <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
                 Current return: {toLocalDate(extendModal.booking.endDate).toLocaleDateString()}
@@ -1234,7 +1234,7 @@ const MyBookings = () => {
               </button>
             </div>
             <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
-              {registrationModal.booking.vehicle?.year} {registrationModal.booking.vehicle?.make} {registrationModal.booking.vehicle?.model}
+              {registrationModal.booking.vehicle?.nickname || `${registrationModal.booking.vehicle?.year} ${registrationModal.booking.vehicle?.make} ${registrationModal.booking.vehicle?.model}`}
             </p>
             <div style={{
               borderRadius: '0.5rem',
