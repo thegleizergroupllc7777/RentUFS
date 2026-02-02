@@ -305,30 +305,42 @@ router.put('/host-tax-info', auth, async (req, res) => {
       ? existingHostInfo.taxId
       : taxId.replace(/\D/g, '');
 
-    user.hostInfo = {
+    const updatedHostInfo = {
       accountType,
-      legalFirstName: accountType === 'individual' ? legalFirstName.trim() : undefined,
-      legalLastName: accountType === 'individual' ? legalLastName.trim() : undefined,
-      legalAddress: accountType === 'individual' && legalAddress ? {
+      taxId: taxIdDigits,
+      taxIdLast4: taxIdDigits.slice(-4),
+      taxIdLocked: true
+    };
+
+    if (accountType === 'individual') {
+      updatedHostInfo.legalFirstName = legalFirstName.trim();
+      updatedHostInfo.legalLastName = legalLastName.trim();
+      updatedHostInfo.legalAddress = {
         street: legalAddress.street?.trim() || '',
         city: legalAddress.city?.trim() || '',
         state: legalAddress.state?.trim() || '',
         zipCode: legalAddress.zipCode?.trim() || ''
-      } : undefined,
-      taxId: taxIdDigits,
-      taxIdLast4: taxIdDigits.slice(-4),
-      taxIdLocked: true,
-      businessName: accountType === 'business' ? businessName.trim() : undefined,
-      dba: accountType === 'business' && dba ? dba.trim() : undefined,
-      businessAddress: accountType === 'business' && businessAddress ? {
+      };
+      // Clear business fields
+      updatedHostInfo.businessName = undefined;
+      updatedHostInfo.dba = undefined;
+      updatedHostInfo.businessAddress = undefined;
+    } else {
+      updatedHostInfo.businessName = businessName.trim();
+      updatedHostInfo.dba = dba ? dba.trim() : undefined;
+      updatedHostInfo.businessAddress = {
         street: businessAddress.street?.trim() || '',
         city: businessAddress.city?.trim() || '',
         state: businessAddress.state?.trim() || '',
         zipCode: businessAddress.zipCode?.trim() || ''
-      } : undefined
-    };
+      };
+      // Clear individual fields
+      updatedHostInfo.legalFirstName = undefined;
+      updatedHostInfo.legalLastName = undefined;
+      updatedHostInfo.legalAddress = undefined;
+    }
 
-    user.markModified('hostInfo');
+    user.set('hostInfo', updatedHostInfo);
     await user.save();
 
     console.log('✅ Host tax info updated for:', user.email, '- Type:', accountType);
