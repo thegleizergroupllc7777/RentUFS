@@ -449,13 +449,20 @@ const DriverProfile = () => {
     setTaxMessage('');
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/users/host-tax-info`, taxFormData, {
+      const payload = { ...taxFormData };
+      // Don't send taxId if it's locked (backend will reject it)
+      if (taxInfo?.taxIdLocked) {
+        delete payload.taxId;
+      }
+      const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTaxInfo(response.data);
       setTaxMessage('Tax information saved successfully');
       setShowTaxForm(false);
       setTaxFormData({ ...taxFormData, taxId: '' });
+      // Re-fetch to ensure consistency with backend
+      await fetchTaxInfo();
     } catch (error) {
       setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
     } finally {

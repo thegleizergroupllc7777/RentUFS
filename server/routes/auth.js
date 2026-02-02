@@ -57,6 +57,15 @@ router.post('/register', async (req, res) => {
         accountType: hostInfo.accountType,
         taxId: taxIdDigits,
         taxIdLast4: taxIdDigits.slice(-4),
+        taxIdLocked: true,
+        legalFirstName: hostInfo.accountType === 'individual' && hostInfo.legalFirstName ? hostInfo.legalFirstName.trim() : undefined,
+        legalLastName: hostInfo.accountType === 'individual' && hostInfo.legalLastName ? hostInfo.legalLastName.trim() : undefined,
+        legalAddress: hostInfo.accountType === 'individual' && hostInfo.legalAddress ? {
+          street: hostInfo.legalAddress.street?.trim() || '',
+          city: hostInfo.legalAddress.city?.trim() || '',
+          state: hostInfo.legalAddress.state?.trim() || '',
+          zipCode: hostInfo.legalAddress.zipCode?.trim() || ''
+        } : undefined,
         businessName: hostInfo.accountType === 'business' && hostInfo.businessName ? hostInfo.businessName.trim() : undefined,
         dba: hostInfo.accountType === 'business' && hostInfo.dba ? hostInfo.dba.trim() : undefined,
         businessAddress: hostInfo.accountType === 'business' && hostInfo.businessAddress ? {

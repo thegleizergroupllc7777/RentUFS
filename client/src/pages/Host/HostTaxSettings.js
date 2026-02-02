@@ -87,6 +87,8 @@ const HostTaxSettings = () => {
       setTaxMessage('Tax information saved successfully');
       setShowTaxForm(false);
       setTaxFormData({ ...taxFormData, taxId: '' });
+      // Re-fetch to ensure consistency with backend
+      await fetchTaxInfo();
     } catch (error) {
       setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
     } finally {
