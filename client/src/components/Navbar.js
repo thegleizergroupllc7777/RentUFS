@@ -33,22 +33,31 @@ const Navbar = () => {
 
   // Poll for unread messages
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    let active = true;
     const fetchUnread = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token || !active) return;
         const response = await axios.get(`${API_URL}/api/messages/unread/count`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setUnreadCount(response.data.count || 0);
+        if (active && response.data && typeof response.data.count === 'number') {
+          setUnreadCount(response.data.count);
+        }
       } catch (error) {
-        // Silently fail - don't disrupt nav
+        console.log('📬 Navbar unread poll error:', error?.response?.status || error.message);
       }
     };
     fetchUnread();
-    const interval = setInterval(fetchUnread, 8000); // Poll every 8 seconds
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchUnread, 5000); // Poll every 5 seconds
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, [user]);
 
   const handleLogout = () => {
@@ -191,22 +200,23 @@ const Navbar = () => {
                 {unreadCount > 0 && (
                   <span style={{
                     position: 'absolute',
-                    top: '-6px',
-                    right: '-8px',
+                    top: '-8px',
+                    right: '-10px',
                     background: '#ef4444',
                     color: '#fff',
-                    fontSize: '0.6rem',
+                    fontSize: '0.65rem',
                     fontWeight: '700',
-                    minWidth: '16px',
-                    height: '16px',
+                    minWidth: '18px',
+                    height: '18px',
                     borderRadius: '9999px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '0 4px',
+                    padding: '0 5px',
                     border: '2px solid #000',
                     lineHeight: '1',
-                    animation: 'pulse 2s infinite'
+                    boxShadow: '0 0 6px rgba(239, 68, 68, 0.6)',
+                    zIndex: 10
                   }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
