@@ -10,11 +10,13 @@ const HostDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [taxInfo, setTaxInfo] = useState(null);
+  const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
   const location = useLocation();
 
   useEffect(() => {
     fetchVehicles();
     fetchTaxInfo();
+    fetchRentedVehicles();
   }, [location.key]);
 
   const fetchVehicles = async () => {
@@ -28,6 +30,24 @@ const HostDashboard = () => {
       console.error('Error fetching vehicles:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRentedVehicles = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const activeBookings = response.data.filter(b =>
+        ['confirmed', 'active'].includes(b.status)
+      );
+      const ids = new Set(activeBookings.map(b =>
+        typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle
+      ));
+      setRentedVehicleIds(ids);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
     }
   };
 
@@ -190,15 +210,16 @@ const HostDashboard = () => {
                   </div>
                   <div className="host-vehicles-grid">
                     {grouped[zip].map(vehicle => (
-                <div key={vehicle._id} className="host-vehicle-card">
+                <div key={vehicle._id} className={`host-vehicle-card ${rentedVehicleIds.has(vehicle._id) ? 'rented' : ''}`}>
                   <div className="host-vehicle-image">
                     {vehicle.images?.[0] ? (
                       <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
                     ) : (
                       <div className="vehicle-placeholder">No Image</div>
                     )}
-                    <div className={`availability-badge ${vehicle.availability ? 'available' : 'unavailable'}`}>
-                      {vehicle.availability ? 'Available' : 'Unavailable'}
+                    {rentedVehicleIds.has(vehicle._id) && <div className="rented-overlay"></div>}
+                    <div className={`availability-badge ${rentedVehicleIds.has(vehicle._id) ? 'rented' : vehicle.availability ? 'available' : 'unavailable'}`}>
+                      {rentedVehicleIds.has(vehicle._id) ? 'Rented' : vehicle.availability ? 'Available' : 'Unavailable'}
                     </div>
                   </div>
 
