@@ -31,7 +31,7 @@ const Navbar = () => {
     }
   }, [user]);
 
-  // Poll for unread messages
+  // Poll for unread messages - pass activeMode as role for correct self-booking notifications
   useEffect(() => {
     if (!user) {
       setUnreadCount(0);
@@ -42,14 +42,15 @@ const Navbar = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token || !active) return;
-        const response = await axios.get(`${API_URL}/api/messages/unread/count`, {
+        const role = activeMode === 'host' ? 'host' : 'driver';
+        const response = await axios.get(`${API_URL}/api/messages/unread/count?role=${role}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (active && response.data && typeof response.data.count === 'number') {
           setUnreadCount(response.data.count);
         }
       } catch (error) {
-        console.log('📬 Navbar unread poll error:', error?.response?.status || error.message);
+        // Silently handle poll errors
       }
     };
     fetchUnread();
@@ -58,7 +59,7 @@ const Navbar = () => {
       active = false;
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user, activeMode]);
 
   const handleLogout = () => {
     logout();

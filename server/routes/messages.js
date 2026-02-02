@@ -8,9 +8,11 @@ const router = express.Router();
 
 // Get unread message count for current user across all bookings
 // IMPORTANT: This must be defined before /:bookingId to avoid being caught by the dynamic route
+// Accepts optional ?role=host|driver to use role-based filtering (needed for self-bookings)
 router.get('/unread/count', auth, async (req, res) => {
   try {
     const userId = req.user._id;
+    const role = req.query.role; // 'host' or 'driver'
 
     // Find all bookings where user is driver or host
     const userBookings = await Booking.find({
@@ -23,13 +25,23 @@ router.get('/unread/count', auth, async (req, res) => {
       return res.json({ count: 0 });
     }
 
-    const count = await Message.countDocuments({
+    // Use role-based filtering if role is provided (works for self-bookings)
+    // Otherwise fall back to sender-based filtering
+    const matchFilter = {
       booking: { $in: bookingIds },
-      sender: { $ne: userId },
       read: false
-    });
+    };
 
-    console.log(`📬 Unread count for user ${userId}: ${count} (across ${bookingIds.length} bookings)`);
+    if (role && ['host', 'driver'].includes(role)) {
+      // Count messages NOT from my current role (e.g., if I'm host, count driver messages)
+      matchFilter.senderRole = { $ne: role };
+    } else {
+      // Fallback: count messages not from me
+      matchFilter.sender = { $ne: userId };
+    }
+
+    const count = await Message.countDocuments(matchFilter);
+
     res.json({ count });
   } catch (error) {
     console.error('❌ Error fetching unread count:', error);
@@ -38,9 +50,11 @@ router.get('/unread/count', auth, async (req, res) => {
 });
 
 // Get per-booking unread message counts for current user
+// Accepts optional ?role=host|driver for role-based filtering
 router.get('/unread/per-booking', auth, async (req, res) => {
   try {
     const userId = req.user._id;
+    const role = req.query.role; // 'host' or 'driver'
 
     // Find all bookings where user is driver or host
     const userBookings = await Booking.find({
@@ -51,15 +65,21 @@ router.get('/unread/per-booking', auth, async (req, res) => {
     const bookingIds = userBookings.map(b => new mongoose.Types.ObjectId(b._id));
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
+    // Build match filter - role-based or sender-based
+    const matchFilter = {
+      booking: { $in: bookingIds },
+      read: false
+    };
+
+    if (role && ['host', 'driver'].includes(role)) {
+      matchFilter.senderRole = { $ne: role };
+    } else {
+      matchFilter.sender = { $ne: userObjectId };
+    }
+
     // Aggregate unread counts per booking
     const unreadCounts = await Message.aggregate([
-      {
-        $match: {
-          booking: { $in: bookingIds },
-          sender: { $ne: userObjectId },
-          read: false
-        }
-      },
+      { $match: matchFilter },
       {
         $group: {
           _id: '$booking',
@@ -106,6 +126,7 @@ router.get('/:bookingId', auth, async (req, res) => {
 });
 
 // Mark messages as read for a booking (call when user opens chat or sends a message)
+// Accepts optional { role: 'host'|'driver' } in body for role-based filtering
 router.post('/:bookingId/read', auth, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.bookingId);
@@ -118,17 +139,26 @@ router.post('/:bookingId/read', auth, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    const result = await Message.updateMany(
-      {
-        booking: req.params.bookingId,
-        sender: { $ne: req.user._id },
-        read: false
-      },
-      { read: true }
-    );
+    const role = req.body.role; // optional: 'host' or 'driver'
+
+    // Build filter - role-based or sender-based
+    const filter = {
+      booking: req.params.bookingId,
+      read: false
+    };
+
+    if (role && ['host', 'driver'].includes(role)) {
+      // Mark messages from the OTHER role as read
+      filter.senderRole = { $ne: role };
+    } else {
+      // Fallback: mark messages from other users as read
+      filter.sender = { $ne: req.user._id };
+    }
+
+    const result = await Message.updateMany(filter, { read: true });
 
     if (result.modifiedCount > 0) {
-      console.log(`✅ Marked ${result.modifiedCount} messages as read for booking ${req.params.bookingId} by user ${req.user._id}`);
+      console.log(`✅ Marked ${result.modifiedCount} messages as read for booking ${req.params.bookingId} by user ${req.user._id} (role: ${role || 'auto'})`);
     }
     res.json({ markedRead: result.modifiedCount });
   } catch (error) {
@@ -138,9 +168,11 @@ router.post('/:bookingId/read', auth, async (req, res) => {
 });
 
 // Send a message
+// Accepts optional { senderRole: 'host'|'driver' } to override auto-detected role
+// This is needed for self-bookings where user is both host and driver
 router.post('/:bookingId', auth, async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, senderRole: requestedRole } = req.body;
 
     if (!text || !text.trim()) {
       return res.status(400).json({ message: 'Message text is required' });
@@ -165,10 +197,25 @@ router.post('/:bookingId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Messaging is not available for cancelled reservations' });
     }
 
+    // Use requested role if valid and user has that role, otherwise auto-detect
+    let role;
+    if (requestedRole && ['host', 'driver'].includes(requestedRole)) {
+      // Validate the requested role matches the user's relationship to the booking
+      if ((requestedRole === 'host' && isHost) || (requestedRole === 'driver' && isDriver)) {
+        role = requestedRole;
+      } else {
+        role = isHost ? 'host' : 'driver';
+      }
+    } else {
+      // Auto-detect: prefer host if user is host-only, driver if driver-only
+      // For users who are both, default to host (since isHost check is more specific for host actions)
+      role = isHost && !isDriver ? 'host' : isDriver && !isHost ? 'driver' : isDriver ? 'driver' : 'host';
+    }
+
     const message = new Message({
       booking: req.params.bookingId,
       sender: req.user._id,
-      senderRole: isDriver ? 'driver' : 'host',
+      senderRole: role,
       text: text.trim()
     });
 
