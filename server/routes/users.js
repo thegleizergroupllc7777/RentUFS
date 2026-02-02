@@ -257,6 +257,13 @@ router.put('/host-tax-info', auth, async (req, res) => {
       });
     }
 
+    // If tax ID is locked, reject account type changes (SSN vs EIN are different ID types)
+    if (existingHostInfo.taxIdLocked && existingHostInfo.accountType && accountType !== existingHostInfo.accountType) {
+      return res.status(403).json({
+        message: 'Your account type is locked because your tax ID has been submitted. Contact support if you need to change it.'
+      });
+    }
+
     // Tax ID is required on first submission
     if (!existingHostInfo.taxIdLocked) {
       if (!taxId || !taxId.trim()) {

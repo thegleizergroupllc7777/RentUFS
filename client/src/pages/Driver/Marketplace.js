@@ -191,7 +191,7 @@ const Marketplace = () => {
 
               <div className="vehicle-card-content">
                 <h3 className="vehicle-title">
-                  {vehicle.year} {vehicle.make} {vehicle.model}
+                  {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                 </h3>
 
                 <div className="vehicle-details">
@@ -374,7 +374,7 @@ const Marketplace = () => {
                         )}
                       </div>
                       <div className="floating-card-info">
-                        <h4>{vehicle.year} {vehicle.make} {vehicle.model}</h4>
+                        <h4>{vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}</h4>
                         <div className="floating-card-price">
                           ${vehicle.pricePerDay}<span>/day</span>
                         </div>

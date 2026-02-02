@@ -99,6 +99,10 @@ router.post('/', auth, async (req, res) => {
     const resolvedPickupTime = pickupTime || '10:00';
     const resolvedDropoffTime = resolvedPickupTime;
 
+    // Platform transaction fee
+    const platformFee = 1.50;
+    totalPrice = totalPrice + platformFee;
+
     const booking = new Booking({
       vehicle: vehicleId,
       driver: req.user._id,
@@ -112,6 +116,7 @@ router.post('/', auth, async (req, res) => {
       quantity: quantity || totalDays,
       pricePerDay: vehicle.pricePerDay, // Store original daily rate
       totalPrice,
+      platformFee,
       message
     });
 

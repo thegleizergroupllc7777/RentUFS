@@ -250,7 +250,9 @@ const VehicleDetail = () => {
     );
   }
 
-  const totalPrice = calculateTotal();
+  const rentalSubtotal = calculateTotal();
+  const platformFee = 1.50;
+  const totalPrice = rentalSubtotal > 0 ? rentalSubtotal + platformFee : 0;
 
   return (
     <div>
@@ -260,8 +262,13 @@ const VehicleDetail = () => {
           <div className="vehicle-detail">
             <div className="vehicle-detail-main">
               <h1 className="vehicle-detail-title">
-                {vehicle.year} {vehicle.make} {vehicle.model}
+                {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
               </h1>
+              {vehicle.nickname && (
+                <p style={{ color: '#9ca3af', fontSize: '1rem', marginTop: '0.25rem' }}>
+                  {vehicle.year} {vehicle.make} {vehicle.model}
+                </p>
+              )}
 
               <div className="vehicle-detail-header">
                 <div>
@@ -621,11 +628,15 @@ const VehicleDetail = () => {
                         <span>
                           {getPriceLabel()} × {bookingData.quantity}
                         </span>
-                        <span>${totalPrice}</span>
+                        <span>${rentalSubtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="summary-row">
+                        <span>Platform fee</span>
+                        <span>${platformFee.toFixed(2)}</span>
                       </div>
                       <div className="summary-total">
                         <strong>Total</strong>
-                        <strong>${totalPrice}</strong>
+                        <strong>${totalPrice.toFixed(2)}</strong>
                       </div>
                     </div>
                   )}

@@ -589,7 +589,7 @@ const HostBookings = () => {
 
                         {/* Vehicle name */}
                         <div className="compact-booking-vehicle">
-                          {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                          {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
                         </div>
 
                         {/* Renter */}
@@ -960,7 +960,7 @@ const HostBookings = () => {
                         {booking.reservationId || `#${booking._id.slice(-8).toUpperCase()}`}
                       </div>
                       <h3 className="booking-vehicle">
-                        {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                        {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
                       </h3>
                       <p className="text-gray">
                         Renter: {booking.driver?.firstName} {booking.driver?.lastName}
@@ -1147,7 +1147,7 @@ const HostBookings = () => {
                 {cancelBooking.reservationId || cancelBooking._id.slice(-8).toUpperCase()}
               </p>
               <p style={{ margin: '0.25rem 0' }}>
-                {cancelBooking.vehicle?.year} {cancelBooking.vehicle?.make} {cancelBooking.vehicle?.model}
+                {cancelBooking.vehicle?.nickname || `${cancelBooking.vehicle?.year} ${cancelBooking.vehicle?.make} ${cancelBooking.vehicle?.model}`}
               </p>
               <p style={{ margin: '0.25rem 0', color: '#9ca3af' }}>
                 Renter: {cancelBooking.driver?.firstName} {cancelBooking.driver?.lastName}
@@ -1230,7 +1230,7 @@ const HostBookings = () => {
                 <div className="current-booking-info">
                   <h3>Current Booking</h3>
                   <p><strong>Reservation:</strong> {selectedBooking.reservationId}</p>
-                  <p><strong>Vehicle:</strong> {selectedBooking.vehicle?.year} {selectedBooking.vehicle?.make} {selectedBooking.vehicle?.model}</p>
+                  <p><strong>Vehicle:</strong> {selectedBooking.vehicle?.nickname || `${selectedBooking.vehicle?.year} ${selectedBooking.vehicle?.make} ${selectedBooking.vehicle?.model}`}</p>
                   <p><strong>Dates:</strong> {toLocalDate(selectedBooking.startDate).toLocaleDateString()} - {toLocalDate(selectedBooking.endDate).toLocaleDateString()}</p>
                   <p><strong>Current Price:</strong> ${selectedBooking.totalPrice}</p>
                 </div>
@@ -1265,7 +1265,7 @@ const HostBookings = () => {
                             )}
                           </div>
                           <div className="available-vehicle-info">
-                            <h4>{vehicle.year} {vehicle.make} {vehicle.model}</h4>
+                            <h4>{vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}</h4>
                             <p className="vehicle-type">{vehicle.type} | {vehicle.seats} seats</p>
                             <div className="price-comparison">
                               <p><strong>New Price:</strong> ${vehicle.newTotalPrice}</p>

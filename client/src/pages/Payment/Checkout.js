@@ -211,7 +211,7 @@ const Checkout = () => {
               <div className="summary-item">
                 <span className="label">Vehicle:</span>
                 <span className="value">
-                  {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
+                  {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
                 </span>
               </div>
 
@@ -271,9 +271,16 @@ const Checkout = () => {
               <div className="summary-item">
                 <span className="label">Rental subtotal:</span>
                 <span className="value">
-                  ${((booking.insurance?.totalCost ? booking.totalPrice - booking.insurance.totalCost : booking.totalPrice) || 0).toFixed(2)}
+                  ${((booking.totalPrice - (booking.platformFee || 0) - (booking.insurance?.totalCost || 0)) || 0).toFixed(2)}
                 </span>
               </div>
+
+              {(booking.platformFee > 0 || booking.platformFee === undefined) && (
+                <div className="summary-item">
+                  <span className="label">Platform fee:</span>
+                  <span className="value">${(booking.platformFee ?? 1.50).toFixed(2)}</span>
+                </div>
+              )}
 
               {booking.insurance && booking.insurance.totalCost > 0 && (
                 <div className="summary-item insurance">

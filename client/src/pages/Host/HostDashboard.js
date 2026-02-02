@@ -204,11 +204,13 @@ const HostDashboard = () => {
 
                   <div className="host-vehicle-info">
                     <h3 className="host-vehicle-title">
-                      {vehicle.nickname && (
-                        <span style={{ color: '#10b981', marginRight: '0.5rem' }}>"{vehicle.nickname}"</span>
-                      )}
-                      {vehicle.year} {vehicle.make} {vehicle.model}
+                      {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                     </h3>
+                    {vehicle.nickname && (
+                      <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </p>
+                    )}
 
                     <div className="host-vehicle-stats">
                       <div className="stat-item">

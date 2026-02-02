@@ -66,6 +66,10 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  platformFee: {
+    type: Number,
+    default: 1.50
+  },
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled'],
