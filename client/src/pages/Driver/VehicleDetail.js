@@ -17,7 +17,6 @@ const VehicleDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeBooking, setActiveBooking] = useState(null);
-  const [isHost, setIsHost] = useState(false);
   const [bookingData, setBookingData] = useState({
     startDate: '',
     endDate: '',
@@ -35,37 +34,25 @@ const VehicleDetail = () => {
     fetchReviews();
   }, [id, user]);
 
-  const fetchActiveBooking = async (vehicleData) => {
+  const fetchActiveBooking = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
       const headers = { Authorization: `Bearer ${token}` };
+      const now = new Date();
 
-      // Check if user is the host of this vehicle
-      const userIsHost = vehicleData && user && vehicleData.host?._id === user._id;
-      setIsHost(userIsHost);
-
-      if (userIsHost) {
-        // Host viewing their own vehicle - fetch bookings on this vehicle
-        const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, { headers });
-        const activeOrConfirmed = response.data.find(
-          booking => booking.vehicle?._id === id &&
-          ['active', 'confirmed', 'pending'].includes(booking.status)
-        );
-        if (activeOrConfirmed) {
-          setActiveBooking(activeOrConfirmed);
-        }
-      } else {
-        // Driver viewing - fetch their own bookings
-        const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, { headers });
-        const activeOrConfirmed = response.data.find(
-          booking => booking.vehicle?._id === id &&
-          ['active', 'confirmed'].includes(booking.status)
-        );
-        if (activeOrConfirmed) {
-          setActiveBooking(activeOrConfirmed);
-        }
+      // Only check the driver's own bookings for this vehicle
+      const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, { headers });
+      const currentBooking = response.data.find(booking => {
+        if (booking.vehicle?._id !== id) return false;
+        if (!['active', 'confirmed'].includes(booking.status)) return false;
+        // Only show if the booking end date hasn't passed
+        const endDate = new Date(booking.endDate);
+        return endDate >= now;
+      });
+      if (currentBooking) {
+        setActiveBooking(currentBooking);
       }
     } catch (error) {
       console.error('Error fetching active booking:', error);
@@ -76,9 +63,9 @@ const VehicleDetail = () => {
     try {
       const response = await axios.get(`${API_URL}/api/vehicles/${id}`);
       setVehicle(response.data);
-      // Fetch active booking after we have vehicle data to determine if user is host
+      // Fetch driver's active booking on this vehicle
       if (user) {
-        fetchActiveBooking(response.data);
+        fetchActiveBooking();
       }
     } catch (error) {
       console.error('Error fetching vehicle:', error);
@@ -379,144 +366,7 @@ const VehicleDetail = () => {
 
             <aside className="booking-sidebar">
               <div className="booking-card">
-                {isHost && !activeBooking ? (
-                  <>
-                    <h3>Your Vehicle Listing</h3>
-                    <div style={{
-                      backgroundColor: '#1e3a5f',
-                      padding: '1rem',
-                      borderRadius: '0.5rem',
-                      marginBottom: '1rem',
-                      border: '1px solid #3b82f6',
-                      textAlign: 'center'
-                    }}>
-                      <p style={{ color: '#93c5fd', margin: '0 0 0.75rem 0' }}>
-                        You are the host of this vehicle. You cannot book your own listing.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => navigate(`/host/edit-vehicle/${id}`)}
-                      className="btn btn-primary"
-                      style={{ width: '100%', marginBottom: '0.5rem' }}
-                    >
-                      Edit Listing
-                    </button>
-                    <button
-                      onClick={() => navigate('/host/dashboard')}
-                      className="btn"
-                      style={{ width: '100%', border: '1px solid #10b981', color: '#10b981', background: 'transparent' }}
-                    >
-                      Go to Host Dashboard
-                    </button>
-                  </>
-                ) : isHost && activeBooking ? (
-                  <>
-                    <h3>Current Booking</h3>
-                    <div style={{
-                      backgroundColor: '#1e3a5f',
-                      padding: '1rem',
-                      borderRadius: '0.5rem',
-                      marginBottom: '1rem',
-                      border: '1px solid #3b82f6'
-                    }}>
-                      {/* Driver info for hosts */}
-                      {isHost && activeBooking.driver && (
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          marginBottom: '1rem',
-                          paddingBottom: '0.75rem',
-                          borderBottom: '1px solid #3b82f6'
-                        }}>
-                          {activeBooking.driver.profileImage ? (
-                            <img
-                              src={activeBooking.driver.profileImage.startsWith('http')
-                                ? activeBooking.driver.profileImage
-                                : `${API_URL}${activeBooking.driver.profileImage}`}
-                              alt={`${activeBooking.driver.firstName}'s profile`}
-                              style={{
-                                width: '50px',
-                                height: '50px',
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                                border: '2px solid #3b82f6'
-                              }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: '50px',
-                              height: '50px',
-                              borderRadius: '50%',
-                              backgroundColor: '#3b82f6',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontWeight: 'bold',
-                              fontSize: '1.25rem'
-                            }}>
-                              {activeBooking.driver.firstName?.charAt(0)?.toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div style={{ color: '#ffffff', fontWeight: '600' }}>
-                              {activeBooking.driver.firstName} {activeBooking.driver.lastName}
-                            </div>
-                            <div style={{ color: '#93c5fd', fontSize: '0.75rem' }}>Driver</div>
-                          </div>
-                        </div>
-                      )}
-                      <div style={{
-                        display: 'inline-block',
-                        background: activeBooking.status === 'active' ? '#3b82f6' :
-                                   activeBooking.status === 'pending' ? '#f59e0b' : '#10b981',
-                        color: 'white',
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '1rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        marginBottom: '0.75rem',
-                        textTransform: 'capitalize'
-                      }}>
-                        {activeBooking.status}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
-                        <strong style={{ color: '#93c5fd' }}>Reservation ID:</strong><br />
-                        <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', color: '#ffffff' }}>
-                          {activeBooking.reservationId || activeBooking._id.slice(-8).toUpperCase()}
-                        </span>
-                      </div>
-                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
-                        <strong style={{ color: '#93c5fd' }}>Pickup:</strong><br />
-                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
-                        <strong style={{ color: '#93c5fd' }}>Return:</strong><br />
-                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
-                        <strong style={{ color: '#93c5fd' }}>Duration:</strong> {activeBooking.totalDays} day(s)
-                      </div>
-                      <div style={{ color: '#ffffff' }}>
-                        <strong style={{ color: '#93c5fd' }}>Total Price:</strong> ${activeBooking.totalPrice}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => navigate(isHost ? '/host/bookings' : '/my-bookings')}
-                      className="btn btn-primary"
-                      style={{ width: '100%', marginBottom: '0.5rem' }}
-                    >
-                      Manage Reservation
-                    </button>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: 0 }}>
-                      {isHost
-                        ? 'Go to Host Bookings to manage this reservation'
-                        : 'Go to My Reservations to start, extend, or return this vehicle'}
-                    </p>
-                  </>
-                ) : activeBooking ? (
+                {activeBooking ? (
                   <>
                     <h3>Your Current Reservation</h3>
                     <div style={{
