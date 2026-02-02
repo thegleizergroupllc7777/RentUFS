@@ -971,13 +971,27 @@ const DriverProfile = () => {
             <label className="form-label">
               {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
             </label>
-            <input type="text" className="form-input" value={taxFormData.taxId}
-              onChange={handleTaxIdInput}
-              placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
-              maxLength={taxFormData.accountType === 'individual' ? 11 : 10} required />
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-              Stored securely. Only the last 4 digits will be visible.
-            </p>
+            {taxInfo?.taxIdLocked ? (
+              <>
+                <input type="text" className="form-input"
+                  value={`****${taxInfo.taxIdLast4}`}
+                  disabled
+                  style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }} />
+                <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
+                  Your tax ID has been locked for security. Contact support if you need to change it.
+                </p>
+              </>
+            ) : (
+              <>
+                <input type="text" className="form-input" value={taxFormData.taxId}
+                  onChange={handleTaxIdInput}
+                  placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
+                  maxLength={taxFormData.accountType === 'individual' ? 11 : 10} required />
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Stored securely. Only the last 4 digits will be visible.
+                </p>
+              </>
+            )}
           </div>
 
           {taxMessage && (
