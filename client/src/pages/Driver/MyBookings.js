@@ -285,10 +285,29 @@ const MyBookings = () => {
     // Can start if: confirmed, paid, pickup inspection not done, and within rental period
     const todayStr = toLocalDateStr(new Date());
     const startStr = toLocalDateStr(toLocalDate(booking.startDate));
-    return booking.status === 'confirmed' &&
-           booking.paymentStatus === 'paid' &&
-           !booking.pickupInspection?.completed &&
-           startStr <= todayStr;
+    const isConfirmed = booking.status === 'confirmed';
+    const isPaid = booking.paymentStatus === 'paid';
+    const inspectionNotDone = !booking.pickupInspection || !booking.pickupInspection.completed;
+    const isStartDateReached = startStr <= todayStr;
+
+    const result = isConfirmed && isPaid && inspectionNotDone && isStartDateReached;
+
+    // Debug logging to help diagnose missing Start Reservation button
+    if (isConfirmed && isPaid && !result) {
+      console.log('🔍 canStartReservation debug for', booking.reservationId, {
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        pickupInspection: booking.pickupInspection,
+        inspectionNotDone,
+        startDate: booking.startDate,
+        startStr,
+        todayStr,
+        isStartDateReached,
+        result
+      });
+    }
+
+    return result;
   };
 
   const canReturnVehicle = (booking) => {
@@ -684,11 +703,31 @@ const MyBookings = () => {
                                 Host: {booking.host?.firstName} {booking.host?.lastName}
                               </p>
                             </div>
-                            <div
-                              className="booking-status"
-                              style={{ backgroundColor: getStatusColor(booking.status) }}
-                            >
-                              {booking.status}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
+                              <div
+                                className="booking-status"
+                                style={{ backgroundColor: getStatusColor(booking.status) }}
+                              >
+                                {booking.status}
+                              </div>
+                              {booking.paymentStatus === 'paid' && (
+                                <div style={{
+                                  fontSize: '0.7rem',
+                                  color: '#10b981',
+                                  fontWeight: '600'
+                                }}>
+                                  Paid
+                                </div>
+                              )}
+                              {booking.paymentStatus === 'pending' && (
+                                <div style={{
+                                  fontSize: '0.7rem',
+                                  color: '#f59e0b',
+                                  fontWeight: '600'
+                                }}>
+                                  Payment Pending
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -788,6 +827,37 @@ const MyBookings = () => {
                           >
                             Start Reservation
                           </button>
+                        )}
+
+                        {/* Fallback: show Start Reservation for active bookings that never had pickup inspection */}
+                        {booking.status === 'active' && booking.paymentStatus === 'paid' &&
+                         !booking.pickupInspection?.completed && (
+                          <button
+                            onClick={() => openInspectionModal(booking, 'pickup')}
+                            className="btn btn-primary"
+                            style={{ background: '#10b981' }}
+                          >
+                            Start Reservation
+                          </button>
+                        )}
+
+                        {/* Show info when booking is confirmed+paid but start date not reached */}
+                        {booking.status === 'confirmed' && booking.paymentStatus === 'paid' &&
+                         !booking.pickupInspection?.completed &&
+                         toLocalDateStr(toLocalDate(booking.startDate)) > toLocalDateStr(new Date()) && (
+                          <div style={{
+                            padding: '0.5rem 1rem',
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            border: '1px solid #10b981',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.8rem',
+                            color: '#10b981',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            Start Reservation will be available on pickup day
+                          </div>
                         )}
 
                         {canReturnVehicle(booking) && (
