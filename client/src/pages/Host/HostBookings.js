@@ -257,8 +257,9 @@ const HostBookings = () => {
   }, [unreadCounts, hasAutoSwitched, currentUnread, upcomingUnread, pastUnread]);
 
   // Check if a booking is overdue (past return date/time)
+  // Only active bookings (actually started) can be overdue
   const isOverdue = (booking) => {
-    if (!['active', 'confirmed'].includes(booking.status)) return false;
+    if (booking.status !== 'active') return false;
 
     const now = new Date();
     const endDate = toLocalDate(booking.endDate);
@@ -268,6 +269,14 @@ const HostBookings = () => {
     endDate.setHours(hours, minutes, 0, 0);
 
     return now > endDate;
+  };
+
+  // Check if a confirmed booking was never picked up and is now expired
+  const isExpiredUnstarted = (booking) => {
+    if (booking.status !== 'confirmed') return false;
+    const todayStr = toLocalDateStr(new Date());
+    const endStr = toLocalDateStr(toLocalDate(booking.endDate));
+    return endStr < todayStr;
   };
 
   // Calculate how overdue a booking is
@@ -618,6 +627,9 @@ const HostBookings = () => {
                   style={isOverdue(booking) ? {
                     border: '3px solid #ef4444',
                     boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)'
+                  } : isExpiredUnstarted(booking) ? {
+                    border: '3px solid #f59e0b',
+                    boxShadow: '0 0 10px rgba(245, 158, 11, 0.3)'
                   } : unreadCounts[booking._id] > 0 ? {
                     border: '2px solid #10b981',
                     boxShadow: '0 0 12px rgba(16, 185, 129, 0.3)'
@@ -652,7 +664,7 @@ const HostBookings = () => {
                       }}>NEW</span>
                     </div>
                   )}
-                  {/* Overdue Warning Banner */}
+                  {/* Overdue Warning Banner - only for active (started) bookings */}
                   {isOverdue(booking) && (
                     <div style={{
                       background: 'linear-gradient(90deg, #ef4444, #dc2626)',
@@ -669,6 +681,25 @@ const HostBookings = () => {
                         {getOverdueInfo(booking)} - Renter should extend or return immediately!
                       </span>
                       <span style={{ fontSize: '1.25rem' }}>!</span>
+                    </div>
+                  )}
+                  {/* Expired Unstarted Banner - confirmed booking that was never picked up */}
+                  {isExpiredUnstarted(booking) && (
+                    <div style={{
+                      background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                      color: 'white',
+                      padding: '0.75rem 1rem',
+                      marginBottom: '1rem',
+                      borderRadius: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontWeight: '600'
+                    }}>
+                      <span>
+                        Reservation expired - Driver never picked up the vehicle.
+                      </span>
+                      <span style={{ fontSize: '1.25rem' }}>⚠</span>
                     </div>
                   )}
                   <div className="booking-header">
