@@ -147,7 +147,7 @@ const DriverProfile = () => {
   // Tax info state (hosts only)
   const [taxInfo, setTaxInfo] = useState(null);
   const [showTaxForm, setShowTaxForm] = useState(false);
-  const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } });
+  const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } });
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxMessage, setTaxMessage] = useState('');
 
@@ -411,6 +411,9 @@ const DriverProfile = () => {
         setTaxFormData({
           accountType: response.data.accountType,
           taxId: '',
+          legalFirstName: response.data.legalFirstName || '',
+          legalLastName: response.data.legalLastName || '',
+          legalAddress: response.data.legalAddress || { street: '', city: '', state: '', zipCode: '' },
           businessName: response.data.businessName || '',
           dba: response.data.dba || '',
           businessAddress: response.data.businessAddress || { street: '', city: '', state: '', zipCode: '' }
@@ -771,6 +774,23 @@ const DriverProfile = () => {
                 {taxInfo.accountType === 'business' ? 'Business / LLC' : 'Individual'}
               </p>
             </div>
+            {taxInfo.accountType === 'individual' && (taxInfo.legalFirstName || taxInfo.legalLastName) && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Legal Name</span>
+                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
+                  {taxInfo.legalFirstName} {taxInfo.legalLastName}
+                </p>
+              </div>
+            )}
+            {taxInfo.accountType === 'individual' && taxInfo.legalAddress && taxInfo.legalAddress.street && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Legal Address</span>
+                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
+                  {taxInfo.legalAddress.street}
+                  {taxInfo.legalAddress.city && <><br />{taxInfo.legalAddress.city}{taxInfo.legalAddress.state ? `, ${taxInfo.legalAddress.state}` : ''} {taxInfo.legalAddress.zipCode}</>}
+                </p>
+              </div>
+            )}
             {taxInfo.accountType === 'business' && taxInfo.businessName && (
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Business Name</span>
@@ -894,6 +914,46 @@ const DriverProfile = () => {
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>ZIP Code</label>
                   <input type="text" className="form-input" value={taxFormData.businessAddress.zipCode}
                     onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, zipCode: e.target.value } })}
+                    placeholder="ZIP Code" maxLength={10} required />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Legal name and address for individuals */}
+          {taxFormData.accountType === 'individual' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Legal First Name</label>
+                  <input type="text" className="form-input" value={taxFormData.legalFirstName}
+                    onChange={(e) => setTaxFormData({ ...taxFormData, legalFirstName: e.target.value })}
+                    placeholder="First name as on tax return" required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Legal Last Name</label>
+                  <input type="text" className="form-input" value={taxFormData.legalLastName}
+                    onChange={(e) => setTaxFormData({ ...taxFormData, legalLastName: e.target.value })}
+                    placeholder="Last name as on tax return" required />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Legal Address</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <input type="text" className="form-input" value={taxFormData.legalAddress.street}
+                    onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, street: e.target.value } })}
+                    placeholder="Street address" required />
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
+                    <input type="text" className="form-input" value={taxFormData.legalAddress.city}
+                      onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, city: e.target.value } })}
+                      placeholder="City" required />
+                    <input type="text" className="form-input" value={taxFormData.legalAddress.state}
+                      onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, state: e.target.value.toUpperCase() } })}
+                      placeholder="State" maxLength={2} required />
+                  </div>
+                  <input type="text" className="form-input" value={taxFormData.legalAddress.zipCode}
+                    onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, zipCode: e.target.value } })}
                     placeholder="ZIP Code" maxLength={10} required />
                 </div>
               </div>
