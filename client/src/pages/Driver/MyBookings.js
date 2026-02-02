@@ -676,7 +676,7 @@ const MyBookings = () => {
                           <span style={{ fontSize: '1.25rem' }}>⚠</span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', gap: '1.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
                         {/* Vehicle Image */}
                         <div style={{
                           width: '140px',
@@ -711,6 +711,42 @@ const MyBookings = () => {
                           )}
                         </div>
 
+                        {/* Host Photo */}
+                        <div style={{
+                          width: '100px',
+                          height: '100px',
+                          borderRadius: '0.5rem',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          backgroundColor: '#f3f4f6',
+                          border: '2px solid #10b981'
+                        }}>
+                          {booking.host?.profileImage ? (
+                            <img
+                              src={getImageUrl(booking.host.profileImage)}
+                              alt={`${booking.host?.firstName} ${booking.host?.lastName}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#9ca3af',
+                              fontSize: '2rem',
+                              background: '#e5e7eb'
+                            }}>
+                              {booking.host?.firstName?.[0]?.toUpperCase() || '?'}
+                            </div>
+                          )}
+                        </div>
+
                         {/* Booking Info */}
                         <div style={{ flex: 1 }}>
                           <div className="booking-header">
@@ -731,38 +767,8 @@ const MyBookings = () => {
                               <h3 className="booking-vehicle">
                                 {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
                               </h3>
-                              <p className="text-gray" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                Host:
-                                {booking.host?.profileImage ? (
-                                  <img
-                                    src={getImageUrl(booking.host.profileImage)}
-                                    alt={`${booking.host?.firstName} ${booking.host?.lastName}`}
-                                    style={{
-                                      width: '28px',
-                                      height: '28px',
-                                      borderRadius: '50%',
-                                      objectFit: 'cover',
-                                      border: '2px solid #10b981'
-                                    }}
-                                  />
-                                ) : (
-                                  <span style={{
-                                    width: '28px',
-                                    height: '28px',
-                                    borderRadius: '50%',
-                                    background: '#374151',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600',
-                                    color: '#9ca3af',
-                                    border: '2px solid #4b5563'
-                                  }}>
-                                    {booking.host?.firstName?.charAt(0)}{booking.host?.lastName?.charAt(0)}
-                                  </span>
-                                )}
-                                {booking.host?.firstName} {booking.host?.lastName}
+                              <p className="text-gray">
+                                Host: {booking.host?.firstName} {booking.host?.lastName}
                               </p>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
