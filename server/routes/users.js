@@ -546,4 +546,93 @@ router.patch('/payment-methods/:cardId/default', auth, async (req, res) => {
   }
 });
 
+// ==========================================
+// Account Management (Deactivate / Delete)
+// ==========================================
+
+// Deactivate account (soft disable - can be reactivated on login)
+router.post('/account/deactivate', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.accountStatus = 'deactivated';
+    user.deactivatedAt = new Date();
+    await user.save();
+
+    console.log(`⚠️ Account deactivated: ${user.email}`);
+    res.json({ message: 'Account has been deactivated. You can reactivate it by logging in again.' });
+  } catch (error) {
+    console.error('❌ Error deactivating account:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Reactivate account (called during login if account is deactivated)
+router.post('/account/reactivate', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.accountStatus = 'active';
+    user.deactivatedAt = undefined;
+    await user.save();
+
+    console.log(`✅ Account reactivated: ${user.email}`);
+    res.json({ message: 'Account has been reactivated.' });
+  } catch (error) {
+    console.error('❌ Error reactivating account:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Permanently delete account
+router.delete('/account/delete', auth, async (req, res) => {
+  try {
+    const { confirmation } = req.body;
+
+    if (confirmation !== 'DELETE') {
+      return res.status(400).json({ message: 'Please type DELETE to confirm account deletion.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check for active bookings (as driver or host)
+    const Booking = require('../models/Booking');
+    const activeBookings = await Booking.countDocuments({
+      $or: [{ driver: user._id }, { host: user._id }],
+      status: { $in: ['active', 'confirmed', 'pending'] }
+    });
+
+    if (activeBookings > 0) {
+      return res.status(400).json({
+        message: `You have ${activeBookings} active booking(s). Please complete or cancel all bookings before deleting your account.`
+      });
+    }
+
+    // Set vehicles to unavailable
+    const Vehicle = require('../models/Vehicle');
+    await Vehicle.updateMany(
+      { host: user._id },
+      { availability: false }
+    );
+
+    // Delete the user
+    await User.findByIdAndDelete(user._id);
+
+    console.log(`🗑️ Account permanently deleted: ${user.email}`);
+    res.json({ message: 'Account has been permanently deleted.' });
+  } catch (error) {
+    console.error('❌ Error deleting account:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

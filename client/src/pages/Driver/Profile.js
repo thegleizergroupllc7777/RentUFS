@@ -112,7 +112,7 @@ const StripeCardForm = ({ clientSecret, onSuccess, onCancel }) => {
 };
 
 const DriverProfile = () => {
-  const { user, setUser } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef(null);
@@ -169,6 +169,13 @@ const DriverProfile = () => {
   const [reportPeriod, setReportPeriod] = useState('month');
   const [reportData, setReportData] = useState(null);
   const [reportError, setReportError] = useState('');
+
+  // Settings state
+  const [settingsAction, setSettingsAction] = useState(null); // 'deactivate' | 'delete'
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState('');
+  const [settingsError, setSettingsError] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -1368,6 +1375,252 @@ const DriverProfile = () => {
     </div>
   );
 
+  // ==========================================
+  // Settings Tab
+  // ==========================================
+
+  const handleDeactivateAccount = async () => {
+    setSettingsLoading(true);
+    setSettingsError('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/users/account/deactivate`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSettingsMessage('Account deactivated. You will be logged out.');
+      setTimeout(() => {
+        logout();
+        navigate('/');
+      }, 2000);
+    } catch (err) {
+      setSettingsError(err.response?.data?.message || 'Failed to deactivate account.');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'DELETE') {
+      setSettingsError('Please type DELETE to confirm.');
+      return;
+    }
+    setSettingsLoading(true);
+    setSettingsError('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/users/account/delete`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { confirmation: 'DELETE' }
+      });
+      setSettingsMessage('Account permanently deleted. Redirecting...');
+      setTimeout(() => {
+        logout();
+        navigate('/');
+      }, 2000);
+    } catch (err) {
+      setSettingsError(err.response?.data?.message || 'Failed to delete account.');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const renderSettingsTab = () => (
+    <div>
+      <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
+        <h2 style={{ color: '#fff', marginBottom: '0.5rem', fontSize: '1.25rem' }}>Account Settings</h2>
+        <p style={{ color: '#9ca3af', fontSize: '0.875rem', margin: 0 }}>
+          Manage your account status and preferences.
+        </p>
+      </div>
+
+      {settingsMessage && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid #10b981',
+          borderRadius: '0.5rem',
+          padding: '1rem',
+          marginBottom: '1rem',
+          color: '#10b981'
+        }}>
+          {settingsMessage}
+        </div>
+      )}
+
+      {settingsError && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid #ef4444',
+          borderRadius: '0.5rem',
+          padding: '1rem',
+          marginBottom: '1rem',
+          color: '#ef4444'
+        }}>
+          {settingsError}
+        </div>
+      )}
+
+      {/* Deactivate Account */}
+      <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
+        <h3 style={{ color: '#f59e0b', marginBottom: '0.5rem' }}>Deactivate Account</h3>
+        <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.5' }}>
+          Temporarily disable your account. Your profile, listings, and booking history will be preserved.
+          You can reactivate your account at any time by logging in again.
+        </p>
+
+        {settingsAction === 'deactivate' ? (
+          <div style={{
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid #f59e0b',
+            borderRadius: '0.5rem',
+            padding: '1rem'
+          }}>
+            <p style={{ color: '#fbbf24', fontWeight: '600', marginBottom: '0.75rem' }}>
+              Are you sure you want to deactivate your account?
+            </p>
+            <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1rem' }}>
+              Your vehicle listings will become hidden from the marketplace.
+              You can reactivate anytime by logging back in.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={handleDeactivateAccount}
+                disabled={settingsLoading}
+                style={{
+                  background: '#f59e0b',
+                  color: '#000',
+                  border: 'none',
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '0.375rem',
+                  fontWeight: '600',
+                  cursor: settingsLoading ? 'not-allowed' : 'pointer',
+                  opacity: settingsLoading ? 0.6 : 1
+                }}
+              >
+                {settingsLoading ? 'Processing...' : 'Yes, Deactivate'}
+              </button>
+              <button
+                onClick={() => { setSettingsAction(null); setSettingsError(''); }}
+                style={{
+                  background: 'transparent',
+                  color: '#9ca3af',
+                  border: '1px solid #6b7280',
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setSettingsAction('deactivate'); setSettingsError(''); setSettingsMessage(''); }}
+            style={{
+              background: 'transparent',
+              color: '#f59e0b',
+              border: '1px solid #f59e0b',
+              padding: '0.5rem 1.25rem',
+              borderRadius: '0.375rem',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Deactivate Account
+          </button>
+        )}
+      </div>
+
+      {/* Delete Account */}
+      <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #dc2626' }}>
+        <h3 style={{ color: '#ef4444', marginBottom: '0.5rem' }}>Delete Account</h3>
+        <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.5' }}>
+          Permanently delete your account and all associated data. This action cannot be undone.
+          Your vehicle listings will be removed and booking history will be lost.
+        </p>
+
+        {settingsAction === 'delete' ? (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid #ef4444',
+            borderRadius: '0.5rem',
+            padding: '1rem'
+          }}>
+            <p style={{ color: '#ef4444', fontWeight: '600', marginBottom: '0.75rem' }}>
+              This action is permanent and cannot be reversed.
+            </p>
+            <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1rem' }}>
+              Type <strong style={{ color: '#ef4444' }}>DELETE</strong> below to confirm you want to permanently delete your account.
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder='Type "DELETE" to confirm'
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.375rem',
+                border: '1px solid #ef4444',
+                background: '#1a1a1a',
+                color: '#fff',
+                fontSize: '0.875rem',
+                marginBottom: '1rem',
+                boxSizing: 'border-box'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={settingsLoading || deleteConfirmation !== 'DELETE'}
+                style={{
+                  background: deleteConfirmation === 'DELETE' ? '#ef4444' : '#555',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '0.375rem',
+                  fontWeight: '600',
+                  cursor: (settingsLoading || deleteConfirmation !== 'DELETE') ? 'not-allowed' : 'pointer',
+                  opacity: (settingsLoading || deleteConfirmation !== 'DELETE') ? 0.6 : 1
+                }}
+              >
+                {settingsLoading ? 'Deleting...' : 'Permanently Delete Account'}
+              </button>
+              <button
+                onClick={() => { setSettingsAction(null); setDeleteConfirmation(''); setSettingsError(''); }}
+                style={{
+                  background: 'transparent',
+                  color: '#9ca3af',
+                  border: '1px solid #6b7280',
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setSettingsAction('delete'); setSettingsError(''); setSettingsMessage(''); }}
+            style={{
+              background: 'transparent',
+              color: '#ef4444',
+              border: '1px solid #ef4444',
+              padding: '0.5rem 1.25rem',
+              borderRadius: '0.375rem',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Delete Account
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   const taxNeedsAttention = isHost && taxInfo && !taxInfo.hasSubmitted;
 
   const isDriver = user?.userType === 'driver' || user?.userType === 'both';
@@ -1379,7 +1632,8 @@ const DriverProfile = () => {
     ...(isHost ? [
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
       { id: 'reports', label: 'Reports' }
-    ] : [])
+    ] : []),
+    { id: 'settings', label: 'Settings' }
   ];
 
   return (
@@ -1450,6 +1704,7 @@ const DriverProfile = () => {
               {activeTab === 'payment' && renderPaymentTab()}
               {activeTab === 'tax' && isHost && renderTaxTab()}
               {activeTab === 'reports' && isHost && renderReportsTab()}
+              {activeTab === 'settings' && renderSettingsTab()}
             </div>
           </div>
         </div>
