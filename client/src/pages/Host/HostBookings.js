@@ -40,6 +40,9 @@ const HostBookings = () => {
   const [switchReason, setSwitchReason] = useState('');
   const [switching, setSwitching] = useState(false);
 
+  // Expanded past booking state
+  const [expandedPastBookingId, setExpandedPastBookingId] = useState(null);
+
   // Cancel reservation modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelBooking, setCancelBooking] = useState(null);
@@ -535,15 +538,25 @@ const HostBookings = () => {
                           </div>
                         </div>
                       )}
-                      <Link
-                        to={`/vehicle/${booking.vehicle?._id}`}
+                      <div
                         className="compact-booking-row"
-                        style={unreadCounts[booking._id] > 0 ? {
-                          border: '2px solid #10b981',
-                          borderTop: 'none',
-                          boxShadow: '0 0 12px rgba(16, 185, 129, 0.3)',
-                          borderRadius: '0 0 0.5rem 0.5rem'
-                        } : {}}
+                        style={{
+                          cursor: 'pointer',
+                          ...(unreadCounts[booking._id] > 0 ? {
+                            border: '2px solid #10b981',
+                            borderTop: 'none',
+                            boxShadow: '0 0 12px rgba(16, 185, 129, 0.3)',
+                            borderRadius: '0 0 0.5rem 0.5rem'
+                          } : {}),
+                          ...(expandedPastBookingId === booking._id ? {
+                            background: '#1a2332',
+                            borderBottom: 'none',
+                            borderRadius: '0.5rem 0.5rem 0 0'
+                          } : {})
+                        }}
+                        onClick={() => setExpandedPastBookingId(
+                          expandedPastBookingId === booking._id ? null : booking._id
+                        )}
                       >
                         {/* Vehicle thumbnail + driver avatar */}
                         <div className="compact-booking-images">
@@ -601,17 +614,176 @@ const HostBookings = () => {
                         >
                           {booking.status}
                         </div>
-                      </Link>
-                      {/* Chat Box for past bookings */}
-                      {openChatBookingId === booking._id && user && (
-                        <div style={{ marginTop: '-1px' }}>
-                          <ChatBox
-                            bookingId={booking._id}
-                            currentUserId={user._id || user.id}
-                            otherUserName={`${booking.driver?.firstName || ''} ${booking.driver?.lastName || ''}`.trim()}
-                            currentRole="host"
-                            onClose={() => setOpenChatBookingId(null)}
-                          />
+                      </div>
+
+                      {/* Expanded booking details */}
+                      {expandedPastBookingId === booking._id && (
+                        <div style={{
+                          background: '#1a2332',
+                          borderRadius: '0 0 0.5rem 0.5rem',
+                          padding: '1.25rem',
+                          borderTop: '1px solid #2d3748',
+                          marginTop: '-1px'
+                        }}>
+                          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                            {/* Left: Booking details */}
+                            <div style={{ flex: '1 1 300px' }}>
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '0.75rem',
+                                fontSize: '0.875rem'
+                              }}>
+                                <div>
+                                  <span style={{ color: '#9ca3af' }}>Pickup:</span>
+                                  <div style={{ color: '#fff', fontWeight: '500' }}>
+                                    {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTime(booking.pickupTime)}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span style={{ color: '#9ca3af' }}>Return:</span>
+                                  <div style={{ color: '#fff', fontWeight: '500' }}>
+                                    {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTime(booking.dropoffTime)}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span style={{ color: '#9ca3af' }}>Duration:</span>
+                                  <div style={{ color: '#fff', fontWeight: '500' }}>{booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}</div>
+                                </div>
+                                <div>
+                                  <span style={{ color: '#9ca3af' }}>Rate:</span>
+                                  <div style={{ color: '#fff', fontWeight: '500' }}>${booking.pricePerDay}/day</div>
+                                </div>
+                                <div>
+                                  <span style={{ color: '#9ca3af' }}>Total Price:</span>
+                                  <div style={{ color: '#10b981', fontWeight: '600', fontSize: '1rem' }}>${booking.totalPrice}</div>
+                                </div>
+                                <div>
+                                  <span style={{ color: '#9ca3af' }}>Payment:</span>
+                                  <div style={{
+                                    color: booking.paymentStatus === 'paid' ? '#10b981' : '#f59e0b',
+                                    fontWeight: '500'
+                                  }}>
+                                    {booking.paymentStatus === 'paid' ? 'Paid' : booking.paymentStatus}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {booking.insurance && booking.insurance.type && (
+                                <div style={{ marginTop: '0.75rem', fontSize: '0.875rem' }}>
+                                  <span style={{ color: '#9ca3af' }}>Insurance:</span>
+                                  <span style={{ color: '#fff', marginLeft: '0.5rem' }}>
+                                    {booking.insurance.type} (${booking.insurance.price})
+                                  </span>
+                                </div>
+                              )}
+
+                              {booking.extensions && booking.extensions.length > 0 && (
+                                <div style={{
+                                  marginTop: '0.75rem',
+                                  padding: '0.5rem 0.75rem',
+                                  background: 'rgba(16, 185, 129, 0.1)',
+                                  borderRadius: '0.375rem',
+                                  fontSize: '0.875rem',
+                                  color: '#10b981'
+                                }}>
+                                  Extended {booking.extensions.length} time{booking.extensions.length > 1 ? 's' : ''}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Right: Driver info */}
+                            <div style={{
+                              flex: '0 0 auto',
+                              minWidth: '200px',
+                              padding: '0.75rem',
+                              background: '#0f1923',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.875rem'
+                            }}>
+                              <div style={{ color: '#9ca3af', marginBottom: '0.5rem', fontWeight: '600' }}>Driver</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                <div style={{
+                                  width: '40px',
+                                  height: '40px',
+                                  borderRadius: '50%',
+                                  overflow: 'hidden',
+                                  flexShrink: 0,
+                                  background: '#e5e7eb'
+                                }}>
+                                  {booking.driver?.profileImage ? (
+                                    <img
+                                      src={getImageUrl(booking.driver.profileImage)}
+                                      alt={booking.driver?.firstName}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  ) : (
+                                    <div style={{
+                                      width: '100%', height: '100%',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      color: '#6b7280', fontSize: '1rem', fontWeight: '600'
+                                    }}>
+                                      {booking.driver?.firstName?.[0]?.toUpperCase() || '?'}
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={{ color: '#fff', fontWeight: '500' }}>
+                                  {booking.driver?.firstName} {booking.driver?.lastName}
+                                </div>
+                              </div>
+                              {booking.driver?.email && (
+                                <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{booking.driver.email}</div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div style={{
+                            display: 'flex',
+                            gap: '0.75rem',
+                            marginTop: '1rem',
+                            paddingTop: '1rem',
+                            borderTop: '1px solid #2d3748'
+                          }}>
+                            <Link to={`/vehicle/${booking.vehicle?._id}`}>
+                              <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
+                                View Vehicle
+                              </button>
+                            </Link>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const isOpening = openChatBookingId !== booking._id;
+                                setOpenChatBookingId(isOpening ? booking._id : null);
+                                if (isOpening) {
+                                  setUnreadCounts(prev => ({ ...prev, [booking._id]: 0 }));
+                                }
+                              }}
+                              className="btn btn-secondary"
+                              style={{
+                                fontSize: '0.8rem',
+                                padding: '0.4rem 0.75rem',
+                                background: openChatBookingId === booking._id ? '#059669' : '#10b981',
+                                color: '#000',
+                                border: 'none'
+                              }}
+                            >
+                              {openChatBookingId === booking._id ? 'Close Chat' : 'Message Driver'}
+                            </button>
+                          </div>
+
+                          {/* Chat Box */}
+                          {openChatBookingId === booking._id && user && (
+                            <div style={{ marginTop: '0.75rem' }}>
+                              <ChatBox
+                                bookingId={booking._id}
+                                currentUserId={user._id || user.id}
+                                otherUserName={`${booking.driver?.firstName || ''} ${booking.driver?.lastName || ''}`.trim()}
+                                currentRole="host"
+                                onClose={() => setOpenChatBookingId(null)}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
