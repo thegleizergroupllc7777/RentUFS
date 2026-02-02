@@ -57,7 +57,7 @@ const HostBookings = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const response = await axios.get(`${API_URL}/api/messages/unread/per-booking`, {
+      const response = await axios.get(`${API_URL}/api/messages/unread/per-booking?role=host`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUnreadCounts(response.data.counts || {});
@@ -600,6 +600,7 @@ const HostBookings = () => {
                             bookingId={booking._id}
                             currentUserId={user._id || user.id}
                             otherUserName={`${booking.driver?.firstName || ''} ${booking.driver?.lastName || ''}`.trim()}
+                            currentRole="host"
                             onClose={() => setOpenChatBookingId(null)}
                           />
                         </div>
@@ -912,6 +913,7 @@ const HostBookings = () => {
                       bookingId={booking._id}
                       currentUserId={user._id || user.id}
                       otherUserName={`${booking.driver?.firstName || ''} ${booking.driver?.lastName || ''}`.trim()}
+                      currentRole="host"
                       onClose={() => setOpenChatBookingId(null)}
                     />
                   )}

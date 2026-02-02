@@ -3,7 +3,7 @@ import axios from 'axios';
 import API_URL from '../config/api';
 import './ChatBox.css';
 
-const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
+const ChatBox = ({ bookingId, currentUserId, otherUserName, currentRole, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -19,16 +19,18 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
   };
 
   // Mark messages as read (separate from fetching)
+  // Pass role so self-bookings correctly mark messages from the other role as read
   const markAsRead = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/messages/${bookingId}/read`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(`${API_URL}/api/messages/${bookingId}/read`,
+        { role: currentRole },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
     } catch (err) {
       // Silently fail - marking as read is not critical
     }
-  }, [bookingId]);
+  }, [bookingId, currentRole]);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -83,7 +85,7 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
       const token = localStorage.getItem('token');
       const res = await axios.post(
         `${API_URL}/api/messages/${bookingId}`,
-        { text: newMessage.trim() },
+        { text: newMessage.trim(), senderRole: currentRole },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessages(prev => [...prev, res.data]);
@@ -132,7 +134,11 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, onClose }) => {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMine = msg.sender?._id === currentUserId || msg.sender === currentUserId;
+            // Use role-based check when currentRole is provided (works for self-bookings)
+            // Otherwise fall back to sender ID comparison
+            const isMine = currentRole
+              ? msg.senderRole === currentRole
+              : (msg.sender?._id === currentUserId || msg.sender === currentUserId);
             const role = msg.senderRole === 'host' ? 'Host' : 'Driver';
             return (
               <div key={msg._id} className={`chatbox-msg ${isMine ? 'chatbox-msg-mine' : 'chatbox-msg-theirs'}`}>
