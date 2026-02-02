@@ -40,13 +40,30 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
-    const { token, user } = response.data;
+    const { token, user, deactivated } = response.data;
 
     localStorage.setItem('token', token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    setUser(user);
 
+    // If account is deactivated, don't set user yet - let Login page handle it
+    if (deactivated) {
+      const error = new Error('Account is deactivated');
+      error.deactivated = true;
+      error.token = token;
+      error.user = user;
+      throw error;
+    }
+
+    setUser(user);
     return user;
+  };
+
+  const reactivateAndLogin = async (token) => {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    await axios.post(`${API_URL}/api/users/account/reactivate`);
+    const response = await axios.get(`${API_URL}/api/auth/me`);
+    setUser(response.data);
+    return response.data;
   };
 
   const register = async (userData) => {
@@ -90,6 +107,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    reactivateAndLogin,
     register,
     logout,
     forgotPassword,

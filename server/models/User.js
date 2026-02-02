@@ -36,6 +36,14 @@ const userSchema = new mongoose.Schema({
     enum: ['driver', 'host', 'both'],
     default: 'driver'
   },
+  accountStatus: {
+    type: String,
+    enum: ['active', 'deactivated'],
+    default: 'active'
+  },
+  deactivatedAt: {
+    type: Date
+  },
   driverLicense: {
     licenseNumber: {
       type: String,

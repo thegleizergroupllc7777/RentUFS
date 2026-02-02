@@ -135,6 +135,23 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Check if account is deactivated - return token but flag it
+    if (user.accountStatus === 'deactivated') {
+      return res.json({
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userType: user.userType,
+          profileImage: user.profileImage
+        },
+        deactivated: true,
+        deactivatedAt: user.deactivatedAt
+      });
+    }
+
     res.json({
       token,
       user: {

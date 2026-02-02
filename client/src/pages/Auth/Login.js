@@ -11,8 +11,10 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deactivatedInfo, setDeactivatedInfo] = useState(null);
+  const [reactivating, setReactivating] = useState(false);
 
-  const { login } = useAuth();
+  const { login, reactivateAndLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -25,21 +27,38 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setDeactivatedInfo(null);
     setLoading(true);
 
     try {
       const userData = await login(formData.email, formData.password);
 
-      // Redirect based on user role
       if (userData.role === 'host') {
         navigate('/host/dashboard');
       } else {
         navigate('/driver/my-bookings');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to login');
+      if (err.deactivated) {
+        setDeactivatedInfo({ token: err.token, user: err.user });
+      } else {
+        setError(err.response?.data?.message || 'Failed to login');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setReactivating(true);
+    setError('');
+    try {
+      await reactivateAndLogin(deactivatedInfo.token);
+      navigate('/marketplace');
+    } catch (err) {
+      setError('Failed to reactivate account. Please try again.');
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -54,46 +73,78 @@ const Login = () => {
 
             {error && <div className="error-message">{error}</div>}
 
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  className="form-input"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
+            {deactivatedInfo ? (
+              <div style={{
+                backgroundColor: '#1c1c1c',
+                border: '1px solid #f59e0b',
+                borderRadius: '0.5rem',
+                padding: '1.5rem',
+                marginBottom: '1rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⚠️</div>
+                <h3 style={{ color: '#f59e0b', marginBottom: '0.5rem' }}>Account Deactivated</h3>
+                <p style={{ color: '#9ca3af', marginBottom: '1rem', fontSize: '0.875rem' }}>
+                  Your account was deactivated. Would you like to reactivate it?
+                </p>
+                <button
+                  onClick={handleReactivate}
+                  className="btn btn-primary"
+                  style={{ width: '100%', marginBottom: '0.75rem' }}
+                  disabled={reactivating}
+                >
+                  {reactivating ? 'Reactivating...' : 'Reactivate My Account'}
+                </button>
+                <button
+                  onClick={() => { setDeactivatedInfo(null); localStorage.removeItem('token'); }}
+                  className="btn"
+                  style={{ width: '100%', border: '1px solid #6b7280', color: '#6b7280', background: 'transparent' }}
+                >
+                  Cancel
+                </button>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="auth-form">
+                <div className="form-group">
+                  <label className="form-label">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    className="form-input"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  className="form-input"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    className="form-input"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-              <div style={{ textAlign: 'right', marginBottom: '16px' }}>
-                <Link to="/forgot-password" className="auth-link" style={{ fontSize: '14px' }}>
-                  Forgot Password?
-                </Link>
-              </div>
+                <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+                  <Link to="/forgot-password" className="auth-link" style={{ fontSize: '14px' }}>
+                    Forgot Password?
+                  </Link>
+                </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                disabled={loading}
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  disabled={loading}
+                >
+                  {loading ? 'Logging in...' : 'Login'}
+                </button>
+              </form>
+            )}
 
             <p className="auth-footer">
               Don't have an account?{' '}
