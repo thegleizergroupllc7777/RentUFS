@@ -304,12 +304,6 @@ const HostDashboard = () => {
                       >
                         {vehicle.availability ? 'Mark Unavailable' : 'Mark Available'}
                       </button>
-                      <button
-                        onClick={() => handleDelete(vehicle._id)}
-                        className="btn-action btn-action-danger"
-                      >
-                        Delete
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -375,12 +369,6 @@ const HostDashboard = () => {
                             className="btn-action"
                           >
                             {vehicle.availability ? 'Mark Unavailable' : 'Mark Available'}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(vehicle._id)}
-                            className="btn-action btn-action-danger"
-                          >
-                            Delete
                           </button>
                         </div>
                       </div>
