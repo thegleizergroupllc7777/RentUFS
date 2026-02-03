@@ -450,8 +450,8 @@ const DriverProfile = () => {
     try {
       const token = localStorage.getItem('token');
       const payload = { ...taxFormData };
-      // Don't send taxId if it's locked (backend will reject it)
-      if (taxInfo?.taxIdLocked) {
+      // Don't send taxId if it's locked AND has a stored value (backend will reject it)
+      if (taxInfo?.taxIdLocked && taxInfo?.taxIdLast4) {
         delete payload.taxId;
       }
       const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {
@@ -852,7 +852,7 @@ const DriverProfile = () => {
                 background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent'
               }}>
                 <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
-                  onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
+                  onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Individual</span>
@@ -866,7 +866,7 @@ const DriverProfile = () => {
                 background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent'
               }}>
                 <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
-                  onChange={() => setTaxFormData({ accountType: 'business', taxId: '', businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
+                  onChange={() => setTaxFormData({ accountType: 'business', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Business / LLC</span>
