@@ -11,7 +11,13 @@ const HostDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [taxInfo, setTaxInfo] = useState(null);
   const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('hostVehicleView') || 'grid');
   const location = useLocation();
+
+  const handleViewChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('hostVehicleView', mode);
+  };
 
   useEffect(() => {
     fetchVehicles();
@@ -161,7 +167,35 @@ const HostDashboard = () => {
               </Link>
             </div>
           ) : (
-            (() => {
+            <>
+              {/* View Toggle */}
+              <div className="view-toggle">
+                <button
+                  className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                  onClick={() => handleViewChange('grid')}
+                  title="Grid view"
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                    <rect x="0" y="0" width="8" height="8" rx="1.5" />
+                    <rect x="10" y="0" width="8" height="8" rx="1.5" />
+                    <rect x="0" y="10" width="8" height="8" rx="1.5" />
+                    <rect x="10" y="10" width="8" height="8" rx="1.5" />
+                  </svg>
+                </button>
+                <button
+                  className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                  onClick={() => handleViewChange('list')}
+                  title="List view"
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                    <rect x="0" y="1" width="18" height="4" rx="1.5" />
+                    <rect x="0" y="7" width="18" height="4" rx="1.5" />
+                    <rect x="0" y="13" width="18" height="4" rx="1.5" />
+                  </svg>
+                </button>
+              </div>
+
+              {(() => {
               // Group vehicles by zip code
               const grouped = {};
               vehicles.forEach(v => {
@@ -208,6 +242,9 @@ const HostDashboard = () => {
                       {grouped[zip].length} vehicle{grouped[zip].length !== 1 ? 's' : ''}
                     </span>
                   </div>
+
+                  {/* Grid View */}
+                  {viewMode === 'grid' && (
                   <div className="host-vehicles-grid">
                     {grouped[zip].map(vehicle => (
                 <div key={vehicle._id} className={`host-vehicle-card ${rentedVehicleIds.has(vehicle._id) ? 'rented' : ''}`}>
@@ -278,9 +315,84 @@ const HostDashboard = () => {
                 </div>
                     ))}
                   </div>
+                  )}
+
+                  {/* List View */}
+                  {viewMode === 'list' && (
+                  <div className="host-vehicles-list">
+                    {grouped[zip].map(vehicle => {
+                      const isRented = rentedVehicleIds.has(vehicle._id);
+                      return (
+                    <div key={vehicle._id} className={`host-vehicle-card-list ${isRented ? 'rented' : ''}`}>
+                      <div className="list-vehicle-image">
+                        {vehicle.images?.[0] ? (
+                          <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
+                        ) : (
+                          <div className="vehicle-placeholder">No Image</div>
+                        )}
+                        {isRented && <div className="rented-overlay"></div>}
+                        <div className={`availability-badge ${isRented ? 'rented' : vehicle.availability ? 'available' : 'unavailable'}`}>
+                          {isRented ? 'Rented' : vehicle.availability ? 'Available' : 'Unavailable'}
+                        </div>
+                      </div>
+
+                      <div className="list-vehicle-content">
+                        <div className="list-vehicle-header">
+                          <div>
+                            <h3 className="host-vehicle-title" style={{ marginBottom: '0.25rem' }}>
+                              {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                            </h3>
+                            {vehicle.nickname && (
+                              <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>
+                                {vehicle.year} {vehicle.make} {vehicle.model}
+                              </p>
+                            )}
+                          </div>
+                          <div className="list-vehicle-pricing">
+                            <span className="list-price-main">${vehicle.pricePerDay}/day</span>
+                            {vehicle.pricePerWeek && <span className="list-price-sub">${vehicle.pricePerWeek}/wk</span>}
+                            {vehicle.pricePerMonth && <span className="list-price-sub">${vehicle.pricePerMonth}/mo</span>}
+                          </div>
+                        </div>
+
+                        <div className="list-vehicle-meta">
+                          <span>{vehicle.type}</span>
+                          <span>{vehicle.transmission}</span>
+                          <span>{vehicle.seats} seats</span>
+                          <span>{vehicle.tripCount} trip{vehicle.tripCount !== 1 ? 's' : ''}</span>
+                          <span>{vehicle.rating > 0 ? `${vehicle.rating.toFixed(1)} rating` : 'No ratings'}</span>
+                        </div>
+
+                        <div className="host-vehicle-actions">
+                          <Link to={`/vehicle/${vehicle._id}`}>
+                            <button className="btn-action">View</button>
+                          </Link>
+                          <Link to={`/host/edit-vehicle/${vehicle._id}`}>
+                            <button className="btn-action">Edit</button>
+                          </Link>
+                          <button
+                            onClick={() => toggleAvailability(vehicle._id, vehicle.availability)}
+                            className="btn-action"
+                          >
+                            {vehicle.availability ? 'Mark Unavailable' : 'Mark Available'}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(vehicle._id)}
+                            className="btn-action btn-action-danger"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                      );
+                    })}
+                  </div>
+                  )}
                 </div>
               ));
-            })()
+            })()}
+            </>
           )}
         </div>
       </div>
