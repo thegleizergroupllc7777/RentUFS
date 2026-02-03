@@ -58,6 +58,28 @@ const AddVehicle = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
+  const [vinDuplicate, setVinDuplicate] = useState(null);
+
+  const checkVinDuplicate = async (vin) => {
+    if (vin.length !== 17) {
+      setVinDuplicate(null);
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/vehicles/check-vin/${vin.toUpperCase()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.duplicate) {
+        setVinDuplicate(response.data.vehicleNickname || 'an existing vehicle');
+      } else {
+        setVinDuplicate(null);
+      }
+    } catch (err) {
+      // Silently fail - don't block the form
+      setVinDuplicate(null);
+    }
+  };
 
   const handleZipLookup = async (zip) => {
     if (!/^\d{5}$/.test(zip)) return;
@@ -159,6 +181,14 @@ const AddVehicle = () => {
     setError('');
     setLoading(true);
 
+    // Block submission if VIN is a duplicate
+    if (vinDuplicate) {
+      setError('This VIN is already used on one of your listings. Each vehicle can only have one listing.');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     // Validate that at least 4 photos are uploaded
     if (!formData.images || formData.images.length < 4) {
       setError(`Please upload at least 4 photos (${formData.images?.length || 0} uploaded)`);
@@ -233,6 +263,7 @@ const AddVehicle = () => {
                       onChange={(e) => {
                         handleChange(e);
                         setVinDecoded(false);
+                        checkVinDuplicate(e.target.value.trim());
                       }}
                       placeholder="Enter 17-character VIN"
                       maxLength="17"
@@ -255,7 +286,7 @@ const AddVehicle = () => {
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                     Found on your dashboard or driver's door jamb. Enter VIN and click Decode to auto-fill vehicle details.
                   </p>
-                  {vinDecoded && (
+                  {vinDecoded && !vinDuplicate && (
                     <div style={{
                       marginTop: '0.5rem',
                       padding: '0.75rem',
@@ -266,6 +297,20 @@ const AddVehicle = () => {
                       fontSize: '0.9rem'
                     }}>
                       VIN decoded successfully: {formData.year} {formData.make} {formData.model}. Please verify details below.
+                    </div>
+                  )}
+                  {vinDuplicate && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem',
+                      backgroundColor: '#fef2f2',
+                      color: '#991b1b',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #ef4444',
+                      fontSize: '0.9rem',
+                      fontWeight: '500'
+                    }}>
+                      Duplicate listing — this VIN is already used on your listing "{vinDuplicate}". Each vehicle can only have one listing.
                     </div>
                   )}
                 </div>

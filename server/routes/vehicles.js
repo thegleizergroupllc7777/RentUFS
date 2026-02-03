@@ -54,6 +54,29 @@ router.get('/lookup-zip/:zip', async (req, res) => {
   }
 });
 
+// Check if a VIN already exists for this host
+router.get('/check-vin/:vin', auth, async (req, res) => {
+  try {
+    const { vin } = req.params;
+    if (!vin || vin.length !== 17) {
+      return res.json({ duplicate: false });
+    }
+
+    const existing = await Vehicle.findOne({
+      vin: vin.toUpperCase(),
+      host: req.user._id
+    });
+
+    res.json({
+      duplicate: !!existing,
+      vehicleNickname: existing?.nickname || `${existing?.year} ${existing?.make} ${existing?.model}` || null
+    });
+  } catch (error) {
+    console.error('❌ VIN check error:', error.message);
+    res.status(500).json({ message: 'Failed to check VIN' });
+  }
+});
+
 // Decode VIN using NHTSA vPIC API (free, no key required)
 router.get('/decode-vin/:vin', async (req, res) => {
   try {
