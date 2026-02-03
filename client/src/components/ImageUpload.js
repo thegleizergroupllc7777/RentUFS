@@ -5,7 +5,7 @@ import API_URL from '../config/api';
 import getImageUrl from '../config/imageUrl';
 import './ImageUpload.css';
 
-// Compress an image file to a base64 data URL
+// Compress an image file and return as a Blob
 // Resizes to max 1200px and compresses as JPEG quality 0.7
 // Result is typically 100-300KB instead of 3-5MB
 const compressImage = (file) => {
@@ -36,10 +36,12 @@ const compressImage = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        const base64 = canvas.toDataURL('image/jpeg', 0.7);
-        const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
-        console.log(`📸 Compressed image: ${img.width}x${img.height} → ${width}x${height}, ~${sizeKB}KB`);
-        resolve(base64);
+        canvas.toBlob((blob) => {
+          if (!blob) return reject(new Error('Failed to compress image'));
+          const sizeKB = Math.round(blob.size / 1024);
+          console.log(`📸 Compressed image: ${img.width}x${img.height} → ${width}x${height}, ~${sizeKB}KB`);
+          resolve(blob);
+        }, 'image/jpeg', 0.7);
       };
       img.onerror = () => reject(new Error('Failed to load image'));
       img.src = e.target.result;
@@ -47,6 +49,31 @@ const compressImage = (file) => {
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsDataURL(file);
   });
+};
+
+// Upload a Blob to the server and return the URL path
+const uploadToServer = async (blob, filename) => {
+  const formData = new FormData();
+  formData.append('image', blob, filename || 'photo.jpg');
+  const token = localStorage.getItem('token');
+  const response = await axios.post(`${API_URL}/api/upload/image`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+  if (!response.data.success) throw new Error('Upload failed');
+  return response.data.imageUrl;
+};
+
+// Convert a base64 data URL to a Blob
+const base64ToBlob = (base64) => {
+  const parts = base64.split(',');
+  const mime = parts[0].match(/:(.*?);/)[1];
+  const bytes = atob(parts[1]);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
 };
 
 const ImageUpload = ({ label, value, onChange, required = false }) => {
@@ -91,13 +118,14 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
 
     setUploading(true);
     try {
-      const base64 = await compressImage(file);
-      console.log(`✅ Image compressed for ${label}`);
-      onChange(base64);
+      const blob = await compressImage(file);
+      const imageUrl = await uploadToServer(blob, file.name);
+      console.log(`✅ Image uploaded for ${label}: ${imageUrl}`);
+      onChange(imageUrl);
       setUploadError('');
     } catch (err) {
-      console.error('Compression failed:', err);
-      setUploadError('Failed to process image. Please try again.');
+      console.error('Upload failed:', err);
+      setUploadError('Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -174,11 +202,19 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
     ctx.drawImage(video, 0, 0, width, height);
 
     stopCamera();
+    setUploading(true);
 
-    // Get compressed base64 directly from canvas
-    const base64 = canvas.toDataURL('image/jpeg', 0.7);
-    console.log(`✅ Camera photo captured for ${label}`);
-    onChange(base64);
+    try {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.7));
+      const imageUrl = await uploadToServer(blob, 'camera-photo.jpg');
+      console.log(`✅ Camera photo uploaded for ${label}: ${imageUrl}`);
+      onChange(imageUrl);
+    } catch (err) {
+      console.error('Camera upload failed:', err);
+      setUploadError('Failed to upload photo. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   // Phone upload: create session and show QR code
@@ -195,14 +231,23 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
       setPhoneQrUrl(qrUrl);
 
       // Start polling for uploaded images
+      let lastCount = 0;
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         try {
           const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
-          if (pollRes.data.images && pollRes.data.images.length > 0) {
-            // Use the latest image
-            const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
-            onChange(latestImage);
+          if (pollRes.data.images && pollRes.data.images.length > lastCount) {
+            lastCount = pollRes.data.images.length;
+            // Upload the latest base64 image from phone to server as a file
+            const latestBase64 = pollRes.data.images[pollRes.data.images.length - 1];
+            try {
+              const blob = base64ToBlob(latestBase64);
+              const imageUrl = await uploadToServer(blob, 'phone-photo.jpg');
+              console.log(`✅ Phone photo uploaded: ${imageUrl}`);
+              onChange(imageUrl);
+            } catch (uploadErr) {
+              console.error('Failed to upload phone image:', uploadErr);
+            }
           }
         } catch (err) {
           // Session expired or error - stop polling
