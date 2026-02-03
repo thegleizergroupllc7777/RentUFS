@@ -237,23 +237,26 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
         try {
           const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
           if (pollRes.data.images && pollRes.data.images.length > lastCount) {
+            // Process ALL new images since last poll, not just the latest
+            const newImages = pollRes.data.images.slice(lastCount);
             lastCount = pollRes.data.images.length;
-            // Phone upload now returns Cloudinary URLs directly
-            const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
-            try {
-              if (latestImage.startsWith('data:')) {
-                // Legacy base64 format - convert and upload
-                const blob = base64ToBlob(latestImage);
-                const imageUrl = await uploadToServer(blob, 'phone-photo.jpg');
-                console.log(`✅ Phone photo uploaded: ${imageUrl}`);
-                onChange(imageUrl);
-              } else {
-                // Cloudinary URL - use directly
-                console.log(`✅ Phone photo ready: ${latestImage}`);
-                onChange(latestImage);
+
+            for (const image of newImages) {
+              try {
+                if (image.startsWith('data:')) {
+                  // Legacy base64 format - convert and upload
+                  const blob = base64ToBlob(image);
+                  const imageUrl = await uploadToServer(blob, 'phone-photo.jpg');
+                  console.log(`✅ Phone photo uploaded: ${imageUrl}`);
+                  onChange(imageUrl);
+                } else {
+                  // Cloudinary URL - use directly
+                  console.log(`✅ Phone photo ready: ${image}`);
+                  onChange(image);
+                }
+              } catch (uploadErr) {
+                console.error('Failed to process phone image:', uploadErr);
               }
-            } catch (uploadErr) {
-              console.error('Failed to process phone image:', uploadErr);
             }
           }
         } catch (err) {

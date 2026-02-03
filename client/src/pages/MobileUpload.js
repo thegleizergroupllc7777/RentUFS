@@ -19,45 +19,60 @@ const MobileUpload = () => {
   const cameraInputRef = useRef(null);
 
   const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+    // Validate all files first
+    const invalidFile = files.find(f => !f.type.startsWith('image/'));
+    if (invalidFile) {
+      setError('Please select only image files');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB');
+    const oversizedFile = files.find(f => f.size > 5 * 1024 * 1024);
+    if (oversizedFile) {
+      setError(`"${oversizedFile.name}" is over 5MB. Please select smaller images.`);
       return;
     }
 
     setUploading(true);
     setError('');
 
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
+    let successCount = 0;
+    let lastError = null;
 
-      const res = await axios.post(
-        `${uploadApiUrl}/api/upload/mobile/${sessionId}`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
+    // Upload files one at a time to avoid overwhelming the server
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
 
-      setUploaded(res.data.count);
-      // Clear inputs
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setError('Session expired. Please generate a new QR code on your computer.');
-      } else {
-        setError('Upload failed. Please try again.');
+        const res = await axios.post(
+          `${uploadApiUrl}/api/upload/mobile/${sessionId}`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+
+        successCount++;
+        setUploaded(res.data.count);
+      } catch (err) {
+        if (err.response?.status === 404) {
+          lastError = 'Session expired. Please generate a new QR code on your computer.';
+          break; // Stop uploading if session expired
+        } else {
+          lastError = `Failed to upload "${file.name}". ${files.length > 1 ? `${successCount} of ${files.length} uploaded.` : 'Please try again.'}`;
+        }
       }
-    } finally {
-      setUploading(false);
     }
+
+    if (lastError) {
+      setError(lastError);
+    }
+
+    // Clear inputs
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    setUploading(false);
   };
 
   if (done) {
@@ -109,6 +124,7 @@ const MobileUpload = () => {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handleUpload}
           style={{ display: 'none' }}
           id="gallery-input"
@@ -130,7 +146,7 @@ const MobileUpload = () => {
             opacity: uploading ? 0.6 : 1,
             pointerEvents: uploading ? 'none' : 'auto'
           }}>
-            {uploading ? '📤 Uploading...' : '🖼️ Choose from Gallery'}
+            {uploading ? '📤 Uploading...' : '🖼️ Select Photos'}
           </label>
         </div>
 
@@ -144,7 +160,7 @@ const MobileUpload = () => {
         )}
 
         <p style={styles.hint}>
-          You can upload multiple photos. Each one will appear on your computer instantly.
+          Select multiple photos at once from your gallery, or take them one at a time with the camera.
         </p>
       </div>
     </div>
