@@ -138,8 +138,8 @@ const Register = () => {
     setError('');
     setLoading(true);
 
-    // Validate age for drivers and both (must be at least 21)
-    if ((formData.userType === 'driver' || formData.userType === 'both') && formData.dateOfBirth) {
+    // Validate age for drivers (must be at least 21)
+    if (formData.userType === 'driver' && formData.dateOfBirth) {
       const birthDate = new Date(formData.dateOfBirth);
       const today = new Date();
       const age = today.getFullYear() - birthDate.getFullYear();
@@ -158,7 +158,7 @@ const Register = () => {
     }
 
     // Validate license photo and verification selfie for drivers
-    if (formData.userType === 'driver' || formData.userType === 'both') {
+    if (formData.userType === 'driver') {
       if (!formData.driverLicense.licenseImage || formData.driverLicense.licenseImage.trim() === '') {
         setError('Please upload a photo of your driver\'s license.');
         setLoading(false);
@@ -199,8 +199,8 @@ const Register = () => {
 
       await register(registrationData);
 
-      // If user is host or both, go to host dashboard
-      if (formData.userType === 'host' || formData.userType === 'both') {
+      // If user is host, go to host dashboard
+      if (formData.userType === 'host') {
         navigate('/host/dashboard');
       } else {
         // If just a driver, go to driver dashboard
@@ -372,7 +372,7 @@ const Register = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Date of Birth {(formData.userType === 'driver' || formData.userType === 'both') && '*'}</label>
+                    <label className="form-label">Date of Birth {formData.userType === 'driver' && '*'}</label>
                     <input
                       type="date"
                       name="dateOfBirth"
@@ -380,9 +380,9 @@ const Register = () => {
                       value={formData.dateOfBirth}
                       onChange={handleChange}
                       max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]}
-                      required={(formData.userType === 'driver' || formData.userType === 'both')}
+                      required={formData.userType === 'driver'}
                     />
-                    {(formData.userType === 'driver' || formData.userType === 'both') && (
+                    {formData.userType === 'driver' && (
                       <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                         You must be at least 21 years old to rent vehicles
                       </p>
@@ -399,12 +399,11 @@ const Register = () => {
                     >
                       <option value="driver">Rent cars (Driver)</option>
                       <option value="host">List my car (Host)</option>
-                      <option value="both">Both rent and list cars</option>
                     </select>
                   </div>
 
                   {/* Profile Picture / Business Logo */}
-                  {(formData.userType === 'host' || formData.userType === 'both') && (
+                  {formData.userType === 'host' && (
                     <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
                       <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#1f2937' }}>
                         Profile Picture or Business Logo
@@ -420,8 +419,8 @@ const Register = () => {
                     </div>
                   )}
 
-                  {/* Driver License Information - Only for drivers and both */}
-                  {(formData.userType === 'driver' || formData.userType === 'both') && (
+                  {/* Driver License Information - Only for drivers */}
+                  {formData.userType === 'driver' && (
                     <>
                       <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
                         <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#1f2937' }}>
