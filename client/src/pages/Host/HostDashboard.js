@@ -343,7 +343,7 @@ const HostDashboard = () => {
                               {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                             </h3>
                             {vehicle.nickname && (
-                              <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>
+                              <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: 0 }}>
                                 {vehicle.year} {vehicle.make} {vehicle.model}
                               </p>
                             )}

@@ -207,6 +207,15 @@ router.get('/host-tax-info', auth, async (req, res) => {
     const hasLegalName = !!(hostInfo.legalFirstName) && !!(hostInfo.legalLastName);
     const hasLegalAddress = !!(legalAddr.street) && !!(legalAddr.city) && !!(legalAddr.state) && !!(legalAddr.zipCode);
 
+    // Auto-fix: if taxIdLocked is true but no actual tax ID exists, reset the lock
+    let taxIdLocked = hostInfo.taxIdLocked || false;
+    if (taxIdLocked && !hostInfo.taxId && !hostInfo.taxIdLast4) {
+      console.log('🔧 Auto-resetting taxIdLocked for user:', user.email, '- no tax ID found in database');
+      user.set('hostInfo.taxIdLocked', false);
+      await user.save();
+      taxIdLocked = false;
+    }
+
     // For individual: need tax ID + legal name + legal address
     // For business: need tax ID + business name + business address
     const hasSubmitted = acctType === 'business'
@@ -219,7 +228,7 @@ router.get('/host-tax-info', auth, async (req, res) => {
       legalLastName: hostInfo.legalLastName || '',
       legalAddress: legalAddr,
       taxIdLast4: hostInfo.taxIdLast4 || '',
-      taxIdLocked: hostInfo.taxIdLocked || false,
+      taxIdLocked,
       businessName: hostInfo.businessName || '',
       dba: hostInfo.dba || '',
       businessAddress: bizAddr,
