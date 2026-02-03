@@ -371,6 +371,53 @@ router.put('/host-tax-info', auth, async (req, res) => {
   }
 });
 
+// Reset (unlock) host tax ID - allows re-entry
+router.post('/host-tax-info/reset', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!['host', 'both'].includes(user.userType)) {
+      return res.status(403).json({ message: 'Only hosts can reset tax information' });
+    }
+
+    const existingHostInfo = user.hostInfo || {};
+    if (!existingHostInfo.taxIdLocked) {
+      return res.status(400).json({ message: 'Tax ID is not currently locked' });
+    }
+
+    // Clear the tax ID and unlock it, but keep other info (name, address, account type)
+    user.set('hostInfo', {
+      ...existingHostInfo,
+      taxId: undefined,
+      taxIdLast4: undefined,
+      taxIdLocked: false
+    });
+    await user.save();
+
+    console.log('🔓 Host tax ID reset for:', user.email);
+
+    res.json({
+      message: 'Tax ID has been reset. You can now enter a new SSN/EIN.',
+      accountType: user.hostInfo.accountType,
+      legalFirstName: user.hostInfo.legalFirstName || '',
+      legalLastName: user.hostInfo.legalLastName || '',
+      legalAddress: user.hostInfo.legalAddress || {},
+      taxIdLast4: '',
+      taxIdLocked: false,
+      businessName: user.hostInfo.businessName || '',
+      dba: user.hostInfo.dba || '',
+      businessAddress: user.hostInfo.businessAddress || {},
+      hasSubmitted: false
+    });
+  } catch (error) {
+    console.error('❌ Error resetting host tax ID:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get driver license info
 router.get('/driver-license', auth, async (req, res) => {
   try {

@@ -20,6 +20,7 @@ const HostTaxSettings = () => {
   });
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxMessage, setTaxMessage] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetchTaxInfo();
@@ -93,6 +94,27 @@ const HostTaxSettings = () => {
       setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
     } finally {
       setTaxSaving(false);
+    }
+  };
+
+  const handleResetTaxId = async () => {
+    if (!window.confirm('Are you sure you want to reset your tax ID? You will need to re-enter your SSN/EIN.')) {
+      return;
+    }
+    setResetting(true);
+    setTaxMessage('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/users/host-tax-info/reset`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTaxMessage('Tax ID has been reset. You can now enter a new SSN/EIN.');
+      await fetchTaxInfo();
+      setShowTaxForm(true);
+    } catch (error) {
+      setTaxMessage(error.response?.data?.message || 'Failed to reset tax ID');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -213,7 +235,7 @@ const HostTaxSettings = () => {
                   <label className="tax-form-label">Account Type</label>
                   {taxInfo?.taxIdLocked && (
                     <p className="tax-form-hint" style={{ color: '#f59e0b', marginBottom: '0.5rem' }}>
-                      Account type is locked because your tax ID has been submitted. Contact support to change it.
+                      Account type is locked because your tax ID has been submitted. Reset your tax ID below to change it.
                     </p>
                   )}
                   <div className="tax-account-type-options">
@@ -347,9 +369,29 @@ const HostTaxSettings = () => {
                       className="tax-form-input"
                       style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }}
                     />
-                    <p className="tax-form-hint" style={{ color: '#f59e0b' }}>
-                      Your tax ID has been locked for security. Contact support if you need to change it.
-                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                      <p className="tax-form-hint" style={{ color: '#f59e0b', margin: 0 }}>
+                        Your tax ID is locked. Reset it below if you need to change it.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleResetTaxId}
+                        disabled={resetting}
+                        style={{
+                          background: 'transparent',
+                          color: '#ef4444',
+                          border: '1px solid #ef4444',
+                          borderRadius: '6px',
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '0.8rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      >
+                        {resetting ? 'Resetting...' : 'Reset Tax ID'}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="tax-form-group">
@@ -388,7 +430,7 @@ const HostTaxSettings = () => {
             <ul className="tax-info-list">
               <li>The IRS requires platforms to report earnings via Form 1099-K for hosts earning over $600/year.</li>
               <li>Your tax ID is encrypted and stored securely — only the last 4 digits are visible.</li>
-              <li>Your SSN/EIN is locked after submission for security. Name and address can still be updated.</li>
+              <li>Your SSN/EIN is locked after submission for security. You can reset it if needed. Name and address can still be updated.</li>
             </ul>
           </div>
         </div>
