@@ -18,6 +18,12 @@ services:
         sync: false  # Set your SendGrid API key for reliable email delivery
       - key: EMAIL_FROM
         sync: false  # Set verified sender email (e.g., noreply@yourdomain.com)
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false  # Set your Cloudinary cloud name
+      - key: CLOUDINARY_API_KEY
+        sync: false  # Set your Cloudinary API key
+      - key: CLOUDINARY_API_SECRET
+        sync: false  # Set your Cloudinary API secret
 
   # Frontend Static Site
   - type: web
