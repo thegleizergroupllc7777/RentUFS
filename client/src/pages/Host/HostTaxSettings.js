@@ -172,6 +172,13 @@ const HostTaxSettings = () => {
                   </span>
                   <span className="tax-detail-value">
                     ****{taxInfo.taxIdLast4}
+                    {taxInfo.taxIdLocked && (
+                      <span style={{
+                        marginLeft: '0.5rem', fontSize: '0.7rem',
+                        background: '#374151', color: '#9ca3af',
+                        padding: '0.15rem 0.4rem', borderRadius: '4px'
+                      }}>LOCKED</span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -200,18 +207,20 @@ const HostTaxSettings = () => {
                 <div className="tax-form-group">
                   <label className="tax-form-label">Account Type</label>
                   <div className="tax-account-type-options">
-                    <label className={`tax-account-option ${taxFormData.accountType === 'individual' ? 'selected' : ''}`}>
+                    <label className={`tax-account-option ${taxFormData.accountType === 'individual' ? 'selected' : ''} ${taxInfo?.taxIdLocked ? 'disabled' : ''}`}>
                       <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
                         onChange={() => setTaxFormData({ ...taxFormData, accountType: 'individual', taxId: '', businessName: '' })}
+                        disabled={!!taxInfo?.taxIdLocked}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Individual</span>
                         <span className="tax-account-option-desc">Personal SSN</span>
                       </div>
                     </label>
-                    <label className={`tax-account-option ${taxFormData.accountType === 'business' ? 'selected' : ''}`}>
+                    <label className={`tax-account-option ${taxFormData.accountType === 'business' ? 'selected' : ''} ${taxInfo?.taxIdLocked ? 'disabled' : ''}`}>
                       <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
                         onChange={() => setTaxFormData({ ...taxFormData, accountType: 'business', taxId: '', businessName: '' })}
+                        disabled={!!taxInfo?.taxIdLocked}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Business / LLC</span>
@@ -320,19 +329,31 @@ const HostTaxSettings = () => {
                   <label className="tax-form-label">
                     {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
                   </label>
-                  <input type="text" value={taxFormData.taxId}
-                    onChange={handleTaxIdInput}
-                    placeholder={taxInfo?.taxIdLast4
-                      ? `Current: ****${taxInfo.taxIdLast4} (leave blank to keep)`
-                      : (taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX')}
-                    maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
-                    className="tax-form-input"
-                    required={!taxInfo?.taxIdLast4} />
-                  <p className="tax-form-hint">
-                    {taxInfo?.taxIdLast4
-                      ? `Currently saved (****${taxInfo.taxIdLast4}). Enter a new number to update, or leave blank to keep current.`
-                      : 'Stored securely. Only the last 4 digits will be visible.'}
-                  </p>
+                  {taxInfo?.taxIdLocked ? (
+                    <>
+                      <input type="text"
+                        value={`****${taxInfo.taxIdLast4}`}
+                        disabled
+                        className="tax-form-input"
+                        style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }}
+                      />
+                      <p className="tax-form-hint" style={{ color: '#f59e0b' }}>
+                        Locked after submission. Contact support to update.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <input type="text" value={taxFormData.taxId}
+                        onChange={handleTaxIdInput}
+                        placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
+                        maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
+                        className="tax-form-input"
+                        required />
+                      <p className="tax-form-hint">
+                        Stored securely. Only the last 4 digits will be visible.
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {taxMessage && (
@@ -355,7 +376,7 @@ const HostTaxSettings = () => {
             <ul className="tax-info-list">
               <li>The IRS requires platforms to report earnings via Form 1099-K for hosts earning over $600/year.</li>
               <li>Your tax ID is encrypted and stored securely — only the last 4 digits are visible.</li>
-              <li>You can update your tax information at any time from this page.</li>
+              <li>Your SSN/EIN is locked after submission for security. Name and address can still be updated. Contact support to change your tax ID.</li>
             </ul>
           </div>
         </div>

@@ -224,12 +224,16 @@ router.get('/host-tax-info', auth, async (req, res) => {
       ? (hasTaxId && hasBusinessInfo)
       : (hasTaxId && hasLegalName && hasLegalAddress);
 
+    // Tax ID is locked once a valid 9-digit ID has been saved
+    const taxIdLocked = !!(hostInfo.taxId && hostInfo.taxId.length === 9 && hostInfo.taxIdLast4);
+
     res.json({
       accountType: acctType,
       legalFirstName: hostInfo.legalFirstName || '',
       legalLastName: hostInfo.legalLastName || '',
       legalAddress: legalAddr,
       taxIdLast4: hostInfo.taxIdLast4 || '',
+      taxIdLocked,
       businessName: hostInfo.businessName || '',
       dba: hostInfo.dba || '',
       businessAddress: bizAddr,
@@ -294,14 +298,27 @@ router.put('/host-tax-info', auth, async (req, res) => {
       return res.status(400).json({ message: 'Please select Individual or Business account type' });
     }
 
-    // Determine if we need a new tax ID or can keep existing
+    // Check if tax ID already exists (locked after first successful save)
     const existingTaxId = user.hostInfo?.taxId;
     const existingTaxIdLast4 = user.hostInfo?.taxIdLast4;
     const hasExistingTaxId = existingTaxId && existingTaxId.length === 9 && existingTaxIdLast4;
 
-    // If user provided a new tax ID, validate it
     let finalTaxIdDigits;
-    if (taxId && taxId.trim()) {
+    if (hasExistingTaxId) {
+      // Tax ID is locked - reject any attempt to change it or account type
+      if (taxId && taxId.trim()) {
+        return res.status(403).json({
+          message: 'Your tax ID is locked after submission. Contact support to update it.'
+        });
+      }
+      if (user.hostInfo.accountType && accountType !== user.hostInfo.accountType) {
+        return res.status(403).json({
+          message: 'Account type is locked after tax ID submission. Contact support to change it.'
+        });
+      }
+      finalTaxIdDigits = existingTaxId;
+    } else if (taxId && taxId.trim()) {
+      // First-time submission - validate the tax ID
       const digits = taxId.replace(/\D/g, '');
       if (digits.length !== 9) {
         return res.status(400).json({
@@ -311,9 +328,6 @@ router.put('/host-tax-info', auth, async (req, res) => {
         });
       }
       finalTaxIdDigits = digits;
-    } else if (hasExistingTaxId) {
-      // Keep the existing tax ID
-      finalTaxIdDigits = existingTaxId;
     } else {
       // No tax ID provided and none exists
       return res.status(400).json({
@@ -395,6 +409,7 @@ router.put('/host-tax-info', auth, async (req, res) => {
       legalLastName: user.hostInfo.legalLastName || '',
       legalAddress: user.hostInfo.legalAddress || {},
       taxIdLast4: finalTaxIdDigits.slice(-4),
+      taxIdLocked: true,
       businessName: user.hostInfo.businessName || '',
       dba: user.hostInfo.dba || '',
       businessAddress: user.hostInfo.businessAddress || {},
