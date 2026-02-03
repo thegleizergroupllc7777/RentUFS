@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -115,10 +115,6 @@ const DriverProfile = () => {
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-
   const canBeHost = user?.userType === 'host' || user?.userType === 'both';
   const activeMode = localStorage.getItem('activeMode') || 'driver';
   const isHost = canBeHost && activeMode === 'host';
@@ -133,8 +129,6 @@ const DriverProfile = () => {
     email: '',
     profileImage: ''
   });
-  const [showCamera, setShowCamera] = useState(false);
-  const [stream, setStream] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Email change state
@@ -197,14 +191,6 @@ const DriverProfile = () => {
   }, [user]);
 
   useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [stream]);
-
-  useEffect(() => {
     if (activeTab === 'reports' && isHost && !reportData) {
       fetchReports();
     }
@@ -222,81 +208,15 @@ const DriverProfile = () => {
   };
 
   // === Profile functions ===
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 640, height: 480 }
-      });
-      setStream(mediaStream);
-      setShowCamera(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      setMessage({ type: 'error', text: 'Could not access camera. Please allow camera permissions or upload a photo instead.' });
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setShowCamera(false);
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-      uploadImage(imageDataUrl);
-      stopCamera();
-    }
-  };
-
-  const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: 'Please select an image file' });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Image must be less than 5MB' });
-      return;
-    }
+  const handleProfileImageChange = async (base64Image) => {
+    if (!base64Image) return;
     setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('image', file);
-      const uploadResponse = await axios.post(`${API_URL}/api/upload/image`, formData, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
-      });
-      await updateProfileImage(uploadResponse.data.imageUrl);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      setMessage({ type: 'error', text: 'Failed to upload image' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const uploadImage = async (base64Image) => {
-    setLoading(true);
+    setMessage({ type: '', text: '' });
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(base64Image);
       const blob = await response.blob();
-      const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+      const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
       const formData = new FormData();
       formData.append('image', file);
       const uploadResponse = await axios.post(`${API_URL}/api/upload/image`, formData, {
@@ -634,48 +554,15 @@ const DriverProfile = () => {
         marginBottom: '1.5rem',
         border: '1px solid #333'
       }}>
-        <h3 style={{ marginBottom: '1.5rem', color: '#fff' }}>Profile Photo</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-          <div style={{
-            width: '150px',
-            height: '150px',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            border: '4px solid #10b981',
-            background: '#f3f4f6'
-          }}>
-            {profileData.profileImage ? (
-              <img src={profileData.profileImage.startsWith('http') || profileData.profileImage.startsWith('data:') ? profileData.profileImage : `${API_URL}${profileData.profileImage}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#9ca3af' }}>
-                {profileData.firstName?.[0]?.toUpperCase() || '?'}
-              </div>
-            )}
-          </div>
-
-          {showCamera && (
-            <div style={{ position: 'relative', borderRadius: '1rem', overflow: 'hidden', background: '#000' }}>
-              <video ref={videoRef} autoPlay playsInline style={{ width: '100%', maxWidth: '400px', display: 'block' }} />
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', padding: '1rem' }}>
-                <button onClick={capturePhoto} className="btn btn-primary" style={{ background: '#10b981' }}>Take Photo</button>
-                <button onClick={stopCamera} className="btn btn-secondary">Cancel</button>
-              </div>
-            </div>
-          )}
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-          {!showCamera && (
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button onClick={startCamera} className="btn btn-primary" disabled={loading} style={{ background: '#3b82f6' }}>Take Selfie</button>
-              <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary" disabled={loading}>Upload Photo</button>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
-            </div>
-          )}
-          {loading && <p style={{ color: '#9ca3af' }}>Uploading...</p>}
-          <p style={{ fontSize: '0.875rem', color: '#9ca3af', textAlign: 'center' }}>
-            Your photo will be shown to hosts when you book their vehicles
-          </p>
-        </div>
+        <ImageUpload
+          label="Profile Photo"
+          value={profileData.profileImage ? getImageUrl(profileData.profileImage) : ''}
+          onChange={handleProfileImageChange}
+        />
+        {loading && <p style={{ color: '#9ca3af', textAlign: 'center', marginTop: '0.5rem' }}>Saving profile photo...</p>}
+        <p style={{ fontSize: '0.875rem', color: '#9ca3af', textAlign: 'center', marginTop: '1rem' }}>
+          Your photo will be shown to {isHost ? 'drivers when they book your vehicles' : 'hosts when you book their vehicles'}
+        </p>
       </div>
 
       {/* Profile Info Form */}
