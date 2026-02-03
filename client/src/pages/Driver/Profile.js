@@ -225,16 +225,7 @@ const DriverProfile = () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(base64Image);
-      const blob = await response.blob();
-      const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
-      const formData = new FormData();
-      formData.append('image', file);
-      const uploadResponse = await axios.post(`${API_URL}/api/upload/image`, formData, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
-      });
-      await updateProfileImage(uploadResponse.data.imageUrl);
+      await updateProfileImage(base64Image);
     } catch (error) {
       console.error('Error uploading image:', error);
       setMessage({ type: 'error', text: 'Failed to upload image' });
