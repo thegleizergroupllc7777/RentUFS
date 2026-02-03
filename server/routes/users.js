@@ -203,8 +203,10 @@ router.post('/confirm-email-change', auth, async (req, res) => {
 // Get host tax info (only last 4 digits visible)
 router.get('/host-tax-info', auth, async (req, res) => {
   try {
+    // Auth middleware already loaded the user, but we need the full document (with password for save)
     const user = await User.findById(req.user._id);
     if (!user) {
+      console.error('❌ host-tax-info: User not found for id:', req.user._id);
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -213,16 +215,23 @@ router.get('/host-tax-info', auth, async (req, res) => {
     const taxIdLocked = !!(hostInfo.taxIdLocked);
 
     // Auto-fix: if taxIdLast4 exists but flag was never set (old data), set it now
+    // Wrapped in try-catch so auto-fix failure never breaks the GET response
+    let isLocked = taxIdLocked;
     if (!taxIdLocked && hostInfo.taxIdLast4) {
       const storedDigits = hostInfo.taxId ? hostInfo.taxId.replace(/\D/g, '') : '';
       if (storedDigits.length === 9) {
-        user.set('hostInfo.taxIdLocked', true);
-        await user.save();
-        console.log('🔒 Auto-locked tax ID for user:', user.email);
+        try {
+          user.set('hostInfo.taxIdLocked', true);
+          await user.save();
+          isLocked = true;
+          console.log('🔒 Auto-locked tax ID for user:', user.email);
+        } catch (saveErr) {
+          console.error('⚠️ Auto-fix save failed (non-fatal):', saveErr.message);
+          // Still treat as locked since the data qualifies
+          isLocked = true;
+        }
       }
     }
-
-    const isLocked = !!(user.hostInfo?.taxIdLocked);
 
     res.json({
       accountType: acctType,
