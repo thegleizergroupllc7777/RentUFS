@@ -31,6 +31,7 @@ const AddVehicle = () => {
     model: '',
     year: new Date().getFullYear(),
     vin: '',
+    licensePlate: '',
     type: 'sedan',
     transmission: 'automatic',
     seats: 5,
@@ -267,6 +268,19 @@ const AddVehicle = () => {
                       VIN decoded successfully: {formData.year} {formData.make} {formData.model}. Please verify details below.
                     </div>
                   )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">License Plate</label>
+                  <input
+                    type="text"
+                    name="licensePlate"
+                    className="form-input"
+                    value={formData.licensePlate}
+                    onChange={handleChange}
+                    placeholder="e.g., ABC1234"
+                    style={{ textTransform: 'uppercase' }}
+                  />
                 </div>
 
                 <div className="form-group">

@@ -34,6 +34,11 @@ const vehicleSchema = new mongoose.Schema({
     minlength: 17,
     maxlength: 17
   },
+  licensePlate: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
   type: {
     type: String,
     enum: ['sedan', 'suv', 'truck', 'van', 'convertible', 'coupe', 'wagon', 'other'],

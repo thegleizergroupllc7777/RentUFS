@@ -14,6 +14,7 @@ const paymentRoutes = require('./routes/payment');
 const reportRoutes = require('./routes/reports');
 const insuranceRoutes = require('./routes/insurance');
 const messageRoutes = require('./routes/messages');
+const agreementRoutes = require('./routes/agreements');
 const { startReturnReminderScheduler } = require('./utils/scheduler');
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/insurance', insuranceRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/agreements', agreementRoutes);
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')

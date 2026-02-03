@@ -7,6 +7,7 @@ import { formatTime } from '../../utils/formatTime';
 import Navbar from '../../components/Navbar';
 import CheckoutForm from './CheckoutForm';
 import InsuranceSelection from '../../components/InsuranceSelection';
+import RentalAgreement from '../../components/RentalAgreement';
 import API_URL from '../../config/api';
 import './Payment.css';
 
@@ -29,6 +30,7 @@ const Checkout = () => {
   const [paymentMode, setPaymentMode] = useState('new'); // 'new' or 'saved'
   const [selectedCard, setSelectedCard] = useState(null);
   const [payingWithSaved, setPayingWithSaved] = useState(false);
+  const [agreementSigned, setAgreementSigned] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -53,6 +55,11 @@ const Checkout = () => {
 
       setClientSecret(response.data.clientSecret);
       setBooking(response.data.booking);
+
+      // Check if agreement is already signed
+      if (response.data.booking?.agreement?.signed) {
+        setAgreementSigned(true);
+      }
 
       // Set saved cards if available
       if (response.data.savedCards && response.data.savedCards.length > 0) {
@@ -303,8 +310,30 @@ const Checkout = () => {
               initialSelection={booking.insurance?.type || 'none'}
             />
 
+            {/* Rental Agreement */}
+            <RentalAgreement
+              bookingId={bookingId}
+              onAgreementSigned={() => setAgreementSigned(true)}
+            />
+
+            {/* Payment sections - only visible after agreement is signed */}
+            {!agreementSigned && (
+              <div style={{
+                textAlign: 'center',
+                padding: '1.5rem',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid #333',
+                borderRadius: '8px',
+                marginBottom: '1.5rem'
+              }}>
+                <p style={{ color: '#9ca3af', margin: 0 }}>
+                  Please review and sign the rental agreement above before proceeding to payment.
+                </p>
+              </div>
+            )}
+
             {/* Saved Cards Section */}
-            {savedCards.length > 0 && (
+            {agreementSigned && savedCards.length > 0 && (
               <div className="payment-form-section" style={{ marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <h3 style={{ margin: 0 }}>Payment Method</h3>
@@ -388,14 +417,14 @@ const Checkout = () => {
               </div>
             )}
 
-            {!isValidStripeKey && (
+            {agreementSigned && !isValidStripeKey && (
               <div className="error-message">
                 Payment system configuration error. The Stripe publishable key is missing or invalid.
                 Please contact support.
               </div>
             )}
 
-            {clientSecret && isValidStripeKey && (paymentMode === 'new' || savedCards.length === 0) && (
+            {agreementSigned && clientSecret && isValidStripeKey && (paymentMode === 'new' || savedCards.length === 0) && (
               <Elements options={options} stripe={stripePromise}>
                 <CheckoutForm
                   booking={booking}
