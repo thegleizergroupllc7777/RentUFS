@@ -7,6 +7,17 @@ const { sendEmailVerificationCode } = require('../utils/emailService');
 
 const router = express.Router();
 
+// Helper: resolve relative profile image path to full URL
+function resolveProfileImage(user, req) {
+  const userObj = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+  if (userObj.profileImage && userObj.profileImage.startsWith('/uploads/')) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    userObj.profileImage = `${protocol}://${host}${userObj.profileImage}`;
+  }
+  return userObj;
+}
+
 // Helper: get or create Stripe customer for a user
 const getOrCreateStripeCustomer = async (user) => {
   if (user.stripeCustomerId) {
@@ -52,7 +63,7 @@ router.put('/profile', auth, async (req, res) => {
 
     await user.save();
 
-    res.json(user);
+    res.json(resolveProfileImage(user, req));
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -73,7 +84,7 @@ router.put('/profile-image', auth, async (req, res) => {
       { new: true }
     ).select('-password');
 
-    res.json(user);
+    res.json(resolveProfileImage(user, req));
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
