@@ -625,7 +625,7 @@ const EditVehicle = () => {
                 {formData.images.length > 0 && (
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                     gap: '0.75rem',
                     marginBottom: '1rem'
                   }}>
