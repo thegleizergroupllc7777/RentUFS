@@ -8,40 +8,26 @@ import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import API_URL from '../../config/api';
 import './Host.css';
 
-// Re-compress a base64 image if it's larger than the threshold
-const recompressBase64 = (base64, maxSizeKB = 500) => {
-  return new Promise((resolve) => {
-    const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
-    if (sizeKB <= maxSizeKB) {
-      resolve(base64); // Already small enough
-      return;
+// Upload a base64 image to the server and return the URL path
+const uploadBase64ToServer = async (base64) => {
+  const parts = base64.split(',');
+  const mime = parts[0].match(/:(.*?);/)[1];
+  const bytes = atob(parts[1]);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  const blob = new Blob([arr], { type: mime });
+
+  const formPayload = new FormData();
+  formPayload.append('image', blob, 'migrated-photo.jpg');
+  const token = localStorage.getItem('token');
+  const response = await axios.post(`${API_URL}/api/upload/image`, formPayload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
     }
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 1200;
-      const MAX_HEIGHT = 900;
-      let width = img.width;
-      let height = img.height;
-      if (width > MAX_WIDTH) {
-        height = Math.round((height * MAX_WIDTH) / width);
-        width = MAX_WIDTH;
-      }
-      if (height > MAX_HEIGHT) {
-        width = Math.round((width * MAX_HEIGHT) / height);
-        height = MAX_HEIGHT;
-      }
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      const compressed = canvas.toDataURL('image/jpeg', 0.7);
-      console.log(`🔄 Re-compressed image: ${sizeKB}KB → ${Math.round((compressed.length * 3) / 4 / 1024)}KB`);
-      resolve(compressed);
-    };
-    img.onerror = () => resolve(base64); // On error, keep original
-    img.src = base64;
   });
+  if (!response.data.success) throw new Error('Upload failed');
+  return response.data.imageUrl;
 };
 
 const EditVehicle = () => {
@@ -109,6 +95,50 @@ const EditVehicle = () => {
       const response = await axios.get(`${API_URL}/api/vehicles/${id}`);
       const vehicle = response.data;
 
+      // Migrate any base64 images to server files so they aren't lost on save
+      let images = vehicle.images || [];
+      let registrationImage = vehicle.registrationImage || '';
+
+      const migratePromises = images.map(async (img) => {
+        if (typeof img === 'string' && img.startsWith('data:')) {
+          try {
+            const url = await uploadBase64ToServer(img);
+            console.log('🔄 Migrated base64 vehicle image to file:', url);
+            return url;
+          } catch (err) {
+            console.error('Failed to migrate image:', err);
+            return img; // Keep original if migration fails
+          }
+        }
+        return img;
+      });
+
+      if (typeof registrationImage === 'string' && registrationImage.startsWith('data:')) {
+        try {
+          registrationImage = await uploadBase64ToServer(registrationImage);
+          console.log('🔄 Migrated base64 registration image to file:', registrationImage);
+        } catch (err) {
+          console.error('Failed to migrate registration image:', err);
+        }
+      }
+
+      images = await Promise.all(migratePromises);
+
+      // If any images were migrated, save the URLs back to the database immediately
+      const hadBase64 = (vehicle.images || []).some(img => typeof img === 'string' && img.startsWith('data:')) ||
+        (typeof vehicle.registrationImage === 'string' && vehicle.registrationImage.startsWith('data:'));
+      if (hadBase64) {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.put(`${API_URL}/api/vehicles/${id}`, { images, registrationImage }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          console.log('✅ Migrated images saved to database');
+        } catch (err) {
+          console.error('Failed to save migrated images:', err);
+        }
+      }
+
       setFormData({
         make: vehicle.make,
         model: vehicle.model,
@@ -123,8 +153,8 @@ const EditVehicle = () => {
         pricePerDay: vehicle.pricePerDay,
         pricePerWeek: vehicle.pricePerWeek || '',
         pricePerMonth: vehicle.pricePerMonth || '',
-        images: vehicle.images || [],
-        registrationImage: vehicle.registrationImage || '',
+        images: images,
+        registrationImage: registrationImage,
         registrationExpiration: vehicle.registrationExpiration ? vehicle.registrationExpiration.substring(0, 10) : '',
         location: vehicle.location || {
           address: '',
@@ -185,30 +215,41 @@ const EditVehicle = () => {
     setSaving(true);
 
     try {
-      // Re-compress any oversized base64 images before sending
+      // Convert any remaining base64 images to server files before saving
       let processedImages = formData.images;
       if (processedImages.length > 0) {
         processedImages = await Promise.all(
-          processedImages.map(img =>
-            typeof img === 'string' && img.startsWith('data:')
-              ? recompressBase64(img)
-              : Promise.resolve(img)
-          )
+          processedImages.map(async (img) => {
+            if (typeof img === 'string' && img.startsWith('data:')) {
+              try {
+                return await uploadBase64ToServer(img);
+              } catch (err) {
+                console.error('Failed to upload image before save:', err);
+                return img;
+              }
+            }
+            return img;
+          })
         );
+      }
+
+      let regImage = formData.registrationImage;
+      if (regImage && typeof regImage === 'string' && regImage.startsWith('data:')) {
+        try {
+          regImage = await uploadBase64ToServer(regImage);
+        } catch (err) {
+          console.error('Failed to upload registration image before save:', err);
+        }
       }
 
       const vehicleData = {
         ...formData,
         features: formData.features,
         images: processedImages.length > 0 ? processedImages : undefined,
+        registrationImage: regImage,
         pricePerWeek: formData.pricePerWeek !== '' ? formData.pricePerWeek : undefined,
         pricePerMonth: formData.pricePerMonth !== '' ? formData.pricePerMonth : undefined
       };
-
-      // Re-compress registration image if it's oversized base64
-      if (vehicleData.registrationImage && typeof vehicleData.registrationImage === 'string' && vehicleData.registrationImage.startsWith('data:')) {
-        vehicleData.registrationImage = await recompressBase64(vehicleData.registrationImage);
-      }
 
       const token = localStorage.getItem('token');
       await axios.put(`${API_URL}/api/vehicles/${id}`, vehicleData, {
