@@ -1034,11 +1034,13 @@ const DriverProfile = () => {
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
                 border: taxFormData.accountType === 'individual' ? '2px solid #10b981' : '2px solid #333',
-                borderRadius: '8px', cursor: 'pointer',
-                background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent'
+                borderRadius: '8px', cursor: taxInfo?.taxIdLocked ? 'not-allowed' : 'pointer',
+                background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                opacity: taxInfo?.taxIdLocked ? 0.6 : 1
               }}>
                 <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
                   onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
+                  disabled={!!taxInfo?.taxIdLocked}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Individual</span>
@@ -1048,11 +1050,13 @@ const DriverProfile = () => {
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
                 border: taxFormData.accountType === 'business' ? '2px solid #10b981' : '2px solid #333',
-                borderRadius: '8px', cursor: 'pointer',
-                background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent'
+                borderRadius: '8px', cursor: taxInfo?.taxIdLocked ? 'not-allowed' : 'pointer',
+                background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                opacity: taxInfo?.taxIdLocked ? 0.6 : 1
               }}>
                 <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
                   onChange={() => setTaxFormData({ accountType: 'business', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
+                  disabled={!!taxInfo?.taxIdLocked}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Business / LLC</span>
@@ -1157,18 +1161,28 @@ const DriverProfile = () => {
             <label className="form-label">
               {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
             </label>
-            <input type="text" className="form-input" value={taxFormData.taxId}
-              onChange={handleTaxIdInput}
-              placeholder={taxInfo?.taxIdLast4
-                ? `Current: ****${taxInfo.taxIdLast4} (leave blank to keep)`
-                : (taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX')}
-              maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
-              required={!taxInfo?.taxIdLast4} />
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-              {taxInfo?.taxIdLast4
-                ? `Currently saved (****${taxInfo.taxIdLast4}). Enter a new number to update, or leave blank to keep current.`
-                : 'Stored securely. Only the last 4 digits will be visible.'}
-            </p>
+            {taxInfo?.taxIdLocked ? (
+              <>
+                <input type="text" className="form-input"
+                  value={`****${taxInfo.taxIdLast4}`}
+                  disabled
+                  style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }} />
+                <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
+                  Locked after submission. Contact support to update.
+                </p>
+              </>
+            ) : (
+              <>
+                <input type="text" className="form-input" value={taxFormData.taxId}
+                  onChange={handleTaxIdInput}
+                  placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
+                  maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
+                  required />
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Stored securely. Only the last 4 digits will be visible.
+                </p>
+              </>
+            )}
           </div>
 
           {taxMessage && (
