@@ -307,15 +307,10 @@ router.put('/host-tax-info', auth, async (req, res) => {
 
     let finalTaxIdDigits;
     if (hasExistingTaxId) {
-      // Tax ID is locked - reject any attempt to change it or account type
+      // Tax ID is locked - reject any attempt to change it (only SSN/EIN locks)
       if (taxId && taxId.trim()) {
         return res.status(403).json({
           message: 'Your tax ID is locked after submission. Contact support to update it.'
-        });
-      }
-      if (user.hostInfo.accountType && accountType !== user.hostInfo.accountType) {
-        return res.status(403).json({
-          message: 'Account type is locked after tax ID submission. Contact support to change it.'
         });
       }
       finalTaxIdDigits = existingTaxIdDigits;
