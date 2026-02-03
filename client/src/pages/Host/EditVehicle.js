@@ -64,6 +64,7 @@ const EditVehicle = () => {
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [originalVin, setOriginalVin] = useState('');
 
   const handleZipLookup = async (zip) => {
     if (!/^\d{5}$/.test(zip)) return;
@@ -139,6 +140,7 @@ const EditVehicle = () => {
         }
       }
 
+      setOriginalVin(vehicle.vin || '');
       setFormData({
         make: vehicle.make,
         model: vehicle.model,
@@ -433,11 +435,21 @@ const EditVehicle = () => {
                       onChange={handleChange}
                       placeholder="17 characters"
                       maxLength="17"
-                      style={{ textTransform: 'uppercase' }}
+                      style={{
+                        textTransform: 'uppercase',
+                        ...(originalVin && originalVin.length === 17 ? {
+                          backgroundColor: '#f3f4f6',
+                          color: '#6b7280',
+                          cursor: 'not-allowed'
+                        } : {})
+                      }}
+                      readOnly={!!(originalVin && originalVin.length === 17)}
                       required
                     />
                     <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      Found on dashboard or driver's door jamb
+                      {originalVin && originalVin.length === 17
+                        ? 'VIN is locked and cannot be changed. To use a different VIN, create a new listing.'
+                        : 'Found on dashboard or driver\'s door jamb'}
                     </p>
                   </div>
 

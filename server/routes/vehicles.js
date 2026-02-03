@@ -406,6 +406,11 @@ router.put('/:id', auth, async (req, res) => {
 
     const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id });
 
+    // VIN cannot be changed once set (must create a new listing)
+    if (vehicle && vehicle.vin && vehicle.vin.length === 17) {
+      delete updateData.vin;
+    }
+
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
     }
