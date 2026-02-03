@@ -218,18 +218,6 @@ router.get('/host-tax-info', auth, async (req, res) => {
     const hasLegalName = !!(hostInfo.legalFirstName) && !!(hostInfo.legalLastName);
     const hasLegalAddress = !!(legalAddr.street) && !!(legalAddr.city) && !!(legalAddr.state) && !!(legalAddr.zipCode);
 
-    // Auto-fix: if taxIdLocked is true but tax ID data is incomplete, reset the lock
-    let taxIdLocked = hostInfo.taxIdLocked || false;
-    if (taxIdLocked) {
-      const hasValidTaxId = hostInfo.taxId && hostInfo.taxId.length === 9 && hostInfo.taxIdLast4;
-      if (!hasValidTaxId) {
-        console.log('🔧 Auto-resetting taxIdLocked for user:', user.email, '- incomplete tax ID data');
-        user.set('hostInfo.taxIdLocked', false);
-        await user.save();
-        taxIdLocked = false;
-      }
-    }
-
     // For individual: need tax ID + legal name + legal address
     // For business: need tax ID + business name + business address
     const hasSubmitted = acctType === 'business'
@@ -242,7 +230,6 @@ router.get('/host-tax-info', auth, async (req, res) => {
       legalLastName: hostInfo.legalLastName || '',
       legalAddress: legalAddr,
       taxIdLast4: hostInfo.taxIdLast4 || '',
-      taxIdLocked,
       businessName: hostInfo.businessName || '',
       dba: hostInfo.dba || '',
       businessAddress: bizAddr,
@@ -307,51 +294,33 @@ router.put('/host-tax-info', auth, async (req, res) => {
       return res.status(400).json({ message: 'Please select Individual or Business account type' });
     }
 
-    const existingHostInfo = user.hostInfo || {};
+    // Determine if we need a new tax ID or can keep existing
+    const existingTaxId = user.hostInfo?.taxId;
+    const existingTaxIdLast4 = user.hostInfo?.taxIdLast4;
+    const hasExistingTaxId = existingTaxId && existingTaxId.length === 9 && existingTaxIdLast4;
 
-    // Auto-fix: if taxIdLocked is true but the tax submission is incomplete, reset the lock
-    // This handles cases where a previous bug set the lock without properly saving all data
-    if (existingHostInfo.taxIdLocked) {
-      const hasValidTaxId = existingHostInfo.taxId && existingHostInfo.taxId.length === 9 && existingHostInfo.taxIdLast4;
-      if (!hasValidTaxId) {
-        console.log('🔧 Auto-resetting taxIdLocked in PUT for user:', user.email, '- incomplete tax ID data');
-        existingHostInfo.taxIdLocked = false;
-        user.set('hostInfo.taxIdLocked', false);
-      }
-    }
-
-    // If SSN/EIN is locked, reject attempts to change it
-    if (existingHostInfo.taxIdLocked && taxId && taxId.trim()) {
-      return res.status(403).json({
-        message: 'Your tax ID (SSN/EIN) has been locked after submission and cannot be changed. Contact support if you need to update it.'
-      });
-    }
-
-    // If tax ID is locked, reject account type changes (SSN vs EIN are different ID types)
-    if (existingHostInfo.taxIdLocked && existingHostInfo.accountType && accountType !== existingHostInfo.accountType) {
-      return res.status(403).json({
-        message: 'Your account type is locked because your tax ID has been submitted. Contact support if you need to change it.'
-      });
-    }
-
-    // Tax ID is required on first submission
-    if (!existingHostInfo.taxIdLocked) {
-      if (!taxId || !taxId.trim()) {
-        return res.status(400).json({
-          message: accountType === 'individual'
-            ? 'Social Security Number is required'
-            : 'Business Tax ID (EIN) is required'
-        });
-      }
-
-      const taxIdDigits = taxId.replace(/\D/g, '');
-      if (taxIdDigits.length !== 9) {
+    // If user provided a new tax ID, validate it
+    let finalTaxIdDigits;
+    if (taxId && taxId.trim()) {
+      const digits = taxId.replace(/\D/g, '');
+      if (digits.length !== 9) {
         return res.status(400).json({
           message: accountType === 'individual'
             ? 'Please enter a valid 9-digit Social Security Number'
             : 'Please enter a valid 9-digit EIN (XX-XXXXXXX)'
         });
       }
+      finalTaxIdDigits = digits;
+    } else if (hasExistingTaxId) {
+      // Keep the existing tax ID
+      finalTaxIdDigits = existingTaxId;
+    } else {
+      // No tax ID provided and none exists
+      return res.status(400).json({
+        message: accountType === 'individual'
+          ? 'Social Security Number is required'
+          : 'Business Tax ID (EIN) is required'
+      });
     }
 
     // Validate individual fields
@@ -377,63 +346,59 @@ router.put('/host-tax-info', auth, async (req, res) => {
       }
     }
 
-    // Build updated hostInfo, preserving locked taxId if already set
-    const taxIdDigits = existingHostInfo.taxIdLocked
-      ? existingHostInfo.taxId
-      : taxId.replace(/\D/g, '');
+    // Save fields individually to avoid Mongoose subdocument replacement issues
+    user.set('hostInfo.accountType', accountType);
+    user.set('hostInfo.taxId', finalTaxIdDigits);
+    user.set('hostInfo.taxIdLast4', finalTaxIdDigits.slice(-4));
 
-    const updatedHostInfo = {
-      accountType,
-      taxId: taxIdDigits,
-      taxIdLast4: taxIdDigits.slice(-4),
-      taxIdLocked: true,
-      displayPreference: existingHostInfo.displayPreference || 'personal'
-    };
+    // Preserve display preference
+    if (!user.hostInfo?.displayPreference) {
+      user.set('hostInfo.displayPreference', 'personal');
+    }
 
     if (accountType === 'individual') {
-      updatedHostInfo.legalFirstName = legalFirstName.trim();
-      updatedHostInfo.legalLastName = legalLastName.trim();
-      updatedHostInfo.legalAddress = {
+      user.set('hostInfo.legalFirstName', legalFirstName.trim());
+      user.set('hostInfo.legalLastName', legalLastName.trim());
+      user.set('hostInfo.legalAddress', {
         street: legalAddress.street?.trim() || '',
         city: legalAddress.city?.trim() || '',
         state: legalAddress.state?.trim() || '',
         zipCode: legalAddress.zipCode?.trim() || ''
-      };
+      });
       // Clear business fields
-      updatedHostInfo.businessName = undefined;
-      updatedHostInfo.dba = undefined;
-      updatedHostInfo.businessAddress = undefined;
+      user.set('hostInfo.businessName', '');
+      user.set('hostInfo.dba', '');
+      user.set('hostInfo.businessAddress', { street: '', city: '', state: '', zipCode: '' });
     } else {
-      updatedHostInfo.businessName = businessName.trim();
-      updatedHostInfo.dba = dba ? dba.trim() : undefined;
-      updatedHostInfo.businessAddress = {
+      user.set('hostInfo.businessName', businessName.trim());
+      user.set('hostInfo.dba', dba ? dba.trim() : '');
+      user.set('hostInfo.businessAddress', {
         street: businessAddress.street?.trim() || '',
         city: businessAddress.city?.trim() || '',
         state: businessAddress.state?.trim() || '',
         zipCode: businessAddress.zipCode?.trim() || ''
-      };
+      });
       // Clear individual fields
-      updatedHostInfo.legalFirstName = undefined;
-      updatedHostInfo.legalLastName = undefined;
-      updatedHostInfo.legalAddress = undefined;
+      user.set('hostInfo.legalFirstName', '');
+      user.set('hostInfo.legalLastName', '');
+      user.set('hostInfo.legalAddress', { street: '', city: '', state: '', zipCode: '' });
     }
 
-    user.set('hostInfo', updatedHostInfo);
     await user.save();
 
-    console.log('✅ Host tax info updated for:', user.email, '- Type:', accountType);
+    console.log('✅ Host tax info saved for:', user.email, '- Type:', accountType, '- Last4:', finalTaxIdDigits.slice(-4));
 
     res.json({
       message: 'Tax information saved successfully',
-      accountType: user.hostInfo.accountType,
+      accountType,
       legalFirstName: user.hostInfo.legalFirstName || '',
       legalLastName: user.hostInfo.legalLastName || '',
       legalAddress: user.hostInfo.legalAddress || {},
-      taxIdLast4: user.hostInfo.taxIdLast4,
-      taxIdLocked: true,
+      taxIdLast4: finalTaxIdDigits.slice(-4),
       businessName: user.hostInfo.businessName || '',
       dba: user.hostInfo.dba || '',
       businessAddress: user.hostInfo.businessAddress || {},
+      displayPreference: user.hostInfo.displayPreference || 'personal',
       hasSubmitted: true
     });
   } catch (error) {
