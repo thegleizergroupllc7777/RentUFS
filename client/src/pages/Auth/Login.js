@@ -33,10 +33,10 @@ const Login = () => {
     try {
       const userData = await login(formData.email, formData.password);
 
-      if (userData.role === 'host') {
+      if (userData.userType === 'host' || userData.userType === 'both') {
         navigate('/host/dashboard');
       } else {
-        navigate('/driver/my-bookings');
+        navigate('/marketplace');
       }
     } catch (err) {
       if (err.deactivated) {
