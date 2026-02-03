@@ -383,7 +383,7 @@ const EditVehicle = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">VIN (Vehicle Identification Number)</label>
+                    <label className="form-label">VIN (Vehicle Identification Number) *</label>
                     <input
                       type="text"
                       name="vin"
@@ -393,9 +393,10 @@ const EditVehicle = () => {
                       placeholder="17 characters"
                       maxLength="17"
                       style={{ textTransform: 'uppercase' }}
+                      required
                     />
                     <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      Optional - Found on dashboard or driver's door jamb
+                      Found on dashboard or driver's door jamb
                     </p>
                   </div>
 
