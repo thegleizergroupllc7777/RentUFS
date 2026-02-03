@@ -210,38 +210,35 @@ router.get('/host-tax-info', auth, async (req, res) => {
 
     const hostInfo = user.hostInfo || {};
     const acctType = hostInfo.accountType || 'individual';
-    const hasTaxId = !!(hostInfo.taxIdLast4);
-    const bizAddr = hostInfo.businessAddress || {};
-    const legalAddr = hostInfo.legalAddress || {};
-    const hasBusinessInfo = !!(hostInfo.businessName) &&
-      !!(bizAddr.street) && !!(bizAddr.city) && !!(bizAddr.state) && !!(bizAddr.zipCode);
-    const hasLegalName = !!(hostInfo.legalFirstName) && !!(hostInfo.legalLastName);
-    const hasLegalAddress = !!(legalAddr.street) && !!(legalAddr.city) && !!(legalAddr.state) && !!(legalAddr.zipCode);
+    const taxIdLocked = !!(hostInfo.taxIdLocked);
 
-    // For individual: need tax ID + legal name + legal address
-    // For business: need tax ID + business name + business address
-    const hasSubmitted = acctType === 'business'
-      ? (hasTaxId && hasBusinessInfo)
-      : (hasTaxId && hasLegalName && hasLegalAddress);
+    // Auto-fix: if taxIdLast4 exists but flag was never set (old data), set it now
+    if (!taxIdLocked && hostInfo.taxIdLast4) {
+      const storedDigits = hostInfo.taxId ? hostInfo.taxId.replace(/\D/g, '') : '';
+      if (storedDigits.length === 9) {
+        user.set('hostInfo.taxIdLocked', true);
+        await user.save();
+        console.log('🔒 Auto-locked tax ID for user:', user.email);
+      }
+    }
 
-    // Tax ID is locked once a valid 9-digit ID has been saved (check persisted flag, or computed from stored digits)
-    const taxIdDigitsOnly = hostInfo.taxId ? hostInfo.taxId.replace(/\D/g, '') : '';
-    const taxIdLocked = !!(hostInfo.taxIdLocked) || !!(taxIdDigitsOnly.length === 9 && hostInfo.taxIdLast4);
+    const isLocked = !!(user.hostInfo?.taxIdLocked);
 
     res.json({
       accountType: acctType,
       legalFirstName: hostInfo.legalFirstName || '',
       legalLastName: hostInfo.legalLastName || '',
-      legalAddress: legalAddr,
+      legalAddress: hostInfo.legalAddress || { street: '', city: '', state: '', zipCode: '' },
       taxIdLast4: hostInfo.taxIdLast4 || '',
-      taxIdLocked,
+      taxIdLocked: isLocked,
       businessName: hostInfo.businessName || '',
       dba: hostInfo.dba || '',
-      businessAddress: bizAddr,
+      businessAddress: hostInfo.businessAddress || { street: '', city: '', state: '', zipCode: '' },
       displayPreference: hostInfo.displayPreference || 'personal',
-      hasSubmitted
+      hasSubmitted: isLocked
     });
   } catch (error) {
+    console.error('❌ Error fetching host tax info:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -299,23 +296,23 @@ router.put('/host-tax-info', auth, async (req, res) => {
       return res.status(400).json({ message: 'Please select Individual or Business account type' });
     }
 
-    // Check if tax ID already exists (locked after first successful save)
-    const existingTaxId = user.hostInfo?.taxId;
-    const existingTaxIdLast4 = user.hostInfo?.taxIdLast4;
-    const existingTaxIdDigits = existingTaxId ? existingTaxId.replace(/\D/g, '') : '';
-    const hasExistingTaxId = (user.hostInfo?.taxIdLocked) || (existingTaxIdDigits.length === 9 && existingTaxIdLast4);
+    const ssnIsLocked = !!(user.hostInfo?.taxIdLocked);
 
+    // --- Handle SSN/EIN ---
     let finalTaxIdDigits;
-    if (hasExistingTaxId) {
-      // Tax ID is locked - reject any attempt to change it (only SSN/EIN locks)
-      if (taxId && taxId.trim()) {
-        return res.status(403).json({
-          message: 'Your tax ID is locked after submission. Contact support to update it.'
+    if (ssnIsLocked) {
+      // SSN is locked. The frontend should NOT send a taxId field at all.
+      // If it does, silently ignore it (don't reject - just use the existing one).
+      finalTaxIdDigits = (user.hostInfo.taxId || '').replace(/\D/g, '');
+    } else {
+      // First-time submission - taxId is required
+      if (!taxId || !taxId.trim()) {
+        return res.status(400).json({
+          message: accountType === 'individual'
+            ? 'Social Security Number is required'
+            : 'Business Tax ID (EIN) is required'
         });
       }
-      finalTaxIdDigits = existingTaxIdDigits;
-    } else if (taxId && taxId.trim()) {
-      // First-time submission - validate the tax ID
       const digits = taxId.replace(/\D/g, '');
       if (digits.length !== 9) {
         return res.status(400).json({
@@ -325,16 +322,9 @@ router.put('/host-tax-info', auth, async (req, res) => {
         });
       }
       finalTaxIdDigits = digits;
-    } else {
-      // No tax ID provided and none exists
-      return res.status(400).json({
-        message: accountType === 'individual'
-          ? 'Social Security Number is required'
-          : 'Business Tax ID (EIN) is required'
-      });
     }
 
-    // Validate individual fields
+    // --- Validate name/address (always required, always editable) ---
     if (accountType === 'individual') {
       if (!legalFirstName || !legalFirstName.trim()) {
         return res.status(400).json({ message: 'Legal first name is required' });
@@ -347,7 +337,6 @@ router.put('/host-tax-info', auth, async (req, res) => {
       }
     }
 
-    // Validate business fields
     if (accountType === 'business') {
       if (!businessName || !businessName.trim()) {
         return res.status(400).json({ message: 'Business name is required for business accounts' });
@@ -357,13 +346,12 @@ router.put('/host-tax-info', auth, async (req, res) => {
       }
     }
 
-    // Save fields individually to avoid Mongoose subdocument replacement issues
+    // --- Save everything ---
     user.set('hostInfo.accountType', accountType);
     user.set('hostInfo.taxId', finalTaxIdDigits);
     user.set('hostInfo.taxIdLast4', finalTaxIdDigits.slice(-4));
     user.set('hostInfo.taxIdLocked', true);
 
-    // Preserve display preference
     if (!user.hostInfo?.displayPreference) {
       user.set('hostInfo.displayPreference', 'personal');
     }
@@ -377,7 +365,6 @@ router.put('/host-tax-info', auth, async (req, res) => {
         state: legalAddress.state?.trim() || '',
         zipCode: legalAddress.zipCode?.trim() || ''
       });
-      // Clear business fields
       user.set('hostInfo.businessName', '');
       user.set('hostInfo.dba', '');
       user.set('hostInfo.businessAddress', { street: '', city: '', state: '', zipCode: '' });
@@ -390,7 +377,6 @@ router.put('/host-tax-info', auth, async (req, res) => {
         state: businessAddress.state?.trim() || '',
         zipCode: businessAddress.zipCode?.trim() || ''
       });
-      // Clear individual fields
       user.set('hostInfo.legalFirstName', '');
       user.set('hostInfo.legalLastName', '');
       user.set('hostInfo.legalAddress', { street: '', city: '', state: '', zipCode: '' });
@@ -401,16 +387,15 @@ router.put('/host-tax-info', auth, async (req, res) => {
     console.log('✅ Host tax info saved for:', user.email, '- Type:', accountType, '- Last4:', finalTaxIdDigits.slice(-4));
 
     res.json({
-      message: 'Tax information saved successfully',
       accountType,
       legalFirstName: user.hostInfo.legalFirstName || '',
       legalLastName: user.hostInfo.legalLastName || '',
-      legalAddress: user.hostInfo.legalAddress || {},
+      legalAddress: user.hostInfo.legalAddress || { street: '', city: '', state: '', zipCode: '' },
       taxIdLast4: finalTaxIdDigits.slice(-4),
       taxIdLocked: true,
       businessName: user.hostInfo.businessName || '',
       dba: user.hostInfo.dba || '',
-      businessAddress: user.hostInfo.businessAddress || {},
+      businessAddress: user.hostInfo.businessAddress || { street: '', city: '', state: '', zipCode: '' },
       displayPreference: user.hostInfo.displayPreference || 'personal',
       hasSubmitted: true
     });

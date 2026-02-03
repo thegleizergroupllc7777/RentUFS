@@ -152,6 +152,8 @@ const DriverProfile = () => {
 
   // Tax info state (hosts only)
   const [taxInfo, setTaxInfo] = useState(null);
+  const [taxLoading, setTaxLoading] = useState(true);
+  const [taxLoadError, setTaxLoadError] = useState('');
   const [showTaxForm, setShowTaxForm] = useState(false);
   const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } });
   const [taxSaving, setTaxSaving] = useState(false);
@@ -454,27 +456,33 @@ const DriverProfile = () => {
 
   // === Tax functions ===
   const fetchTaxInfo = async () => {
+    setTaxLoading(true);
+    setTaxLoadError('');
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/users/host-tax-info`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setTaxInfo(response.data);
-      setDisplayPreference(response.data.displayPreference || 'personal');
-      // Always populate form with server data so fields are pre-filled when editing
+      const data = response.data;
+      setTaxInfo(data);
+      setDisplayPreference(data.displayPreference || 'personal');
+      // Pre-fill form with server data (SSN is never returned, always empty)
       setTaxFormData({
-        accountType: response.data.accountType || 'individual',
+        accountType: data.accountType || 'individual',
         taxId: '',
-        legalFirstName: response.data.legalFirstName || '',
-        legalLastName: response.data.legalLastName || '',
-        legalAddress: response.data.legalAddress || { street: '', city: '', state: '', zipCode: '' },
-        businessName: response.data.businessName || '',
-        dba: response.data.dba || '',
-        businessAddress: response.data.businessAddress || { street: '', city: '', state: '', zipCode: '' }
+        legalFirstName: data.legalFirstName || '',
+        legalLastName: data.legalLastName || '',
+        legalAddress: data.legalAddress || { street: '', city: '', state: '', zipCode: '' },
+        businessName: data.businessName || '',
+        dba: data.dba || '',
+        businessAddress: data.businessAddress || { street: '', city: '', state: '', zipCode: '' }
       });
     } catch (error) {
-      console.error('Error fetching tax info:', error);
-      setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', dba: '', businessAddress: {}, hasSubmitted: false });
+      console.error('❌ Error fetching tax info:', error);
+      setTaxLoadError('Failed to load tax information. Please refresh the page.');
+      setTaxInfo(null);
+    } finally {
+      setTaxLoading(false);
     }
   };
 
@@ -502,13 +510,18 @@ const DriverProfile = () => {
     setTaxMessage('');
     try {
       const token = localStorage.getItem('token');
-      const payload = { ...taxFormData };
-      // If tax ID is locked on server, never send a new taxId
-      if (taxInfo?.taxIdLocked) {
-        delete payload.taxId;
-      } else if (!payload.taxId || !payload.taxId.trim()) {
-        // If no new taxId entered but one already exists on server, don't send empty taxId
-        delete payload.taxId;
+      const payload = {
+        accountType: taxFormData.accountType,
+        legalFirstName: taxFormData.legalFirstName,
+        legalLastName: taxFormData.legalLastName,
+        legalAddress: taxFormData.legalAddress,
+        businessName: taxFormData.businessName,
+        dba: taxFormData.dba,
+        businessAddress: taxFormData.businessAddress
+      };
+      // Only include taxId if SSN is NOT locked (first-time submission)
+      if (!taxInfo?.taxIdLocked) {
+        payload.taxId = taxFormData.taxId;
       }
       const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {
         headers: { Authorization: `Bearer ${token}` }
@@ -516,7 +529,6 @@ const DriverProfile = () => {
       setTaxInfo(response.data);
       setTaxMessage('Tax information saved successfully');
       setShowTaxForm(false);
-      // Clear the taxId field after successful save (server stores it, we show last4)
       setTaxFormData(prev => ({ ...prev, taxId: '' }));
     } catch (error) {
       setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
@@ -870,333 +882,352 @@ const DriverProfile = () => {
     </>
   );
 
-  const renderTaxTab = () => (
-    <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333' }}>
-      <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Tax Information</h3>
-      <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
-        Manage your tax details for 1099 reporting and payouts.
-      </p>
-
-      {/* Current Status */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem',
-        background: taxInfo?.hasSubmitted ? '#064e3b' : '#78350f',
-        border: `1px solid ${taxInfo?.hasSubmitted ? '#10b981' : '#f59e0b'}`
-      }}>
-        <div style={{
-          width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: '700', fontSize: '0.9rem', flexShrink: 0,
-          background: taxInfo?.hasSubmitted ? '#10b981' : '#f59e0b',
-          color: '#000'
-        }}>
-          {taxInfo?.hasSubmitted ? '\u2713' : '!'}
+  const renderTaxTab = () => {
+    // Loading state - don't show anything until we know the server state
+    if (taxLoading) {
+      return (
+        <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333', textAlign: 'center' }}>
+          <p style={{ color: '#9ca3af' }}>Loading tax information...</p>
         </div>
-        <span style={{ fontSize: '0.9rem', color: taxInfo?.hasSubmitted ? '#a7f3d0' : '#fde68a' }}>
-          {taxInfo?.hasSubmitted ? 'Tax information is on file' : 'Tax information required for payouts'}
-        </span>
-      </div>
+      );
+    }
 
-      {/* Saved Details */}
-      {taxInfo?.hasSubmitted && !showTaxForm && (
+    // Error state - fetch failed, don't show form (prevents out-of-sync issues)
+    if (taxLoadError) {
+      return (
+        <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333' }}>
+          <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Tax Information</h3>
+          <div style={{ padding: '1rem', borderRadius: '0.5rem', background: '#7f1d1d', border: '1px solid #ef4444', marginBottom: '1rem' }}>
+            <p style={{ color: '#fca5a5', margin: 0 }}>{taxLoadError}</p>
+          </div>
+          <button onClick={fetchTaxInfo} className="btn btn-primary" style={{ width: '100%' }}>
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    const ssnLocked = !!(taxInfo?.taxIdLocked);
+    const hasData = !!(taxInfo?.taxIdLast4);
+
+    return (
+      <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333' }}>
+        <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Tax Information</h3>
+        <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
+          Manage your tax details for 1099 reporting and payouts.
+        </p>
+
+        {/* Status Banner */}
         <div style={{
-          background: '#111', borderRadius: '0.5rem', padding: '1.25rem',
-          marginBottom: '1.5rem', border: '1px solid #333'
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem',
+          background: hasData ? '#064e3b' : '#78350f',
+          border: `1px solid ${hasData ? '#10b981' : '#f59e0b'}`
         }}>
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account Type</span>
-              <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
-                {taxInfo.accountType === 'business' ? 'Business / LLC' : 'Individual'}
-              </p>
-            </div>
-            {taxInfo.accountType === 'individual' && (taxInfo.legalFirstName || taxInfo.legalLastName) && (
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: '700', fontSize: '0.9rem', flexShrink: 0,
+            background: hasData ? '#10b981' : '#f59e0b', color: '#000'
+          }}>
+            {hasData ? '\u2713' : '!'}
+          </div>
+          <span style={{ fontSize: '0.9rem', color: hasData ? '#a7f3d0' : '#fde68a' }}>
+            {hasData ? 'Tax information is on file' : 'Tax information required for payouts'}
+          </span>
+        </div>
+
+        {/* Saved Details (shown when not editing) */}
+        {hasData && !showTaxForm && (
+          <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1.25rem', marginBottom: '1.5rem', border: '1px solid #333' }}>
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Legal Name</span>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account Type</span>
                 <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
-                  {taxInfo.legalFirstName} {taxInfo.legalLastName}
+                  {taxInfo.accountType === 'business' ? 'Business / LLC' : 'Individual'}
                 </p>
               </div>
-            )}
-            {taxInfo.accountType === 'individual' && taxInfo.legalAddress && taxInfo.legalAddress.street && (
+              {taxInfo.accountType === 'individual' && (taxInfo.legalFirstName || taxInfo.legalLastName) && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Legal Name</span>
+                  <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
+                    {taxInfo.legalFirstName} {taxInfo.legalLastName}
+                  </p>
+                </div>
+              )}
+              {taxInfo.accountType === 'individual' && taxInfo.legalAddress?.street && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Legal Address</span>
+                  <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
+                    {taxInfo.legalAddress.street}<br />
+                    {taxInfo.legalAddress.city}{taxInfo.legalAddress.state ? `, ${taxInfo.legalAddress.state}` : ''} {taxInfo.legalAddress.zipCode}
+                  </p>
+                </div>
+              )}
+              {taxInfo.accountType === 'business' && taxInfo.businessName && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Business Name</span>
+                  <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{taxInfo.businessName}</p>
+                </div>
+              )}
+              {taxInfo.accountType === 'business' && taxInfo.dba && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>DBA</span>
+                  <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{taxInfo.dba}</p>
+                </div>
+              )}
+              {taxInfo.accountType === 'business' && taxInfo.businessAddress?.street && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Business Address</span>
+                  <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
+                    {taxInfo.businessAddress.street}<br />
+                    {taxInfo.businessAddress.city}{taxInfo.businessAddress.state ? `, ${taxInfo.businessAddress.state}` : ''} {taxInfo.businessAddress.zipCode}
+                  </p>
+                </div>
+              )}
               <div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Legal Address</span>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'}
+                </span>
                 <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
-                  {taxInfo.legalAddress.street}
-                  {taxInfo.legalAddress.city && <><br />{taxInfo.legalAddress.city}{taxInfo.legalAddress.state ? `, ${taxInfo.legalAddress.state}` : ''} {taxInfo.legalAddress.zipCode}</>}
+                  ****{taxInfo.taxIdLast4}
+                  <span style={{ fontSize: '0.75rem', color: '#f59e0b', marginLeft: '0.5rem' }}>(locked)</span>
                 </p>
               </div>
-            )}
-            {taxInfo.accountType === 'business' && taxInfo.businessName && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Business Name</span>
-                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{taxInfo.businessName}</p>
-              </div>
-            )}
-            {taxInfo.accountType === 'business' && taxInfo.dba && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>DBA</span>
-                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>{taxInfo.dba}</p>
-              </div>
-            )}
-            {taxInfo.accountType === 'business' && taxInfo.businessAddress && taxInfo.businessAddress.street && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Business Address</span>
-                <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>
-                  {taxInfo.businessAddress.street}
-                  {taxInfo.businessAddress.city && <><br />{taxInfo.businessAddress.city}{taxInfo.businessAddress.state ? `, ${taxInfo.businessAddress.state}` : ''} {taxInfo.businessAddress.zipCode}</>}
-                </p>
-              </div>
-            )}
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {taxInfo.accountType === 'individual' ? 'SSN' : 'EIN'}
-              </span>
-              <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>****{taxInfo.taxIdLast4}</p>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Display Preference - only show when tax info is submitted */}
-      {taxInfo?.hasSubmitted && !showTaxForm && (
-        <div style={{
-          background: '#111', borderRadius: '0.5rem', padding: '1.25rem',
-          marginBottom: '1.5rem', border: '1px solid #333'
-        }}>
-          <h4 style={{ color: '#e5e7eb', fontSize: '0.95rem', marginBottom: '0.25rem' }}>Listing Display Name</h4>
-          <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1rem' }}>
-            Choose what drivers see on your vehicle listings.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              type="button"
-              disabled={displayPrefSaving}
-              onClick={() => handleDisplayPreferenceChange('personal')}
-              style={{
-                flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
-                border: displayPreference === 'personal' ? '2px solid #10b981' : '2px solid #333',
-                background: displayPreference === 'personal' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                color: '#e5e7eb', fontWeight: '500', fontSize: '0.85rem',
-                opacity: displayPrefSaving ? 0.6 : 1
-              }}
-            >
-              <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Personal Name</div>
-              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                {user?.firstName} {user?.lastName?.charAt(0)}.
-              </div>
-            </button>
-            <button
-              type="button"
-              disabled={displayPrefSaving || (!taxInfo?.businessName && taxInfo?.accountType !== 'business')}
-              onClick={() => handleDisplayPreferenceChange('business')}
-              style={{
-                flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
-                border: displayPreference === 'business' ? '2px solid #10b981' : '2px solid #333',
-                background: displayPreference === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                color: taxInfo?.businessName ? '#e5e7eb' : '#4b5563', fontWeight: '500', fontSize: '0.85rem',
-                opacity: (displayPrefSaving || !taxInfo?.businessName) ? 0.6 : 1
-              }}
-            >
-              <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Business Name</div>
-              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                {taxInfo?.businessName || 'Add business info first'}
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {taxMessage && !showTaxForm && (
-        <p style={{ fontSize: '0.85rem', color: taxMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '1rem' }}>{taxMessage}</p>
-      )}
-
-      {!showTaxForm && (
-        <button onClick={() => { setShowTaxForm(true); setTaxMessage(''); }}
-          className={`btn ${taxInfo?.hasSubmitted ? 'btn-secondary' : 'btn-primary'}`} style={{ width: '100%' }}>
-          {taxInfo?.hasSubmitted ? 'Update Tax Information' : 'Add Tax Information'}
-        </button>
-      )}
-
-      {showTaxForm && (
-        <form onSubmit={handleSaveTaxInfo}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.5rem' }}>Account Type</label>
+        {/* Display Preference */}
+        {hasData && !showTaxForm && (
+          <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1.25rem', marginBottom: '1.5rem', border: '1px solid #333' }}>
+            <h4 style={{ color: '#e5e7eb', fontSize: '0.95rem', marginBottom: '0.25rem' }}>Listing Display Name</h4>
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1rem' }}>
+              Choose what drivers see on your vehicle listings.
+            </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <label style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
-                border: taxFormData.accountType === 'individual' ? '2px solid #10b981' : '2px solid #333',
-                borderRadius: '8px', cursor: 'pointer',
-                background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent'
-              }}>
-                <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
-                  onChange={() => setTaxFormData(prev => ({ ...prev, accountType: 'individual' }))}
-                  style={{ accentColor: '#10b981' }} />
-                <div>
-                  <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Individual</span>
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Personal SSN</p>
-                </div>
-              </label>
-              <label style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
-                border: taxFormData.accountType === 'business' ? '2px solid #10b981' : '2px solid #333',
-                borderRadius: '8px', cursor: 'pointer',
-                background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent'
-              }}>
-                <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
-                  onChange={() => setTaxFormData(prev => ({ ...prev, accountType: 'business' }))}
-                  style={{ accentColor: '#10b981' }} />
-                <div>
-                  <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Business / LLC</span>
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Company EIN</p>
-                </div>
-              </label>
+              <button type="button" disabled={displayPrefSaving}
+                onClick={() => handleDisplayPreferenceChange('personal')}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
+                  border: displayPreference === 'personal' ? '2px solid #10b981' : '2px solid #333',
+                  background: displayPreference === 'personal' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                  color: '#e5e7eb', fontWeight: '500', fontSize: '0.85rem',
+                  opacity: displayPrefSaving ? 0.6 : 1
+                }}>
+                <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Personal Name</div>
+                <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{user?.firstName} {user?.lastName?.charAt(0)}.</div>
+              </button>
+              <button type="button"
+                disabled={displayPrefSaving || !taxInfo?.businessName}
+                onClick={() => handleDisplayPreferenceChange('business')}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
+                  border: displayPreference === 'business' ? '2px solid #10b981' : '2px solid #333',
+                  background: displayPreference === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                  color: taxInfo?.businessName ? '#e5e7eb' : '#4b5563', fontWeight: '500', fontSize: '0.85rem',
+                  opacity: (displayPrefSaving || !taxInfo?.businessName) ? 0.6 : 1
+                }}>
+                <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Business Name</div>
+                <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{taxInfo?.businessName || 'Add business info first'}</div>
+              </button>
             </div>
           </div>
+        )}
 
-          {taxFormData.accountType === 'business' && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Business Name</label>
-                <input type="text" className="form-input" value={taxFormData.businessName}
-                  onChange={(e) => setTaxFormData({ ...taxFormData, businessName: e.target.value })}
-                  placeholder="e.g., United Fleet Services LLC" required />
+        {/* Success/error message outside form */}
+        {taxMessage && !showTaxForm && (
+          <p style={{ fontSize: '0.85rem', color: taxMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '1rem' }}>{taxMessage}</p>
+        )}
+
+        {/* Add/Update button */}
+        {!showTaxForm && (
+          <button onClick={() => { setShowTaxForm(true); setTaxMessage(''); }}
+            className={`btn ${hasData ? 'btn-secondary' : 'btn-primary'}`} style={{ width: '100%' }}>
+            {hasData ? 'Update Tax Information' : 'Add Tax Information'}
+          </button>
+        )}
+
+        {/* ===== THE FORM ===== */}
+        {showTaxForm && (
+          <form onSubmit={handleSaveTaxInfo}>
+            {/* Account Type */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.5rem' }}>Account Type</label>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <label style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
+                  border: taxFormData.accountType === 'individual' ? '2px solid #10b981' : '2px solid #333',
+                  borderRadius: '8px', cursor: 'pointer',
+                  background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent'
+                }}>
+                  <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
+                    onChange={() => setTaxFormData(prev => ({ ...prev, accountType: 'individual' }))}
+                    style={{ accentColor: '#10b981' }} />
+                  <div>
+                    <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Individual</span>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Personal SSN</p>
+                  </div>
+                </label>
+                <label style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
+                  border: taxFormData.accountType === 'business' ? '2px solid #10b981' : '2px solid #333',
+                  borderRadius: '8px', cursor: 'pointer',
+                  background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent'
+                }}>
+                  <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
+                    onChange={() => setTaxFormData(prev => ({ ...prev, accountType: 'business' }))}
+                    style={{ accentColor: '#10b981' }} />
+                  <div>
+                    <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Business / LLC</span>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Company EIN</p>
+                  </div>
+                </label>
               </div>
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">DBA (Doing Business As)</label>
-                <input type="text" className="form-input" value={taxFormData.dba}
-                  onChange={(e) => setTaxFormData({ ...taxFormData, dba: e.target.value })}
-                  placeholder="e.g., UFS Car Rentals" />
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                  Optional. Enter if your business operates under a different name.
-                </p>
-              </div>
-
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Business Address *</label>
+            {/* Business fields */}
+            {taxFormData.accountType === 'business' && (
+              <>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Street Address</label>
-                  <input type="text" className="form-input" value={taxFormData.businessAddress.street}
-                    onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, street: e.target.value } })}
-                    placeholder="123 Main St, Suite 100" required />
+                  <label className="form-label">Business Name *</label>
+                  <input type="text" className="form-input" value={taxFormData.businessName}
+                    onChange={(e) => setTaxFormData(prev => ({ ...prev, businessName: e.target.value }))}
+                    placeholder="e.g., United Fleet Services LLC" required />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">DBA (Doing Business As)</label>
+                  <input type="text" className="form-input" value={taxFormData.dba}
+                    onChange={(e) => setTaxFormData(prev => ({ ...prev, dba: e.target.value }))}
+                    placeholder="e.g., UFS Car Rentals" />
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Optional. Enter if your business operates under a different name.
+                  </p>
+                </div>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Business Address *</label>
+                  <div className="form-group">
+                    <input type="text" className="form-input" value={taxFormData.businessAddress.street}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, businessAddress: { ...prev.businessAddress, street: e.target.value } }))}
+                      placeholder="Street address" required />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-group">
+                      <input type="text" className="form-input" value={taxFormData.businessAddress.city}
+                        onChange={(e) => setTaxFormData(prev => ({ ...prev, businessAddress: { ...prev.businessAddress, city: e.target.value } }))}
+                        placeholder="City" required />
+                    </div>
+                    <div className="form-group">
+                      <input type="text" className="form-input" value={taxFormData.businessAddress.state}
+                        onChange={(e) => setTaxFormData(prev => ({ ...prev, businessAddress: { ...prev.businessAddress, state: e.target.value.toUpperCase() } }))}
+                        placeholder="State" maxLength={2} required />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ maxWidth: '50%' }}>
+                    <input type="text" className="form-input" value={taxFormData.businessAddress.zipCode}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, businessAddress: { ...prev.businessAddress, zipCode: e.target.value } }))}
+                      placeholder="ZIP Code" maxLength={10} required />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Individual fields */}
+            {taxFormData.accountType === 'individual' && (
+              <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div className="form-group">
-                    <label className="form-label" style={{ fontSize: '0.8rem' }}>City</label>
-                    <input type="text" className="form-input" value={taxFormData.businessAddress.city}
-                      onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, city: e.target.value } })}
-                      placeholder="City" required />
+                    <label className="form-label">Legal First Name *</label>
+                    <input type="text" className="form-input" value={taxFormData.legalFirstName}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, legalFirstName: e.target.value }))}
+                      placeholder="First name as on tax return" required />
                   </div>
                   <div className="form-group">
-                    <label className="form-label" style={{ fontSize: '0.8rem' }}>State</label>
-                    <input type="text" className="form-input" value={taxFormData.businessAddress.state}
-                      onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, state: e.target.value } })}
-                      placeholder="State" maxLength={2} style={{ textTransform: 'uppercase' }} required />
+                    <label className="form-label">Legal Last Name *</label>
+                    <input type="text" className="form-input" value={taxFormData.legalLastName}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, legalLastName: e.target.value }))}
+                      placeholder="Last name as on tax return" required />
                   </div>
                 </div>
-                <div className="form-group" style={{ maxWidth: '50%' }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>ZIP Code</label>
-                  <input type="text" className="form-input" value={taxFormData.businessAddress.zipCode}
-                    onChange={(e) => setTaxFormData({ ...taxFormData, businessAddress: { ...taxFormData.businessAddress, zipCode: e.target.value } })}
-                    placeholder="ZIP Code" maxLength={10} required />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Legal name and address for individuals */}
-          {taxFormData.accountType === 'individual' && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Legal First Name</label>
-                  <input type="text" className="form-input" value={taxFormData.legalFirstName}
-                    onChange={(e) => setTaxFormData({ ...taxFormData, legalFirstName: e.target.value })}
-                    placeholder="First name as on tax return" required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Legal Last Name</label>
-                  <input type="text" className="form-input" value={taxFormData.legalLastName}
-                    onChange={(e) => setTaxFormData({ ...taxFormData, legalLastName: e.target.value })}
-                    placeholder="Last name as on tax return" required />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Legal Address</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <input type="text" className="form-input" value={taxFormData.legalAddress.street}
-                    onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, street: e.target.value } })}
-                    placeholder="Street address" required />
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontWeight: '600', fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Legal Address *</label>
+                  <div className="form-group">
+                    <input type="text" className="form-input" value={taxFormData.legalAddress.street}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, legalAddress: { ...prev.legalAddress, street: e.target.value } }))}
+                      placeholder="Street address" required />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <input type="text" className="form-input" value={taxFormData.legalAddress.city}
-                      onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, city: e.target.value } })}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, legalAddress: { ...prev.legalAddress, city: e.target.value } }))}
                       placeholder="City" required />
                     <input type="text" className="form-input" value={taxFormData.legalAddress.state}
-                      onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, state: e.target.value.toUpperCase() } })}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, legalAddress: { ...prev.legalAddress, state: e.target.value.toUpperCase() } }))}
                       placeholder="State" maxLength={2} required />
                   </div>
-                  <input type="text" className="form-input" value={taxFormData.legalAddress.zipCode}
-                    onChange={(e) => setTaxFormData({ ...taxFormData, legalAddress: { ...taxFormData.legalAddress, zipCode: e.target.value } })}
-                    placeholder="ZIP Code" maxLength={10} required />
+                  <div style={{ maxWidth: '50%' }}>
+                    <input type="text" className="form-input" value={taxFormData.legalAddress.zipCode}
+                      onChange={(e) => setTaxFormData(prev => ({ ...prev, legalAddress: { ...prev.legalAddress, zipCode: e.target.value } }))}
+                      placeholder="ZIP Code" maxLength={10} required />
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-
-          <div className="form-group">
-            <label className="form-label">
-              {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
-            </label>
-            {taxInfo?.taxIdLocked ? (
-              <>
-                <input type="text" className="form-input"
-                  value={`****${taxInfo.taxIdLast4}`}
-                  disabled
-                  style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }} />
-                <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
-                  Locked after submission. Contact support to update.
-                </p>
-              </>
-            ) : (
-              <>
-                <input type="text" className="form-input" value={taxFormData.taxId}
-                  onChange={handleTaxIdInput}
-                  placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
-                  maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
-                  required />
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                  Stored securely. Only the last 4 digits will be visible.
-                </p>
               </>
             )}
-          </div>
 
-          {taxMessage && (
-            <p style={{ fontSize: '0.85rem', color: taxMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '0.75rem' }}>{taxMessage}</p>
-          )}
+            {/* SSN / EIN - locked if already submitted */}
+            <div className="form-group">
+              <label className="form-label">
+                {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN) *' : 'Employer ID Number (EIN) *'}
+              </label>
+              {ssnLocked ? (
+                <div>
+                  <input type="text" className="form-input"
+                    value={`****${taxInfo.taxIdLast4}`}
+                    disabled
+                    style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }} />
+                  <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
+                    Locked after submission. Contact support to update.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <input type="text" className="form-input" value={taxFormData.taxId}
+                    onChange={handleTaxIdInput}
+                    placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
+                    maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
+                    required />
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Stored securely. Only the last 4 digits will be visible. Cannot be changed after saving.
+                  </p>
+                </div>
+              )}
+            </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button type="submit" className="btn btn-primary" disabled={taxSaving} style={{ flex: 1 }}>
-              {taxSaving ? 'Saving...' : 'Save Tax Information'}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => { setShowTaxForm(false); setTaxMessage(''); }}>
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
+            {/* Error/success message inside form */}
+            {taxMessage && (
+              <p style={{ fontSize: '0.85rem', color: taxMessage.includes('success') ? '#10b981' : '#ef4444', marginBottom: '0.75rem' }}>{taxMessage}</p>
+            )}
 
-      {/* Info */}
-      <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#111', borderRadius: '0.5rem', border: '1px solid #333' }}>
-        <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-          The IRS requires platforms to report earnings via Form 1099-K for hosts earning over $600/year.
-          Your tax ID is encrypted and stored securely.
-        </p>
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button type="submit" className="btn btn-primary" disabled={taxSaving} style={{ flex: 1 }}>
+                {taxSaving ? 'Saving...' : 'Save Tax Information'}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowTaxForm(false); setTaxMessage(''); }}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* IRS Info */}
+        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#111', borderRadius: '0.5rem', border: '1px solid #333' }}>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
+            The IRS requires platforms to report earnings via Form 1099-K for hosts earning over $600/year.
+            Your tax ID is encrypted and stored securely.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderReportsTab = () => {
     const summary = reportData?.summary || {};
