@@ -233,7 +233,7 @@ const Navbar = () => {
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   {user.profileImage && !imgError ? (
                     <img
-                      src={user.profileImage.startsWith('http') ? user.profileImage : `${API_URL}${user.profileImage}`}
+                      src={user.profileImage.startsWith('http') || user.profileImage.startsWith('data:') ? user.profileImage : `${API_URL}${user.profileImage}`}
                       alt="Profile"
                       onError={() => setImgError(true)}
                       style={{

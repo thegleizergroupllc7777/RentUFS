@@ -281,7 +281,7 @@ const DriverProfile = () => {
       const uploadResponse = await axios.post(`${API_URL}/api/upload/image`, formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
-      await updateProfileImage(uploadResponse.data.url);
+      await updateProfileImage(uploadResponse.data.imageUrl);
     } catch (error) {
       console.error('Error uploading image:', error);
       setMessage({ type: 'error', text: 'Failed to upload image' });
@@ -302,7 +302,7 @@ const DriverProfile = () => {
       const uploadResponse = await axios.post(`${API_URL}/api/upload/image`, formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
-      await updateProfileImage(uploadResponse.data.url);
+      await updateProfileImage(uploadResponse.data.imageUrl);
     } catch (error) {
       console.error('Error uploading image:', error);
       setMessage({ type: 'error', text: 'Failed to upload image' });
@@ -645,7 +645,7 @@ const DriverProfile = () => {
             background: '#f3f4f6'
           }}>
             {profileData.profileImage ? (
-              <img src={profileData.profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={profileData.profileImage.startsWith('http') || profileData.profileImage.startsWith('data:') ? profileData.profileImage : `${API_URL}${profileData.profileImage}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#9ca3af' }}>
                 {profileData.firstName?.[0]?.toUpperCase() || '?'}

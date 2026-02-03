@@ -7,6 +7,16 @@ const { sendWelcomeEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
+// Helper: resolve relative profile image path to full URL
+function resolveProfileImageUrl(profileImage, req) {
+  if (profileImage && profileImage.startsWith('/uploads/')) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    return `${protocol}://${host}${profileImage}`;
+  }
+  return profileImage;
+}
+
 // Register
 router.post('/register', async (req, res) => {
   try {
@@ -115,7 +125,7 @@ router.post('/register', async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         userType: user.userType,
-        profileImage: user.profileImage
+        profileImage: resolveProfileImageUrl(user.profileImage, req)
       }
     });
   } catch (error) {
@@ -154,7 +164,7 @@ router.post('/login', async (req, res) => {
           firstName: user.firstName,
           lastName: user.lastName,
           userType: user.userType,
-          profileImage: user.profileImage
+          profileImage: resolveProfileImageUrl(user.profileImage, req)
         },
         deactivated: true,
         deactivatedAt: user.deactivatedAt
@@ -169,7 +179,7 @@ router.post('/login', async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         userType: user.userType,
-        profileImage: user.profileImage
+        profileImage: resolveProfileImageUrl(user.profileImage, req)
       }
     });
   } catch (error) {
@@ -179,7 +189,14 @@ router.post('/login', async (req, res) => {
 
 // Get current user
 router.get('/me', auth, async (req, res) => {
-  res.json(req.user);
+  const user = req.user.toObject();
+  // Resolve relative profile image path to full URL
+  if (user.profileImage && user.profileImage.startsWith('/uploads/')) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    user.profileImage = `${protocol}://${host}${user.profileImage}`;
+  }
+  res.json(user);
 });
 
 // Request password reset
