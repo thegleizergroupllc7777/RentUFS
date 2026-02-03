@@ -76,8 +76,8 @@ const HostTaxSettings = () => {
     try {
       const token = localStorage.getItem('token');
       const payload = { ...taxFormData };
-      // Don't send taxId if it's locked (backend will reject it)
-      if (taxInfo?.taxIdLocked) {
+      // Don't send taxId if it's locked AND actually has a stored value (backend will reject it)
+      if (taxInfo?.taxIdLocked && taxInfo?.taxIdLast4) {
         delete payload.taxId;
       }
       const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {
@@ -211,26 +211,26 @@ const HostTaxSettings = () => {
               <form onSubmit={handleSaveTaxInfo}>
                 <div className="tax-form-group">
                   <label className="tax-form-label">Account Type</label>
-                  {taxInfo?.taxIdLocked && (
+                  {taxInfo?.taxIdLocked && taxInfo?.taxIdLast4 && (
                     <p className="tax-form-hint" style={{ color: '#f59e0b', marginBottom: '0.5rem' }}>
                       Account type is locked because your tax ID has been submitted. Contact support to change it.
                     </p>
                   )}
                   <div className="tax-account-type-options">
-                    <label className={`tax-account-option ${taxFormData.accountType === 'individual' ? 'selected' : ''} ${taxInfo?.taxIdLocked ? 'disabled' : ''}`}>
+                    <label className={`tax-account-option ${taxFormData.accountType === 'individual' ? 'selected' : ''} ${taxInfo?.taxIdLocked && taxInfo?.taxIdLast4 ? 'disabled' : ''}`}>
                       <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
                         onChange={() => setTaxFormData({ ...taxFormData, accountType: 'individual', taxId: '', businessName: '' })}
-                        disabled={!!taxInfo?.taxIdLocked}
+                        disabled={!!(taxInfo?.taxIdLocked && taxInfo?.taxIdLast4)}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Individual</span>
                         <span className="tax-account-option-desc">Personal SSN</span>
                       </div>
                     </label>
-                    <label className={`tax-account-option ${taxFormData.accountType === 'business' ? 'selected' : ''} ${taxInfo?.taxIdLocked ? 'disabled' : ''}`}>
+                    <label className={`tax-account-option ${taxFormData.accountType === 'business' ? 'selected' : ''} ${taxInfo?.taxIdLocked && taxInfo?.taxIdLast4 ? 'disabled' : ''}`}>
                       <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
                         onChange={() => setTaxFormData({ ...taxFormData, accountType: 'business', taxId: '', businessName: '' })}
-                        disabled={!!taxInfo?.taxIdLocked}
+                        disabled={!!(taxInfo?.taxIdLocked && taxInfo?.taxIdLast4)}
                       />
                       <div className="tax-account-option-content">
                         <span className="tax-account-option-title">Business / LLC</span>
@@ -336,7 +336,7 @@ const HostTaxSettings = () => {
                 )}
 
                 {/* SSN/EIN field - locked after first submission */}
-                {taxInfo?.taxIdLocked ? (
+                {taxInfo?.taxIdLocked && taxInfo?.taxIdLast4 ? (
                   <div className="tax-form-group">
                     <label className="tax-form-label">
                       {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
