@@ -632,11 +632,33 @@ router.delete('/account/delete', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check for active bookings (as driver or host)
+    // Auto-complete stale bookings whose end date has passed
     const Booking = require('../models/Booking');
+    const now = new Date();
+    await Booking.updateMany(
+      {
+        $or: [{ driver: user._id }, { host: user._id }],
+        status: { $in: ['active', 'confirmed'] },
+        endDate: { $lt: now }
+      },
+      { status: 'completed' }
+    );
+
+    // Auto-cancel stale pending bookings whose start date has passed
+    await Booking.updateMany(
+      {
+        $or: [{ driver: user._id }, { host: user._id }],
+        status: 'pending',
+        startDate: { $lt: now }
+      },
+      { status: 'cancelled' }
+    );
+
+    // Check for truly active bookings (current or future, not expired)
     const activeBookings = await Booking.countDocuments({
       $or: [{ driver: user._id }, { host: user._id }],
-      status: { $in: ['active', 'confirmed', 'pending'] }
+      status: { $in: ['active', 'confirmed', 'pending'] },
+      endDate: { $gte: now }
     });
 
     if (activeBookings > 0) {
