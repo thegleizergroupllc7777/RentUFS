@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import axios from 'axios';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
@@ -131,6 +132,17 @@ const DriverProfile = () => {
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  // Profile photo state
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const pollRef = useRef(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [facingMode, setFacingMode] = useState('user');
+  const [phoneSession, setPhoneSession] = useState(null);
+  const [phoneQrUrl, setPhoneQrUrl] = useState('');
+
   // Email change state
   const [emailEditing, setEmailEditing] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -244,6 +256,134 @@ const DriverProfile = () => {
       console.error('Error updating profile:', error);
       setMessage({ type: 'error', text: 'Failed to update profile photo' });
     }
+  };
+
+  // Camera functions for profile photo
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const startCamera = async (mode) => {
+    const useMode = mode || facingMode;
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: useMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      streamRef.current = stream;
+      setShowCamera(true);
+      setTimeout(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      }, 50);
+    } catch (err) {
+      console.error('Camera access error:', err);
+      setMessage({ type: 'error', text: 'Could not access camera. Try uploading a photo instead.' });
+    }
+  };
+
+  const switchCamera = () => {
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newMode);
+    startCamera(newMode);
+  };
+
+  const capturePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const MAX_WIDTH = 1200;
+    let width = video.videoWidth;
+    let height = video.videoHeight;
+    if (width > MAX_WIDTH) {
+      height = Math.round((height * MAX_WIDTH) / width);
+      width = MAX_WIDTH;
+    }
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+    stopCamera();
+    const base64 = canvas.toDataURL('image/jpeg', 0.7);
+    handleProfileImageChange(base64);
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Please select an image file' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Image must be less than 10MB' });
+      return;
+    }
+    // Compress the image
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > 1200) { h = Math.round((h * 1200) / w); w = 1200; }
+        if (h > 900) { w = Math.round((w * 900) / h); h = 900; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const base64 = canvas.toDataURL('image/jpeg', 0.7);
+        handleProfileImageChange(base64);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const startPhoneUpload = async () => {
+    try {
+      const res = await axios.post(`${API_URL}/api/upload/create-session`, { photoSlot: 'Profile Photo' });
+      const { sessionId, qrUrl } = res.data;
+      setPhoneSession(sessionId);
+      setPhoneQrUrl(qrUrl);
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(async () => {
+        try {
+          const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
+          if (pollRes.data.images && pollRes.data.images.length > 0) {
+            const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
+            handleProfileImageChange(latestImage);
+            closePhoneUpload();
+          }
+        } catch (err) {
+          if (err.response?.status === 404) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        }
+      }, 2000);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to create upload session. Please try again.' });
+    }
+  };
+
+  const closePhoneUpload = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    if (phoneSession) axios.delete(`${API_URL}/api/upload/session/${phoneSession}`).catch(() => {});
+    setPhoneSession(null);
+    setPhoneQrUrl('');
   };
 
   const handleProfileUpdate = async (e) => {
@@ -554,11 +694,102 @@ const DriverProfile = () => {
         marginBottom: '1.5rem',
         border: '1px solid #333'
       }}>
-        <ImageUpload
-          label="Profile Photo"
-          value={profileData.profileImage ? getImageUrl(profileData.profileImage) : ''}
-          onChange={handleProfileImageChange}
-        />
+        <h3 style={{ color: '#fff', marginBottom: '1.5rem', fontWeight: '600' }}>Profile Photo</h3>
+
+        {/* Hidden elements */}
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+        {/* Camera viewfinder */}
+        {showCamera && (
+          <div style={{ position: 'relative', marginBottom: '1rem', borderRadius: '0.75rem', overflow: 'hidden' }}>
+            <video ref={videoRef} autoPlay playsInline muted
+              style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', display: 'block', borderRadius: '0.75rem' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.7)', position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+              <button type="button" onClick={switchCamera}
+                style={{ background: '#374151', color: '#fff', border: 'none', borderRadius: '50%', width: '44px', height: '44px', fontSize: '1.2rem', cursor: 'pointer' }}>
+                🔄
+              </button>
+              <button type="button" onClick={capturePhoto}
+                style={{ background: '#fff', border: '3px solid #10b981', borderRadius: '50%', width: '56px', height: '56px', cursor: 'pointer' }}>
+                <span style={{ display: 'block', width: '40px', height: '40px', background: '#10b981', borderRadius: '50%', margin: 'auto' }}></span>
+              </button>
+              <button type="button" onClick={stopCamera}
+                style={{ background: '#374151', color: '#fff', border: 'none', borderRadius: '50%', width: '44px', height: '44px', fontSize: '1.2rem', cursor: 'pointer' }}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* QR Code for phone upload */}
+        {phoneQrUrl && !showCamera && (
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <p style={{ color: '#e5e7eb', fontWeight: '600', marginBottom: '0.75rem' }}>Scan with your phone</p>
+            <div style={{ display: 'inline-block', padding: '1rem', background: '#fff', borderRadius: '0.75rem' }}>
+              <QRCodeSVG value={phoneQrUrl} size={180} bgColor="#ffffff" fgColor="#000000" level="M" />
+            </div>
+            <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '0.75rem' }}>
+              Open your phone's camera and point it at this QR code.
+            </p>
+            <button type="button" onClick={closePhoneUpload}
+              style={{ marginTop: '0.75rem', padding: '0.5rem 1.5rem', background: '#374151', color: '#e5e7eb', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+              Close QR Code
+            </button>
+          </div>
+        )}
+
+        {/* Circle preview */}
+        {!showCamera && !phoneQrUrl && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{
+              width: '180px', height: '180px', borderRadius: '50%',
+              border: '4px solid #10b981',
+              overflow: 'hidden', marginBottom: '1.5rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: profileData.profileImage ? 'transparent' : '#1a1a2e'
+            }}>
+              {profileData.profileImage ? (
+                <img src={getImageUrl(profileData.profileImage)} alt="Profile"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { e.target.style.display = 'none'; }} />
+              ) : (
+                <span style={{ fontSize: '3rem', color: '#6b7280' }}>
+                  {user?.firstName?.charAt(0)?.toUpperCase() || '?'}
+                </span>
+              )}
+            </div>
+
+            {/* Buttons row */}
+            <div style={{ display: 'flex', gap: '0.75rem', width: '100%', maxWidth: '400px', marginBottom: '0.75rem' }}>
+              <button type="button" onClick={() => startCamera()}
+                style={{
+                  flex: 1, padding: '0.75rem 1rem', borderRadius: '0.5rem',
+                  background: '#3b82f6', color: '#fff', border: 'none',
+                  fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer'
+                }}>
+                Take Selfie
+              </button>
+              <button type="button" onClick={() => fileInputRef.current?.click()}
+                style={{
+                  flex: 1, padding: '0.75rem 1rem', borderRadius: '0.5rem',
+                  background: 'transparent', color: '#10b981', border: '2px solid #10b981',
+                  fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer'
+                }}>
+                Upload Photo
+              </button>
+            </div>
+            <button type="button" onClick={startPhoneUpload}
+              style={{
+                width: '100%', maxWidth: '400px', padding: '0.75rem 1rem', borderRadius: '0.5rem',
+                background: '#1a1a2e', color: '#e5e7eb', border: '1px solid #374151',
+                fontSize: '0.9rem', fontWeight: '500', cursor: 'pointer'
+              }}>
+              📱 Upload from Phone
+            </button>
+          </div>
+        )}
+
         {loading && <p style={{ color: '#9ca3af', textAlign: 'center', marginTop: '0.5rem' }}>Saving profile photo...</p>}
         <p style={{ fontSize: '0.875rem', color: '#9ca3af', textAlign: 'center', marginTop: '1rem' }}>
           Your photo will be shown to {isHost ? 'drivers when they book your vehicles' : 'hosts when you book their vehicles'}
