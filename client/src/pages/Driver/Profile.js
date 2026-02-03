@@ -461,18 +461,17 @@ const DriverProfile = () => {
       });
       setTaxInfo(response.data);
       setDisplayPreference(response.data.displayPreference || 'personal');
-      if (response.data.hasSubmitted) {
-        setTaxFormData({
-          accountType: response.data.accountType,
-          taxId: '',
-          legalFirstName: response.data.legalFirstName || '',
-          legalLastName: response.data.legalLastName || '',
-          legalAddress: response.data.legalAddress || { street: '', city: '', state: '', zipCode: '' },
-          businessName: response.data.businessName || '',
-          dba: response.data.dba || '',
-          businessAddress: response.data.businessAddress || { street: '', city: '', state: '', zipCode: '' }
-        });
-      }
+      // Always populate form with server data so fields are pre-filled when editing
+      setTaxFormData({
+        accountType: response.data.accountType || 'individual',
+        taxId: '',
+        legalFirstName: response.data.legalFirstName || '',
+        legalLastName: response.data.legalLastName || '',
+        legalAddress: response.data.legalAddress || { street: '', city: '', state: '', zipCode: '' },
+        businessName: response.data.businessName || '',
+        dba: response.data.dba || '',
+        businessAddress: response.data.businessAddress || { street: '', city: '', state: '', zipCode: '' }
+      });
     } catch (error) {
       console.error('Error fetching tax info:', error);
       setTaxInfo({ accountType: 'individual', taxIdLast4: '', businessName: '', dba: '', businessAddress: {}, hasSubmitted: false });
@@ -1027,13 +1026,11 @@ const DriverProfile = () => {
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
                 border: taxFormData.accountType === 'individual' ? '2px solid #10b981' : '2px solid #333',
-                borderRadius: '8px', cursor: taxInfo?.taxIdLocked ? 'not-allowed' : 'pointer',
-                background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                opacity: taxInfo?.taxIdLocked ? 0.6 : 1
+                borderRadius: '8px', cursor: 'pointer',
+                background: taxFormData.accountType === 'individual' ? 'rgba(16,185,129,0.1)' : 'transparent'
               }}>
                 <input type="radio" value="individual" checked={taxFormData.accountType === 'individual'}
-                  onChange={() => setTaxFormData({ accountType: 'individual', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
-                  disabled={!!taxInfo?.taxIdLocked}
+                  onChange={() => setTaxFormData(prev => ({ ...prev, accountType: 'individual' }))}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Individual</span>
@@ -1043,13 +1040,11 @@ const DriverProfile = () => {
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem',
                 border: taxFormData.accountType === 'business' ? '2px solid #10b981' : '2px solid #333',
-                borderRadius: '8px', cursor: taxInfo?.taxIdLocked ? 'not-allowed' : 'pointer',
-                background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                opacity: taxInfo?.taxIdLocked ? 0.6 : 1
+                borderRadius: '8px', cursor: 'pointer',
+                background: taxFormData.accountType === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent'
               }}>
                 <input type="radio" value="business" checked={taxFormData.accountType === 'business'}
-                  onChange={() => setTaxFormData({ accountType: 'business', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } })}
-                  disabled={!!taxInfo?.taxIdLocked}
+                  onChange={() => setTaxFormData(prev => ({ ...prev, accountType: 'business' }))}
                   style={{ accentColor: '#10b981' }} />
                 <div>
                   <span style={{ fontWeight: '600', color: '#e5e7eb', fontSize: '0.9rem' }}>Business / LLC</span>
