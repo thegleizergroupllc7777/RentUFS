@@ -238,15 +238,22 @@ const ImageUpload = ({ label, value, onChange, required = false }) => {
           const pollRes = await axios.get(`${API_URL}/api/upload/session/${sessionId}`);
           if (pollRes.data.images && pollRes.data.images.length > lastCount) {
             lastCount = pollRes.data.images.length;
-            // Upload the latest base64 image from phone to server as a file
-            const latestBase64 = pollRes.data.images[pollRes.data.images.length - 1];
+            // Phone upload now returns Cloudinary URLs directly
+            const latestImage = pollRes.data.images[pollRes.data.images.length - 1];
             try {
-              const blob = base64ToBlob(latestBase64);
-              const imageUrl = await uploadToServer(blob, 'phone-photo.jpg');
-              console.log(`✅ Phone photo uploaded: ${imageUrl}`);
-              onChange(imageUrl);
+              if (latestImage.startsWith('data:')) {
+                // Legacy base64 format - convert and upload
+                const blob = base64ToBlob(latestImage);
+                const imageUrl = await uploadToServer(blob, 'phone-photo.jpg');
+                console.log(`✅ Phone photo uploaded: ${imageUrl}`);
+                onChange(imageUrl);
+              } else {
+                // Cloudinary URL - use directly
+                console.log(`✅ Phone photo ready: ${latestImage}`);
+                onChange(latestImage);
+              }
             } catch (uploadErr) {
-              console.error('Failed to upload phone image:', uploadErr);
+              console.error('Failed to process phone image:', uploadErr);
             }
           }
         } catch (err) {
