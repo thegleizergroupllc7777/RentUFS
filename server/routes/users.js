@@ -33,21 +33,6 @@ const getOrCreateStripeCustomer = async (user) => {
   return customer.id;
 };
 
-// Get user profile
-router.get('/:id', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id).select('-password');
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
@@ -715,6 +700,22 @@ router.delete('/account/delete', auth, async (req, res) => {
     res.json({ message: 'Account has been permanently deleted.' });
   } catch (error) {
     console.error('❌ Error deleting account:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get user profile by ID — MUST be last: /:id is a catch-all that would shadow
+// named GET routes like /host-tax-info, /driver-license, /payment-methods
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
