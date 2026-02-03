@@ -317,6 +317,25 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
       extendedAt: new Date()
     });
 
+    // Update living agreement with amendment
+    if (booking.agreement && booking.agreement.signed) {
+      if (!booking.agreement.amendments) {
+        booking.agreement.amendments = [];
+      }
+      const previousEndDate = new Date(newEndDate);
+      previousEndDate.setDate(previousEndDate.getDate() - extensionDays);
+      booking.agreement.amendments.push({
+        type: 'extension',
+        description: `Rental extended by ${extensionDays} day(s)`,
+        previousEndDate: previousEndDate,
+        newEndDate: newEndDate,
+        additionalDays: extensionDays,
+        additionalCost: extensionCost,
+        newTotalPrice: booking.totalPrice,
+        acknowledgedAt: new Date()
+      });
+    }
+
     await booking.save();
 
     // Send extension confirmation emails to driver and host
@@ -647,6 +666,20 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     booking.vehicle = newVehicleId;
     booking.pricePerDay = newPricePerDay;
     booking.totalPrice = newTotalPrice;
+
+    // Update living agreement with vehicle swap amendment
+    if (booking.agreement && booking.agreement.signed) {
+      if (!booking.agreement.amendments) {
+        booking.agreement.amendments = [];
+      }
+      booking.agreement.amendments.push({
+        type: 'vehicle_swap',
+        description: `Vehicle swapped to ${newVehicle.year} ${newVehicle.make} ${newVehicle.model}`,
+        newTotalPrice: newTotalPrice,
+        newVehicleInfo: `${newVehicle.year} ${newVehicle.make} ${newVehicle.model} (VIN: ${newVehicle.vin || 'N/A'})`,
+        acknowledgedAt: new Date()
+      });
+    }
 
     await booking.save();
 

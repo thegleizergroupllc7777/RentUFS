@@ -52,6 +52,7 @@ const EditVehicle = () => {
     model: '',
     year: '',
     vin: '',
+    licensePlate: '',
     type: 'sedan',
     transmission: 'automatic',
     seats: 5,
@@ -113,6 +114,7 @@ const EditVehicle = () => {
         model: vehicle.model,
         year: vehicle.year,
         vin: vehicle.vin || '',
+        licensePlate: vehicle.licensePlate || '',
         type: vehicle.type,
         transmission: vehicle.transmission,
         seats: vehicle.seats,
@@ -395,6 +397,19 @@ const EditVehicle = () => {
                     <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                       Optional - Found on dashboard or driver's door jamb
                     </p>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">License Plate</label>
+                    <input
+                      type="text"
+                      name="licensePlate"
+                      className="form-input"
+                      value={formData.licensePlate}
+                      onChange={handleChange}
+                      placeholder="e.g., ABC1234"
+                      style={{ textTransform: 'uppercase' }}
+                    />
                   </div>
                 </div>
 

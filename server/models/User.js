@@ -31,6 +31,12 @@ const userSchema = new mongoose.Schema({
   dateOfBirth: {
     type: Date
   },
+  address: {
+    street: { type: String, trim: true },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    zipCode: { type: String, trim: true }
+  },
   userType: {
     type: String,
     enum: ['driver', 'host', 'both'],

@@ -168,6 +168,29 @@ const bookingSchema = new mongoose.Schema({
       roadsideAssistance: { type: Boolean, default: false }
     }
   },
+  // Rental Agreement
+  agreement: {
+    signed: { type: Boolean, default: false },
+    signedAt: { type: Date },
+    driverSignature: { type: String }, // Typed name as signature
+    driverAddressAtSigning: {
+      street: { type: String },
+      city: { type: String },
+      state: { type: String },
+      zipCode: { type: String }
+    },
+    amendments: [{
+      type: { type: String, enum: ['extension', 'vehicle_swap'] },
+      description: { type: String },
+      previousEndDate: { type: Date },
+      newEndDate: { type: Date },
+      additionalDays: { type: Number },
+      additionalCost: { type: Number },
+      newTotalPrice: { type: Number },
+      newVehicleInfo: { type: String },
+      acknowledgedAt: { type: Date, default: Date.now }
+    }]
+  },
   // Track if return reminder email has been sent
   returnReminderSent: {
     type: Boolean,

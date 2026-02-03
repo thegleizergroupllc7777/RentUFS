@@ -30,7 +30,8 @@ router.post('/create-payment-intent', auth, async (req, res) => {
     // Fetch the booking
     const booking = await Booking.findById(bookingId)
       .populate('vehicle')
-      .populate('driver');
+      .populate('driver')
+      .populate('host', 'firstName lastName email phone');
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });

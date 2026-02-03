@@ -1,0 +1,381 @@
+/* Rental Agreement Styles */
+.rental-agreement {
+  margin: 1.5rem 0;
+}
+
+.agreement-document {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.agreement-title {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e5e7eb;
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.05em;
+}
+
+.agreement-intro {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+/* Section titles */
+.agreement-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #10b981;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.agreement-subsection-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #d1d5db;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Party sections */
+.agreement-party-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.agreement-party-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #d1d5db;
+  margin-bottom: 0.75rem;
+}
+
+/* Fields */
+.agreement-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.agreement-field {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.field-label {
+  color: #9ca3af;
+  font-weight: 600;
+  min-width: 160px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.field-value {
+  color: #e5e7eb;
+}
+
+/* License image */
+.agreement-license-image {
+  margin-top: 1rem;
+  max-width: 400px;
+}
+
+.agreement-license-image img {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+/* Extensions table */
+.agreement-extensions {
+  margin-top: 1rem;
+}
+
+.agreement-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.agreement-table th,
+.agreement-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 0.85rem;
+}
+
+.agreement-table th {
+  color: #9ca3af;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.agreement-table td {
+  color: #d1d5db;
+}
+
+/* Terms and Conditions */
+.agreement-terms {
+  color: #d1d5db;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.agreement-terms ol {
+  padding-left: 1.5rem;
+  margin: 0;
+}
+
+.agreement-terms > ol > li {
+  margin-bottom: 1rem;
+}
+
+.agreement-terms li strong {
+  color: #e5e7eb;
+}
+
+.agreement-terms ol[type="a"] {
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.agreement-terms ol[type="a"] li {
+  margin-bottom: 0.25rem;
+}
+
+/* Signed section */
+.agreement-signed-section {
+  margin-top: 2rem;
+}
+
+.agreement-signed-info {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.signature-display {
+  font-family: 'Georgia', serif;
+  font-size: 1.3rem;
+  font-style: italic;
+  color: #10b981 !important;
+}
+
+/* Sign section (unsigned) */
+.agreement-sign-section {
+  margin-top: 2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.agreement-sign-instructions {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.agreement-sign-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+/* Address form */
+.agreement-address-form {
+  margin-bottom: 1.5rem;
+}
+
+.agreement-address-form h4 {
+  color: #d1d5db;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
+.agreement-form-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.agreement-form-group {
+  flex: 1;
+}
+
+.agreement-form-group.full-width {
+  flex: 1 1 100%;
+}
+
+.agreement-form-group label {
+  display: block;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.agreement-form-group input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.agreement-form-group input:focus {
+  border-color: #10b981;
+  outline: none;
+}
+
+/* Signature input */
+.agreement-signature-input {
+  margin-bottom: 1.25rem;
+}
+
+.agreement-signature-input label {
+  display: block;
+  color: #d1d5db;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.signature-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 8px;
+  color: #10b981;
+  font-size: 1.3rem;
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  box-sizing: border-box;
+}
+
+.signature-input:focus {
+  border-color: #10b981;
+  outline: none;
+}
+
+.signature-input::placeholder {
+  font-size: 0.95rem;
+  font-style: normal;
+  font-family: inherit;
+  color: #4b5563;
+}
+
+/* Checkbox */
+.agreement-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  cursor: pointer;
+}
+
+.agreement-checkbox-label input[type="checkbox"] {
+  margin-top: 0.2rem;
+  accent-color: #10b981;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.agreement-checkbox-label span {
+  color: #d1d5db;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Sign button */
+.agreement-sign-button {
+  width: 100%;
+  padding: 0.85rem;
+  background: #10b981;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.agreement-sign-button:hover:not(:disabled) {
+  background: #059669;
+}
+
+.agreement-sign-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading & error states */
+.agreement-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+}
+
+.agreement-loading .spinner {
+  margin: 0 auto 1rem;
+}
+
+.agreement-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .agreement-document {
+    padding: 1.25rem;
+  }
+
+  .field-label {
+    min-width: 120px;
+    font-size: 0.8rem;
+  }
+
+  .field-value {
+    font-size: 0.85rem;
+  }
+
+  .agreement-form-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .agreement-title {
+    font-size: 1.25rem;
+  }
+}
