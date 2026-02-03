@@ -67,7 +67,7 @@ router.post('/register', async (req, res) => {
         accountType: hostInfo.accountType,
         taxId: taxIdDigits,
         taxIdLast4: taxIdDigits.slice(-4),
-        taxIdLocked: true,
+        taxIdLocked: false,
         legalFirstName: hostInfo.accountType === 'individual' && hostInfo.legalFirstName ? hostInfo.legalFirstName.trim() : undefined,
         legalLastName: hostInfo.accountType === 'individual' && hostInfo.legalLastName ? hostInfo.legalLastName.trim() : undefined,
         legalAddress: hostInfo.accountType === 'individual' && hostInfo.legalAddress ? {

@@ -373,8 +373,9 @@ const DriverProfile = () => {
     try {
       const token = localStorage.getItem('token');
       const payload = { ...taxFormData };
-      // Don't send taxId if it's locked AND has a stored value (backend will reject it)
-      if (taxInfo?.taxIdLocked && taxInfo?.taxIdLast4) {
+      // If no new taxId entered but one already exists on server, don't send empty taxId
+      // Backend will keep the existing one
+      if (!payload.taxId || !payload.taxId.trim()) {
         delete payload.taxId;
       }
       const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {
@@ -383,9 +384,8 @@ const DriverProfile = () => {
       setTaxInfo(response.data);
       setTaxMessage('Tax information saved successfully');
       setShowTaxForm(false);
-      setTaxFormData({ ...taxFormData, taxId: '' });
-      // Re-fetch to ensure consistency with backend
-      await fetchTaxInfo();
+      // Clear the taxId field after successful save (server stores it, we show last4)
+      setTaxFormData(prev => ({ ...prev, taxId: '' }));
     } catch (error) {
       setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
     } finally {
@@ -926,27 +926,18 @@ const DriverProfile = () => {
             <label className="form-label">
               {taxFormData.accountType === 'individual' ? 'Social Security Number (SSN)' : 'Employer ID Number (EIN)'}
             </label>
-            {taxInfo?.taxIdLocked ? (
-              <>
-                <input type="text" className="form-input"
-                  value={`****${taxInfo.taxIdLast4}`}
-                  disabled
-                  style={{ backgroundColor: '#1a1a2e', color: '#6b7280', cursor: 'not-allowed' }} />
-                <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
-                  Your tax ID has been locked for security. Contact support if you need to change it.
-                </p>
-              </>
-            ) : (
-              <>
-                <input type="text" className="form-input" value={taxFormData.taxId}
-                  onChange={handleTaxIdInput}
-                  placeholder={taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'}
-                  maxLength={taxFormData.accountType === 'individual' ? 11 : 10} required />
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                  Stored securely. Only the last 4 digits will be visible.
-                </p>
-              </>
-            )}
+            <input type="text" className="form-input" value={taxFormData.taxId}
+              onChange={handleTaxIdInput}
+              placeholder={taxInfo?.taxIdLast4
+                ? `Current: ****${taxInfo.taxIdLast4} (leave blank to keep)`
+                : (taxFormData.accountType === 'individual' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX')}
+              maxLength={taxFormData.accountType === 'individual' ? 11 : 10}
+              required={!taxInfo?.taxIdLast4} />
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+              {taxInfo?.taxIdLast4
+                ? `Currently saved (****${taxInfo.taxIdLast4}). Enter a new number to update, or leave blank to keep current.`
+                : 'Stored securely. Only the last 4 digits will be visible.'}
+            </p>
           </div>
 
           {taxMessage && (
