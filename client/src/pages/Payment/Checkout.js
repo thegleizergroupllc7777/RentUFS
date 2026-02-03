@@ -277,7 +277,7 @@ const Checkout = () => {
 
               {(booking.platformFee > 0 || booking.platformFee === undefined) && (
                 <div className="summary-item">
-                  <span className="label">Platform fee:</span>
+                  <span className="label">Platform Fee:</span>
                   <span className="value">${(booking.platformFee ?? 1.50).toFixed(2)}</span>
                 </div>
               )}
