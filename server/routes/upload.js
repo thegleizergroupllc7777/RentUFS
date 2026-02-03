@@ -1,30 +1,20 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const auth = require('../middleware/auth');
+const cloudinary = require('cloudinary').v2;
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Create unique filename: timestamp-random-originalname
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    const name = path.basename(file.originalname, ext);
-    cb(null, `${name}-${uniqueSuffix}${ext}`);
-  }
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// Use memory storage so files are buffered in memory for Cloudinary upload
+const storage = multer.memoryStorage();
 
 // File filter to accept only images
 const fileFilter = (req, file, cb) => {
@@ -47,11 +37,25 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
+// Helper: upload a buffer to Cloudinary and return the secure URL
+function uploadToCloudinary(fileBuffer, folder = 'rentufs') {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'image' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+    stream.end(fileBuffer);
+  });
+}
+
 // Public upload endpoint (no auth required) - TEMPORARY for development
 router.post('/image-public', (req, res) => {
   console.log('📸 Public upload request received');
 
-  upload.single('image')(req, res, (err) => {
+  upload.single('image')(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
       console.error('Multer error:', err);
       if (err.code === 'LIMIT_FILE_SIZE') {
@@ -69,14 +73,13 @@ router.post('/image-public', (req, res) => {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
       }
 
-      const imageUrl = `/uploads/${req.file.filename}`;
-      console.log(`✅ Image uploaded successfully: ${req.file.filename}`);
-      console.log(`📤 Returning: { success: true, imageUrl: ${imageUrl} }`);
+      const imageUrl = await uploadToCloudinary(req.file.buffer, 'rentufs/public');
+      console.log(`✅ Image uploaded to Cloudinary: ${imageUrl}`);
 
       return res.status(200).json({
         success: true,
         imageUrl: imageUrl,
-        filename: req.file.filename
+        filename: req.file.originalname
       });
     } catch (error) {
       console.error('Upload processing error:', error);
@@ -89,16 +92,14 @@ router.post('/image-public', (req, res) => {
 router.post('/image', auth, (req, res) => {
   console.log('Upload request received from user:', req.user?._id);
 
-  upload.single('image')(req, res, (err) => {
+  upload.single('image')(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
-      // Multer error
       console.error('Multer error:', err);
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ success: false, message: 'File size too large. Maximum size is 5MB.' });
       }
       return res.status(400).json({ success: false, message: err.message });
     } else if (err) {
-      // Other error
       console.error('Upload error (not multer):', err);
       return res.status(400).json({ success: false, message: err.message });
     }
@@ -109,16 +110,13 @@ router.post('/image', auth, (req, res) => {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
       }
 
-      // Return the URL path to access the uploaded image
-      const imageUrl = `/uploads/${req.file.filename}`;
-
-      console.log(`✅ Image uploaded successfully: ${req.file.filename}`);
-      console.log(`Returning response: { success: true, imageUrl: ${imageUrl} }`);
+      const imageUrl = await uploadToCloudinary(req.file.buffer, 'rentufs/vehicles');
+      console.log(`✅ Image uploaded to Cloudinary: ${imageUrl}`);
 
       return res.status(200).json({
         success: true,
         imageUrl: imageUrl,
-        filename: req.file.filename
+        filename: req.file.originalname
       });
     } catch (error) {
       console.error('Upload processing error:', error);
@@ -128,44 +126,53 @@ router.post('/image', auth, (req, res) => {
 });
 
 // Upload multiple images (up to 4)
-router.post('/images', auth, upload.array('images', 4), (req, res) => {
+router.post('/images', auth, upload.array('images', 4), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    const imageUrls = req.files.map(file => `/uploads/${file.filename}`);
+    const uploadPromises = req.files.map(file =>
+      uploadToCloudinary(file.buffer, 'rentufs/vehicles')
+    );
+    const imageUrls = await Promise.all(uploadPromises);
+
+    console.log(`✅ ${imageUrls.length} images uploaded to Cloudinary`);
 
     res.json({
       success: true,
       imageUrls: imageUrls,
-      count: req.files.length
+      count: imageUrls.length
     });
   } catch (error) {
+    console.error('Upload processing error:', error);
     res.status(500).json({ message: 'Upload failed', error: error.message });
   }
 });
 
-// Delete image (cleanup)
+// Delete image (cleanup) - works with Cloudinary public_id
 router.delete('/image/:filename', auth, (req, res) => {
   try {
     const filename = req.params.filename;
-    const filePath = path.join(uploadsDir, filename);
-
-    // Security check: ensure the file is in the uploads directory
-    if (!filePath.startsWith(uploadsDir)) {
-      return res.status(400).json({ message: 'Invalid file path' });
+    // Extract public_id from Cloudinary URL or use filename directly
+    // Cloudinary URLs look like: https://res.cloudinary.com/xxx/image/upload/v123/rentufs/vehicles/abc.jpg
+    // The public_id would be: rentufs/vehicles/abc
+    let publicId = filename;
+    if (filename.includes('cloudinary.com')) {
+      const parts = filename.split('/upload/');
+      if (parts[1]) {
+        // Remove version prefix (v123/) and file extension
+        publicId = parts[1].replace(/^v\d+\//, '').replace(/\.[^.]+$/, '');
+      }
     }
 
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'File not found' });
-    }
-
-    // Delete the file
-    fs.unlinkSync(filePath);
-
-    res.json({ success: true, message: 'Image deleted successfully' });
+    cloudinary.uploader.destroy(publicId, (error, result) => {
+      if (error) {
+        console.error('Cloudinary delete error:', error);
+        return res.status(500).json({ message: 'Delete failed', error: error.message });
+      }
+      res.json({ success: true, message: 'Image deleted successfully', result });
+    });
   } catch (error) {
     res.status(500).json({ message: 'Delete failed', error: error.message });
   }
@@ -176,7 +183,7 @@ router.delete('/image/:filename', auth, (req, res) => {
 // ============================================
 const crypto = require('crypto');
 
-// In-memory session store: { sessionId: { images: [base64...], createdAt, photoSlot } }
+// In-memory session store: { sessionId: { images: [url...], createdAt, photoSlot } }
 const uploadSessions = new Map();
 
 // Clean up expired sessions every 5 minutes (sessions expire after 15 min)
@@ -222,7 +229,7 @@ router.post('/mobile/:sessionId', (req, res) => {
     return res.status(404).json({ message: 'Session expired or not found' });
   }
 
-  upload.single('image')(req, res, (err) => {
+  upload.single('image')(req, res, async (err) => {
     if (err) {
       console.error('📱 Mobile upload error:', err);
       return res.status(400).json({ message: err.message });
@@ -233,20 +240,14 @@ router.post('/mobile/:sessionId', (req, res) => {
     }
 
     try {
-      // Read file and convert to base64 for persistent storage in MongoDB
-      const filePath = req.file.path;
-      const fileData = fs.readFileSync(filePath);
-      const base64 = `data:${req.file.mimetype};base64,${fileData.toString('base64')}`;
-
-      // Delete the temp file since we have the base64
-      fs.unlinkSync(filePath);
-
-      session.images.push(base64);
-      console.log(`📱 Image added to session ${sessionId} as base64 (~${Math.round(base64.length / 1024)}KB, ${session.images.length} total)`);
+      // Upload to Cloudinary instead of storing as base64
+      const imageUrl = await uploadToCloudinary(req.file.buffer, 'rentufs/mobile');
+      session.images.push(imageUrl);
+      console.log(`📱 Image uploaded to Cloudinary for session ${sessionId} (${session.images.length} total)`);
 
       res.json({ success: true, count: session.images.length });
-    } catch (readErr) {
-      console.error('📱 Failed to convert uploaded file to base64:', readErr);
+    } catch (uploadErr) {
+      console.error('📱 Failed to upload to Cloudinary:', uploadErr);
       res.status(500).json({ message: 'Failed to process uploaded image' });
     }
   });
