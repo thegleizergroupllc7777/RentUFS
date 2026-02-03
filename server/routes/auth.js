@@ -21,8 +21,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Validate age for drivers and both (must be at least 21)
-    if ((userType === 'driver' || userType === 'both') && dateOfBirth) {
+    // Validate age for drivers (must be at least 21)
+    if (userType === 'driver' && dateOfBirth) {
       const birthDate = new Date(dateOfBirth);
       const today = new Date();
       const age = today.getFullYear() - birthDate.getFullYear();
@@ -50,8 +50,8 @@ router.post('/register', async (req, res) => {
       profileImage: profileImage || undefined
     };
 
-    // Add host info if provided (for hosts and both)
-    if (hostInfo && (userType === 'host' || userType === 'both')) {
+    // Add host info if provided (for hosts)
+    if (hostInfo && userType === 'host') {
       const taxIdDigits = hostInfo.taxId.replace(/\D/g, '');
       userData.hostInfo = {
         accountType: hostInfo.accountType,
@@ -77,8 +77,8 @@ router.post('/register', async (req, res) => {
       };
     }
 
-    // Add driver license info if provided (for drivers and both)
-    if (driverLicense && (userType === 'driver' || userType === 'both')) {
+    // Add driver license info if provided (for drivers)
+    if (driverLicense && userType === 'driver') {
       userData.driverLicense = {
         licenseNumber: driverLicense.licenseNumber,
         state: driverLicense.state,
