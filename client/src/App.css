@@ -46,8 +46,10 @@
 
 .navbar-links {
   display: flex;
-  gap: 2rem;
+  gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .navbar-link {

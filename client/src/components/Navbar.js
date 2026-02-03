@@ -9,10 +9,16 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [switching, setSwitching] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [imgError, setImgError] = useState(false);
   // Active mode determines which UI to show (separate from userType which tracks capabilities)
   const [activeMode, setActiveMode] = useState(() => {
     return localStorage.getItem('activeMode') || 'driver';
   });
+
+  // Reset image error state when user changes
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.profileImage]);
 
   // Sync activeMode with userType on login/change
   useEffect(() => {
@@ -223,12 +229,13 @@ const Navbar = () => {
                   </span>
                 )}
               </Link>
-              <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-                <div style={{ position: 'relative' }}>
-                  {user.profileImage ? (
+              <Link to="/driver/profile" className="navbar-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative', flexShrink: 0 }}>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  {user.profileImage && !imgError ? (
                     <img
                       src={user.profileImage.startsWith('http') ? user.profileImage : `${API_URL}${user.profileImage}`}
                       alt="Profile"
+                      onError={() => setImgError(true)}
                       style={{
                         width: '32px',
                         height: '32px',
@@ -255,7 +262,7 @@ const Navbar = () => {
                     </div>
                   )}
                 </div>
-                {user.firstName}
+                <span style={{ whiteSpace: 'nowrap' }}>{user.firstName}</span>
               </Link>
 
               <button onClick={handleLogout} className="btn btn-secondary">
