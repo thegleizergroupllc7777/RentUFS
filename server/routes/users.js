@@ -224,8 +224,8 @@ router.get('/host-tax-info', auth, async (req, res) => {
       ? (hasTaxId && hasBusinessInfo)
       : (hasTaxId && hasLegalName && hasLegalAddress);
 
-    // Tax ID is locked once a valid 9-digit ID has been saved
-    const taxIdLocked = !!(hostInfo.taxId && hostInfo.taxId.length === 9 && hostInfo.taxIdLast4);
+    // Tax ID is locked once a valid 9-digit ID has been saved (check both persisted flag and computed)
+    const taxIdLocked = !!(hostInfo.taxIdLocked) || !!(hostInfo.taxId && hostInfo.taxId.length === 9 && hostInfo.taxIdLast4);
 
     res.json({
       accountType: acctType,
@@ -364,6 +364,7 @@ router.put('/host-tax-info', auth, async (req, res) => {
     user.set('hostInfo.accountType', accountType);
     user.set('hostInfo.taxId', finalTaxIdDigits);
     user.set('hostInfo.taxIdLast4', finalTaxIdDigits.slice(-4));
+    user.set('hostInfo.taxIdLocked', true);
 
     // Preserve display preference
     if (!user.hostInfo?.displayPreference) {
