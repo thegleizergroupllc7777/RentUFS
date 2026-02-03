@@ -768,7 +768,9 @@ const MyBookings = () => {
                                 {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
                               </h3>
                               <p className="text-gray">
-                                Host: {booking.host?.firstName} {booking.host?.lastName}
+                                Host: {booking.host?.hostInfo?.displayPreference === 'business' && booking.host?.hostInfo?.businessName
+                                  ? booking.host.hostInfo.businessName
+                                  : `${booking.host?.firstName} ${booking.host?.lastName}`}
                               </p>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>

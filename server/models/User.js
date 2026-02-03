@@ -128,6 +128,11 @@ const userSchema = new mongoose.Schema({
       city: { type: String, trim: true },
       state: { type: String, trim: true },
       zipCode: { type: String, trim: true }
+    },
+    displayPreference: {
+      type: String,
+      enum: ['personal', 'business'],
+      default: 'personal'
     }
   },
   profileImage: {

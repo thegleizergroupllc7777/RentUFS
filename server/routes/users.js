@@ -232,8 +232,44 @@ router.get('/host-tax-info', auth, async (req, res) => {
       businessName: hostInfo.businessName || '',
       dba: hostInfo.dba || '',
       businessAddress: bizAddr,
+      displayPreference: hostInfo.displayPreference || 'personal',
       hasSubmitted
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update host display preference
+router.put('/host-display-preference', auth, async (req, res) => {
+  try {
+    const { displayPreference } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!['host', 'both'].includes(user.userType)) {
+      return res.status(403).json({ message: 'Only hosts can update display preference' });
+    }
+
+    if (!['personal', 'business'].includes(displayPreference)) {
+      return res.status(400).json({ message: 'Display preference must be "personal" or "business"' });
+    }
+
+    // Business display requires business name to be set
+    if (displayPreference === 'business') {
+      const hostInfo = user.hostInfo || {};
+      if (!hostInfo.businessName) {
+        return res.status(400).json({ message: 'You must add a business name in tax settings before selecting business display' });
+      }
+    }
+
+    user.set('hostInfo.displayPreference', displayPreference);
+    await user.save();
+
+    res.json({ displayPreference, message: 'Display preference updated successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -325,7 +361,8 @@ router.put('/host-tax-info', auth, async (req, res) => {
       accountType,
       taxId: taxIdDigits,
       taxIdLast4: taxIdDigits.slice(-4),
-      taxIdLocked: true
+      taxIdLocked: true,
+      displayPreference: existingHostInfo.displayPreference || 'personal'
     };
 
     if (accountType === 'individual') {

@@ -240,7 +240,7 @@ router.get('/', async (req, res) => {
           query['location.city'] = new RegExp(location, 'i');
         }
         vehicles = await Vehicle.find(query)
-          .populate('host', 'firstName lastName rating reviewCount')
+          .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
           .sort({ createdAt: -1 });
       }
     } else if (location) {
@@ -252,12 +252,12 @@ router.get('/', async (req, res) => {
         query['location.city'] = new RegExp(location, 'i');
       }
       vehicles = await Vehicle.find(query)
-        .populate('host', 'firstName lastName rating reviewCount')
+        .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
         .sort({ createdAt: -1 });
     } else {
       // No location filter - return all available vehicles
       vehicles = await Vehicle.find({ availability: true })
-        .populate('host', 'firstName lastName rating reviewCount')
+        .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
         .sort({ createdAt: -1 });
     }
 
@@ -314,7 +314,7 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.params.id)
-      .populate('host', 'firstName lastName email phone rating reviewCount');
+      .populate('host', 'firstName lastName email phone rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba');
 
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' });
