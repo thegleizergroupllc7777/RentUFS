@@ -271,7 +271,7 @@ const AddVehicle = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">License Plate</label>
+                  <label className="form-label">License Plate *</label>
                   <input
                     type="text"
                     name="licensePlate"
@@ -280,6 +280,7 @@ const AddVehicle = () => {
                     onChange={handleChange}
                     placeholder="e.g., ABC1234"
                     style={{ textTransform: 'uppercase' }}
+                    required
                   />
                 </div>
 
