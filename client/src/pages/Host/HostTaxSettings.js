@@ -76,8 +76,11 @@ const HostTaxSettings = () => {
     try {
       const token = localStorage.getItem('token');
       const payload = { ...taxFormData };
-      // If no new taxId entered but one already exists on server, don't send empty taxId
-      if (!payload.taxId || !payload.taxId.trim()) {
+      // If tax ID is locked on server, never send a new taxId
+      if (taxInfo?.taxIdLocked) {
+        delete payload.taxId;
+      } else if (!payload.taxId || !payload.taxId.trim()) {
+        // If no new taxId entered but one already exists on server, don't send empty taxId
         delete payload.taxId;
       }
       const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {
