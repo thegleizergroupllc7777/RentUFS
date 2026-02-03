@@ -631,7 +631,7 @@ const VehicleDetail = () => {
                         <span>${rentalSubtotal.toFixed(2)}</span>
                       </div>
                       <div className="summary-row">
-                        <span>Platform fee</span>
+                        <span>Platform Fee</span>
                         <span>${platformFee.toFixed(2)}</span>
                       </div>
                       <div className="summary-total">
