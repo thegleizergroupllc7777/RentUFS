@@ -217,7 +217,7 @@ const AddVehicle = () => {
 
             {error && <div className="error-message">{error}</div>}
 
-            <form onSubmit={handleSubmit} className="vehicle-form">
+            <form onSubmit={handleSubmit} className="vehicle-form" autoComplete="off">
               <div className="form-section">
                 <h2 className="form-section-title">Vehicle Details</h2>
 
