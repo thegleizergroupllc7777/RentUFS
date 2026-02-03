@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import './Home.css';
 
 const Home = () => {
+  const { isAuthenticated } = useAuth();
   return (
     <div className="home-page">
       <Navbar />
@@ -24,7 +26,7 @@ const Home = () => {
                   Browse Cars
                 </button>
               </Link>
-              <Link to="/register?type=host">
+              <Link to={isAuthenticated ? "/host/add-vehicle" : "/register?type=host"}>
                 <button className="btn btn-secondary btn-lg">
                   List Your Car
                 </button>
@@ -76,9 +78,9 @@ const Home = () => {
           <p className="text-lg mb-3" style={{ color: '#000000' }}>
             Join our community today as a driver or host
           </p>
-          <Link to="/register">
+          <Link to={isAuthenticated ? "/host/dashboard" : "/register"}>
             <button className="btn btn-primary btn-lg" style={{ background: '#000000', color: '#00FF66' }}>
-              Sign Up Now
+              {isAuthenticated ? 'Go to Dashboard' : 'Sign Up Now'}
             </button>
           </Link>
         </div>
