@@ -212,7 +212,9 @@ const Marketplace = () => {
                     <span>/day</span>
                   </div>
                   <div className="vehicle-host">
-                    Hosted by {vehicle.host?.firstName}
+                    Hosted by {vehicle.host?.hostInfo?.displayPreference === 'business' && vehicle.host?.hostInfo?.businessName
+                      ? vehicle.host.hostInfo.businessName
+                      : vehicle.host?.firstName}
                   </div>
                 </div>
               </div>

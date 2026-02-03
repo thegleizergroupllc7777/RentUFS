@@ -150,6 +150,8 @@ const DriverProfile = () => {
   const [taxFormData, setTaxFormData] = useState({ accountType: 'individual', taxId: '', legalFirstName: '', legalLastName: '', legalAddress: { street: '', city: '', state: '', zipCode: '' }, businessName: '', dba: '', businessAddress: { street: '', city: '', state: '', zipCode: '' } });
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxMessage, setTaxMessage] = useState('');
+  const [displayPreference, setDisplayPreference] = useState('personal');
+  const [displayPrefSaving, setDisplayPrefSaving] = useState(false);
 
   // Driver license state
   const [licenseData, setLicenseData] = useState(null);
@@ -407,6 +409,7 @@ const DriverProfile = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTaxInfo(response.data);
+      setDisplayPreference(response.data.displayPreference || 'personal');
       if (response.data.hasSubmitted) {
         setTaxFormData({
           accountType: response.data.accountType,
@@ -467,6 +470,22 @@ const DriverProfile = () => {
       setTaxMessage(error.response?.data?.message || 'Failed to save tax information');
     } finally {
       setTaxSaving(false);
+    }
+  };
+
+  const handleDisplayPreferenceChange = async (pref) => {
+    setDisplayPrefSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/api/users/host-display-preference`, { displayPreference: pref }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDisplayPreference(pref);
+      setTaxMessage('Display preference updated successfully');
+    } catch (error) {
+      setTaxMessage(error.response?.data?.message || 'Failed to update display preference');
+    } finally {
+      setDisplayPrefSaving(false);
     }
   };
 
@@ -825,6 +844,55 @@ const DriverProfile = () => {
               </span>
               <p style={{ fontSize: '0.95rem', color: '#f9fafb', fontWeight: '500', margin: '0.15rem 0 0' }}>****{taxInfo.taxIdLast4}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Display Preference - only show when tax info is submitted */}
+      {taxInfo?.hasSubmitted && !showTaxForm && (
+        <div style={{
+          background: '#111', borderRadius: '0.5rem', padding: '1.25rem',
+          marginBottom: '1.5rem', border: '1px solid #333'
+        }}>
+          <h4 style={{ color: '#e5e7eb', fontSize: '0.95rem', marginBottom: '0.25rem' }}>Listing Display Name</h4>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1rem' }}>
+            Choose what drivers see on your vehicle listings.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              type="button"
+              disabled={displayPrefSaving}
+              onClick={() => handleDisplayPreferenceChange('personal')}
+              style={{
+                flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
+                border: displayPreference === 'personal' ? '2px solid #10b981' : '2px solid #333',
+                background: displayPreference === 'personal' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                color: '#e5e7eb', fontWeight: '500', fontSize: '0.85rem',
+                opacity: displayPrefSaving ? 0.6 : 1
+              }}
+            >
+              <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Personal Name</div>
+              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                {user?.firstName} {user?.lastName?.charAt(0)}.
+              </div>
+            </button>
+            <button
+              type="button"
+              disabled={displayPrefSaving || (!taxInfo?.businessName && taxInfo?.accountType !== 'business')}
+              onClick={() => handleDisplayPreferenceChange('business')}
+              style={{
+                flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
+                border: displayPreference === 'business' ? '2px solid #10b981' : '2px solid #333',
+                background: displayPreference === 'business' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                color: taxInfo?.businessName ? '#e5e7eb' : '#4b5563', fontWeight: '500', fontSize: '0.85rem',
+                opacity: (displayPrefSaving || !taxInfo?.businessName) ? 0.6 : 1
+              }}
+            >
+              <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Business Name</div>
+              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                {taxInfo?.businessName || 'Add business info first'}
+              </div>
+            </button>
           </div>
         </div>
       )}

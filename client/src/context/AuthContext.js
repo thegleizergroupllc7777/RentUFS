@@ -104,8 +104,19 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/auth/me`);
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   const value = {
     user,
+    setUser,
     login,
     reactivateAndLogin,
     register,
@@ -114,6 +125,7 @@ export const AuthProvider = ({ children }) => {
     verifyResetToken,
     resetPassword,
     updateUserType,
+    refreshUser,
     loading,
     isAuthenticated: !!user
   };
