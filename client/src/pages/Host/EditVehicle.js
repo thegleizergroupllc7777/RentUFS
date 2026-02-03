@@ -76,6 +76,7 @@ const EditVehicle = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleZipLookup = async (zip) => {
     if (!/^\d{5}$/.test(zip)) return;
@@ -221,6 +222,25 @@ const EditVehicle = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to permanently delete this vehicle? This action cannot be undone.')) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/vehicles/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      navigate('/host/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete vehicle');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -823,6 +843,43 @@ const EditVehicle = () => {
                 </button>
               </div>
             </form>
+
+            {/* Danger Zone - Delete Vehicle */}
+            <div style={{
+              marginTop: '3rem',
+              padding: '1.5rem',
+              border: '1px solid #ef4444',
+              borderRadius: '0.5rem',
+              background: 'rgba(239, 68, 68, 0.05)'
+            }}>
+              <h3 style={{ color: '#ef4444', fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                Danger Zone
+              </h3>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                Permanently delete this vehicle listing. This action cannot be undone.
+              </p>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  padding: '0.6rem 1.5rem',
+                  background: 'transparent',
+                  color: '#ef4444',
+                  border: '1px solid #ef4444',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  opacity: deleting ? 0.6 : 1,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.target.style.background = '#ef4444'; e.target.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#ef4444'; }}
+              >
+                {deleting ? 'Deleting...' : 'Delete This Vehicle'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
