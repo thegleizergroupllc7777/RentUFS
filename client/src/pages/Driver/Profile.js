@@ -513,9 +513,9 @@ const DriverProfile = () => {
     try {
       const token = localStorage.getItem('token');
       const payload = { ...taxFormData };
-      // If no new taxId entered but one already exists on server, don't send empty taxId
-      // Backend will keep the existing one
-      if (!payload.taxId || !payload.taxId.trim()) {
+      // Never send taxId if it's already locked on the server
+      // Also strip empty taxId so backend keeps existing
+      if (taxInfo?.taxIdLocked || !payload.taxId || !payload.taxId.trim()) {
         delete payload.taxId;
       }
       const response = await axios.put(`${API_URL}/api/users/host-tax-info`, payload, {

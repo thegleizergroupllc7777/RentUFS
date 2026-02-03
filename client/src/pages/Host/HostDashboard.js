@@ -131,7 +131,7 @@ const HostDashboard = () => {
           </div>
 
           {/* Tax Info Link - only show until host submits tax info */}
-          {taxInfo && !taxInfo.hasSubmitted && (
+          {taxInfo && !taxInfo.hasSubmitted && !taxInfo.taxIdLocked && (
             <div style={{
               background: '#1a1200',
               border: '1px solid #fde68a',
