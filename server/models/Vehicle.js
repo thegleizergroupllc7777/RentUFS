@@ -36,6 +36,7 @@ const vehicleSchema = new mongoose.Schema({
   },
   licensePlate: {
     type: String,
+    required: true,
     trim: true,
     uppercase: true
   },
