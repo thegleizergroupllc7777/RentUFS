@@ -218,13 +218,16 @@ router.get('/host-tax-info', auth, async (req, res) => {
     const hasLegalName = !!(hostInfo.legalFirstName) && !!(hostInfo.legalLastName);
     const hasLegalAddress = !!(legalAddr.street) && !!(legalAddr.city) && !!(legalAddr.state) && !!(legalAddr.zipCode);
 
-    // Auto-fix: if taxIdLocked is true but no actual tax ID exists, reset the lock
+    // Auto-fix: if taxIdLocked is true but tax ID data is incomplete, reset the lock
     let taxIdLocked = hostInfo.taxIdLocked || false;
-    if (taxIdLocked && !hostInfo.taxId && !hostInfo.taxIdLast4) {
-      console.log('🔧 Auto-resetting taxIdLocked for user:', user.email, '- no tax ID found in database');
-      user.set('hostInfo.taxIdLocked', false);
-      await user.save();
-      taxIdLocked = false;
+    if (taxIdLocked) {
+      const hasValidTaxId = hostInfo.taxId && hostInfo.taxId.length === 9 && hostInfo.taxIdLast4;
+      if (!hasValidTaxId) {
+        console.log('🔧 Auto-resetting taxIdLocked for user:', user.email, '- incomplete tax ID data');
+        user.set('hostInfo.taxIdLocked', false);
+        await user.save();
+        taxIdLocked = false;
+      }
     }
 
     // For individual: need tax ID + legal name + legal address
@@ -305,6 +308,17 @@ router.put('/host-tax-info', auth, async (req, res) => {
     }
 
     const existingHostInfo = user.hostInfo || {};
+
+    // Auto-fix: if taxIdLocked is true but the tax submission is incomplete, reset the lock
+    // This handles cases where a previous bug set the lock without properly saving all data
+    if (existingHostInfo.taxIdLocked) {
+      const hasValidTaxId = existingHostInfo.taxId && existingHostInfo.taxId.length === 9 && existingHostInfo.taxIdLast4;
+      if (!hasValidTaxId) {
+        console.log('🔧 Auto-resetting taxIdLocked in PUT for user:', user.email, '- incomplete tax ID data');
+        existingHostInfo.taxIdLocked = false;
+        user.set('hostInfo.taxIdLocked', false);
+      }
+    }
 
     // If SSN/EIN is locked, reject attempts to change it
     if (existingHostInfo.taxIdLocked && taxId && taxId.trim()) {
