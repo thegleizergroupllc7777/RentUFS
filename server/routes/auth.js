@@ -64,6 +64,7 @@ router.post('/register', async (req, res) => {
     if (address && (address.street || address.city || address.state || address.zipCode)) {
       userData.address = {
         street: address.street?.trim() || '',
+        apt: address.apt?.trim() || '',
         city: address.city?.trim() || '',
         state: address.state?.trim() || '',
         zipCode: address.zipCode?.trim() || ''

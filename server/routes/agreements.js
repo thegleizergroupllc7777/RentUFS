@@ -69,6 +69,7 @@ router.post('/:bookingId/sign', auth, async (req, res) => {
       driverSignature: signature.trim(),
       driverAddressAtSigning: {
         street: address.street.trim(),
+        apt: address.apt ? address.apt.trim() : '',
         city: address.city.trim(),
         state: address.state.trim(),
         zipCode: address.zipCode.trim()
@@ -83,6 +84,7 @@ router.post('/:bookingId/sign', auth, async (req, res) => {
     if (user && (!user.address || !user.address.street)) {
       user.address = {
         street: address.street.trim(),
+        apt: address.apt ? address.apt.trim() : '',
         city: address.city.trim(),
         state: address.state.trim(),
         zipCode: address.zipCode.trim()

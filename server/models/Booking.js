@@ -188,6 +188,7 @@ const bookingSchema = new mongoose.Schema({
     driverSignature: { type: String }, // Typed name as signature
     driverAddressAtSigning: {
       street: { type: String },
+      apt: { type: String },
       city: { type: String },
       state: { type: String },
       zipCode: { type: String }
