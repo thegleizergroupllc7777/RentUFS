@@ -219,15 +219,18 @@ const HostBookings = () => {
       return booking.status === 'active' && endStr >= todayStr;
     });
 
-    // Upcoming: pending or confirmed bookings (even if pickup date has passed, stays here until started)
+    // Upcoming: pending or confirmed bookings (not cancelled/completed)
     const upcoming = bookings.filter(booking => {
       const endStr = toLocalDateStr(toLocalDate(booking.endDate));
-      return (booking.status === 'pending' || booking.status === 'confirmed') && endStr >= todayStr;
+      return (booking.status === 'pending' || booking.status === 'confirmed') && endStr >= todayStr
+        && booking.status !== 'cancelled' && booking.status !== 'completed';
     });
 
+    // Past: ended, completed, or cancelled bookings
     const past = bookings.filter(booking => {
       const endStr = toLocalDateStr(toLocalDate(booking.endDate));
-      return endStr < todayStr || booking.status === 'completed' || booking.status === 'cancelled';
+      if (booking.status === 'completed' || booking.status === 'cancelled') return true;
+      return endStr < todayStr;
     });
 
     return { current, upcoming, past };
