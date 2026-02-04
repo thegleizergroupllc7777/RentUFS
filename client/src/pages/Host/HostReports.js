@@ -163,9 +163,19 @@ const HostReports = () => {
 
                     <div className="report-income-grid">
                       <div className="report-income-card main">
-                        <span className="report-income-label">Total Earned</span>
+                        <span className="report-income-label">Your Earnings</span>
+                        <span className="report-income-amount">{formatCurrency(reportData.summary.hostEarnings || 0)}</span>
+                        <span className="report-income-sub">Rental income from {reportData.summary.confirmedBookings} booking{reportData.summary.confirmedBookings !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="report-income-card">
+                        <span className="report-income-label">Total Collected</span>
                         <span className="report-income-amount">{formatCurrency(reportData.summary.totalRevenue)}</span>
-                        <span className="report-income-sub">From {reportData.summary.confirmedBookings} paid booking{reportData.summary.confirmedBookings !== 1 ? 's' : ''}</span>
+                        <span className="report-income-sub">Includes fees &amp; insurance</span>
+                      </div>
+                      <div className="report-income-card">
+                        <span className="report-income-label">Platform (Fees + Insurance)</span>
+                        <span className="report-income-amount" style={{ color: '#9ca3af' }}>{formatCurrency(reportData.summary.platformRevenue || 0)}</span>
+                        <span className="report-income-sub">Retained by RentUFS</span>
                       </div>
                       <div className="report-income-card">
                         <span className="report-income-label">Pending</span>
@@ -310,8 +320,16 @@ const HostReports = () => {
                             </div>
                             <div className="report-fleet-metrics">
                               <div className="report-fleet-metric">
-                                <span className="report-fleet-metric-label">Earned</span>
-                                <span className="report-fleet-metric-value">{formatCurrency(vehicle.totalRevenue)}</span>
+                                <span className="report-fleet-metric-label">Your Earnings</span>
+                                <span className="report-fleet-metric-value">{formatCurrency(vehicle.hostEarnings || 0)}</span>
+                              </div>
+                              <div className="report-fleet-metric">
+                                <span className="report-fleet-metric-label">Total Collected</span>
+                                <span className="report-fleet-metric-value" style={{ color: '#9ca3af' }}>{formatCurrency(vehicle.totalRevenue)}</span>
+                              </div>
+                              <div className="report-fleet-metric">
+                                <span className="report-fleet-metric-label">Platform</span>
+                                <span className="report-fleet-metric-value" style={{ color: '#9ca3af', fontSize: '0.85rem' }}>{formatCurrency(vehicle.platformRevenue || 0)}</span>
                               </div>
                               <div className="report-fleet-metric">
                                 <span className="report-fleet-metric-label">Pending</span>

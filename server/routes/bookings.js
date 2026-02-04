@@ -101,7 +101,12 @@ router.post('/', auth, async (req, res) => {
 
     // Platform transaction fee
     const platformFee = 1.50;
+    const rentalSubtotal = totalPrice; // Rental amount before fees
     totalPrice = totalPrice + platformFee;
+
+    // Revenue split: host gets rental subtotal, platform keeps fee (+ insurance added later)
+    const hostEarnings = rentalSubtotal;
+    const platformRevenue = platformFee;
 
     const booking = new Booking({
       vehicle: vehicleId,
@@ -117,6 +122,8 @@ router.post('/', auth, async (req, res) => {
       pricePerDay: vehicle.pricePerDay, // Store original daily rate
       totalPrice,
       platformFee,
+      hostEarnings,
+      platformRevenue,
       message
     });
 
@@ -305,6 +312,9 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
     booking.endDate = newEndDate;
     booking.totalDays = booking.totalDays + extensionDays;
     booking.totalPrice = booking.totalPrice + extensionCost;
+
+    // Extension rental goes to host
+    booking.hostEarnings = (booking.hostEarnings || 0) + extensionCost;
 
     // Track extension history
     if (!booking.extensions) {
