@@ -24,7 +24,10 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+  // Key to force re-mount of file inputs on iOS to prevent freeze
+  const [inputKey, setInputKey] = useState(0);
 
   // Phone upload state
   const [phoneSession, setPhoneSession] = useState(null);
@@ -78,8 +81,8 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
   };
 
   const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file || uploading) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -95,6 +98,9 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
 
     setUploading(true);
     setError('');
+
+    // Force re-mount file inputs immediately to prevent iOS freeze
+    setInputKey(prev => prev + 1);
 
     try {
       const token = localStorage.getItem('token');
@@ -120,27 +126,37 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
         ? response.data.imageUrl
         : `${API_URL}${response.data.imageUrl}`;
 
-      setPhotos(prev => ({
-        ...prev,
-        [currentPosition.key]: imageUrl
-      }));
+      // Use functional updates to avoid stale closures
+      setCurrentStep(prevStep => {
+        const posKey = PHOTO_POSITIONS[prevStep]?.key;
+        if (posKey) {
+          setPhotos(prev => ({
+            ...prev,
+            [posKey]: imageUrl
+          }));
+        }
 
-      // Auto-advance to next step if not on last photo
-      if (currentStep < PHOTO_POSITIONS.length - 1) {
-        setTimeout(() => setCurrentStep(currentStep + 1), 500);
-      }
+        // Auto-advance to next step if not on last photo
+        if (prevStep < PHOTO_POSITIONS.length - 1) {
+          return prevStep + 1;
+        }
+        return prevStep;
+      });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to upload photo');
     } finally {
       setUploading(false);
     }
-
-    // Reset file input
-    e.target.value = '';
   };
 
   const handleCameraCapture = () => {
-    fileInputRef.current?.click();
+    if (uploading) return;
+    cameraInputRef.current?.click();
+  };
+
+  const handleGalleryPick = () => {
+    if (uploading) return;
+    galleryInputRef.current?.click();
   };
 
   const handleRetakePhoto = (key) => {
@@ -179,17 +195,20 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
               setUploading(true);
               const imageUrl = latestImage;
 
-              setPhotos(prev => ({
-                ...prev,
-                [PHOTO_POSITIONS[currentStep]?.key]: imageUrl
-              }));
-
-              // Auto-advance after receiving photo
-              setCurrentStep(prev => {
-                if (prev < PHOTO_POSITIONS.length - 1) {
-                  return prev + 1;
+              // Use functional update for currentStep to avoid stale closure
+              setCurrentStep(prevStep => {
+                const posKey = PHOTO_POSITIONS[prevStep]?.key;
+                if (posKey) {
+                  setPhotos(prev => ({
+                    ...prev,
+                    [posKey]: imageUrl
+                  }));
                 }
-                return prev;
+
+                if (prevStep < PHOTO_POSITIONS.length - 1) {
+                  return prevStep + 1;
+                }
+                return prevStep;
               });
             } catch (uploadErr) {
               setError('Failed to process phone photo. Please try again.');
@@ -339,11 +358,21 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
               </div>
             ) : (
               <div className="capture-area">
+                {/* Separate file inputs for camera and gallery to prevent iOS freeze */}
                 <input
+                  key={`camera-${inputKey}`}
                   type="file"
                   accept="image/*"
                   capture="environment"
-                  ref={fileInputRef}
+                  ref={cameraInputRef}
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
+                <input
+                  key={`gallery-${inputKey}`}
+                  type="file"
+                  accept="image/*"
+                  ref={galleryInputRef}
                   onChange={handleFileSelect}
                   style={{ display: 'none' }}
                 />
@@ -364,11 +393,17 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                   </button>
                   <button
                     className="inspection-phone-btn"
-                    onClick={startPhoneUpload}
+                    onClick={handleGalleryPick}
                     disabled={uploading}
                   >
-                    <span className="phone-icon">📱</span>
-                    <span>Upload from Phone</span>
+                    {uploading ? (
+                      <span className="uploading">Uploading...</span>
+                    ) : (
+                      <>
+                        <span className="phone-icon">🖼️</span>
+                        <span>Upload from Phone</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
