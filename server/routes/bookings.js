@@ -841,6 +841,33 @@ router.post('/:id/host-cancel', auth, async (req, res) => {
   }
 });
 
+// Check if cancellation fee applies for a booking
+router.get('/:id/cancellation-fee', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    if (booking.driver.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const now = new Date();
+    const pickupDate = new Date(booking.startDate);
+    const pickupTime = booking.pickupTime || '10:00';
+    const [hours, minutes] = pickupTime.split(':').map(Number);
+    pickupDate.setHours(hours, minutes, 0, 0);
+
+    const hoursUntilPickup = (pickupDate - now) / (1000 * 60 * 60);
+    const isLateCancellation = hoursUntilPickup <= 24;
+    const cancellationFee = isLateCancellation ? 5.00 : 0;
+
+    res.json({ isLateCancellation, cancellationFee, hoursUntilPickup: Math.max(0, hoursUntilPickup) });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update booking status
 router.patch('/:id/status', auth, async (req, res) => {
   try {
@@ -857,10 +884,36 @@ router.patch('/:id/status', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
+    // Late cancellation fee: $5 if driver cancels within 24 hours of pickup
+    let cancellationFee = 0;
+    if (status === 'cancelled' && booking.driver.toString() === req.user._id.toString()) {
+      const now = new Date();
+      const pickupDate = new Date(booking.startDate);
+      // Set pickup time on the date
+      const pickupTime = booking.pickupTime || '10:00';
+      const [hours, minutes] = pickupTime.split(':').map(Number);
+      pickupDate.setHours(hours, minutes, 0, 0);
+
+      const hoursUntilPickup = (pickupDate - now) / (1000 * 60 * 60);
+
+      if (hoursUntilPickup <= 24) {
+        cancellationFee = 5.00;
+        booking.cancellationFee = cancellationFee;
+        // Add fee to platform revenue
+        booking.platformRevenue = (booking.platformRevenue || 0) + cancellationFee;
+      }
+
+      booking.cancelledBy = 'driver';
+      booking.cancelledAt = new Date();
+      booking.cancellationReason = hoursUntilPickup <= 24
+        ? 'Cancelled by driver (late cancellation - within 24 hours of pickup)'
+        : 'Cancelled by driver';
+    }
+
     booking.status = status;
     await booking.save();
 
-    res.json(booking);
+    res.json({ ...booking.toObject(), cancellationFee });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
