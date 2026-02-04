@@ -10,6 +10,27 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_
 
 const router = express.Router();
 
+// Auto-cancel stale awaiting_payment bookings (older than 30 minutes)
+const cleanupStaleBookings = async () => {
+  try {
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const result = await Booking.updateMany(
+      { status: 'awaiting_payment', createdAt: { $lt: thirtyMinutesAgo } },
+      { status: 'cancelled', cancellationReason: 'Payment not completed within 30 minutes', cancelledAt: new Date() }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(`🧹 Auto-cancelled ${result.modifiedCount} stale awaiting_payment booking(s)`);
+    }
+  } catch (err) {
+    console.error('Error cleaning up stale bookings:', err);
+  }
+};
+
+// Run cleanup every 5 minutes
+setInterval(cleanupStaleBookings, 5 * 60 * 1000);
+// Run once on startup
+cleanupStaleBookings();
+
 // Migration endpoint to add reservation IDs to existing bookings
 router.post('/migrate-reservation-ids', auth, async (req, res) => {
   try {
@@ -126,6 +147,7 @@ router.post('/', auth, async (req, res) => {
       platformFee,
       hostEarnings,
       platformRevenue,
+      status: 'awaiting_payment',
       message
     });
 
@@ -141,7 +163,7 @@ router.post('/', auth, async (req, res) => {
 // Get user's bookings (as driver)
 router.get('/my-bookings', auth, async (req, res) => {
   try {
-    const bookings = await Booking.find({ driver: req.user._id })
+    const bookings = await Booking.find({ driver: req.user._id, status: { $ne: 'awaiting_payment' } })
       .populate('vehicle')
       .populate('host', 'firstName lastName email phone profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
       .sort({ createdAt: -1 });
@@ -155,7 +177,7 @@ router.get('/my-bookings', auth, async (req, res) => {
 // Get host's bookings
 router.get('/host-bookings', auth, async (req, res) => {
   try {
-    const bookings = await Booking.find({ host: req.user._id })
+    const bookings = await Booking.find({ host: req.user._id, status: { $ne: 'awaiting_payment' } })
       .populate('vehicle')
       .populate('driver', 'firstName lastName email phone profileImage')
       .sort({ createdAt: -1 });
