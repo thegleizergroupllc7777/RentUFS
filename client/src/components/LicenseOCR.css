@@ -1,0 +1,121 @@
+.license-ocr-container {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 2px solid #374151;
+  background: #1a1a2e;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.license-ocr-match {
+  border-color: #10b981;
+  background: #062e1f;
+}
+
+.license-ocr-no-match {
+  border-color: #ef4444;
+  background: #2e0606;
+}
+
+.license-ocr-error {
+  border-color: #f59e0b;
+  background: #2e2306;
+}
+
+.license-ocr-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.license-ocr-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  flex-shrink: 0;
+  background: #374151;
+  color: #9ca3af;
+}
+
+.license-ocr-match .license-ocr-icon {
+  background: #10b981;
+  color: #fff;
+}
+
+.license-ocr-no-match .license-ocr-icon {
+  background: #ef4444;
+  color: #fff;
+}
+
+.license-ocr-error .license-ocr-icon {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.license-ocr-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.license-ocr-match .license-ocr-title {
+  color: #6ee7b7;
+}
+
+.license-ocr-no-match .license-ocr-title {
+  color: #fca5a5;
+}
+
+.license-ocr-error .license-ocr-title {
+  color: #fcd34d;
+}
+
+.license-ocr-progress {
+  margin-top: 0.75rem;
+  height: 4px;
+  background: #374151;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.license-ocr-progress-bar {
+  height: 100%;
+  background: #10b981;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.license-ocr-detail {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #374151;
+}
+
+.license-ocr-msg {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.license-ocr-retry {
+  margin-top: 0.75rem;
+  background: none;
+  border: 1px solid #4b5563;
+  color: #d1d5db;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.license-ocr-retry:hover {
+  background: #374151;
+  border-color: #6b7280;
+}

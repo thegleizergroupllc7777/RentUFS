@@ -81,6 +81,10 @@ const userSchema = new mongoose.Schema({
     faceVerified: {
       type: Boolean,
       default: false
+    },
+    licenseNumberMatched: {
+      type: Boolean,
+      default: false
     }
   },
   hostInfo: {
