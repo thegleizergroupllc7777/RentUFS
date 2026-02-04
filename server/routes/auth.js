@@ -231,8 +231,14 @@ router.post('/forgot-password', async (req, res) => {
 
     if (emailResult.dev) {
       console.log('⚠️  Email service not configured — password reset email logged to console only');
+      return res.status(503).json({
+        message: 'Email service is not configured. Please contact support or check server environment variables (SENDGRID_API_KEY, EMAIL_SERVICE, or SMTP_HOST).'
+      });
     } else if (!emailResult.success) {
       console.error('❌ Failed to send password reset email:', emailResult.error);
+      return res.status(500).json({
+        message: 'Failed to send password reset email. Please try again later.'
+      });
     }
 
     res.json({ message: successMessage });

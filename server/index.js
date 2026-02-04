@@ -56,7 +56,20 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'RentUFS API is running' });
+  const emailConfigured = !!(process.env.SENDGRID_API_KEY || process.env.EMAIL_SERVICE || process.env.SMTP_HOST);
+  const emailProvider = process.env.SENDGRID_API_KEY ? 'sendgrid' :
+                        process.env.EMAIL_SERVICE ? process.env.EMAIL_SERVICE :
+                        process.env.SMTP_HOST ? 'smtp' : 'none';
+  res.json({
+    status: 'ok',
+    message: 'RentUFS API is running',
+    email: {
+      configured: emailConfigured,
+      provider: emailProvider,
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com',
+      clientUrl: process.env.CLIENT_URL || 'http://localhost:3000'
+    }
+  });
 });
 
 // Serve React frontend in production
