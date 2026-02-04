@@ -51,15 +51,33 @@ const FaceVerification = ({ licenseImage, selfieImage, onVerificationResult }) =
         loadImage(selfieImage)
       ]);
 
-      // Detect face on the license photo
-      const licenseDetection = await faceapi
-        .detectSingleFace(licenseImg)
+      // Detect face on the license photo — use a lower confidence threshold
+      // since license photos are small, often behind plastic, and may have glare
+      let licenseDetection = await faceapi
+        .detectSingleFace(licenseImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.2 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
 
+      // Fallback: try detectAllFaces with low threshold and pick the best one
+      if (!licenseDetection) {
+        console.log('⚠️ Single face detection failed on license, trying detectAllFaces...');
+        const allDetections = await faceapi
+          .detectAllFaces(licenseImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.15 }))
+          .withFaceLandmarks()
+          .withFaceDescriptors();
+
+        if (allDetections && allDetections.length > 0) {
+          // Pick the detection with the highest confidence score
+          licenseDetection = allDetections.reduce((best, current) =>
+            current.detection.score > best.detection.score ? current : best
+          );
+          console.log(`✅ Found ${allDetections.length} face(s) on license via fallback, using best (score: ${licenseDetection.detection.score.toFixed(3)})`);
+        }
+      }
+
       if (!licenseDetection) {
         setStatus('error');
-        setErrorMessage('Could not detect a face on the driver\'s license. Please upload a clearer photo.');
+        setErrorMessage('Could not detect a face on the driver\'s license. Please upload a clearer, well-lit photo of the front of your license.');
         onVerificationResult({ verified: false, score: 0, reason: 'no_face_license' });
         return;
       }
@@ -68,7 +86,7 @@ const FaceVerification = ({ licenseImage, selfieImage, onVerificationResult }) =
       // so there may be two faces: the person's real face and the small license photo.
       // We pick the largest face (by bounding box area) which is the actual person.
       const selfieDetections = await faceapi
-        .detectAllFaces(selfieImg)
+        .detectAllFaces(selfieImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
         .withFaceLandmarks()
         .withFaceDescriptors();
 
