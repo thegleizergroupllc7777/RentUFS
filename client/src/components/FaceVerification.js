@@ -185,7 +185,7 @@ const FaceVerification = ({ licenseImage, selfieImage, onVerificationResult }) =
             <span className="face-verify-score face-verify-score-bad">{matchScore}%</span>
           </div>
           <p className="face-verify-msg">
-            The faces don't appear to match. Please make sure you uploaded the correct license and a clear selfie of yourself holding it.
+            The faces don't appear to match. Please make sure you uploaded the correct license and a clear, well-lit selfie of your face.
           </p>
         </div>
       )}
