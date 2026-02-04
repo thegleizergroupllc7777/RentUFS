@@ -1370,6 +1370,87 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
   }
 };
 
+// Send password reset email
+const sendPasswordResetEmail = async (user, resetToken) => {
+  try {
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Password Reset Email to: ${user.email}, token: ${resetToken}`);
+      return { success: true, dev: true };
+    }
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
+
+    const mailOptions = {
+      to: user.email,
+      subject: 'Reset Your RentUFS Password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2.5rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { background: #000000; color: #00FF66; padding: 14px 35px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; font-size: 1.1rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
+            .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; border-radius: 4px; margin: 20px 0; font-size: 0.9rem; color: #856404; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">RentUFS</div>
+              <h1 style="margin-top: 20px; color: white;">Password Reset</h1>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${user.firstName},</h2>
+
+              <p>We received a request to reset the password for your RentUFS account.</p>
+
+              <p>Click the button below to set a new password:</p>
+
+              <center>
+                <a href="${resetUrl}" class="button">
+                  Reset My Password
+                </a>
+              </center>
+
+              <div class="warning">
+                This link will expire in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.
+              </div>
+
+              <p style="margin-top: 20px; font-size: 0.85rem; color: #6b7280;">
+                If the button doesn't work, copy and paste this link into your browser:<br>
+                <a href="${resetUrl}" style="color: #10b981; word-break: break-all;">${resetUrl}</a>
+              </p>
+            </div>
+
+            <div class="footer">
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Hi ${user.firstName},\n\nWe received a request to reset the password for your RentUFS account.\n\nClick the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request a password reset, you can safely ignore this email.\n\nThe RentUFS Team`
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log('✅ Password reset email sent to:', user.email);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending password reset email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
@@ -1379,5 +1460,6 @@ module.exports = {
   sendBookingExtensionEmail,
   sendBookingCancellationEmail,
   sendEmailVerificationCode,
-  sendRegistrationExpirationReminder
+  sendRegistrationExpirationReminder,
+  sendPasswordResetEmail
 };
