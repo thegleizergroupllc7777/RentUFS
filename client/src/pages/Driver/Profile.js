@@ -1540,7 +1540,7 @@ const DriverProfile = () => {
               <div>
                 <h4 style={{ color: '#d1d5db', margin: 0, fontSize: '0.95rem' }}>Selfie Verification</h4>
                 <p style={{ color: '#6b7280', margin: '0.15rem 0 0', fontSize: '0.75rem' }}>
-                  Required: Take a selfie to verify your identity matches your license
+                  Required: Take a clear selfie of your face to verify your identity
                 </p>
               </div>
             </div>

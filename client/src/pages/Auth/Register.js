@@ -166,7 +166,7 @@ const Register = () => {
         return;
       }
       if (!formData.driverLicense.verificationSelfie || formData.driverLicense.verificationSelfie.trim() === '') {
-        setError('Please upload a verification selfie holding your driver\'s license.');
+        setError('Please upload a verification selfie of your face.');
         setLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -489,10 +489,10 @@ const Register = () => {
                           Verification Selfie *
                         </h4>
                         <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-                          Take a selfie holding your driver's license next to your face. This helps us verify your identity.
+                          Take a clear selfie of your face. This will be compared to your license photo to verify your identity.
                         </p>
                         <ImageUpload
-                          label="Selfie with License"
+                          label="Verification Selfie"
                           value={formData.driverLicense.verificationSelfie}
                           onChange={(url) => setFormData(prev => ({
                             ...prev,
