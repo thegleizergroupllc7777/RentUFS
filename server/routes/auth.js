@@ -204,12 +204,17 @@ router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const successMessage = 'If an account with that email exists, a password reset link has been sent.';
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       // Return success even if user not found (security best practice)
-      return res.json({
-        message: 'If an account with that email exists, a password reset link has been generated.'
-      });
+      return res.json({ message: successMessage });
     }
 
     // Generate reset token
@@ -221,14 +226,16 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    // Send password reset email
-    sendPasswordResetEmail(user, resetToken).catch(err =>
-      console.error('Failed to send password reset email:', err)
-    );
+    // Send password reset email and await the result
+    const emailResult = await sendPasswordResetEmail(user, resetToken);
 
-    res.json({
-      message: 'If an account with that email exists, a password reset link has been sent.'
-    });
+    if (emailResult.dev) {
+      console.log('⚠️  Email service not configured — password reset email logged to console only');
+    } else if (!emailResult.success) {
+      console.error('❌ Failed to send password reset email:', emailResult.error);
+    }
+
+    res.json({ message: successMessage });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

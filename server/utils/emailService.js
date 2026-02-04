@@ -108,6 +108,7 @@ const sendEmail = async (mailOptions) => {
     };
 
     const response = await sgMail.send(msg);
+    console.log(`📧 Email sent via SendGrid to: ${mailOptions.to} | Subject: ${mailOptions.subject}`);
     return { success: true, messageId: response[0]?.headers['x-message-id'] };
   } else {
     // Nodemailer (Gmail / SMTP) — apply the same anti-spam headers
@@ -122,6 +123,7 @@ const sendEmail = async (mailOptions) => {
     };
 
     const info = await transporter.sendMail(nodemailerOptions);
+    console.log(`📧 Email sent via Nodemailer to: ${mailOptions.to} | Subject: ${mailOptions.subject}`);
     return { success: true, messageId: info.messageId };
   }
 };
@@ -1374,8 +1376,11 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
 const sendPasswordResetEmail = async (user, resetToken) => {
   try {
     if (!isEmailConfigured()) {
-      console.log(`📧 [DEV] Password Reset Email to: ${user.email}, token: ${resetToken}`);
-      return { success: true, dev: true };
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      console.log(`📧 [DEV] Password Reset Email to: ${user.email}`);
+      console.log(`📧 [DEV] Reset link: ${clientUrl}/reset-password/${resetToken}`);
+      console.log('⚠️  No email service configured (set SENDGRID_API_KEY, EMAIL_SERVICE, or SMTP_HOST)');
+      return { success: false, dev: true };
     }
 
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
