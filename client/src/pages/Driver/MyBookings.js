@@ -125,6 +125,7 @@ const MyBookings = () => {
   const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [cancelModal, setCancelModal] = useState({ open: false, booking: null, fee: 0, loading: false, isLate: false });
 
   useEffect(() => {
     fetchBookings();
@@ -160,22 +161,40 @@ const MyBookings = () => {
     }
   };
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) {
-      return;
-    }
-
+  const openCancelModal = async (booking) => {
+    setCancelModal({ open: true, booking, fee: 0, loading: true, isLate: false });
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`${API_URL}/api/bookings/${bookingId}/status`, {
+      const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/cancellation-fee`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCancelModal(prev => ({
+        ...prev,
+        fee: response.data.cancellationFee,
+        isLate: response.data.isLateCancellation,
+        loading: false
+      }));
+    } catch (error) {
+      setCancelModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelModal.booking) return;
+    setCancelModal(prev => ({ ...prev, loading: true }));
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_URL}/api/bookings/${cancelModal.booking._id}/status`, {
         status: 'cancelled'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      setCancelModal({ open: false, booking: null, fee: 0, loading: false, isLate: false });
       fetchBookings();
     } catch (error) {
       console.error('Error cancelling booking:', error);
       alert('Failed to cancel booking');
+      setCancelModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -960,9 +979,9 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {booking.status === 'pending' && (
+                        {(booking.status === 'pending' || booking.status === 'confirmed') && (
                           <button
-                            onClick={() => handleCancelBooking(booking._id)}
+                            onClick={() => openCancelModal(booking)}
                             className="btn btn-danger"
                           >
                             Cancel Booking
@@ -1260,6 +1279,105 @@ const MyBookings = () => {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Confirmation Modal */}
+      {cancelModal.open && cancelModal.booking && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '450px',
+            width: '100%'
+          }}>
+            <h2 style={{ marginBottom: '1rem', color: '#1f2937' }}>Cancel Booking</h2>
+
+            <div style={{
+              padding: '1rem',
+              background: '#f9fafb',
+              borderRadius: '0.5rem',
+              marginBottom: '1.5rem'
+            }}>
+              <p style={{ fontWeight: '600', color: '#1f2937', marginBottom: '0.25rem' }}>
+                {cancelModal.booking.vehicle?.nickname || `${cancelModal.booking.vehicle?.year} ${cancelModal.booking.vehicle?.make} ${cancelModal.booking.vehicle?.model}`}
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                {cancelModal.booking.reservationId}
+              </p>
+            </div>
+
+            {cancelModal.loading ? (
+              <p style={{ color: '#6b7280', textAlign: 'center' }}>Checking cancellation policy...</p>
+            ) : (
+              <>
+                {cancelModal.isLate ? (
+                  <div style={{
+                    padding: '1rem',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '0.5rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <p style={{ fontWeight: '600', color: '#dc2626', marginBottom: '0.5rem' }}>
+                      Late Cancellation Fee: $5.00
+                    </p>
+                    <p style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                      You are cancelling within 24 hours of your scheduled pickup. A $5.00 late cancellation fee will be charged to your account.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: '1rem',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '0.5rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <p style={{ fontSize: '0.875rem', color: '#166534' }}>
+                      No cancellation fee applies. You are cancelling more than 24 hours before your pickup.
+                    </p>
+                  </div>
+                )}
+
+                <p style={{ color: '#4b5563', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                  Are you sure you want to cancel this reservation?
+                </p>
+
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button
+                    onClick={() => setCancelModal({ open: false, booking: null, fee: 0, loading: false, isLate: false })}
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                    disabled={cancelModal.loading}
+                  >
+                    Keep Booking
+                  </button>
+                  <button
+                    onClick={handleConfirmCancel}
+                    className="btn btn-danger"
+                    style={{ flex: 1 }}
+                    disabled={cancelModal.loading}
+                  >
+                    {cancelModal.loading ? 'Cancelling...' : cancelModal.isLate ? 'Cancel (Fee: $5.00)' : 'Cancel Booking'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
