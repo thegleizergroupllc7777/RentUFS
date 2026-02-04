@@ -23,6 +23,12 @@ const Register = () => {
     dateOfBirth: '',
     userType: initialType,
     profileImage: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    },
     driverLicense: {
       licenseNumber: '',
       state: '',
@@ -112,6 +118,15 @@ const Register = () => {
         driverLicense: {
           ...formData.driverLicense,
           [licenseField]: value
+        }
+      });
+    } else if (name.startsWith('address.')) {
+      const addressField = name.split('.')[1];
+      setFormData({
+        ...formData,
+        address: {
+          ...formData.address,
+          [addressField]: value
         }
       });
     } else {
@@ -418,6 +433,65 @@ const Register = () => {
                         You must be at least 21 years old to rent vehicles
                       </p>
                     )}
+                  </div>
+
+                  {/* Address */}
+                  <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#1f2937' }}>
+                      Home Address {formData.userType === 'driver' && '*'}
+                    </h3>
+                    <div className="form-group">
+                      <label className="form-label">Street Address</label>
+                      <input
+                        type="text"
+                        name="address.street"
+                        className="form-input"
+                        value={formData.address.street}
+                        onChange={handleChange}
+                        placeholder="123 Main St, Apt 4B"
+                        required={formData.userType === 'driver'}
+                      />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">City</label>
+                        <input
+                          type="text"
+                          name="address.city"
+                          className="form-input"
+                          value={formData.address.city}
+                          onChange={handleChange}
+                          placeholder="New York"
+                          required={formData.userType === 'driver'}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">State</label>
+                        <input
+                          type="text"
+                          name="address.state"
+                          className="form-input"
+                          value={formData.address.state}
+                          onChange={handleChange}
+                          placeholder="NY"
+                          maxLength="2"
+                          required={formData.userType === 'driver'}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ maxWidth: '200px' }}>
+                      <label className="form-label">Zip Code</label>
+                      <input
+                        type="text"
+                        name="address.zipCode"
+                        className="form-input"
+                        value={formData.address.zipCode}
+                        onChange={handleChange}
+                        placeholder="10001"
+                        maxLength="10"
+                        required={formData.userType === 'driver'}
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">

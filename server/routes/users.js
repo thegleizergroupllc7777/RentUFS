@@ -36,7 +36,7 @@ const getOrCreateStripeCustomer = async (user) => {
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { firstName, lastName, phone, userType, profileImage } = req.body;
+    const { firstName, lastName, phone, userType, profileImage, address } = req.body;
 
     const user = await User.findById(req.user._id);
 
@@ -45,6 +45,14 @@ router.put('/profile', auth, async (req, res) => {
     if (phone) user.phone = phone;
     if (userType) user.userType = userType;
     if (profileImage) user.profileImage = profileImage;
+    if (address) {
+      user.address = {
+        street: address.street?.trim() || '',
+        city: address.city?.trim() || '',
+        state: address.state?.trim() || '',
+        zipCode: address.zipCode?.trim() || ''
+      };
+    }
 
     await user.save();
 
