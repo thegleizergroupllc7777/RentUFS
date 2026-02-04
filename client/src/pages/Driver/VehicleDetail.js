@@ -602,14 +602,16 @@ const VehicleDetail = () => {
 
                   {bookingData.startDate && bookingData.endDate && (
                     <div style={{
-                      backgroundColor: '#f3f4f6',
+                      backgroundColor: '#1a2e1a',
+                      border: '1px solid #10b981',
                       padding: '0.75rem',
                       borderRadius: '0.5rem',
                       marginBottom: '1rem',
-                      fontSize: '0.9rem'
+                      fontSize: '0.9rem',
+                      color: '#e5e7eb'
                     }}>
                       <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {bookingData.pickupTime}</div>
-                      <div><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {bookingData.dropoffTime}</div>
+                      <div style={{ marginTop: '0.25rem' }}><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {bookingData.dropoffTime}</div>
                     </div>
                   )}
 
