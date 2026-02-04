@@ -52,11 +52,13 @@ const compressImage = (file) => {
 };
 
 // Upload a Blob to the server and return the URL path
+// Uses authenticated endpoint when logged in, public endpoint otherwise (e.g. during registration)
 const uploadToServer = async (blob, filename) => {
   const formData = new FormData();
   formData.append('image', blob, filename || 'photo.jpg');
   const token = localStorage.getItem('token');
-  const response = await axios.post(`${API_URL}/api/upload/image`, formData, {
+  const endpoint = token ? '/api/upload/image' : '/api/upload/image-public';
+  const response = await axios.post(`${API_URL}${endpoint}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
       ...(token ? { Authorization: `Bearer ${token}` } : {})
