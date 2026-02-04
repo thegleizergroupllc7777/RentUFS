@@ -45,14 +45,23 @@ const createTransporter = () => {
   return null;
 };
 
-// Get the verified sender email/name for SendGrid
+// Consistent sender info used across all emails
+const SENDER_NAME = 'RentUFS';
+
+// Get the verified sender email/name
 const getSenderInfo = () => {
   const email = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com';
-  const name = process.env.EMAIL_FROM_NAME || 'RentUFS';
+  const name = SENDER_NAME;
   return { email, name };
 };
 
+// Check if email service is available (not dev mode)
+const isEmailConfigured = () => {
+  return !!(process.env.SENDGRID_API_KEY || process.env.EMAIL_SERVICE || process.env.SMTP_HOST);
+};
+
 // Helper function to send email via SendGrid or Nodemailer
+// All emails go through this single function to ensure consistent headers
 const sendEmail = async (mailOptions) => {
   const transporter = createTransporter();
 
@@ -60,11 +69,20 @@ const sendEmail = async (mailOptions) => {
     return { success: false, dev: true };
   }
 
-  if (transporter.type === 'sendgrid') {
-    const sender = getSenderInfo();
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  const sender = getSenderInfo();
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
 
-    // Use SendGrid API with proper headers for inbox delivery
+  // Anti-spam headers applied to ALL transport methods
+  const antiSpamHeaders = {
+    'X-Priority': '3',
+    'X-Mailer': 'RentUFS Notifications',
+    'List-Unsubscribe': `<${clientUrl}/unsubscribe>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    'Precedence': 'bulk',
+    'X-Auto-Response-Suppress': 'OOF, AutoReply'
+  };
+
+  if (transporter.type === 'sendgrid') {
     const msg = {
       to: mailOptions.to,
       from: {
@@ -76,17 +94,13 @@ const sendEmail = async (mailOptions) => {
         name: sender.name
       },
       subject: mailOptions.subject,
-      text: mailOptions.text,
+      text: mailOptions.text || stripHtml(mailOptions.html),
       html: mailOptions.html,
-      headers: {
-        'X-Priority': '3',
-        'X-Mailer': 'RentUFS Notifications',
-        'List-Unsubscribe': `<${clientUrl}/unsubscribe>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
-      },
+      headers: antiSpamHeaders,
       trackingSettings: {
         clickTracking: { enable: false },
-        openTracking: { enable: false }
+        openTracking: { enable: false },
+        subscriptionTracking: { enable: false }
       },
       mailSettings: {
         bypassListManagement: { enable: false }
@@ -96,49 +110,50 @@ const sendEmail = async (mailOptions) => {
     const response = await sgMail.send(msg);
     return { success: true, messageId: response[0]?.headers['x-message-id'] };
   } else {
-    // Use Nodemailer
-    const info = await transporter.sendMail(mailOptions);
+    // Nodemailer (Gmail / SMTP) — apply the same anti-spam headers
+    const nodemailerOptions = {
+      from: `"${sender.name}" <${sender.email}>`,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      text: mailOptions.text || stripHtml(mailOptions.html),
+      html: mailOptions.html,
+      headers: antiSpamHeaders,
+      replyTo: process.env.EMAIL_REPLY_TO || sender.email
+    };
+
+    const info = await transporter.sendMail(nodemailerOptions);
     return { success: true, messageId: info.messageId };
   }
+};
+
+// Simple HTML tag stripper for auto-generating text fallback
+const stripHtml = (html) => {
+  if (!html) return '';
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<li>/gi, '- ')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&copy;/g, '(c)')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 };
 
 // Send welcome email to new users
 const sendWelcomeEmail = async (user) => {
   try {
-    const transporter = createTransporter();
-
-    if (!transporter) {
-      // Development mode - just log the email
-      console.log('📧 [DEV] Welcome Email to:', user.email);
-      console.log('-----------------------------------');
-      console.log(`To: ${user.email}`);
-      console.log(`Subject: Welcome to UFS - Your Account is Ready!`);
-      console.log(`
-Hi ${user.firstName},
-
-Welcome to UFS!
-
-Your account has been successfully created. You're now part of our community!
-
-Account Type: ${user.userType === 'driver' ? 'Driver' : user.userType === 'host' ? 'Host' : 'Driver & Host'}
-
-${user.userType === 'driver' ?
-  'You can now browse and rent vehicles from trusted hosts in your area.' :
-  user.userType === 'host' ?
-  'You can now list your vehicles and start earning money!' :
-  'You can rent vehicles and list your own cars to earn money!'}
-
-Get Started:
-- Browse available vehicles
-- ${user.userType !== 'driver' ? 'List your vehicles' : 'Book your first ride'}
-- Complete your profile
-
-Thank you for choosing UFS!
-
-Best regards,
-The UFS Team
-      `);
-      console.log('-----------------------------------\n');
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Welcome Email to: ${user.email}`);
       return { success: true, dev: true };
     }
 
@@ -146,9 +161,8 @@ The UFS Team
                          user.userType === 'host' ? 'Host' : 'Driver & Host';
 
     const mailOptions = {
-      from: `"UFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
       to: user.email,
-      subject: 'Welcome to UFS - Your Account is Ready!',
+      subject: 'Welcome to RentUFS - Your Account is Ready!',
       html: `
         <!DOCTYPE html>
         <html>
@@ -230,14 +244,14 @@ The UFS Team
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">UFS</div>
+              <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Welcome Aboard!</h1>
             </div>
 
             <div class="content">
               <h2>Hi ${user.firstName},</h2>
 
-              <p>Your UFS account has been successfully created!</p>
+              <p>Your RentUFS account has been successfully created!</p>
 
               <div class="badge">${userTypeText} Account</div>
 
@@ -274,44 +288,19 @@ The UFS Team
             </div>
 
             <div class="footer">
-              <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
               <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
         </body>
         </html>
       `,
-      text: `
-Hi ${user.firstName},
-
-Welcome to UFS!
-
-Your account has been successfully created. You're now part of our community!
-
-Account Type: ${userTypeText}
-
-${user.userType === 'driver' ?
-  'You can now browse and rent vehicles from trusted hosts in your area.' :
-  user.userType === 'host' ?
-  'You can now list your vehicles and start earning money!' :
-  'You can rent vehicles and list your own cars to earn money!'}
-
-Get Started:
-- Browse available vehicles
-- ${user.userType !== 'driver' ? 'List your vehicles' : 'Book your first ride'}
-- Complete your profile
-
-Thank you for choosing UFS!
-
-Best regards,
-The UFS Team
-      `
+      text: `Hi ${user.firstName},\n\nWelcome to RentUFS!\n\nYour account has been successfully created.\n\nAccount Type: ${userTypeText}\n\n${user.userType === 'driver' ? 'You can now browse and rent vehicles from trusted hosts in your area.' : user.userType === 'host' ? 'You can now list your vehicles and start earning money!' : 'You can rent vehicles and list your own cars to earn money!'}\n\nGet Started:\n- Browse available vehicles\n- ${user.userType !== 'driver' ? 'List your vehicles' : 'Book your first ride'}\n- Complete your profile\n\nThank you for choosing RentUFS!\n\nBest regards,\nThe RentUFS Team`
     };
 
     const result = await sendEmail(mailOptions);
     if (result.success) {
       console.log('✅ Welcome email sent to:', user.email);
-      if (result.messageId) console.log('Message ID:', result.messageId);
     }
     return result;
   } catch (error) {
@@ -324,43 +313,12 @@ The UFS Team
 // Send vehicle listing confirmation email
 const sendVehicleListedEmail = async (user, vehicle) => {
   try {
-    const transporter = createTransporter();
-
-    if (!transporter) {
-      // Development mode - just log the email
-      console.log('📧 [DEV] Vehicle Listed Email to:', user.email);
-      console.log('-----------------------------------');
-      console.log(`To: ${user.email}`);
-      console.log(`Subject: Your ${vehicle.year} ${vehicle.make} ${vehicle.model} is Now Listed!`);
-      console.log(`
-Hi ${user.firstName},
-
-Congratulations! Your vehicle has been successfully listed on UFS!
-
-Vehicle Details:
-- ${vehicle.year} ${vehicle.make} ${vehicle.model}
-- Type: ${vehicle.type}
-- Price: $${vehicle.pricePerDay}/day
-- Location: ${vehicle.location?.city}, ${vehicle.location?.state}
-
-Your vehicle is now visible to thousands of potential renters!
-
-What's Next:
-- Monitor booking requests in your host dashboard
-- Update your vehicle availability as needed
-- Respond to renter inquiries promptly
-
-Start earning today!
-
-Best regards,
-The UFS Team
-      `);
-      console.log('-----------------------------------\n');
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Vehicle Listed Email to: ${user.email}`);
       return { success: true, dev: true };
     }
 
     const mailOptions = {
-      from: `"UFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
       to: user.email,
       subject: `Your ${vehicle.year} ${vehicle.make} ${vehicle.model} is Now Listed!`,
       html: `
@@ -384,7 +342,7 @@ The UFS Team
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">UFS</div>
+              <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Vehicle Listed Successfully!</h1>
             </div>
 
@@ -439,31 +397,7 @@ The UFS Team
         </body>
         </html>
       `,
-      text: `
-Hi ${user.firstName},
-
-Congratulations! Your vehicle has been successfully listed on UFS!
-
-Vehicle Details:
-- ${vehicle.year} ${vehicle.make} ${vehicle.model}
-- Type: ${vehicle.type}
-- Transmission: ${vehicle.transmission}
-- Seats: ${vehicle.seats}
-- Price: $${vehicle.pricePerDay}/day
-- Location: ${vehicle.location?.city}, ${vehicle.location?.state}
-
-Your vehicle is now visible to thousands of potential renters!
-
-What's Next:
-- Monitor booking requests in your host dashboard
-- Update your vehicle availability as needed
-- Respond to renter inquiries promptly
-
-Start earning today!
-
-Best regards,
-The UFS Team
-      `
+      text: `Hi ${user.firstName},\n\nCongratulations! Your vehicle has been successfully listed on RentUFS!\n\nVehicle Details:\n- ${vehicle.year} ${vehicle.make} ${vehicle.model}\n- Type: ${vehicle.type}\n- Price: $${vehicle.pricePerDay}/day\n- Location: ${vehicle.location?.city}, ${vehicle.location?.state}\n\nYour vehicle is now visible to potential renters!\n\nWhat's Next:\n- Monitor booking requests in your host dashboard\n- Update your vehicle availability as needed\n- Respond to renter inquiries promptly\n\nStart earning today!\n\nBest regards,\nThe RentUFS Team`
     };
 
     const result = await sendEmail(mailOptions);
@@ -480,54 +414,16 @@ The UFS Team
 // Send booking confirmation email to driver
 const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) => {
   try {
-    const transporter = createTransporter();
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
-    if (!transporter) {
-      console.log('📧 [DEV] Booking Confirmation Email to Driver:', driver.email);
-      console.log('-----------------------------------');
-      console.log(`To: ${driver.email}`);
-      console.log(`Subject: Booking Confirmed - ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
-      console.log(`
-Hi ${driver.firstName},
-
-Great news! Your booking has been confirmed and payment processed successfully!
-
-Reservation ID: ${booking.reservationId || booking._id}
-
-Booking Details:
-- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-- Pick-up Date: ${startDate}
-- Return Date: ${endDate}
-- Duration: ${booking.totalDays} day(s)
-- Total Paid: $${booking.totalPrice.toFixed(2)}
-
-Host Information:
-- Name: ${host.firstName} ${host.lastName}
-- Email: ${host.email}
-- Phone: ${host.phone || 'Not provided'}
-
-Pick-up Location:
-${vehicle.location?.address || ''}, ${vehicle.location?.city || ''}, ${vehicle.location?.state || ''} ${vehicle.location?.zipCode || ''}
-
-Important Reminders:
-- Bring a valid driver's license
-- Arrive on time for pick-up
-- Inspect the vehicle before driving
-
-Thank you for choosing RentUFS!
-
-Best regards,
-The RentUFS Team
-      `);
-      console.log('-----------------------------------\n');
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Booking Confirmation Email to Driver: ${driver.email}`);
       return { success: true, dev: true };
     }
 
     const mailOptions = {
-      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to: driver.email,
       subject: `Booking Confirmed - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
       html: `
@@ -675,50 +571,16 @@ The RentUFS Team
 // Send booking notification email to host
 const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => {
   try {
-    const transporter = createTransporter();
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
-    if (!transporter) {
-      console.log('📧 [DEV] Booking Notification Email to Host:', host.email);
-      console.log('-----------------------------------');
-      console.log(`To: ${host.email}`);
-      console.log(`Subject: New Booking! ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
-      console.log(`
-Hi ${host.firstName},
-
-Great news! You have a new confirmed booking for your vehicle!
-
-Reservation ID: ${booking.reservationId || booking._id}
-
-Booking Details:
-- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-- Pick-up Date: ${startDate}
-- Return Date: ${endDate}
-- Duration: ${booking.totalDays} day(s)
-- Earnings: $${booking.totalPrice.toFixed(2)}
-
-Driver Information:
-- Name: ${driver.firstName} ${driver.lastName}
-- Email: ${driver.email}
-
-Next Steps:
-- Ensure your vehicle is clean and ready
-- Confirm the pick-up location with the driver
-- Have all necessary documents ready
-
-Congratulations on your booking!
-
-Best regards,
-The RentUFS Team
-      `);
-      console.log('-----------------------------------\n');
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Booking Notification Email to Host: ${host.email}`);
       return { success: true, dev: true };
     }
 
     const mailOptions = {
-      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to: host.email,
       subject: `New Booking! ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
       html: `
@@ -857,57 +719,16 @@ The RentUFS Team
 // Send return reminder email to driver (1 hour before reservation ends)
 const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
   try {
-    const transporter = createTransporter();
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const dropoffTime = booking.dropoffTime || '10:00';
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
-    if (!transporter) {
-      console.log('📧 [DEV] Return Reminder Email to Driver:', driver.email);
-      console.log('-----------------------------------');
-      console.log(`To: ${driver.email}`);
-      console.log(`Subject: Reminder: Your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental ends soon!`);
-      console.log(`
-Hi ${driver.firstName},
-
-This is a friendly reminder that your rental period is ending soon!
-
-Reservation ID: ${booking.reservationId || booking._id}
-
-Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-Return Date: ${endDate}
-Return Time: ${dropoffTime}
-
-Return Location:
-${vehicle.location?.address || ''}, ${vehicle.location?.city || ''}, ${vehicle.location?.state || ''} ${vehicle.location?.zipCode || ''}
-
-Options:
-1. EXTEND YOUR RENTAL - Need more time? You can extend your booking from your dashboard.
-2. RETURN THE VEHICLE - Please return the vehicle on time to avoid late fees.
-
-Important Reminders:
-- Return the vehicle with the same fuel level
-- Complete the return inspection photos
-- Remove all personal belongings
-
-Need to extend? Visit: ${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings
-
-If you have any questions, contact your host:
-- Name: ${host.firstName} ${host.lastName}
-- Email: ${host.email}
-- Phone: ${host.phone || 'Not provided'}
-
-Thank you for choosing RentUFS!
-
-Best regards,
-The RentUFS Team
-      `);
-      console.log('-----------------------------------\n');
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Return Reminder Email to Driver: ${driver.email}`);
       return { success: true, dev: true };
     }
 
     const mailOptions = {
-      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
       to: driver.email,
       subject: `Reminder: Your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental ends soon!`,
       html: `
@@ -1082,7 +903,6 @@ const getVehicleImageUrl = (vehicle) => {
 // Send booking extension confirmation email to driver and host
 const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
   try {
-    const transporter = createTransporter();
     const newEndDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
@@ -1090,23 +910,8 @@ const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
     const extensionDays = lastExtension?.days || 0;
     const extensionCost = lastExtension?.cost || 0;
 
-    if (!transporter) {
-      console.log('📧 [DEV] Booking Extension Email to Driver:', driver.email);
-      console.log('📧 [DEV] Booking Extension Email to Host:', host.email);
-      console.log('-----------------------------------');
-      console.log(`Subject: Booking Extended - ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
-      console.log(`
-Reservation ${booking.reservationId || booking._id} has been extended by ${extensionDays} day(s).
-
-Updated Booking Details:
-- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-- Pick-up Date: ${startDate}
-- New Return Date: ${newEndDate}
-- Total Duration: ${booking.totalDays} day(s)
-- Extension Cost: $${extensionCost.toFixed(2)}
-- New Total: $${booking.totalPrice.toFixed(2)}
-      `);
-      console.log('-----------------------------------\n');
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Booking Extension Email to: ${driver.email}, ${host.email}`);
       return { success: true, dev: true };
     }
 
@@ -1190,7 +995,6 @@ Updated Booking Details:
 
     // Email to driver
     const driverMail = {
-      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
       to: driver.email,
       subject: `Booking Extended - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
       html: `
@@ -1244,7 +1048,6 @@ Updated Booking Details:
 
     // Email to host
     const hostMail = {
-      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
       to: host.email,
       subject: `Booking Extended - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
       html: `
@@ -1317,30 +1120,17 @@ Updated Booking Details:
 // Send booking cancellation email to driver (cancelled by host with full refund)
 const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reason) => {
   try {
-    const transporter = createTransporter();
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
     const wasRefunded = booking.paymentStatus === 'refunded';
 
-    if (!transporter) {
-      console.log('📧 [DEV] Booking Cancellation Email to Driver:', driver.email);
-      console.log('-----------------------------------');
-      console.log(`Subject: Reservation Cancelled - ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
-      console.log(`
-Reservation ${booking.reservationId || booking._id} has been cancelled by the host.
-${reason ? `Reason: ${reason}` : ''}
-${wasRefunded ? `A full refund of $${booking.totalPrice.toFixed(2)} has been processed.` : ''}
-
-Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-Dates: ${startDate} - ${endDate}
-      `);
-      console.log('-----------------------------------\n');
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Booking Cancellation Email to Driver: ${driver.email}`);
       return { success: true, dev: true };
     }
 
     const mailOptions = {
-      from: `"RentUFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
       to: driver.email,
       subject: `Reservation Cancelled - ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
       html: `
@@ -1460,9 +1250,8 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
 
     const mailOptions = {
-      from: `"UFS" <${process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com'}>`,
       to: toEmail,
-      subject: 'Verify Your New Email Address - UFS',
+      subject: 'Verify Your New Email Address - RentUFS',
       html: `
         <!DOCTYPE html>
         <html>
@@ -1480,7 +1269,7 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">UFS</div>
+              <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Email Verification</h1>
             </div>
             <div class="content">
@@ -1513,17 +1302,15 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
 
 const sendRegistrationExpirationReminder = async (host, vehicle) => {
   try {
-    const transporter = createTransporter();
     const expirationDate = new Date(vehicle.registrationExpiration).toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
     const vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
     const dashboardUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/host/edit-vehicle/${vehicle._id}`;
 
-    if (!transporter) {
-      console.log('📧 [DEV] Registration Expiration Reminder to Host:', host.email);
-      console.log(`Vehicle: ${vehicleName}, Expires: ${expirationDate}`);
-      return { success: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Registration Expiration Reminder to Host: ${host.email} (${vehicleName})`);
+      return { success: true, dev: true };
     }
 
     const subject = `Registration Expiring Soon: ${vehicleName}`;
@@ -1568,10 +1355,10 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com',
       to: host.email,
       subject,
-      html
+      html,
+      text: `Hi ${host.firstName},\n\nThe vehicle registration for your ${vehicleName} is expiring on ${expirationDate}.\n\nPlease renew your registration and upload the updated document to keep your vehicle listing active on RentUFS.\n\nUpdate your registration at: ${dashboardUrl}\n\nVehicle: ${vehicleName}\nVIN: ${vehicle.vin || 'N/A'}\nExpires: ${expirationDate}\n\nThe RentUFS Team`
     };
 
     const result = await sendEmail(mailOptions);
