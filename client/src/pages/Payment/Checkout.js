@@ -276,7 +276,7 @@ const Checkout = () => {
               </div>
 
               <div className="summary-item">
-                <span className="label">Rental subtotal:</span>
+                <span className="label">Rental subtotal (${(booking.pricePerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
                 <span className="value">
                   ${((booking.totalPrice - (booking.platformFee || 0) - (booking.insurance?.totalCost || 0)) || 0).toFixed(2)}
                 </span>
