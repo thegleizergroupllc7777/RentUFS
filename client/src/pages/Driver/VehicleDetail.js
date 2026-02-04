@@ -251,7 +251,13 @@ const VehicleDetail = () => {
   }
 
   const rentalSubtotal = calculateTotal();
-  const platformFee = 1.50;
+  const platformFeePerDay = 1.50;
+  const totalDaysForFee = bookingData.rentalType === 'weekly'
+    ? (parseInt(bookingData.quantity, 10) || 1) * 7
+    : bookingData.rentalType === 'monthly'
+      ? (parseInt(bookingData.quantity, 10) || 1) * 30
+      : (parseInt(bookingData.quantity, 10) || 1);
+  const platformFee = platformFeePerDay * totalDaysForFee;
   const totalPrice = rentalSubtotal > 0 ? rentalSubtotal + platformFee : 0;
 
   return (
@@ -635,7 +641,7 @@ const VehicleDetail = () => {
                         <span>${rentalSubtotal.toFixed(2)}</span>
                       </div>
                       <div className="summary-row">
-                        <span>Platform Fee</span>
+                        <span>Platform Fee ($1.50/day x {totalDaysForFee})</span>
                         <span>${platformFee.toFixed(2)}</span>
                       </div>
                       <div className="summary-total">

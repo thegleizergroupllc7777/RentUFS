@@ -99,8 +99,9 @@ router.post('/', auth, async (req, res) => {
     const resolvedPickupTime = pickupTime || '10:00';
     const resolvedDropoffTime = resolvedPickupTime;
 
-    // Platform transaction fee
-    const platformFee = 1.50;
+    // Platform transaction fee: $1.50 per day
+    const platformFeePerDay = 1.50;
+    const platformFee = platformFeePerDay * totalDays;
     const rentalSubtotal = totalPrice; // Rental amount before fees
     totalPrice = totalPrice + platformFee;
 
@@ -121,6 +122,7 @@ router.post('/', auth, async (req, res) => {
       quantity: quantity || totalDays,
       pricePerDay: vehicle.pricePerDay, // Store original daily rate
       totalPrice,
+      platformFeePerDay,
       platformFee,
       hostEarnings,
       platformRevenue,
@@ -259,8 +261,11 @@ router.post('/:id/extend', auth, async (req, res) => {
       });
     }
 
-    // Calculate extension cost
-    const extensionCost = extensionDays * booking.pricePerDay;
+    // Calculate extension cost: rental + platform fee per day + insurance per day
+    const rentalCost = extensionDays * booking.pricePerDay;
+    const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
+    const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
+    const extensionCost = rentalCost + extensionPlatformFee + extensionInsurance;
 
     res.json({
       bookingId: booking._id,
@@ -269,6 +274,11 @@ router.post('/:id/extend', auth, async (req, res) => {
       extensionDays,
       pricePerDay: booking.pricePerDay,
       extensionCost,
+      extensionBreakdown: {
+        rental: rentalCost,
+        platformFee: extensionPlatformFee,
+        insurance: extensionInsurance
+      },
       vehicle: {
         id: booking.vehicle._id,
         name: `${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`
@@ -303,18 +313,26 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
       return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
     }
 
-    // Calculate new values
+    // Calculate new values: rental + platform fee + insurance per extension day
     const newEndDate = new Date(booking.endDate);
     newEndDate.setDate(newEndDate.getDate() + extensionDays);
-    const extensionCost = extensionDays * booking.pricePerDay;
+    const extensionRental = extensionDays * booking.pricePerDay;
+    const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
+    const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
+    const extensionCost = extensionRental + extensionPlatformFee + extensionInsurance;
 
     // Update booking
     booking.endDate = newEndDate;
     booking.totalDays = booking.totalDays + extensionDays;
     booking.totalPrice = booking.totalPrice + extensionCost;
+    booking.platformFee = (booking.platformFee || 0) + extensionPlatformFee;
+    if (booking.insurance && booking.insurance.totalCost !== undefined) {
+      booking.insurance.totalCost = (booking.insurance.totalCost || 0) + extensionInsurance;
+    }
 
-    // Extension rental goes to host
-    booking.hostEarnings = (booking.hostEarnings || 0) + extensionCost;
+    // Extension rental goes to host, platform fee + insurance to platform
+    booking.hostEarnings = (booking.hostEarnings || 0) + extensionRental;
+    booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionInsurance;
 
     // Track extension history
     if (!booking.extensions) {

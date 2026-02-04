@@ -282,10 +282,10 @@ const Checkout = () => {
                 </span>
               </div>
 
-              {(booking.platformFee > 0 || booking.platformFee === undefined) && (
+              {(booking.platformFee > 0 || booking.platformFeePerDay > 0) && (
                 <div className="summary-item">
-                  <span className="label">Platform Fee:</span>
-                  <span className="value">${(booking.platformFee ?? 1.50).toFixed(2)}</span>
+                  <span className="label">Platform Fee (${(booking.platformFeePerDay ?? 1.50).toFixed(2)}/day x {booking.totalDays}):</span>
+                  <span className="value">${(booking.platformFee || ((booking.platformFeePerDay ?? 1.50) * booking.totalDays)).toFixed(2)}</span>
                 </div>
               )}
 

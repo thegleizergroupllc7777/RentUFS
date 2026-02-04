@@ -279,7 +279,7 @@ router.post('/add-to-booking', auth, async (req, res) => {
     booking.totalPrice = booking.totalPrice + priceDifference;
 
     // Update revenue split: platform keeps platformFee + insurance
-    booking.platformRevenue = (booking.platformFee || 1.50) + insuranceCost;
+    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + insuranceCost;
     // Host earnings stays the same (rental subtotal only)
 
     await booking.save();
@@ -329,7 +329,7 @@ router.post('/remove-from-booking', auth, async (req, res) => {
     booking.totalPrice = booking.totalPrice - insuranceCost;
 
     // Update revenue split: platform only keeps platformFee when no insurance
-    booking.platformRevenue = (booking.platformFee || 1.50);
+    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays);
 
     // Reset insurance to none
     booking.insurance = {
