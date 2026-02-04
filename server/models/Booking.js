@@ -70,6 +70,15 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: 1.50
   },
+  // Revenue split: platform keeps platformFee + insurance, host gets the rest
+  hostEarnings: {
+    type: Number,
+    default: 0
+  },
+  platformRevenue: {
+    type: Number,
+    default: 0
+  },
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled'],
