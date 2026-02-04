@@ -54,6 +54,7 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [vinLoading, setVinLoading] = useState(false);
   const [vinDecoded, setVinDecoded] = useState(false);
   const [faceVerification, setFaceVerification] = useState(null);
@@ -347,15 +348,25 @@ const Register = () => {
 
                   <div className="form-group">
                     <label className="form-label">Password</label>
-                    <input
-                      type="password"
-                      name="password"
-                      className="form-input"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      minLength="6"
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        className="form-input"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        minLength="6"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? '🙈' : '👁'}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="form-group">
