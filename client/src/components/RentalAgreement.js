@@ -330,6 +330,10 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             <span className="field-value">{currentTotalDays}</span>
           </div>
           <div className="agreement-field">
+            <span className="field-label">Permissible Vehicle Use:</span>
+            <span className="field-value">Rideshare</span>
+          </div>
+          <div className="agreement-field">
             <span className="field-label">Daily Mileage Max:</span>
             <span className="field-value">Unlimited</span>
           </div>
