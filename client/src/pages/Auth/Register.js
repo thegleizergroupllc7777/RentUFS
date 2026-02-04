@@ -5,6 +5,7 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
 import FaceVerification from '../../components/FaceVerification';
+import LicenseOCR from '../../components/LicenseOCR';
 import { vehicleModels } from '../../data/vehicleModels';
 import API_URL from '../../config/api';
 import './Auth.css';
@@ -58,9 +59,14 @@ const Register = () => {
   const [vinLoading, setVinLoading] = useState(false);
   const [vinDecoded, setVinDecoded] = useState(false);
   const [faceVerification, setFaceVerification] = useState(null);
+  const [licenseOcrResult, setLicenseOcrResult] = useState(null);
 
   const handleFaceVerificationResult = useCallback((result) => {
     setFaceVerification(result);
+  }, []);
+
+  const handleOcrResult = useCallback((result) => {
+    setLicenseOcrResult(result);
   }, []);
 
   const handleDecodeVin = async () => {
@@ -185,6 +191,19 @@ const Register = () => {
           return;
         }
       }
+
+      // Check license number OCR match result
+      if (licenseOcrResult && !licenseOcrResult.matched && licenseOcrResult.reason !== 'ocr_error') {
+        const proceed = window.confirm(
+          'The license number you entered does not appear to match the number on your uploaded license photo. ' +
+          'Please verify you entered the correct license number.\n\n' +
+          'Do you still want to proceed with registration?'
+        );
+        if (!proceed) {
+          setLoading(false);
+          return;
+        }
+      }
     }
 
     try {
@@ -194,7 +213,8 @@ const Register = () => {
         driverLicense: {
           ...formData.driverLicense,
           faceMatchScore: faceVerification?.score || null,
-          faceVerified: faceVerification?.verified || false
+          faceVerified: faceVerification?.verified || false,
+          licenseNumberMatched: licenseOcrResult?.matched || false
         }
       };
 
@@ -494,6 +514,12 @@ const Register = () => {
                             driverLicense: { ...prev.driverLicense, licenseImage: url }
                           }))}
                           required={true}
+                        />
+
+                        <LicenseOCR
+                          licenseImage={formData.driverLicense.licenseImage}
+                          enteredLicenseNumber={formData.driverLicense.licenseNumber}
+                          onOcrResult={handleOcrResult}
                         />
 
                         <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#1f2937' }}>

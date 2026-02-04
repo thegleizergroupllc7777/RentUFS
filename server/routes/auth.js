@@ -96,7 +96,8 @@ router.post('/register', async (req, res) => {
         licenseImage: driverLicense.licenseImage || undefined,
         verificationSelfie: driverLicense.verificationSelfie || undefined,
         faceMatchScore: typeof driverLicense.faceMatchScore === 'number' ? driverLicense.faceMatchScore : null,
-        faceVerified: driverLicense.faceVerified === true
+        faceVerified: driverLicense.faceVerified === true,
+        licenseNumberMatched: driverLicense.licenseNumberMatched === true
       };
     }
 
