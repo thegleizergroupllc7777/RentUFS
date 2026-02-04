@@ -51,14 +51,9 @@ const FaceVerification = ({ licenseImage, selfieImage, onVerificationResult }) =
         loadImage(selfieImage)
       ]);
 
-      // Detect faces with descriptors
+      // Detect face on the license photo
       const licenseDetection = await faceapi
         .detectSingleFace(licenseImg)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
-
-      const selfieDetection = await faceapi
-        .detectSingleFace(selfieImg)
         .withFaceLandmarks()
         .withFaceDescriptor();
 
@@ -69,12 +64,27 @@ const FaceVerification = ({ licenseImage, selfieImage, onVerificationResult }) =
         return;
       }
 
-      if (!selfieDetection) {
+      // Detect ALL faces in the selfie — the user is holding their license,
+      // so there may be two faces: the person's real face and the small license photo.
+      // We pick the largest face (by bounding box area) which is the actual person.
+      const selfieDetections = await faceapi
+        .detectAllFaces(selfieImg)
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+      if (!selfieDetections || selfieDetections.length === 0) {
         setStatus('error');
         setErrorMessage('Could not detect a face in the selfie. Please take a clearer photo with your face visible.');
         onVerificationResult({ verified: false, score: 0, reason: 'no_face_selfie' });
         return;
       }
+
+      // Pick the largest detected face (by bounding box area) — this is the real person, not the license photo
+      const selfieDetection = selfieDetections.reduce((largest, current) => {
+        const largestArea = largest.detection.box.width * largest.detection.box.height;
+        const currentArea = current.detection.box.width * current.detection.box.height;
+        return currentArea > largestArea ? current : largest;
+      });
 
       // Calculate Euclidean distance between face descriptors
       const distance = faceapi.euclideanDistance(
@@ -82,10 +92,11 @@ const FaceVerification = ({ licenseImage, selfieImage, onVerificationResult }) =
         selfieDetection.descriptor
       );
 
-      // distance < 0.6 is typically a match (lower = more similar)
+      // Use 0.75 threshold — more forgiving for ID photo vs live selfie
+      // (different lighting, angle, photo quality, age differences on ID)
       // Convert to a percentage score (0-100)
       const score = Math.round(Math.max(0, (1 - distance)) * 100);
-      const isMatch = distance < 0.6;
+      const isMatch = distance < 0.75;
 
       setMatchScore(score);
       setStatus(isMatch ? 'match' : 'no-match');
