@@ -128,7 +128,13 @@ const DriverProfile = () => {
     lastName: '',
     phone: '',
     email: '',
-    profileImage: ''
+    profileImage: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    }
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -194,7 +200,13 @@ const DriverProfile = () => {
         lastName: user.lastName || '',
         phone: user.phone || '',
         email: user.email || '',
-        profileImage: user.profileImage || ''
+        profileImage: user.profileImage || '',
+        address: {
+          street: user.address?.street || '',
+          city: user.address?.city || '',
+          state: user.address?.state || '',
+          zipCode: user.address?.zipCode || ''
+        }
       });
       if (isHost) {
         fetchTaxInfo();
@@ -388,7 +400,8 @@ const DriverProfile = () => {
       const response = await axios.put(`${API_URL}/api/users/profile`, {
         firstName: profileData.firstName,
         lastName: profileData.lastName,
-        phone: profileData.phone
+        phone: profileData.phone,
+        address: profileData.address
       }, { headers: { Authorization: `Bearer ${token}` } });
       setUser(response.data);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -874,6 +887,37 @@ const DriverProfile = () => {
             <input type="tel" className="form-input" value={profileData.phone}
               onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))} placeholder="(555) 123-4567" />
           </div>
+
+          <div style={{ borderTop: '1px solid #333', paddingTop: '1.5rem', marginTop: '1rem' }}>
+            <h4 style={{ marginBottom: '1rem', color: '#e5e7eb', fontSize: '1rem' }}>Home Address</h4>
+            <div className="form-group">
+              <label className="form-label">Street Address</label>
+              <input type="text" className="form-input" value={profileData.address.street}
+                onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))}
+                placeholder="123 Main St, Apt 4B" />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">City</label>
+                <input type="text" className="form-input" value={profileData.address.city}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, city: e.target.value } }))}
+                  placeholder="New York" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">State</label>
+                <input type="text" className="form-input" value={profileData.address.state}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, state: e.target.value } }))}
+                  placeholder="NY" maxLength="2" />
+              </div>
+            </div>
+            <div className="form-group" style={{ maxWidth: '200px' }}>
+              <label className="form-label">Zip Code</label>
+              <input type="text" className="form-input" value={profileData.address.zipCode}
+                onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, zipCode: e.target.value } }))}
+                placeholder="10001" maxLength="10" />
+            </div>
+          </div>
+
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
             {loading ? 'Saving...' : 'Save Changes'}
           </button>

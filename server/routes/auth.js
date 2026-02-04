@@ -20,7 +20,7 @@ function resolveProfileImageUrl(profileImage, req) {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage, hostInfo } = req.body;
+    const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage, hostInfo, address } = req.body;
 
     if (!phone || !phone.trim()) {
       return res.status(400).json({ message: 'Phone number is required' });
@@ -59,6 +59,16 @@ router.post('/register', async (req, res) => {
       userType: userType || 'driver',
       profileImage: profileImage || undefined
     };
+
+    // Add address if provided
+    if (address && (address.street || address.city || address.state || address.zipCode)) {
+      userData.address = {
+        street: address.street?.trim() || '',
+        city: address.city?.trim() || '',
+        state: address.state?.trim() || '',
+        zipCode: address.zipCode?.trim() || ''
+      };
+    }
 
     // Add host info if provided (for hosts)
     if (hostInfo && userType === 'host') {
