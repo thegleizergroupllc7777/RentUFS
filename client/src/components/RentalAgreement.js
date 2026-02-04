@@ -14,6 +14,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
   const [signature, setSignature] = useState('');
   const [address, setAddress] = useState({
     street: '',
+    apt: '',
     city: '',
     state: '',
     zipCode: ''
@@ -195,7 +196,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
               <span className="field-label">Address:</span>
               <span className="field-value">
                 {driverAddress?.street
-                  ? `${driverAddress.street}, ${driverAddress.city}, ${driverAddress.state} ${driverAddress.zipCode}`
+                  ? `${driverAddress.street}${driverAddress.apt ? `, ${driverAddress.apt}` : ''}, ${driverAddress.city}, ${driverAddress.state} ${driverAddress.zipCode}`
                   : 'To be provided at signing'}
               </span>
             </div>
@@ -548,6 +549,17 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
                     value={address.street}
                     onChange={(e) => setAddress(prev => ({ ...prev, street: e.target.value }))}
                     placeholder="123 Main Street"
+                  />
+                </div>
+              </div>
+              <div className="agreement-form-row">
+                <div className="agreement-form-group full-width">
+                  <label>Apt / Suite / Unit</label>
+                  <input
+                    type="text"
+                    value={address.apt}
+                    onChange={(e) => setAddress(prev => ({ ...prev, apt: e.target.value }))}
+                    placeholder="Apt 4B, Suite 200, etc."
                   />
                 </div>
               </div>

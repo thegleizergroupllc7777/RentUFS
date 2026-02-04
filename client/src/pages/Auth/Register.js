@@ -25,6 +25,7 @@ const Register = () => {
     profileImage: '',
     address: {
       street: '',
+      apt: '',
       city: '',
       state: '',
       zipCode: ''
@@ -448,8 +449,19 @@ const Register = () => {
                         className="form-input"
                         value={formData.address.street}
                         onChange={handleChange}
-                        placeholder="123 Main St, Apt 4B"
+                        placeholder="123 Main St"
                         required={formData.userType === 'driver'}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Apt / Suite / Unit</label>
+                      <input
+                        type="text"
+                        name="address.apt"
+                        className="form-input"
+                        value={formData.address.apt}
+                        onChange={handleChange}
+                        placeholder="Apt 4B, Suite 200, etc."
                       />
                     </div>
                     <div className="form-row">

@@ -131,6 +131,7 @@ const DriverProfile = () => {
     profileImage: '',
     address: {
       street: '',
+      apt: '',
       city: '',
       state: '',
       zipCode: ''
@@ -203,6 +204,7 @@ const DriverProfile = () => {
         profileImage: user.profileImage || '',
         address: {
           street: user.address?.street || '',
+          apt: user.address?.apt || '',
           city: user.address?.city || '',
           state: user.address?.state || '',
           zipCode: user.address?.zipCode || ''
@@ -894,7 +896,13 @@ const DriverProfile = () => {
               <label className="form-label">Street Address</label>
               <input type="text" className="form-input" value={profileData.address.street}
                 onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))}
-                placeholder="123 Main St, Apt 4B" />
+                placeholder="123 Main St" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Apt / Suite / Unit</label>
+              <input type="text" className="form-input" value={profileData.address.apt}
+                onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, apt: e.target.value } }))}
+                placeholder="Apt 4B, Suite 200, etc." />
             </div>
             <div className="form-row">
               <div className="form-group">

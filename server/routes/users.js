@@ -48,6 +48,7 @@ router.put('/profile', auth, async (req, res) => {
     if (address) {
       user.address = {
         street: address.street?.trim() || '',
+        apt: address.apt?.trim() || '',
         city: address.city?.trim() || '',
         state: address.state?.trim() || '',
         zipCode: address.zipCode?.trim() || ''
