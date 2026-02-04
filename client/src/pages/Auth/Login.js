@@ -11,6 +11,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [deactivatedInfo, setDeactivatedInfo] = useState(null);
   const [reactivating, setReactivating] = useState(false);
 
@@ -119,14 +120,24 @@ const Login = () => {
 
                 <div className="form-group">
                   <label className="form-label">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    className="form-input"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                  />
+                  <div className="password-input-wrapper">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      className="form-input"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? '🙈' : '👁'}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ textAlign: 'right', marginBottom: '16px' }}>

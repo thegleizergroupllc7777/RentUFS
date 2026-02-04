@@ -12,6 +12,8 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validatingToken, setValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
   const [userEmail, setUserEmail] = useState('');
@@ -144,30 +146,50 @@ const ResetPassword = () => {
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="form-group">
                 <label className="form-label">New Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  className="form-input"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter new password"
-                  minLength="6"
-                  required
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    className="form-input"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter new password"
+                    minLength="6"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? '🙈' : '👁'}
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Confirm New Password</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  className="form-input"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm new password"
-                  minLength="6"
-                  required
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    className="form-input"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm new password"
+                    minLength="6"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? '🙈' : '👁'}
+                  </button>
+                </div>
               </div>
 
               <button
