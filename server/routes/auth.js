@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-const { sendWelcomeEmail } = require('../utils/emailService');
+const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -221,13 +221,13 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    // In a production environment, you would send an email here
-    // For now, we return the token in the response (for demo/development purposes)
+    // Send password reset email
+    sendPasswordResetEmail(user, resetToken).catch(err =>
+      console.error('Failed to send password reset email:', err)
+    );
+
     res.json({
-      message: 'If an account with that email exists, a password reset link has been generated.',
-      // Remove the following line in production - only for development/demo
-      resetToken: resetToken,
-      resetUrl: `/reset-password/${resetToken}`
+      message: 'If an account with that email exists, a password reset link has been sent.'
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
