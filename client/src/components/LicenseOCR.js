@@ -67,7 +67,30 @@ const LicenseOCR = ({ licenseImage, enteredLicenseNumber, onOcrResult }) => {
       const normalizedFullText = normalize(text);
       const directMatch = normalizedFullText.includes(normalizedInput);
 
-      const isMatch = matched || directMatch;
+      // Fallback: try common OCR character substitutions (0/O, 1/I/L, 5/S, 8/B)
+      let ocrFuzzyMatch = false;
+      if (!matched && !directMatch) {
+        const substitutions = [
+          [/O/g, '0'], [/0/g, 'O'],
+          [/I/g, '1'], [/1/g, 'I'],
+          [/L/g, '1'], [/1/g, 'L'],
+          [/S/g, '5'], [/5/g, 'S'],
+          [/B/g, '8'], [/8/g, 'B'],
+          [/Z/g, '2'], [/2/g, 'Z'],
+          [/G/g, '6'], [/6/g, 'G'],
+        ];
+        for (const [pattern, replacement] of substitutions) {
+          const variant = normalizedInput.replace(pattern, replacement);
+          if (normalizedFullText.includes(variant) ||
+              candidates.some(c => c.includes(variant) || variant.includes(c))) {
+            ocrFuzzyMatch = true;
+            console.log(`🔄 OCR fuzzy match found with substitution: ${normalizedInput} → ${variant}`);
+            break;
+          }
+        }
+      }
+
+      const isMatch = matched || directMatch || ocrFuzzyMatch;
 
       setStatus(isMatch ? 'match' : 'no-match');
       onOcrResult({
