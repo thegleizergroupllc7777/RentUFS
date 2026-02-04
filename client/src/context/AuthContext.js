@@ -54,8 +54,10 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
 
-    setUser(user);
-    return user;
+    // Fetch full user data (login response only has basic fields, missing driverLicense etc.)
+    const fullUser = await axios.get(`${API_URL}/api/auth/me`);
+    setUser(fullUser.data);
+    return fullUser.data;
   };
 
   const reactivateAndLogin = async (token) => {
@@ -72,9 +74,12 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.setItem('token', token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    setUser(user);
 
-    return user;
+    // Fetch full user data (register response only has basic fields, missing driverLicense etc.)
+    const fullUser = await axios.get(`${API_URL}/api/auth/me`);
+    setUser(fullUser.data);
+
+    return fullUser.data;
   };
 
   const logout = () => {
