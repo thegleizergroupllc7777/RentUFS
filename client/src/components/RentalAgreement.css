@@ -203,52 +203,81 @@
   margin-bottom: 1rem;
 }
 
-/* Address form */
-.agreement-address-form {
+/* Signature Pad */
+.agreement-signature-pad {
   margin-bottom: 1.5rem;
 }
 
-.agreement-address-form h4 {
+.agreement-signature-pad label {
+  display: block;
   color: #d1d5db;
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
-}
-
-.agreement-form-row {
-  display: flex;
-  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
-.agreement-form-group {
-  flex: 1;
-}
-
-.agreement-form-group.full-width {
-  flex: 1 1 100%;
-}
-
-.agreement-form-group label {
-  display: block;
-  color: #9ca3af;
-  font-size: 0.8rem;
-  margin-bottom: 0.25rem;
-}
-
-.agreement-form-group input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
+.signature-canvas-wrapper {
+  position: relative;
   background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.signature-canvas {
+  display: block;
+  width: 100%;
+  height: 150px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.signature-canvas-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #4b5563;
+  font-size: 1.1rem;
+  font-style: italic;
+  pointer-events: none;
+}
+
+.signature-clear-button {
+  margin-top: 0.5rem;
+  padding: 0.4rem 1rem;
+  background: transparent;
   border: 1px solid #333;
   border-radius: 6px;
-  color: #e5e7eb;
-  font-size: 0.9rem;
-  box-sizing: border-box;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
 }
 
-.agreement-form-group input:focus {
-  border-color: #10b981;
-  outline: none;
+.signature-clear-button:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+/* Signed signature image display */
+.agreement-signature-image-display {
+  margin-bottom: 1rem;
+}
+
+.agreement-signature-image-display .field-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.signature-image {
+  max-width: 300px;
+  height: auto;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.5rem;
 }
 
 /* Signature input */
@@ -368,11 +397,6 @@
 
   .field-value {
     font-size: 0.85rem;
-  }
-
-  .agreement-form-row {
-    flex-direction: column;
-    gap: 0.5rem;
   }
 
   .agreement-title {

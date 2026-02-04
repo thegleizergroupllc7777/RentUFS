@@ -33,14 +33,14 @@ router.get('/:bookingId', auth, async (req, res) => {
 // Sign the rental agreement
 router.post('/:bookingId/sign', auth, async (req, res) => {
   try {
-    const { signature, address } = req.body;
+    const { signature, signatureImage } = req.body;
 
     if (!signature || !signature.trim()) {
-      return res.status(400).json({ message: 'Signature (typed full name) is required' });
+      return res.status(400).json({ message: 'Full legal name is required' });
     }
 
-    if (!address || !address.street || !address.city || !address.state || !address.zipCode) {
-      return res.status(400).json({ message: 'Complete address is required to sign the agreement' });
+    if (!signatureImage) {
+      return res.status(400).json({ message: 'Drawn signature is required' });
     }
 
     const booking = await Booking.findById(req.params.bookingId)
@@ -67,30 +67,11 @@ router.post('/:bookingId/sign', auth, async (req, res) => {
       signed: true,
       signedAt: new Date(),
       driverSignature: signature.trim(),
-      driverAddressAtSigning: {
-        street: address.street.trim(),
-        apt: address.apt ? address.apt.trim() : '',
-        city: address.city.trim(),
-        state: address.state.trim(),
-        zipCode: address.zipCode.trim()
-      },
+      signatureImage: signatureImage,
       amendments: []
     };
 
     await booking.save();
-
-    // Also save address to user profile if they don't have one
-    const user = await User.findById(req.user._id);
-    if (user && (!user.address || !user.address.street)) {
-      user.address = {
-        street: address.street.trim(),
-        apt: address.apt ? address.apt.trim() : '',
-        city: address.city.trim(),
-        state: address.state.trim(),
-        zipCode: address.zipCode.trim()
-      };
-      await user.save();
-    }
 
     console.log('✅ Rental agreement signed for booking:', booking.reservationId);
 

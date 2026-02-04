@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { resolveImageUrl } from './ImageUpload';
 import { formatTime } from '../utils/formatTime';
@@ -12,13 +12,10 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [signature, setSignature] = useState('');
-  const [address, setAddress] = useState({
-    street: '',
-    apt: '',
-    city: '',
-    state: '',
-    zipCode: ''
-  });
+  const [signatureImage, setSignatureImage] = useState('');
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasDrawn, setHasDrawn] = useState(false);
+  const canvasRef = useRef(null);
   const [signing, setSigning] = useState(false);
   const [agreed, setAgreed] = useState(false);
 
@@ -35,16 +32,12 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
       });
       setBooking(response.data);
 
-      // Pre-fill address from user profile or signed agreement
       const agreement = response.data.agreement;
-      if (agreement && agreement.driverAddressAtSigning && agreement.driverAddressAtSigning.street) {
-        setAddress(agreement.driverAddressAtSigning);
-      } else if (response.data.driver?.address && response.data.driver.address.street) {
-        setAddress(response.data.driver.address);
-      }
-
       if (agreement && agreement.driverSignature) {
         setSignature(agreement.driverSignature);
+      }
+      if (agreement && agreement.signatureImage) {
+        setSignatureImage(agreement.signatureImage);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load agreement data');
@@ -53,13 +46,88 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
     }
   };
 
+  // Canvas signature pad methods
+  const initCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !booking?.agreement?.signed && !readOnly) {
+      // Small delay to ensure canvas is in DOM
+      const timer = setTimeout(initCanvas, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, booking, readOnly, initCanvas]);
+
+  const getPos = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches) {
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top
+      };
+    }
+    return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
+  };
+
+  const startDrawing = (e) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    setHasDrawn(true);
+  };
+
+  const stopDrawing = (e) => {
+    if (e) e.preventDefault();
+    setIsDrawing(false);
+  };
+
+  const clearSignaturePad = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
+  };
+
+  const getSignatureDataUrl = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !hasDrawn) return '';
+    return canvas.toDataURL('image/png');
+  };
+
   const handleSign = async () => {
-    if (!signature.trim()) {
-      setError('Please type your full legal name as your signature');
+    if (!hasDrawn) {
+      setError('Please draw your signature above');
       return;
     }
-    if (!address.street || !address.city || !address.state || !address.zipCode) {
-      setError('Please enter your complete address');
+    if (!signature.trim()) {
+      setError('Please type your full legal name below');
       return;
     }
     if (!agreed) {
@@ -72,9 +140,10 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
 
     try {
       const token = localStorage.getItem('token');
+      const sigImage = getSignatureDataUrl();
       await axios.post(`${API_URL}/api/agreements/${bookingId}/sign`, {
         signature: signature.trim(),
-        address
+        signatureImage: sigImage
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -127,7 +196,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
   const host = booking.host;
   const isSigned = booking.agreement && booking.agreement.signed;
   const agreementData = booking.agreement || {};
-  const driverAddress = isSigned ? agreementData.driverAddressAtSigning : address;
+  const driverAddress = driver?.address || agreementData.driverAddressAtSigning;
 
   // Calculate current terms (including extensions)
   const currentEndDate = booking.endDate;
@@ -514,8 +583,18 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
           <div className="agreement-signed-section">
             <h2 className="agreement-section-title">AGREEMENT SIGNATURE</h2>
             <div className="agreement-signed-info">
+              {agreementData.signatureImage && (
+                <div className="agreement-signature-image-display">
+                  <span className="field-label">Signature:</span>
+                  <img
+                    src={agreementData.signatureImage}
+                    alt="Driver Signature"
+                    className="signature-image"
+                  />
+                </div>
+              )}
               <div className="agreement-field">
-                <span className="field-label">Signed By:</span>
+                <span className="field-label">Full Legal Name:</span>
                 <span className="field-value signature-display">
                   {agreementData.driverSignature}
                 </span>
@@ -535,69 +614,40 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             {error && <div className="agreement-sign-error">{error}</div>}
 
             <p className="agreement-sign-instructions">
-              Please provide your address and type your full legal name below to sign this agreement.
+              Please sign with your finger or mouse below, then type your full legal name to confirm.
             </p>
 
-            {/* Address Fields */}
-            <div className="agreement-address-form">
-              <h4>Your Address</h4>
-              <div className="agreement-form-row">
-                <div className="agreement-form-group full-width">
-                  <label>Street Address *</label>
-                  <input
-                    type="text"
-                    value={address.street}
-                    onChange={(e) => setAddress(prev => ({ ...prev, street: e.target.value }))}
-                    placeholder="123 Main Street"
-                  />
-                </div>
+            {/* Canvas Signature Pad */}
+            <div className="agreement-signature-pad">
+              <label>Draw Your Signature *</label>
+              <div className="signature-canvas-wrapper">
+                <canvas
+                  ref={canvasRef}
+                  className="signature-canvas"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+                {!hasDrawn && (
+                  <div className="signature-canvas-placeholder">
+                    Sign here
+                  </div>
+                )}
               </div>
-              <div className="agreement-form-row">
-                <div className="agreement-form-group full-width">
-                  <label>Apt / Suite / Unit</label>
-                  <input
-                    type="text"
-                    value={address.apt}
-                    onChange={(e) => setAddress(prev => ({ ...prev, apt: e.target.value }))}
-                    placeholder="Apt 4B, Suite 200, etc."
-                  />
-                </div>
-              </div>
-              <div className="agreement-form-row">
-                <div className="agreement-form-group">
-                  <label>City *</label>
-                  <input
-                    type="text"
-                    value={address.city}
-                    onChange={(e) => setAddress(prev => ({ ...prev, city: e.target.value }))}
-                    placeholder="City"
-                  />
-                </div>
-                <div className="agreement-form-group">
-                  <label>State *</label>
-                  <input
-                    type="text"
-                    value={address.state}
-                    onChange={(e) => setAddress(prev => ({ ...prev, state: e.target.value }))}
-                    placeholder="State"
-                    maxLength="2"
-                    style={{ textTransform: 'uppercase' }}
-                  />
-                </div>
-                <div className="agreement-form-group">
-                  <label>Zip Code *</label>
-                  <input
-                    type="text"
-                    value={address.zipCode}
-                    onChange={(e) => setAddress(prev => ({ ...prev, zipCode: e.target.value }))}
-                    placeholder="12345"
-                    maxLength="5"
-                  />
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={clearSignaturePad}
+                className="signature-clear-button"
+              >
+                Clear
+              </button>
             </div>
 
-            {/* Signature */}
+            {/* Typed Full Legal Name */}
             <div className="agreement-signature-input">
               <label>Type Your Full Legal Name *</label>
               <input
@@ -624,7 +674,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
 
             <button
               onClick={handleSign}
-              disabled={signing || !signature.trim() || !agreed}
+              disabled={signing || !signature.trim() || !hasDrawn || !agreed}
               className="agreement-sign-button"
             >
               {signing ? 'Signing...' : 'Sign Agreement'}

@@ -186,7 +186,8 @@ const bookingSchema = new mongoose.Schema({
   agreement: {
     signed: { type: Boolean, default: false },
     signedAt: { type: Date },
-    driverSignature: { type: String }, // Typed name as signature
+    driverSignature: { type: String }, // Typed full legal name
+    signatureImage: { type: String }, // Base64 drawn signature image
     driverAddressAtSigning: {
       street: { type: String },
       apt: { type: String },
