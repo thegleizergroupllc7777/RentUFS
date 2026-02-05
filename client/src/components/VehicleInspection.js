@@ -32,6 +32,7 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
   // Phone upload state
   const [phoneSession, setPhoneSession] = useState(null);
   const [phoneQrUrl, setPhoneQrUrl] = useState('');
+  const [phoneLoading, setPhoneLoading] = useState(false);
   const pollRef = useRef(null);
 
   const currentPosition = PHOTO_POSITIONS[currentStep];
@@ -167,12 +168,16 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
 
   // Phone upload: create session and show QR code
   const startPhoneUpload = useCallback(async () => {
+    if (phoneLoading) return;
     setError('');
+    setPhoneLoading(true);
     try {
       const positionLabel = PHOTO_POSITIONS[currentStep]?.label || 'Inspection Photo';
+      console.log('📱 Creating upload session for:', positionLabel);
       const res = await axios.post(`${API_URL}/api/upload/create-session`, {
         photoSlot: positionLabel
       });
+      console.log('📱 Session created:', res.data);
       const { sessionId } = res.data;
       // Build QR URL from the current browser origin and pass API URL so the phone
       // knows where to send uploads regardless of frontend/backend domain setup
@@ -210,6 +215,14 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                 }
                 return prevStep;
               });
+
+              // Close QR code after receiving photo so buttons reappear for next step
+              setPhoneQrUrl('');
+              setPhoneSession(null);
+              if (pollRef.current) {
+                clearInterval(pollRef.current);
+                pollRef.current = null;
+              }
             } catch (uploadErr) {
               setError('Failed to process phone photo. Please try again.');
             } finally {
@@ -224,10 +237,13 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
         }
       }, 2000);
     } catch (err) {
-      setError('Failed to create upload session. Please try again.');
+      console.error('📱 Failed to create session:', err);
+      setError('Failed to create upload session: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setPhoneLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep]);
+  }, [currentStep, phoneLoading]);
 
   const closePhoneUpload = useCallback(() => {
     if (pollRef.current) {
@@ -394,10 +410,16 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                   <button
                     className="inspection-phone-btn"
                     onClick={startPhoneUpload}
-                    disabled={uploading}
+                    disabled={uploading || phoneLoading}
                   >
-                    <span className="phone-icon">📱</span>
-                    <span>Upload from Phone</span>
+                    {phoneLoading ? (
+                      <span className="uploading">Loading...</span>
+                    ) : (
+                      <>
+                        <span className="phone-icon">📱</span>
+                        <span>Upload from Phone</span>
+                      </>
+                    )}
                   </button>
                 </div>
                 <button
@@ -411,6 +433,8 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
             )}
           </div>
         )}
+
+        {error && <div className="inspection-error">{error}</div>}
 
         {/* Photo thumbnails */}
         <div className="inspection-thumbnails">
@@ -444,8 +468,6 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
             />
           </div>
         )}
-
-        {error && <div className="inspection-error">{error}</div>}
 
         {/* Actions */}
         <div className="inspection-actions">
