@@ -24,12 +24,18 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
   // Key to force re-mount of file inputs on iOS to prevent freeze
   const [inputKey, setInputKey] = useState(0);
   // Ref to track currentStep for use in async handlers (avoids stale closures)
   const currentStepRef = useRef(0);
+
+  // Webcam state
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment');
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
   // Phone upload state
   const [phoneSession, setPhoneSession] = useState(null);
@@ -45,12 +51,138 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
     currentStepRef.current = currentStep;
   }, [currentStep]);
 
-  // Clean up polling on unmount
+  // Clean up polling and camera on unmount
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
   }, []);
+
+  // Stop camera stream
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setCameraOpen(false);
+  }, []);
+
+  // Start camera with getUserMedia
+  const startCamera = async (mode) => {
+    setError('');
+    const useMode = mode || facingMode;
+
+    try {
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: useMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      setCameraOpen(true);
+
+      // Small delay to ensure video element is mounted
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 50);
+    } catch (err) {
+      console.error('Camera access error:', err);
+      if (err.name === 'NotAllowedError') {
+        setError('Camera access denied. Please allow camera access in your browser settings.');
+      } else if (err.name === 'NotFoundError') {
+        setError('No camera found on this device. Use "Choose from Computer" or "Upload from Phone" instead.');
+      } else {
+        setError('Could not access camera. Use "Choose from Computer" or "Upload from Phone" instead.');
+      }
+    }
+  };
+
+  // Switch between front and rear camera
+  const switchCamera = () => {
+    const newMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newMode);
+    startCamera(newMode);
+  };
+
+  // Capture photo from video stream
+  const capturePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    // Resize capture to max 1200px
+    const MAX_WIDTH = 1200;
+    let width = video.videoWidth;
+    let height = video.videoHeight;
+    if (width > MAX_WIDTH) {
+      height = Math.round((height * MAX_WIDTH) / width);
+      width = MAX_WIDTH;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, width, height);
+
+    stopCamera();
+    setUploading(true);
+
+    // Capture the step at the time of capture
+    const stepAtCapture = currentStepRef.current;
+    const posKey = PHOTO_POSITIONS[stepAtCapture]?.key;
+
+    try {
+      const token = localStorage.getItem('token');
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.7));
+
+      const formData = new FormData();
+      formData.append('image', blob, 'camera-photo.jpg');
+
+      const response = await axios.post(
+        `${API_URL}/api/upload/image`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      const imageUrl = response.data.imageUrl.startsWith('http')
+        ? response.data.imageUrl
+        : `${API_URL}${response.data.imageUrl}`;
+
+      if (posKey) {
+        setPhotos(prev => ({
+          ...prev,
+          [posKey]: imageUrl
+        }));
+      }
+
+      // Auto-advance to next step if not on last photo
+      if (stepAtCapture < PHOTO_POSITIONS.length - 1) {
+        setCurrentStep(stepAtCapture + 1);
+      }
+    } catch (err) {
+      console.error('Camera upload failed:', err);
+      setError('Failed to upload photo. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Convert a base64 data URL to a Blob for FormData upload
   const base64ToBlob = (base64) => {
@@ -162,7 +294,7 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
 
   const handleCameraCapture = () => {
     if (uploading) return;
-    cameraInputRef.current?.click();
+    startCamera();
   };
 
   const handleGalleryPick = () => {
@@ -340,7 +472,48 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
               <p>{currentPosition.instruction}</p>
             </div>
 
-            {phoneQrUrl ? (
+            {/* Hidden canvas for photo capture */}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+            {cameraOpen ? (
+              /* Webcam viewfinder */
+              <div className="inspection-camera-viewfinder">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="inspection-camera-video"
+                />
+                <div className="inspection-camera-controls">
+                  <button
+                    type="button"
+                    className="inspection-camera-btn inspection-camera-switch"
+                    onClick={switchCamera}
+                    title="Switch camera"
+                  >
+                    🔄
+                  </button>
+                  <button
+                    type="button"
+                    className="inspection-camera-btn inspection-camera-capture"
+                    onClick={capturePhoto}
+                    disabled={uploading}
+                    title="Take photo"
+                  >
+                    <span className="inspection-capture-circle"></span>
+                  </button>
+                  <button
+                    type="button"
+                    className="inspection-camera-btn inspection-camera-close"
+                    onClick={stopCamera}
+                    title="Close camera"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ) : phoneQrUrl ? (
               /* QR Code for phone upload - stays open for all photos */
               <div className="inspection-phone-qr">
                 <p className="inspection-qr-title">Scan with your phone to upload</p>
@@ -383,16 +556,7 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
               </div>
             ) : (
               <div className="capture-area">
-                {/* Separate file inputs for camera and gallery to prevent iOS freeze */}
-                <input
-                  key={`camera-${inputKey}`}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  ref={cameraInputRef}
-                  onChange={handleFileSelect}
-                  style={{ display: 'none' }}
-                />
+                {/* File input for gallery selection */}
                 <input
                   key={`gallery-${inputKey}`}
                   type="file"
