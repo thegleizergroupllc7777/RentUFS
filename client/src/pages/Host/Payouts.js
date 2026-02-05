@@ -176,7 +176,24 @@ const Payouts = () => {
         <div className="payouts-card account-status-card">
           <h2>Payout Account</h2>
 
-          {!accountStatus?.hasAccount ? (
+          {accountStatus?.isPlatformOwner ? (
+            <div className="account-active">
+              <div className="account-status-badge">
+                <span className="status-dot active"></span>
+                Platform Owner - Payouts Active
+              </div>
+              <p style={{ color: '#9ca3af', margin: '1rem 0' }}>
+                As the platform owner, all rental payments are deposited directly into your Stripe account.
+                Manage your payouts and view transactions through your Stripe Dashboard.
+              </p>
+              <button
+                className="btn btn-secondary dashboard-btn"
+                onClick={() => window.open('https://dashboard.stripe.com', '_blank')}
+              >
+                Open Stripe Dashboard
+              </button>
+            </div>
+          ) : !accountStatus?.hasAccount ? (
             <div className="setup-prompt">
               <div className="setup-icon">$</div>
               <h3>Set Up Payouts</h3>
