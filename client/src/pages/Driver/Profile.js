@@ -146,7 +146,8 @@ const DriverProfile = () => {
   const streamRef = useRef(null);
   const pollRef = useRef(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [facingMode, setFacingMode] = useState('user');
+  const [cameras, setCameras] = useState([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
   const [phoneSession, setPhoneSession] = useState(null);
   const [phoneQrUrl, setPhoneQrUrl] = useState('');
 
@@ -281,18 +282,42 @@ const DriverProfile = () => {
     };
   }, []);
 
-  const startCamera = async (mode) => {
-    const useMode = mode || facingMode;
+  const startCamera = async (deviceId = null) => {
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+
+      // Get list of available cameras
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      setCameras(videoDevices);
+
+      // Build video constraints
+      let videoConstraints = { width: { ideal: 1280 }, height: { ideal: 720 } };
+
+      if (deviceId) {
+        // Use specific device
+        videoConstraints.deviceId = { exact: deviceId };
+      } else if (videoDevices.length > 0) {
+        // Try front camera first for profile photos (facingMode: user)
+        videoConstraints.facingMode = { ideal: 'user' };
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: useMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: videoConstraints,
         audio: false
       });
+
       streamRef.current = stream;
       setShowCamera(true);
+
+      // Find the index of the current camera
+      const currentTrack = stream.getVideoTracks()[0];
+      const currentDeviceId = currentTrack?.getSettings()?.deviceId;
+      const idx = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
+      if (idx !== -1) setCurrentCameraIndex(idx);
+
       setTimeout(() => {
         if (videoRef.current) videoRef.current.srcObject = stream;
       }, 50);
@@ -302,10 +327,12 @@ const DriverProfile = () => {
     }
   };
 
+  // Switch between available cameras
   const switchCamera = () => {
-    const newMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(newMode);
-    startCamera(newMode);
+    if (cameras.length < 2) return; // Need at least 2 cameras to switch
+    const nextIndex = (currentCameraIndex + 1) % cameras.length;
+    setCurrentCameraIndex(nextIndex);
+    startCamera(cameras[nextIndex].deviceId);
   };
 
   const capturePhoto = async () => {
