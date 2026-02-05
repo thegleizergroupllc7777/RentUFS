@@ -236,29 +236,6 @@ const HostReservationDetail = () => {
                 completedLabel="Return inspection not yet completed"
               />
 
-              {/* Vehicle Images */}
-              {vehicleData?.images?.length > 0 && (
-                <div style={{
-                  background: '#1a1a1a', border: '1px solid #333',
-                  borderRadius: '12px', padding: '1.5rem'
-                }}>
-                  <h3 style={{ color: '#fff', margin: '0 0 1rem 0', fontSize: '1.125rem' }}>Vehicle Listing Photos</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-                    {vehicleData.images.map((img, index) => (
-                      <img
-                        key={index}
-                        src={getImageUrl(img)}
-                        alt={`${vehicleData.make} ${vehicleData.model}`}
-                        style={{
-                          width: '100%', height: '140px', objectFit: 'cover',
-                          borderRadius: '0.5rem', border: '1px solid #333'
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Rental Agreement */}
               {booking.agreement?.signed && (
                 <div style={{ marginTop: '1.5rem' }}>
