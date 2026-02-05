@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import ChatBox from '../../components/ChatBox';
 import { useAuth } from '../../context/AuthContext';
 import { formatTime } from '../../utils/formatTime';
+import { formatPhone } from '../../utils/formatPhone';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Host.css';
@@ -735,7 +736,7 @@ const HostBookings = () => {
                                 </div>
                               </div>
                               {booking.driver?.phone && (
-                                <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{booking.driver.phone}</div>
+                                <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{formatPhone(booking.driver.phone)}</div>
                               )}
                               {booking.driver?.email && (
                                 <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{booking.driver.email}</div>
@@ -972,7 +973,7 @@ const HostBookings = () => {
                         Renter: {booking.driver?.firstName} {booking.driver?.lastName}
                       </p>
                       <p className="text-gray text-sm">
-                        Email: {booking.driver?.email} | Phone: {booking.driver?.phone}
+                        Email: {booking.driver?.email} | Phone: {formatPhone(booking.driver?.phone)}
                       </p>
                     </div>
                     <div
