@@ -1145,10 +1145,22 @@ const MyBookings = () => {
                       {new Date(toLocalDate(extendModal.booking.endDate).getTime() + extensionDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#1e40af' }}>Extension cost:</span>
-                    <span style={{ fontWeight: '600', color: '#059669', fontSize: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ color: '#1e40af' }}>Rental ({extensionDays} day{extensionDays > 1 ? 's' : ''} × ${extendModal.booking.pricePerDay}):</span>
+                    <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
                       ${(extensionDays * extendModal.booking.pricePerDay).toFixed(2)}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ color: '#1e40af' }}>Platform fee ({extensionDays} day{extensionDays > 1 ? 's' : ''} × $1.50):</span>
+                    <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
+                      ${(extensionDays * 1.50).toFixed(2)}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #bfdbfe', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                    <span style={{ color: '#1e40af', fontWeight: '600' }}>Total:</span>
+                    <span style={{ fontWeight: '600', color: '#059669', fontSize: '1.25rem' }}>
+                      ${(extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50).toFixed(2)}
                     </span>
                   </div>
                 </div>

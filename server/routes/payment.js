@@ -274,8 +274,11 @@ router.post('/create-extension-payment', auth, async (req, res) => {
       return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
     }
 
-    // Calculate extension cost
-    const extensionCost = extensionDays * booking.pricePerDay;
+    // Calculate extension costs with platform fee
+    const rentalCost = extensionDays * booking.pricePerDay;
+    const platformFeePerDay = booking.platformFeePerDay || 1.50;
+    const platformFee = extensionDays * platformFeePerDay;
+    const extensionCost = rentalCost + platformFee;
 
     // Calculate new end date
     const newEndDate = new Date(booking.endDate);
@@ -294,6 +297,8 @@ router.post('/create-extension-payment', auth, async (req, res) => {
         type: 'extension',
         driverId: booking.driver._id.toString(),
         vehicleId: booking.vehicle._id.toString(),
+        rentalCost: rentalCost.toString(),
+        platformFee: platformFee.toString(),
       },
       description: `Extension: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model} - ${extensionDays} additional day(s)`,
     });
@@ -303,6 +308,9 @@ router.post('/create-extension-payment', auth, async (req, res) => {
       extensionDetails: {
         bookingId,
         extensionDays,
+        rentalCost,
+        platformFeePerDay,
+        platformFee,
         extensionCost,
         pricePerDay: booking.pricePerDay,
         currentEndDate: booking.endDate,
@@ -336,8 +344,11 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
         return res.status(404).json({ message: 'Booking not found' });
       }
 
-      // Calculate new values
-      const extensionCost = extensionDays * booking.pricePerDay;
+      // Calculate new values with platform fee
+      const rentalCost = extensionDays * booking.pricePerDay;
+      const platformFeePerDay = booking.platformFeePerDay || 1.50;
+      const extensionPlatformFee = extensionDays * platformFeePerDay;
+      const extensionCost = rentalCost + extensionPlatformFee;
       const newEndDate = new Date(booking.endDate);
       newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
@@ -345,6 +356,10 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       booking.endDate = newEndDate;
       booking.totalDays = booking.totalDays + extensionDays;
       booking.totalPrice = booking.totalPrice + extensionCost;
+      booking.platformFee = (booking.platformFee || 0) + extensionPlatformFee;
+
+      // Update host earnings (rental goes to host, platform fee stays with platform)
+      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost;
 
       // Track extension
       if (!booking.extensions) {
@@ -353,6 +368,8 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       booking.extensions.push({
         days: extensionDays,
         cost: extensionCost,
+        rentalCost: rentalCost,
+        platformFee: extensionPlatformFee,
         paymentId: paymentIntentId,
         extendedAt: new Date()
       });
@@ -441,13 +458,19 @@ router.post('/webhook', async (req, res) => {
         if (paymentIntent.metadata?.type === 'extension') {
           const extensionDays = parseInt(paymentIntent.metadata.extensionDays, 10);
           if (existingBooking && extensionDays) {
-            const extensionCost = extensionDays * existingBooking.pricePerDay;
+            // Calculate extension costs with platform fee
+            const rentalCost = extensionDays * existingBooking.pricePerDay;
+            const platformFeePerDay = existingBooking.platformFeePerDay || 1.50;
+            const extensionPlatformFee = extensionDays * platformFeePerDay;
+            const extensionCost = rentalCost + extensionPlatformFee;
             const newEndDate = new Date(existingBooking.endDate);
             newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
             existingBooking.endDate = newEndDate;
             existingBooking.totalDays = existingBooking.totalDays + extensionDays;
             existingBooking.totalPrice = existingBooking.totalPrice + extensionCost;
+            existingBooking.platformFee = (existingBooking.platformFee || 0) + extensionPlatformFee;
+            existingBooking.hostEarnings = (existingBooking.hostEarnings || 0) + rentalCost;
 
             if (!existingBooking.extensions) {
               existingBooking.extensions = [];
@@ -455,6 +478,8 @@ router.post('/webhook', async (req, res) => {
             existingBooking.extensions.push({
               days: extensionDays,
               cost: extensionCost,
+              rentalCost: rentalCost,
+              platformFee: extensionPlatformFee,
               paymentId: paymentIntent.id,
               extendedAt: new Date()
             });
