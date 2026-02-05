@@ -907,7 +907,7 @@ const MyBookings = () => {
                       )}
 
                       <div className="booking-actions">
-                        <Link to={`/vehicle/${booking.vehicle?._id}`}>
+                        <Link to={`/reservation/${booking._id}`}>
                           <button className="btn btn-secondary">View Vehicle</button>
                         </Link>
 

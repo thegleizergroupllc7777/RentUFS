@@ -13,6 +13,7 @@ import Home from './pages/Home';
 import Marketplace from './pages/Driver/Marketplace';
 import VehicleDetail from './pages/Driver/VehicleDetail';
 import MyBookings from './pages/Driver/MyBookings';
+import ReservationDetail from './pages/Driver/ReservationDetail';
 import DriverProfile from './pages/Driver/Profile';
 
 // Host pages
@@ -53,6 +54,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <MyBookings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/reservation/:bookingId"
+              element={
+                <PrivateRoute>
+                  <ReservationDetail />
                 </PrivateRoute>
               }
             />
