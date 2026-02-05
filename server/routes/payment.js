@@ -284,10 +284,15 @@ router.post('/create-extension-payment', auth, async (req, res) => {
     const newEndDate = new Date(booking.endDate);
     newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
+    // Use the same Stripe customer as the original booking
+    const driver = await User.findById(req.user._id);
+    const customerId = await getOrCreateStripeCustomer(driver);
+
     // Create a PaymentIntent for the extension
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(extensionCost * 100), // Convert to cents
       currency: 'usd',
+      customer: customerId,
       automatic_payment_methods: {
         enabled: true,
       },
