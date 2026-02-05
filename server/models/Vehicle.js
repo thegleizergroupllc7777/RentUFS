@@ -55,6 +55,16 @@ const vehicleSchema = new mongoose.Schema({
     required: true,
     min: 1
   },
+  odometer: {
+    type: Number,
+    min: 0,
+    max: 500000
+  },
+  vehicleValue: {
+    type: Number,
+    min: 5000,
+    max: 90000
+  },
   description: {
     type: String,
     required: true
