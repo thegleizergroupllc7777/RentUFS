@@ -406,6 +406,13 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                     )}
                   </button>
                 </div>
+                <button
+                  className="inspection-gallery-btn"
+                  onClick={handleGalleryPick}
+                  disabled={uploading}
+                >
+                  <span>Choose from Gallery</span>
+                </button>
               </div>
             )}
           </div>
