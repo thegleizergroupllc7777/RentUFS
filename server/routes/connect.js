@@ -6,6 +6,20 @@ const Booking = require('../models/Booking');
 
 const router = express.Router();
 
+// Cache the platform account ID
+let platformAccountId = null;
+const getPlatformAccountId = async () => {
+  if (!platformAccountId) {
+    try {
+      const account = await stripe.accounts.retrieve();
+      platformAccountId = account.id;
+    } catch (err) {
+      console.error('Error retrieving platform account:', err.message);
+    }
+  }
+  return platformAccountId;
+};
+
 // Get the client URL for redirects
 const getClientUrl = () => {
   return process.env.CLIENT_URL || 'http://localhost:3000';
@@ -116,6 +130,18 @@ router.get('/account-status', auth, async (req, res) => {
         onboardingComplete: false,
         payoutsEnabled: false,
         chargesEnabled: false
+      });
+    }
+
+    // Check if this user's Connect account is the platform's own account
+    const platId = await getPlatformAccountId();
+    if (platId && user.stripeConnectAccountId === platId) {
+      return res.json({
+        hasAccount: true,
+        isPlatformOwner: true,
+        onboardingComplete: true,
+        payoutsEnabled: true,
+        chargesEnabled: true
       });
     }
 
