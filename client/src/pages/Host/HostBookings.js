@@ -734,6 +734,9 @@ const HostBookings = () => {
                                   {booking.driver?.firstName} {booking.driver?.lastName}
                                 </div>
                               </div>
+                              {booking.driver?.phone && (
+                                <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{booking.driver.phone}</div>
+                              )}
                               {booking.driver?.email && (
                                 <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{booking.driver.email}</div>
                               )}
