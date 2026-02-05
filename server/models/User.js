@@ -176,6 +176,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Stripe Connect for hosts to receive payouts
+  stripeConnectAccountId: {
+    type: String,
+    default: null
+  },
+  stripeConnectOnboardingComplete: {
+    type: Boolean,
+    default: false
+  },
+  stripeConnectPayoutsEnabled: {
+    type: Boolean,
+    default: false
+  },
+  stripeConnectChargesEnabled: {
+    type: Boolean,
+    default: false
+  },
   paymentMethods: [{
     nickname: { type: String, trim: true },
     cardBrand: { type: String, trim: true },

@@ -15,6 +15,7 @@ const reportRoutes = require('./routes/reports');
 const insuranceRoutes = require('./routes/insurance');
 const messageRoutes = require('./routes/messages');
 const agreementRoutes = require('./routes/agreements');
+const connectRoutes = require('./routes/connect');
 const { startReturnReminderScheduler } = require('./utils/scheduler');
 
 const app = express();
@@ -27,6 +28,7 @@ app.use(cors());
 
 // Stripe webhook needs raw body - must be before express.json()
 app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/connect/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -44,6 +46,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/insurance', insuranceRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/agreements', agreementRoutes);
+app.use('/api/connect', connectRoutes);
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
