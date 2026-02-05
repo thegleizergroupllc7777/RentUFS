@@ -128,45 +128,11 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
-  padding: 2rem;
+  align-items: stretch;
+  padding: 1.5rem;
   background: #f9fafb;
   border: 2px dashed #d1d5db;
   border-radius: 1rem;
-}
-
-.capture-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 2rem 3rem;
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 1rem;
-  cursor: pointer;
-  font-size: 1.125rem;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.capture-button:hover:not(:disabled) {
-  background: #059669;
-  transform: scale(1.02);
-}
-
-.capture-button:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-}
-
-.capture-button .camera-icon {
-  font-size: 2.5rem;
-}
-
-.capture-button .uploading {
-  padding: 1rem;
 }
 
 /* Photo preview */
@@ -298,71 +264,80 @@
   font-weight: 600;
 }
 
-/* Upload options layout (camera + phone buttons) */
+/* Upload options layout - 3 button layout matching ImageUpload style */
 .inspection-upload-options {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
   width: 100%;
-  justify-content: center;
-  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
-.inspection-phone-btn {
+/* Shared upload button base */
+.inspection-upload-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 2rem 3rem;
-  background: #3b82f6;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
   color: white;
   border: none;
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   cursor: pointer;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   transition: all 0.2s;
 }
 
-.inspection-phone-btn:hover:not(:disabled) {
-  background: #2563eb;
+.inspection-upload-btn:hover:not(:disabled) {
   transform: scale(1.02);
+  filter: brightness(1.1);
 }
 
-.inspection-phone-btn:disabled {
+.inspection-upload-btn:disabled {
   background: #9ca3af;
   cursor: not-allowed;
 }
 
-.inspection-phone-btn .phone-icon {
-  font-size: 2.5rem;
+.inspection-upload-btn .upload-btn-icon {
+  font-size: 1.25rem;
 }
 
-/* Gallery pick button */
-.inspection-gallery-btn {
-  display: block;
+/* Use Camera - green */
+.inspection-upload-btn--camera {
+  background: #10b981;
+}
+
+.inspection-upload-btn--camera:hover:not(:disabled) {
+  background: #059669;
+}
+
+/* Choose from Computer - green */
+.inspection-upload-btn--computer {
+  background: #10b981;
+}
+
+.inspection-upload-btn--computer:hover:not(:disabled) {
+  background: #059669;
+}
+
+/* Upload from Phone - dark */
+.inspection-upload-btn--phone {
+  background: #1e293b;
   width: 100%;
-  margin-top: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: transparent;
-  color: #6b7280;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
+}
+
+.inspection-upload-btn--phone:hover:not(:disabled) {
+  background: #334155;
+}
+
+/* Upload hint text */
+.inspection-upload-hint {
   text-align: center;
-}
-
-.inspection-gallery-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  color: #374151;
-  border-color: #9ca3af;
-}
-
-.inspection-gallery-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0.75rem 0 0 0;
+  line-height: 1.4;
 }
 
 /* QR code display in inspection */
@@ -424,16 +399,12 @@
     display: none;
   }
 
-  .capture-button {
-    padding: 1.5rem 2rem;
-  }
-
-  .inspection-phone-btn {
-    padding: 1.5rem 2rem;
-  }
-
   .inspection-upload-options {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .inspection-upload-btn {
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
   }
 }
