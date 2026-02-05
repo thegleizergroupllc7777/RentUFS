@@ -208,6 +208,16 @@ const VehicleDetail = () => {
       return;
     }
 
+    if (!bookingData.startDate) {
+      setError('Please select a pick-up date');
+      return;
+    }
+
+    if (!bookingData.endDate) {
+      setError('Unable to calculate end date. Please re-select your dates.');
+      return;
+    }
+
     setError('');
     setBookingLoading(true);
 

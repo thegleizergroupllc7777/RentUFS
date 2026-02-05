@@ -86,6 +86,11 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Your driver\'s license is expired. Please update your license information in your profile.' });
     }
 
+    // Validate required date fields
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: 'Please select a pick-up date' });
+    }
+
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' });
@@ -93,6 +98,12 @@ router.post('/', auth, async (req, res) => {
 
     const start = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T00:00:00');
+
+    // Validate dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
     if (totalDays < 1) {
