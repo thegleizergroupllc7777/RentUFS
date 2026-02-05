@@ -4,6 +4,7 @@ import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { formatTime } from '../../utils/formatTime';
+import { formatPhone } from '../../utils/formatPhone';
 import Navbar from '../../components/Navbar';
 import VehicleInspection from '../../components/VehicleInspection';
 import ChatBox from '../../components/ChatBox';
@@ -879,7 +880,7 @@ const MyBookings = () => {
                               <div>
                                 <strong style={{ color: '#93c5fd' }}>Phone:</strong>{' '}
                                 <a href={`tel:${booking.host.phone}`} style={{ color: '#60a5fa', textDecoration: 'none' }}>
-                                  {booking.host.phone}
+                                  {formatPhone(booking.host.phone)}
                                 </a>
                               </div>
                             )}

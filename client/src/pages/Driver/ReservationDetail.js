@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
+import RentalAgreement from '../../components/RentalAgreement';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
@@ -25,6 +26,7 @@ const ReservationDetail = () => {
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAgreement, setShowAgreement] = useState(false);
 
   useEffect(() => {
     fetchBookingDetails();
@@ -291,6 +293,31 @@ const ReservationDetail = () => {
                   <p>Host rating: {vehicleData.host.rating.toFixed(1)} ({vehicleData.host.reviewCount} reviews)</p>
                 )}
               </div>
+
+              {/* Rental Agreement */}
+              {booking.agreement?.signed && (
+                <div className="vehicle-section" style={{ marginTop: '1.5rem' }}>
+                  <button
+                    onClick={() => setShowAgreement(!showAgreement)}
+                    style={{
+                      background: 'none', border: '1px solid #333', borderRadius: '0.5rem',
+                      color: '#10b981', cursor: 'pointer', padding: '0.75rem 1rem',
+                      width: '100%', fontSize: '1rem', fontWeight: '600',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                    }}
+                  >
+                    <span>Rental Agreement</span>
+                    <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                      Signed {new Date(booking.agreement.signedAt).toLocaleDateString()} {showAgreement ? '▲' : '▼'}
+                    </span>
+                  </button>
+                  {showAgreement && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <RentalAgreement bookingId={booking._id} readOnly={true} />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right Column - Reservation & Transactions */}
