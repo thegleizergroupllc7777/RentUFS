@@ -232,6 +232,10 @@ const DriverProfile = () => {
   }, [reportPeriod]);
 
   const handleTabChange = (tab) => {
+    if (tab === 'payouts') {
+      navigate('/host/payouts');
+      return;
+    }
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -2001,6 +2005,7 @@ const DriverProfile = () => {
     { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
+      { id: 'payouts', label: 'Payouts' },
       { id: 'reports', label: 'Reports' }
     ] : []),
     { id: 'settings', label: 'Settings' }
@@ -2028,7 +2033,7 @@ const DriverProfile = () => {
               {tabs.map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => tab.link ? navigate(tab.link) : handleTabChange(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
