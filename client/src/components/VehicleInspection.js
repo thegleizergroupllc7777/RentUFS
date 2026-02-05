@@ -222,14 +222,14 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
 
               if (step < PHOTO_POSITIONS.length - 1) {
                 setCurrentStep(step + 1);
-              }
-
-              // Close QR code after receiving photo so buttons reappear for next step
-              setPhoneQrUrl('');
-              setPhoneSession(null);
-              if (pollRef.current) {
-                clearInterval(pollRef.current);
-                pollRef.current = null;
+              } else {
+                // All 4 photos received - close the QR session
+                setPhoneQrUrl('');
+                setPhoneSession(null);
+                if (pollRef.current) {
+                  clearInterval(pollRef.current);
+                  pollRef.current = null;
+                }
               }
             } catch (uploadErr) {
               setError('Failed to process phone photo. Please try again.');
@@ -340,18 +340,8 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
               <p>{currentPosition.instruction}</p>
             </div>
 
-            {photos[currentPosition.key] ? (
-              <div className="photo-preview">
-                <img src={resolveImageUrl(photos[currentPosition.key])} alt={currentPosition.label} />
-                <button
-                  className="btn btn-secondary retake-btn"
-                  onClick={() => handleRetakePhoto(currentPosition.key)}
-                >
-                  Retake Photo
-                </button>
-              </div>
-            ) : phoneQrUrl ? (
-              /* QR Code for phone upload */
+            {phoneQrUrl ? (
+              /* QR Code for phone upload - stays open for all photos */
               <div className="inspection-phone-qr">
                 <p className="inspection-qr-title">Scan with your phone to upload</p>
                 <div className="inspection-qr-wrapper">
@@ -364,8 +354,9 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                   />
                 </div>
                 <p className="inspection-qr-hint">
-                  Open your phone's camera and point it at this QR code.
-                  Photos you take will appear here automatically.
+                  Upload photos from your phone. They will fill in automatically.
+                  <br />
+                  <strong>{Object.values(photos).filter(p => p !== null).length} of 4 photos received</strong>
                 </p>
                 {uploading && (
                   <div className="inspection-qr-receiving">
@@ -378,6 +369,16 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                   style={{ marginTop: '0.75rem', width: '100%' }}
                 >
                   Close QR Code
+                </button>
+              </div>
+            ) : photos[currentPosition.key] ? (
+              <div className="photo-preview">
+                <img src={resolveImageUrl(photos[currentPosition.key])} alt={currentPosition.label} />
+                <button
+                  className="btn btn-secondary retake-btn"
+                  onClick={() => handleRetakePhoto(currentPosition.key)}
+                >
+                  Retake Photo
                 </button>
               </div>
             ) : (
