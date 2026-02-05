@@ -24,8 +24,6 @@ import HostBookings from './pages/Host/HostBookings';
 import HostReservationDetail from './pages/Host/HostReservationDetail';
 import HostReports from './pages/Host/HostReports';
 import HostTaxSettings from './pages/Host/HostTaxSettings';
-import HostPayouts from './pages/Host/Payouts';
-
 // Payment pages
 import Checkout from './pages/Payment/Checkout';
 import PaymentSuccess from './pages/Payment/Success';
@@ -126,15 +124,6 @@ function App() {
                 </PrivateRoute>
               }
             />
-            <Route
-              path="/host/payouts"
-              element={
-                <PrivateRoute>
-                  <HostPayouts />
-                </PrivateRoute>
-              }
-            />
-
             {/* Payment Routes */}
             <Route
               path="/payment/checkout"
