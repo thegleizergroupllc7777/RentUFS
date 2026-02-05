@@ -403,41 +403,45 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                 />
                 <div className="inspection-upload-options">
                   <button
-                    className="capture-button"
+                    className="inspection-upload-btn inspection-upload-btn--camera"
                     onClick={handleCameraCapture}
                     disabled={uploading}
                   >
                     {uploading ? (
-                      <span className="uploading">Uploading...</span>
+                      <span>Uploading...</span>
                     ) : (
                       <>
-                        <span className="camera-icon">📷</span>
-                        <span>Take Photo</span>
+                        <span className="upload-btn-icon">📷</span>
+                        <span>Use Camera</span>
                       </>
                     )}
                   </button>
                   <button
-                    className="inspection-phone-btn"
-                    onClick={startPhoneUpload}
-                    disabled={uploading || phoneLoading}
+                    className="inspection-upload-btn inspection-upload-btn--computer"
+                    onClick={handleGalleryPick}
+                    disabled={uploading}
                   >
-                    {phoneLoading ? (
-                      <span className="uploading">Loading...</span>
-                    ) : (
-                      <>
-                        <span className="phone-icon">📱</span>
-                        <span>Upload from Phone</span>
-                      </>
-                    )}
+                    <span className="upload-btn-icon">🖥️</span>
+                    <span>Choose from Computer</span>
                   </button>
                 </div>
                 <button
-                  className="inspection-gallery-btn"
-                  onClick={handleGalleryPick}
-                  disabled={uploading}
+                  className="inspection-upload-btn inspection-upload-btn--phone"
+                  onClick={startPhoneUpload}
+                  disabled={uploading || phoneLoading}
                 >
-                  <span>Choose from Gallery</span>
+                  {phoneLoading ? (
+                    <span>Loading...</span>
+                  ) : (
+                    <>
+                      <span className="upload-btn-icon">📱</span>
+                      <span>Upload from Phone</span>
+                    </>
+                  )}
                 </button>
+                <p className="inspection-upload-hint">
+                  Use camera, select from computer, or scan QR code with your phone (Max 5MB, auto-compressed)
+                </p>
               </div>
             )}
           </div>
