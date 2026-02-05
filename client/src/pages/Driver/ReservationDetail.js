@@ -87,22 +87,32 @@ const ReservationDetail = () => {
     if (!booking) return [];
     const transactions = [];
 
+    // Calculate extension totals to determine original booking values
+    const extensionDaysTotal = booking.extensions?.reduce((sum, ext) => sum + (ext.days || 0), 0) || 0;
+    const extensionCostTotal = booking.extensions?.reduce((sum, ext) => sum + (ext.cost || 0), 0) || 0;
+
+    // Original booking values (before any extensions)
+    const originalDays = booking.totalDays - extensionDaysTotal;
+    const platformFeePerDay = booking.platformFeePerDay || 1.50;
+    const originalPlatformFee = originalDays * platformFeePerDay;
+    const originalTotalPrice = booking.totalPrice - extensionCostTotal;
+    const originalRentalCost = originalTotalPrice - originalPlatformFee - (booking.insurance?.totalCost || 0);
+
     // Initial booking
-    const rentalCost = booking.totalPrice - (booking.platformFee || 0) - (booking.insurance?.totalCost || 0);
     transactions.push({
       date: booking.createdAt,
       type: 'Booking Created',
-      description: `${booking.rentalType === 'daily' ? `${booking.totalDays} day(s)` : booking.rentalType === 'weekly' ? `${booking.quantity || 1} week(s)` : `${booking.quantity || 1} month(s)`} rental`,
-      amount: rentalCost > 0 ? rentalCost : booking.totalPrice
+      description: `${booking.rentalType === 'daily' ? `${originalDays} day(s)` : booking.rentalType === 'weekly' ? `${booking.quantity || 1} week(s)` : `${booking.quantity || 1} month(s)`} rental`,
+      amount: originalRentalCost > 0 ? originalRentalCost : originalTotalPrice
     });
 
-    // Platform fee
-    if (booking.platformFee > 0) {
+    // Platform fee (original, not including extensions)
+    if (originalPlatformFee > 0) {
       transactions.push({
         date: booking.createdAt,
         type: 'Platform Fee',
-        description: `$${booking.platformFeePerDay || 1.50}/day x ${booking.totalDays} days`,
-        amount: booking.platformFee
+        description: `$${platformFeePerDay.toFixed(2)}/day x ${originalDays} day${originalDays !== 1 ? 's' : ''}`,
+        amount: originalPlatformFee
       });
     }
 
