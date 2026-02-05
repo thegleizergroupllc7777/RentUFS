@@ -124,6 +124,9 @@ const HostDashboard = () => {
               <Link to="/host/bookings">
                 <button className="btn btn-secondary">View Bookings</button>
               </Link>
+              <Link to="/host/payouts">
+                <button className="btn btn-secondary">Payouts</button>
+              </Link>
               <Link to="/host/add-vehicle">
                 <button className="btn btn-primary">Add New Vehicle</button>
               </Link>
