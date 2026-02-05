@@ -2001,7 +2001,6 @@ const DriverProfile = () => {
     { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
-      { id: 'payouts', label: 'Payouts', link: '/host/payouts' },
       { id: 'reports', label: 'Reports' }
     ] : []),
     { id: 'settings', label: 'Settings' }
