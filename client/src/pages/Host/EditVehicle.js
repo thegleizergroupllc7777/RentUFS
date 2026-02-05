@@ -42,6 +42,8 @@ const EditVehicle = () => {
     type: 'sedan',
     transmission: 'automatic',
     seats: 5,
+    odometer: '',
+    vehicleValue: '',
     description: '',
     features: [],
     pricePerDay: '',
@@ -150,6 +152,8 @@ const EditVehicle = () => {
         type: vehicle.type,
         transmission: vehicle.transmission,
         seats: vehicle.seats,
+        odometer: vehicle.odometer || '',
+        vehicleValue: vehicle.vehicleValue || '',
         description: vehicle.description,
         features: vehicle.features || [],
         pricePerDay: vehicle.pricePerDay,
@@ -487,6 +491,40 @@ const EditVehicle = () => {
                       <option value="wagon">Wagon</option>
                       <option value="other">Other</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Odometer *</label>
+                    <input
+                      type="number"
+                      name="odometer"
+                      className="form-input"
+                      value={formData.odometer}
+                      onChange={handleChange}
+                      min="0"
+                      max="500000"
+                      placeholder="Enter mileage"
+                      required
+                    />
+                    <span className="form-hint">Max: 500,000</span>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Vehicle Value *</label>
+                    <input
+                      type="number"
+                      name="vehicleValue"
+                      className="form-input"
+                      value={formData.vehicleValue}
+                      onChange={handleChange}
+                      min="5000"
+                      max="90000"
+                      placeholder="Enter vehicle value"
+                      required
+                    />
+                    <span className="form-hint">Min: $5,000 Max: $90,000</span>
                   </div>
                 </div>
 
