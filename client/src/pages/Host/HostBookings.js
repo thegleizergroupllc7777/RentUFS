@@ -751,9 +751,9 @@ const HostBookings = () => {
                             paddingTop: '1rem',
                             borderTop: '1px solid #2d3748'
                           }}>
-                            <Link to={`/vehicle/${booking.vehicle?._id}`}>
+                            <Link to={`/host/reservation/${booking._id}`}>
                               <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
-                                View Vehicle
+                                View Reservation
                               </button>
                             </Link>
                             <button
@@ -1008,8 +1008,8 @@ const HostBookings = () => {
                   )}
 
                   <div className="booking-actions">
-                    <Link to={`/vehicle/${booking.vehicle?._id}`}>
-                      <button className="btn btn-secondary">View Vehicle</button>
+                    <Link to={`/host/reservation/${booking._id}`}>
+                      <button className="btn btn-secondary">View Reservation</button>
                     </Link>
 
                     {booking.status === 'pending' && (
