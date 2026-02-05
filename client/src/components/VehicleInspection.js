@@ -393,19 +393,20 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                   </button>
                   <button
                     className="inspection-phone-btn"
-                    onClick={handleGalleryPick}
+                    onClick={startPhoneUpload}
                     disabled={uploading}
                   >
-                    {uploading ? (
-                      <span className="uploading">Uploading...</span>
-                    ) : (
-                      <>
-                        <span className="phone-icon">🖼️</span>
-                        <span>Upload from Phone</span>
-                      </>
-                    )}
+                    <span className="phone-icon">📱</span>
+                    <span>Upload from Phone</span>
                   </button>
                 </div>
+                <button
+                  className="inspection-gallery-btn"
+                  onClick={handleGalleryPick}
+                  disabled={uploading}
+                >
+                  <span>Choose from Gallery</span>
+                </button>
               </div>
             )}
           </div>
