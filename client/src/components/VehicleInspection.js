@@ -28,6 +28,8 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
   const galleryInputRef = useRef(null);
   // Key to force re-mount of file inputs on iOS to prevent freeze
   const [inputKey, setInputKey] = useState(0);
+  // Ref to track currentStep for use in async handlers (avoids stale closures)
+  const currentStepRef = useRef(0);
 
   // Phone upload state
   const [phoneSession, setPhoneSession] = useState(null);
@@ -37,6 +39,11 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
 
   const currentPosition = PHOTO_POSITIONS[currentStep];
   const allPhotosUploaded = Object.values(photos).every(photo => photo !== null);
+
+  // Keep currentStepRef in sync with currentStep state
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
 
   // Clean up polling on unmount
   useEffect(() => {
@@ -85,6 +92,10 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
     const file = e.target.files?.[0];
     if (!file || uploading) return;
 
+    // Clear input value immediately so the same input can be reused on mobile
+    // This must happen before any state updates to avoid destroying the input mid-read
+    e.target.value = null;
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file');
@@ -97,11 +108,12 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
       return;
     }
 
+    // Capture the step at the time the user clicked, before any async work
+    const stepAtCapture = currentStepRef.current;
+    const posKey = PHOTO_POSITIONS[stepAtCapture]?.key;
+
     setUploading(true);
     setError('');
-
-    // Force re-mount file inputs immediately to prevent iOS freeze
-    setInputKey(prev => prev + 1);
 
     try {
       const token = localStorage.getItem('token');
@@ -127,26 +139,24 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
         ? response.data.imageUrl
         : `${API_URL}${response.data.imageUrl}`;
 
-      // Use functional updates to avoid stale closures
-      setCurrentStep(prevStep => {
-        const posKey = PHOTO_POSITIONS[prevStep]?.key;
-        if (posKey) {
-          setPhotos(prev => ({
-            ...prev,
-            [posKey]: imageUrl
-          }));
-        }
+      // Update photos and step separately (not nested) to avoid batching issues
+      if (posKey) {
+        setPhotos(prev => ({
+          ...prev,
+          [posKey]: imageUrl
+        }));
+      }
 
-        // Auto-advance to next step if not on last photo
-        if (prevStep < PHOTO_POSITIONS.length - 1) {
-          return prevStep + 1;
-        }
-        return prevStep;
-      });
+      // Auto-advance to next step if not on last photo
+      if (stepAtCapture < PHOTO_POSITIONS.length - 1) {
+        setCurrentStep(stepAtCapture + 1);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to upload photo');
     } finally {
       setUploading(false);
+      // Force re-mount file inputs AFTER upload completes to reset iOS camera state
+      setInputKey(prev => prev + 1);
     }
   };
 
@@ -200,21 +210,19 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
               setUploading(true);
               const imageUrl = latestImage;
 
-              // Use functional update for currentStep to avoid stale closure
-              setCurrentStep(prevStep => {
-                const posKey = PHOTO_POSITIONS[prevStep]?.key;
-                if (posKey) {
-                  setPhotos(prev => ({
-                    ...prev,
-                    [posKey]: imageUrl
-                  }));
-                }
+              // Use ref to get current step and update photos/step separately
+              const step = currentStepRef.current;
+              const posKey = PHOTO_POSITIONS[step]?.key;
+              if (posKey) {
+                setPhotos(prev => ({
+                  ...prev,
+                  [posKey]: imageUrl
+                }));
+              }
 
-                if (prevStep < PHOTO_POSITIONS.length - 1) {
-                  return prevStep + 1;
-                }
-                return prevStep;
-              });
+              if (step < PHOTO_POSITIONS.length - 1) {
+                setCurrentStep(step + 1);
+              }
 
               // Close QR code after receiving photo so buttons reappear for next step
               setPhoneQrUrl('');
