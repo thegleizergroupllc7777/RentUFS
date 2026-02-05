@@ -32,7 +32,8 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
 
   // Webcam state
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [facingMode, setFacingMode] = useState('environment');
+  const [cameras, setCameras] = useState([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -71,9 +72,8 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
   }, []);
 
   // Start camera with getUserMedia
-  const startCamera = async (mode) => {
+  const startCamera = async (deviceId = null) => {
     setError('');
-    const useMode = mode || facingMode;
 
     try {
       // Stop any existing stream
@@ -81,13 +81,35 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
 
+      // Get list of available cameras
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      setCameras(videoDevices);
+
+      // Build video constraints
+      let videoConstraints = { width: { ideal: 1280 }, height: { ideal: 720 } };
+
+      if (deviceId) {
+        // Use specific device
+        videoConstraints.deviceId = { exact: deviceId };
+      } else if (videoDevices.length > 0) {
+        // Try rear camera first on mobile (facingMode), fall back to first available
+        videoConstraints.facingMode = { ideal: 'environment' };
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: useMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: videoConstraints,
         audio: false
       });
 
       streamRef.current = stream;
       setCameraOpen(true);
+
+      // Find the index of the current camera
+      const currentTrack = stream.getVideoTracks()[0];
+      const currentDeviceId = currentTrack?.getSettings()?.deviceId;
+      const idx = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
+      if (idx !== -1) setCurrentCameraIndex(idx);
 
       // Small delay to ensure video element is mounted
       setTimeout(() => {
@@ -107,11 +129,12 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
     }
   };
 
-  // Switch between front and rear camera
+  // Switch between available cameras
   const switchCamera = () => {
-    const newMode = facingMode === 'environment' ? 'user' : 'environment';
-    setFacingMode(newMode);
-    startCamera(newMode);
+    if (cameras.length < 2) return; // Need at least 2 cameras to switch
+    const nextIndex = (currentCameraIndex + 1) % cameras.length;
+    setCurrentCameraIndex(nextIndex);
+    startCamera(cameras[nextIndex].deviceId);
   };
 
   // Capture photo from video stream
