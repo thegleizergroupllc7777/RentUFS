@@ -15,6 +15,18 @@ const formatDate = (dateVal) => {
   return new Date(datePart + 'T00:00:00').toLocaleDateString();
 };
 
+// Format time to include AM/PM
+const formatTime = (time) => {
+  if (!time) return '10:00 AM';
+  // If time already has AM/PM, return as-is
+  if (/am|pm/i.test(time)) return time;
+  // Parse HH:MM format and add AM/PM
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
 const PHOTO_LABELS = {
   frontView: 'Front View',
   backView: 'Back View',
@@ -320,12 +332,12 @@ const HostReservationDetail = () => {
                   <div>
                     <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.25rem' }}>PICKUP</div>
                     <div style={{ color: '#fff', fontSize: '0.9375rem' }}>{formatDate(booking.startDate)}</div>
-                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>at {booking.pickupTime || '10:00 AM'}</div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>at {formatTime(booking.pickupTime)}</div>
                   </div>
                   <div>
                     <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.25rem' }}>RETURN</div>
                     <div style={{ color: '#fff', fontSize: '0.9375rem' }}>{formatDate(booking.endDate)}</div>
-                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>by {booking.dropoffTime || '10:00 AM'}</div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>by {formatTime(booking.dropoffTime)}</div>
                   </div>
                 </div>
 
