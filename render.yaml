@@ -18,6 +18,10 @@ services:
         sync: false  # Set your SendGrid API key for reliable email delivery
       - key: EMAIL_FROM
         sync: false  # Set verified sender email (e.g., noreply@yourdomain.com)
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false  # Required for location search and geocoding
+      - key: STRIPE_SECRET_KEY
+        sync: false  # Required for payment processing
       - key: CLOUDINARY_CLOUD_NAME
         sync: false  # Set from your Cloudinary dashboard
       - key: CLOUDINARY_API_KEY

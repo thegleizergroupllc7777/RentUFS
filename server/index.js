@@ -48,8 +48,25 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/agreements', agreementRoutes);
 app.use('/api/connect', connectRoutes);
 
+// Validate critical environment variables
+if (!process.env.MONGODB_URI) {
+  console.warn('⚠️  MONGODB_URI not set — falling back to local MongoDB');
+}
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET not set — authentication will not work properly');
+}
+if (!process.env.GOOGLE_MAPS_API_KEY) {
+  console.warn('⚠️  GOOGLE_MAPS_API_KEY not set — geocoding and map search disabled');
+}
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('⚠️  STRIPE_SECRET_KEY not set — payment processing disabled');
+}
+
 // Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs', {
+  serverSelectionTimeoutMS: 15000,
+  socketTimeoutMS: 45000,
+})
   .then(() => {
     console.log('✅ Connected to MongoDB');
     // Start the return reminder scheduler after DB connection
