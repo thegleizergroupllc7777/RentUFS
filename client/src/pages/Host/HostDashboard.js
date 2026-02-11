@@ -45,9 +45,13 @@ const HostDashboard = () => {
       const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const activeBookings = response.data.filter(b =>
-        ['confirmed', 'active'].includes(b.status)
-      );
+      const now = new Date();
+      const activeBookings = response.data.filter(b => {
+        if (!['confirmed', 'active'].includes(b.status)) return false;
+        // Only count as rented if the booking end date hasn't passed
+        const endDate = new Date(b.endDate);
+        return endDate >= now;
+      });
       const ids = new Set(activeBookings.map(b =>
         typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle
       ));

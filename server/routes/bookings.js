@@ -536,6 +536,9 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
 
     await booking.save();
 
+    // Set vehicle back to available after trip completion
+    await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+
     res.json({
       success: true,
       message: 'Vehicle returned successfully! Thank you for renting with us!',
