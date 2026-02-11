@@ -52,9 +52,10 @@ const HostDashboard = () => {
         const endDate = new Date(b.endDate);
         return endDate >= now;
       });
-      const ids = new Set(activeBookings.map(b =>
-        typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle
-      ));
+      const ids = new Set(activeBookings.map(b => {
+        const id = typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle;
+        return String(id);
+      }));
       setRentedVehicleIds(ids);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -251,16 +252,16 @@ const HostDashboard = () => {
                   {viewMode === 'grid' && (
                   <div className="host-vehicles-grid">
                     {grouped[zip].map(vehicle => (
-                <div key={vehicle._id} className={`host-vehicle-card ${rentedVehicleIds.has(vehicle._id) ? 'rented' : ''}`}>
+                <div key={vehicle._id} className={`host-vehicle-card ${rentedVehicleIds.has(String(vehicle._id)) ? 'rented' : ''}`}>
                   <div className="host-vehicle-image">
                     {vehicle.images?.[0] ? (
                       <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
                     ) : (
                       <div className="vehicle-placeholder">No Image</div>
                     )}
-                    {rentedVehicleIds.has(vehicle._id) && <div className="rented-overlay"></div>}
-                    <div className={`availability-badge ${rentedVehicleIds.has(vehicle._id) ? 'rented' : vehicle.availability ? 'available' : 'unavailable'}`}>
-                      {rentedVehicleIds.has(vehicle._id) ? 'Rented' : vehicle.availability ? 'Available' : 'Unavailable'}
+                    {rentedVehicleIds.has(String(vehicle._id)) && <div className="rented-overlay"></div>}
+                    <div className={`availability-badge ${rentedVehicleIds.has(String(vehicle._id)) ? 'rented' : vehicle.availability ? 'available' : 'unavailable'}`}>
+                      {rentedVehicleIds.has(String(vehicle._id)) ? 'Rented' : vehicle.availability ? 'Available' : 'Unavailable'}
                     </div>
                   </div>
 
@@ -319,7 +320,7 @@ const HostDashboard = () => {
                   {viewMode === 'list' && (
                   <div className="host-vehicles-list">
                     {grouped[zip].map(vehicle => {
-                      const isRented = rentedVehicleIds.has(vehicle._id);
+                      const isRented = rentedVehicleIds.has(String(vehicle._id));
                       return (
                     <div key={vehicle._id} className={`host-vehicle-card-list ${isRented ? 'rented' : ''}`}>
                       <div className="list-vehicle-image">
