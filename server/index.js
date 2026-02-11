@@ -61,6 +61,11 @@ if (!process.env.GOOGLE_MAPS_API_KEY) {
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('⚠️  STRIPE_SECRET_KEY not set — payment processing disabled');
 }
+if (!process.env.TEQMOBILITY_API_KEY) {
+  console.warn('⚠️  TEQMOBILITY_API_KEY not set — TeqMobility insurance integration disabled');
+} else {
+  console.log('🛡️ TeqMobility: API key configured, base URL:', process.env.TEQMOBILITY_API_URL || 'https://insurance.sandbox.teqmobility.com');
+}
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs', {
@@ -75,12 +80,16 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs',
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   const emailConfigured = !!(process.env.SENDGRID_API_KEY || process.env.EMAIL_SERVICE || process.env.SMTP_HOST);
   const emailProvider = process.env.SENDGRID_API_KEY ? 'sendgrid' :
                         process.env.EMAIL_SERVICE ? process.env.EMAIL_SERVICE :
                         process.env.SMTP_HOST ? 'smtp' : 'none';
-  res.json({
+
+  const teqMobilityConfigured = !!process.env.TEQMOBILITY_API_KEY;
+  const teqMobilityUrl = process.env.TEQMOBILITY_API_URL || 'https://insurance.sandbox.teqmobility.com';
+
+  const result = {
     status: 'ok',
     message: 'RentUFS API is running',
     email: {
@@ -88,8 +97,26 @@ app.get('/api/health', (req, res) => {
       provider: emailProvider,
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@rentufs.com',
       clientUrl: process.env.CLIENT_URL || 'http://localhost:3000'
+    },
+    teqMobility: {
+      configured: teqMobilityConfigured,
+      baseUrl: teqMobilityUrl,
+      connected: false
     }
-  });
+  };
+
+  // If TeqMobility is configured, test the connection
+  if (teqMobilityConfigured) {
+    try {
+      const { isConfigured } = require('./utils/teqmobility');
+      result.teqMobility.apiKeyPresent = isConfigured();
+      result.teqMobility.connected = true;
+    } catch (err) {
+      result.teqMobility.error = err.message;
+    }
+  }
+
+  res.json(result);
 });
 
 // Serve React frontend in production
