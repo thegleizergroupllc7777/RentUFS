@@ -121,13 +121,30 @@ app.get('/api/health', async (req, res) => {
 
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {
+  const fs = require('fs');
   const clientBuild = path.join(__dirname, '..', 'client', 'build');
-  app.use(express.static(clientBuild));
+  const indexPath = path.join(clientBuild, 'index.html');
 
-  // SPA catch-all: any non-API route serves index.html so React Router handles it
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientBuild, 'index.html'));
-  });
+  if (fs.existsSync(indexPath)) {
+    app.use(express.static(clientBuild));
+
+    // SPA catch-all: any non-API route serves index.html so React Router handles it
+    app.get('*', (req, res) => {
+      res.sendFile(indexPath);
+    });
+  } else {
+    console.warn('⚠️  client/build/index.html not found — frontend will not be served from this process');
+    console.warn('   If deploying frontend separately, this is expected. Otherwise run: npm run build');
+
+    // Catch-all returns a helpful JSON response instead of ENOENT errors
+    app.get('*', (req, res) => {
+      if (req.path.startsWith('/api/')) return; // API routes already handled above
+      res.status(503).json({
+        message: 'Frontend not available on this server',
+        hint: 'The React frontend may be deployed as a separate service. Check your CLIENT_URL configuration.'
+      });
+    });
+  }
 }
 
 const PORT = process.env.PORT || 5000;

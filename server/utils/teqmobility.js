@@ -241,7 +241,11 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
     };
   } catch (error) {
     const isProfileIncomplete = error.message?.includes('Host profile incomplete');
-    console.error('🛡️ TeqMobility: Error starting rental coverage:', error.response?.data || error.message);
+    if (isProfileIncomplete) {
+      console.warn('🛡️ TeqMobility: Skipping insurance — host profile incomplete (missing driver license or DOB)');
+    } else {
+      console.error('🛡️ TeqMobility: Error starting rental coverage:', error.response?.data || error.message);
+    }
     return {
       success: false,
       reason: isProfileIncomplete ? 'host_profile_incomplete' : 'api_error',
