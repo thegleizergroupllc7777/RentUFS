@@ -169,9 +169,10 @@ const changeVehicleOwner = async (vin, ownerId) => {
 
 /**
  * 4. Start On-Rent Coverage - Starts insurance coverage for a rental
- * POST /api/v1/coverages/on-rent/{vin}
+ * POST /api/v1/coverages/on-rent/{vehicleId}
+ * @param {string} vehicleId - TeqMobility vehicle ID (from upsertVehicle response)
  */
-const startOnRentCoverage = async (vin, driver, vehicle, booking) => {
+const startOnRentCoverage = async (vehicleId, driver, vehicle, booking) => {
   const body = {
     usage: 'RIDESHARE',
     external_id: booking._id.toString(),
@@ -209,7 +210,7 @@ const startOnRentCoverage = async (vin, driver, vehicle, booking) => {
     body.driver.license.expiration_date = new Date(driver.driverLicense.expirationDate).toISOString().split('T')[0];
   }
 
-  const response = await teqApi.post(`/api/v1/coverages/on-rent/${vin}`, body);
+  const response = await teqApi.post(`/api/v1/coverages/on-rent/${vehicleId}`, body);
   console.log('🛡️ TeqMobility: On-rent coverage started -', response.data.id, 'Status:', response.data.status);
   return response.data;
 };
@@ -256,8 +257,8 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
       await changeVehicleOwner(vehicle.vin, owner.id);
     }
 
-    // Step 4: Start on-rent coverage
-    const coverage = await startOnRentCoverage(vehicle.vin, driver, vehicle, booking);
+    // Step 4: Start on-rent coverage (use TeqMobility vehicle ID, not raw VIN)
+    const coverage = await startOnRentCoverage(vehicleResult.id, driver, vehicle, booking);
 
     return {
       success: true,
