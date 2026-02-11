@@ -8,6 +8,13 @@ import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
 
+const formatTime12h = (time24) => {
+  const h = parseInt(time24.split(':')[0], 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:00 ${ampm}`;
+};
+
 const VehicleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -423,11 +430,11 @@ const VehicleDetail = () => {
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#6ee7b7' }}>Pickup:</strong><br />
-                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {activeBooking.pickupTime || '10:00'}
+                        {new Date(activeBooking.startDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} at {formatTime12h(activeBooking.pickupTime || '10:00')}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#6ee7b7' }}>Return:</strong><br />
-                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {activeBooking.dropoffTime || '10:00'}
+                        {new Date(activeBooking.endDate.split('T')[0] + 'T00:00:00').toLocaleDateString()} by {formatTime12h(activeBooking.dropoffTime || '10:00')}
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
                         <strong style={{ color: '#6ee7b7' }}>Duration:</strong> {activeBooking.totalDays} day(s)
@@ -626,8 +633,8 @@ const VehicleDetail = () => {
                       fontSize: '0.9rem',
                       color: '#e5e7eb'
                     }}>
-                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {bookingData.pickupTime}</div>
-                      <div style={{ marginTop: '0.25rem' }}><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {bookingData.dropoffTime}</div>
+                      <div><strong>Pick-up:</strong> {new Date(bookingData.startDate + 'T00:00:00').toLocaleDateString()} at {formatTime12h(bookingData.pickupTime)}</div>
+                      <div style={{ marginTop: '0.25rem' }}><strong>Return:</strong> {new Date(bookingData.endDate + 'T00:00:00').toLocaleDateString()} by {formatTime12h(bookingData.dropoffTime)}</div>
                     </div>
                   )}
 
