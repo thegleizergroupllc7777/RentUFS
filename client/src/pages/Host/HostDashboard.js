@@ -38,15 +38,12 @@ const HostDashboard = () => {
 
       setVehicles(vehiclesRes.data);
 
-      // Active bookings: driver has the car (always rented regardless of dates)
-      // Confirmed bookings: only rented if the booking period hasn't fully elapsed
+      // Only count bookings as rented if the rental period hasn't fully passed
       const now = new Date();
       now.setHours(0, 0, 0, 0);
-      const activeBookings = bookingsRes.data.filter(b => {
-        if (b.status === 'active') return true;
-        if (b.status === 'confirmed') return new Date(b.endDate) >= now;
-        return false;
-      });
+      const activeBookings = bookingsRes.data.filter(b =>
+        ['confirmed', 'active'].includes(b.status) && new Date(b.endDate) >= now
+      );
       const ids = new Set(activeBookings.map(b => {
         const id = typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle;
         return String(id);
