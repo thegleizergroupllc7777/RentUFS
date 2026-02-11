@@ -38,12 +38,10 @@ const HostDashboard = () => {
 
       setVehicles(vehiclesRes.data);
 
-      const now = new Date();
-      const activeBookings = bookingsRes.data.filter(b => {
-        if (!['confirmed', 'active'].includes(b.status)) return false;
-        const endDate = new Date(b.endDate);
-        return endDate >= now;
-      });
+      // Booking status is the source of truth — if confirmed or active, vehicle is rented
+      const activeBookings = bookingsRes.data.filter(b =>
+        ['confirmed', 'active'].includes(b.status)
+      );
       const ids = new Set(activeBookings.map(b => {
         const id = typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle;
         return String(id);
