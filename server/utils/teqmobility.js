@@ -19,6 +19,9 @@ teqApi.interceptors.request.use((config) => {
     config.headers['x-api-key'] = TEQMOBILITY_API_KEY;
   }
   console.log(`🛡️ TeqMobility: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
+  if (config.data) {
+    console.log('🛡️ TeqMobility Request Body:', JSON.stringify(config.data, null, 2));
+  }
   return config;
 });
 
@@ -44,21 +47,17 @@ const upsertOwner = async (host) => {
     phone: host.phone || '',
     email: host.email,
     type: isBusinessHost ? 'COMMERCIAL' : 'PERSONAL',
-    firstname: host.firstName,
-    lastname: host.lastName
+    firstname: host.firstName || '',
+    lastname: host.lastName || ''
   };
 
-  // PERSONAL type requires dl_number, dl_state, birth_date
+  // PERSONAL type requires dl_number, dl_state, birth_date, firstname, lastname
   if (!isBusinessHost) {
-    if (host.driverLicense?.licenseNumber) {
-      body.dl_number = host.driverLicense.licenseNumber;
-    }
-    if (host.driverLicense?.state) {
-      body.dl_state = host.driverLicense.state;
-    }
-    if (host.dateOfBirth) {
-      body.birth_date = new Date(host.dateOfBirth).toISOString().split('T')[0];
-    }
+    body.dl_number = host.driverLicense?.licenseNumber || '';
+    body.dl_state = host.driverLicense?.state || '';
+    body.birth_date = host.dateOfBirth
+      ? new Date(host.dateOfBirth).toISOString().split('T')[0]
+      : '';
   }
 
   // COMMERCIAL type requires fein
@@ -192,6 +191,16 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
   }
 
   try {
+    console.log('🛡️ TeqMobility: Host data -', {
+      id: host._id,
+      name: `${host.firstName} ${host.lastName}`,
+      email: host.email,
+      accountType: host.hostInfo?.accountType || 'individual',
+      hasDriverLicense: !!host.driverLicense?.licenseNumber,
+      hasDOB: !!host.dateOfBirth,
+      dlState: host.driverLicense?.state || 'N/A'
+    });
+
     // Step 1: Upsert the host as owner
     const owner = await upsertOwner(host);
 
