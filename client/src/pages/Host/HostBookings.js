@@ -503,9 +503,19 @@ const HostBookings = () => {
                     { key: 'weekly', label: 'Weekly' },
                     { key: 'monthly', label: 'Monthly' }
                   ].map(({ key, label }) => {
+                    // Infer rental type from duration if not explicitly set
+                    const getRentalType = (b) => {
+                      if (b.rentalType && b.rentalType !== 'daily') return b.rentalType;
+                      if (b.rentalType === 'daily') return 'daily';
+                      // For older bookings without rentalType, infer from duration
+                      const days = b.totalDays || 1;
+                      if (days >= 28) return 'monthly';
+                      if (days >= 7) return 'weekly';
+                      return 'daily';
+                    };
                     const count = key === 'all'
                       ? past.length
-                      : past.filter(b => (b.rentalType || 'daily') === key).length;
+                      : past.filter(b => getRentalType(b) === key).length;
                     return (
                       <button
                         key={key}
@@ -526,14 +536,24 @@ const HostBookings = () => {
                     );
                   })}
                 </div>
-                {activeBookings.filter(b => pastRentalFilter === 'all' || (b.rentalType || 'daily') === pastRentalFilter).length === 0 ? (
+                {(() => {
+                  // Infer rental type from duration if not explicitly set
+                  const getRentalType = (b) => {
+                    if (b.rentalType && b.rentalType !== 'daily') return b.rentalType;
+                    if (b.rentalType === 'daily') return 'daily';
+                    const days = b.totalDays || 1;
+                    if (days >= 28) return 'monthly';
+                    if (days >= 7) return 'weekly';
+                    return 'daily';
+                  };
+                  const filtered = activeBookings.filter(b => pastRentalFilter === 'all' || getRentalType(b) === pastRentalFilter);
+                  return filtered.length === 0 ? (
                   <div className="empty-state">
                     <p>No {pastRentalFilter} bookings.</p>
                   </div>
                 ) : (
                 <div className="compact-bookings-list">
-                  {activeBookings
-                    .filter(b => pastRentalFilter === 'all' || (b.rentalType || 'daily') === pastRentalFilter)
+                  {filtered
                     .map(booking => (
                     <div key={booking._id} style={{ position: 'relative' }}>
                       {/* Unread message indicator for compact row */}
@@ -654,17 +674,29 @@ const HostBookings = () => {
                         </div>
 
                         {/* Rental type */}
+                        {(() => {
+                          const inferredType = (() => {
+                            if (booking.rentalType && booking.rentalType !== 'daily') return booking.rentalType;
+                            if (booking.rentalType === 'daily') return 'daily';
+                            const days = booking.totalDays || 1;
+                            if (days >= 28) return 'monthly';
+                            if (days >= 7) return 'weekly';
+                            return 'daily';
+                          })();
+                          return (
                         <div style={{
                           fontSize: '0.7rem',
                           fontWeight: '600',
                           textTransform: 'uppercase',
-                          color: booking.rentalType === 'monthly' ? '#a78bfa' : booking.rentalType === 'weekly' ? '#38bdf8' : '#10b981',
+                          color: inferredType === 'monthly' ? '#a78bfa' : inferredType === 'weekly' ? '#38bdf8' : '#10b981',
                           letterSpacing: '0.05em',
                           minWidth: '55px',
                           textAlign: 'center'
                         }}>
-                          {booking.rentalType || 'daily'}
+                          {inferredType}
                         </div>
+                          );
+                        })()}
 
                         {/* Duration & Price */}
                         <div className="compact-booking-price">
@@ -856,7 +888,8 @@ const HostBookings = () => {
                     </div>
                   ))}
                 </div>
-                )}
+                );
+                })()}
                 </>
               ) : (
                 /* Full card view for current and upcoming bookings */

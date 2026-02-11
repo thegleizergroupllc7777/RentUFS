@@ -28,15 +28,19 @@ const cleanupStaleBookings = async () => {
 };
 
 // Auto-expire confirmed/active bookings whose rental period has fully passed
+// Uses a 1-day buffer to avoid premature expiration due to UTC/timezone mismatch
 const expireStaleBookings = async () => {
   try {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
+    // Subtract 1 day as buffer — only expire bookings that ended BEFORE yesterday
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - 1);
 
-    // Confirmed bookings past end date — rental window expired without pickup
+    // Confirmed bookings well past end date — rental window expired without pickup
     const staleConfirmed = await Booking.find({
       status: 'confirmed',
-      endDate: { $lt: now }
+      endDate: { $lt: cutoff }
     });
     for (const booking of staleConfirmed) {
       booking.status = 'cancelled';
@@ -46,10 +50,10 @@ const expireStaleBookings = async () => {
       await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
     }
 
-    // Active bookings past end date — trip ended but return inspection never completed
+    // Active bookings well past end date — trip ended but return inspection never completed
     const staleActive = await Booking.find({
       status: 'active',
-      endDate: { $lt: now }
+      endDate: { $lt: cutoff }
     });
     for (const booking of staleActive) {
       booking.status = 'completed';
