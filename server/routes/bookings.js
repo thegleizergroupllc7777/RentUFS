@@ -471,6 +471,9 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
     };
     booking.status = 'active';
 
+    // Mark vehicle as unavailable while actively rented
+    await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, { availability: false });
+
     // TeqMobility Dynamic Insurance - Start on-rent coverage (non-blocking)
     const driver = await User.findById(req.user._id);
     const coverageResult = await startRentalCoverage(
@@ -988,6 +991,11 @@ router.patch('/:id/status', auth, async (req, res) => {
     }
 
     booking.status = status;
+
+    // Mark vehicle as unavailable when booking is confirmed or active
+    if (['confirmed', 'active'].includes(status)) {
+      await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: false });
+    }
 
     // TeqMobility: Stop coverage when booking is completed or cancelled
     if (['completed', 'cancelled'].includes(status) && booking.teqMobility?.coverageId) {

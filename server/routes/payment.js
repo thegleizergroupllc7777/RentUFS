@@ -2,6 +2,7 @@ const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
+const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const { sendBookingConfirmationToDriver, sendBookingNotificationToHost } = require('../utils/emailService');
 
@@ -175,6 +176,11 @@ router.post('/verify-payment', auth, async (req, res) => {
         { new: true }
       ).populate('vehicle').populate('driver').populate('host');
 
+      // Mark vehicle as unavailable now that booking is confirmed
+      if (!wasAlreadyConfirmed && booking.vehicle) {
+        await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: false });
+      }
+
       // Only send confirmation emails if this is a new confirmation (not already paid)
       if (!wasAlreadyConfirmed && booking.driver && booking.host && booking.vehicle) {
         sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
@@ -223,6 +229,11 @@ router.post('/confirm-payment', auth, async (req, res) => {
         },
         { new: true }
       ).populate('vehicle').populate('driver').populate('host');
+
+      // Mark vehicle as unavailable now that booking is confirmed
+      if (!wasAlreadyConfirmed && booking.vehicle) {
+        await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: false });
+      }
 
       // Only send confirmation emails if this is a new confirmation (not already paid)
       if (!wasAlreadyConfirmed && booking.driver && booking.host && booking.vehicle) {
@@ -509,6 +520,11 @@ router.post('/webhook', async (req, res) => {
         if (booking) {
           console.log(`✅ Booking ${bookingId} confirmed via webhook`);
 
+          // Mark vehicle as unavailable
+          if (booking.vehicle) {
+            await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, { availability: false });
+          }
+
           // Send confirmation emails
           if (booking.driver && booking.host && booking.vehicle) {
             sendBookingConfirmationToDriver(booking.driver, booking, booking.vehicle, booking.host)
@@ -554,6 +570,11 @@ router.post('/webhook', async (req, res) => {
 
           if (booking) {
             console.log(`✅ Booking ${bookingId} confirmed via checkout session webhook`);
+
+            // Mark vehicle as unavailable
+            if (booking.vehicle) {
+              await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, { availability: false });
+            }
 
             // Send confirmation emails
             if (booking.driver && booking.host && booking.vehicle) {
