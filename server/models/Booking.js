@@ -204,6 +204,16 @@ const bookingSchema = new mongoose.Schema({
       roadsideAssistance: { type: Boolean, default: false }
     }
   },
+  // TeqMobility Dynamic Insurance
+  teqMobility: {
+    coverageId: { type: String, default: null },
+    ownerId: { type: String, default: null },
+    status: { type: String, default: null },
+    cardUrl: { type: String, default: null },
+    startedAt: { type: Date, default: null },
+    stoppedAt: { type: Date, default: null },
+    error: { type: String, default: null }
+  },
   // Rental Agreement
   agreement: {
     signed: { type: Boolean, default: false },
