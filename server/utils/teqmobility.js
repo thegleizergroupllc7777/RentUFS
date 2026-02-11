@@ -53,11 +53,26 @@ const upsertOwner = async (host) => {
 
   // PERSONAL type requires dl_number, dl_state, birth_date, firstname, lastname
   if (!isBusinessHost) {
-    body.dl_number = host.driverLicense?.licenseNumber || '';
-    body.dl_state = host.driverLicense?.state || '';
-    body.birth_date = host.dateOfBirth
+    const dlNumber = host.driverLicense?.licenseNumber || '';
+    const dlState = host.driverLicense?.state || '';
+    const birthDate = host.dateOfBirth
       ? new Date(host.dateOfBirth).toISOString().split('T')[0]
       : '';
+
+    // TeqMobility API rejects empty strings for required PERSONAL fields
+    if (!dlNumber || !dlState || !birthDate) {
+      console.warn('🛡️ TeqMobility: Host missing required PERSONAL owner fields -', {
+        hasDlNumber: !!dlNumber,
+        hasDlState: !!dlState,
+        hasBirthDate: !!birthDate,
+        hostId: host._id
+      });
+      throw new Error('Host profile incomplete for insurance: missing driver license number, state, or date of birth');
+    }
+
+    body.dl_number = dlNumber;
+    body.dl_state = dlState;
+    body.birth_date = birthDate;
   }
 
   // COMMERCIAL type requires fein
@@ -66,8 +81,10 @@ const upsertOwner = async (host) => {
     body.commercial_name = host.hostInfo.businessName || '';
   }
 
-  // Address
-  const addr = isBusinessHost ? host.hostInfo?.businessAddress : host.address;
+  // Address - for individual hosts, fall back to hostInfo.legalAddress if personal address is missing
+  const addr = isBusinessHost
+    ? host.hostInfo?.businessAddress
+    : (host.address?.street ? host.address : host.hostInfo?.legalAddress);
   if (addr) {
     body.address = {
       line1: addr.street || addr.line1 || '',
@@ -223,10 +240,11 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
       cardUrl: coverage.card_url || null
     };
   } catch (error) {
+    const isProfileIncomplete = error.message?.includes('Host profile incomplete');
     console.error('🛡️ TeqMobility: Error starting rental coverage:', error.response?.data || error.message);
     return {
       success: false,
-      reason: 'api_error',
+      reason: isProfileIncomplete ? 'host_profile_incomplete' : 'api_error',
       error: error.response?.data?.message || error.message
     };
   }
