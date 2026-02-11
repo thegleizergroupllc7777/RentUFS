@@ -13,10 +13,12 @@ const teqApi = axios.create({
 });
 
 // Add auth header to every request
+// TeqMobility uses x-api-key header for authentication
 teqApi.interceptors.request.use((config) => {
   if (TEQMOBILITY_API_KEY) {
-    config.headers.Authorization = `Bearer ${TEQMOBILITY_API_KEY}`;
+    config.headers['x-api-key'] = TEQMOBILITY_API_KEY;
   }
+  console.log(`🛡️ TeqMobility: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
 
