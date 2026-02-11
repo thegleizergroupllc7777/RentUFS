@@ -435,9 +435,7 @@ router.put('/driver-license', auth, async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (!['driver', 'both'].includes(user.userType)) {
-      return res.status(403).json({ message: 'Only drivers can update license information' });
-    }
+    // All user types can save license info (hosts need it for insurance integration)
 
     user.driverLicense = {
       ...user.driverLicense,
