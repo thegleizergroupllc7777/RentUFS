@@ -26,6 +26,36 @@ teqApi.interceptors.request.use((config) => {
 });
 
 /**
+ * Convert full state name to 2-letter abbreviation.
+ * If already a 2-letter code, returns it as-is.
+ */
+const STATE_ABBR = {
+  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+  'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+  'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+  'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+  'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+  'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+  'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+  'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+  'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+  'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+  'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC'
+};
+
+const toStateAbbr = (state) => {
+  if (!state) return '';
+  const trimmed = state.trim();
+  // Already a 2-letter abbreviation
+  if (/^[A-Z]{2}$/.test(trimmed)) return trimmed;
+  if (/^[a-z]{2}$/i.test(trimmed)) return trimmed.toUpperCase();
+  // Look up full name
+  return STATE_ABBR[trimmed.toLowerCase()] || trimmed;
+};
+
+/**
  * Check if TeqMobility integration is configured
  */
 const isConfigured = () => {
@@ -51,7 +81,7 @@ const upsertOwner = async (host) => {
   // PERSONAL type requires dl_number, dl_state, birth_date, firstname, lastname
   if (!isBusinessHost) {
     const dlNumber = host.driverLicense?.licenseNumber || '';
-    const dlState = host.driverLicense?.state || '';
+    const dlState = toStateAbbr(host.driverLicense?.state);
     const birthDate = host.dateOfBirth
       ? new Date(host.dateOfBirth).toISOString().split('T')[0]
       : '';
@@ -86,7 +116,7 @@ const upsertOwner = async (host) => {
     body.address = {
       line1: addr.street || addr.line1 || '',
       city: addr.city || '',
-      state: addr.state || '',
+      state: toStateAbbr(addr.state),
       zip_code: addr.zipCode || ''
     };
   }
@@ -103,7 +133,7 @@ const upsertOwner = async (host) => {
 const upsertVehicle = async (vehicle, ownerId) => {
   const body = {
     vin: vehicle.vin,
-    state_registered: vehicle.location?.state || 'FL',
+    state_registered: toStateAbbr(vehicle.location?.state) || 'FL',
     year: vehicle.year,
     make: vehicle.make,
     model: vehicle.model,
@@ -152,17 +182,17 @@ const startOnRentCoverage = async (vin, driver, vehicle, booking) => {
       phone: driver.phone || '',
       license: {
         number: driver.driverLicense?.licenseNumber || '',
-        state: driver.driverLicense?.state || '',
+        state: toStateAbbr(driver.driverLicense?.state),
       },
       address: {
         line1: driver.address?.street || '',
         city: driver.address?.city || '',
-        state: driver.address?.state || '',
+        state: toStateAbbr(driver.address?.state),
         zip_code: driver.address?.zipCode || ''
       }
     },
     pickup_address: {
-      state: vehicle.location?.state || '',
+      state: toStateAbbr(vehicle.location?.state),
       city: vehicle.location?.city || '',
       zip_code: vehicle.location?.zipCode || '',
       line1: vehicle.location?.address || ''
