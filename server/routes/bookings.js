@@ -27,10 +27,52 @@ const cleanupStaleBookings = async () => {
   }
 };
 
-// Run cleanup every 5 minutes
+// Auto-expire confirmed/active bookings whose rental period has fully passed
+const expireStaleBookings = async () => {
+  try {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Confirmed bookings past end date — rental window expired without pickup
+    const staleConfirmed = await Booking.find({
+      status: 'confirmed',
+      endDate: { $lt: now }
+    });
+    for (const booking of staleConfirmed) {
+      booking.status = 'cancelled';
+      booking.cancellationReason = 'Booking expired — rental period passed without pickup';
+      booking.cancelledAt = new Date();
+      await booking.save();
+      await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+    }
+
+    // Active bookings past end date — trip ended but return inspection never completed
+    const staleActive = await Booking.find({
+      status: 'active',
+      endDate: { $lt: now }
+    });
+    for (const booking of staleActive) {
+      booking.status = 'completed';
+      booking.completedAt = new Date();
+      await booking.save();
+      await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+    }
+
+    const total = staleConfirmed.length + staleActive.length;
+    if (total > 0) {
+      console.log(`🧹 Auto-expired ${staleConfirmed.length} stale confirmed + ${staleActive.length} stale active booking(s)`);
+    }
+  } catch (err) {
+    console.error('Error expiring stale bookings:', err);
+  }
+};
+
+// Run cleanups every 5 minutes
 setInterval(cleanupStaleBookings, 5 * 60 * 1000);
+setInterval(expireStaleBookings, 5 * 60 * 1000);
 // Run once on startup
 cleanupStaleBookings();
+expireStaleBookings();
 
 // Migration endpoint to add reservation IDs to existing bookings
 router.post('/migrate-reservation-ids', auth, async (req, res) => {
