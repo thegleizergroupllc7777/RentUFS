@@ -44,6 +44,9 @@ const HostBookings = () => {
   // Expanded past booking state
   const [expandedPastBookingId, setExpandedPastBookingId] = useState(null);
 
+  // Past bookings rental type sub-filter
+  const [pastRentalFilter, setPastRentalFilter] = useState('all');
+
   // Cancel reservation modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelBooking, setCancelBooking] = useState(null);
@@ -486,8 +489,52 @@ const HostBookings = () => {
                 </div>
               ) : activeTab === 'past' ? (
                 /* Compact list view for past bookings */
+                <>
+                {/* Rental type sub-filters */}
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  marginBottom: '1rem',
+                  flexWrap: 'wrap'
+                }}>
+                  {[
+                    { key: 'all', label: 'All' },
+                    { key: 'daily', label: 'Daily' },
+                    { key: 'weekly', label: 'Weekly' },
+                    { key: 'monthly', label: 'Monthly' }
+                  ].map(({ key, label }) => {
+                    const count = key === 'all'
+                      ? past.length
+                      : past.filter(b => (b.rentalType || 'daily') === key).length;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setPastRentalFilter(key)}
+                        style={{
+                          padding: '0.4rem 1rem',
+                          borderRadius: '9999px',
+                          border: pastRentalFilter === key ? '2px solid #10b981' : '1px solid #4b5563',
+                          background: pastRentalFilter === key ? '#10b981' : 'transparent',
+                          color: pastRentalFilter === key ? '#000' : '#9ca3af',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        {label} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+                {activeBookings.filter(b => pastRentalFilter === 'all' || (b.rentalType || 'daily') === pastRentalFilter).length === 0 ? (
+                  <div className="empty-state">
+                    <p>No {pastRentalFilter} bookings.</p>
+                  </div>
+                ) : (
                 <div className="compact-bookings-list">
-                  {activeBookings.map(booking => (
+                  {activeBookings
+                    .filter(b => pastRentalFilter === 'all' || (b.rentalType || 'daily') === pastRentalFilter)
+                    .map(booking => (
                     <div key={booking._id} style={{ position: 'relative' }}>
                       {/* Unread message indicator for compact row */}
                       {unreadCounts[booking._id] > 0 && (
@@ -604,6 +651,19 @@ const HostBookings = () => {
                         {/* Dates */}
                         <div className="compact-booking-dates">
                           {toLocalDate(booking.startDate).toLocaleDateString()} - {toLocalDate(booking.endDate).toLocaleDateString()}
+                        </div>
+
+                        {/* Rental type */}
+                        <div style={{
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          color: booking.rentalType === 'monthly' ? '#a78bfa' : booking.rentalType === 'weekly' ? '#38bdf8' : '#10b981',
+                          letterSpacing: '0.05em',
+                          minWidth: '55px',
+                          textAlign: 'center'
+                        }}>
+                          {booking.rentalType || 'daily'}
                         </div>
 
                         {/* Duration & Price */}
@@ -796,6 +856,8 @@ const HostBookings = () => {
                     </div>
                   ))}
                 </div>
+                )}
+                </>
               ) : (
                 /* Full card view for current and upcoming bookings */
                 <div className="bookings-list">
