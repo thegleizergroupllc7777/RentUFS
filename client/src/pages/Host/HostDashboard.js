@@ -20,35 +20,27 @@ const HostDashboard = () => {
   };
 
   useEffect(() => {
-    fetchVehicles();
+    fetchDashboardData();
     fetchTaxInfo();
-    fetchRentedVehicles();
   }, [location.key]);
 
-  const fetchVehicles = async () => {
+  const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/vehicles/host/my-vehicles`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setVehicles(response.data);
-    } catch (error) {
-      console.error('Error fetching vehicles:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const [vehiclesRes, bookingsRes] = await Promise.all([
+        axios.get(`${API_URL}/api/vehicles/host/my-vehicles`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_URL}/api/bookings/host-bookings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
 
-  const fetchRentedVehicles = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      setVehicles(vehiclesRes.data);
+
       const now = new Date();
-      const activeBookings = response.data.filter(b => {
+      const activeBookings = bookingsRes.data.filter(b => {
         if (!['confirmed', 'active'].includes(b.status)) return false;
-        // Only count as rented if the booking end date hasn't passed
         const endDate = new Date(b.endDate);
         return endDate >= now;
       });
@@ -58,7 +50,9 @@ const HostDashboard = () => {
       }));
       setRentedVehicleIds(ids);
     } catch (error) {
-      console.error('Error fetching bookings:', error);
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,7 +66,7 @@ const HostDashboard = () => {
       await axios.delete(`${API_URL}/api/vehicles/${vehicleId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchVehicles();
+      fetchDashboardData();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
       alert('Failed to delete vehicle');
@@ -87,7 +81,7 @@ const HostDashboard = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchVehicles();
+      fetchDashboardData();
     } catch (error) {
       console.error('Error updating availability:', error);
       alert('Failed to update availability');
