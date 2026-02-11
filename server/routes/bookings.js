@@ -931,6 +931,11 @@ router.patch('/:id/status', auth, async (req, res) => {
     booking.status = status;
     await booking.save();
 
+    // Set vehicle back to available when booking is completed or cancelled
+    if (['completed', 'cancelled'].includes(status)) {
+      await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+    }
+
     res.json({ ...booking.toObject(), cancellationFee });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
