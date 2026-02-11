@@ -41,9 +41,6 @@ const upsertOwner = async (host) => {
 
   const body = {
     external_id: host._id.toString(),
-    name: isBusinessHost
-      ? (host.hostInfo.businessName || `${host.firstName} ${host.lastName}`)
-      : `${host.firstName} ${host.lastName}`,
     phone: host.phone || '',
     email: host.email,
     type: isBusinessHost ? 'COMMERCIAL' : 'PERSONAL',
