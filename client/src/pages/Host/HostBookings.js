@@ -1046,6 +1046,14 @@ const HostBookings = () => {
                         >
                           Switch Vehicle
                         </button>
+                        {new Date(booking.endDate) < new Date() && (
+                          <button
+                            onClick={() => handleUpdateStatus(booking._id, 'completed')}
+                            className="btn btn-success"
+                          >
+                            Complete Reservation
+                          </button>
+                        )}
                         <button
                           onClick={() => handleOpenCancelModal(booking)}
                           className="btn btn-danger"
