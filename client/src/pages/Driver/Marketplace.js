@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Component } from 'react';
+import React, { useState, useEffect, useRef, Component } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
@@ -83,31 +83,58 @@ const Marketplace = () => {
   const [searchLocation, setSearchLocation] = useState('');
   const [resultsInfo, setResultsInfo] = useState({ showing: 0, total: 0 });
   const [mapCenter, setMapCenter] = useState(null);
+  const [loadingSlow, setLoadingSlow] = useState(false);
+  const [error, setError] = useState(null);
+  const slowTimerRef = useRef(null);
 
   useEffect(() => {
     fetchVehicles();
+    return () => {
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    };
   }, []);
 
-  const fetchVehicles = async () => {
+  const fetchVehicles = async (retryCount = 0) => {
     try {
-      setLoading(true);
+      if (retryCount === 0) {
+        setLoading(true);
+        setError(null);
+        setLoadingSlow(false);
+        if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+        slowTimerRef.current = setTimeout(() => setLoadingSlow(true), 5000);
+      }
+
       const params = new URLSearchParams();
       Object.keys(filters).forEach(key => {
         if (filters[key]) params.append(key, filters[key]);
       });
 
-      const response = await axios.get(`${API_URL}/api/vehicles?${params}`);
+      const response = await axios.get(`${API_URL}/api/vehicles?${params}`, {
+        timeout: 30000
+      });
+
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
       const allVehicles = response.data || [];
       setVehicles(allVehicles);
       setResultsInfo({
         showing: Math.min(12, allVehicles.length),
         total: allVehicles.length
       });
+      setLoadingSlow(false);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching vehicles:', error);
+
+      // Retry once on timeout or network error (handles server cold starts)
+      if (retryCount < 1 && (error.code === 'ECONNABORTED' || !error.response)) {
+        return fetchVehicles(retryCount + 1);
+      }
+
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
       setVehicles([]);
-    } finally {
+      setLoadingSlow(false);
       setLoading(false);
+      setError('Unable to load vehicles. The server may be starting up.');
     }
   };
 
@@ -268,7 +295,7 @@ const Marketplace = () => {
         <div className="results-text">
           <strong>{getLocationText()}</strong>
           <span className="results-count">
-            Showing {resultsInfo.showing} of {resultsInfo.total} vehicles
+            {loading ? 'Loading...' : `Showing ${resultsInfo.showing} of ${resultsInfo.total} vehicles`}
           </span>
         </div>
         <button
@@ -341,7 +368,31 @@ const Marketplace = () => {
       <div className="marketplace-content">
         {loading ? (
           <div className="loading-overlay">
-            <div className="loading-spinner">Loading vehicles...</div>
+            <div className="loading-spinner">
+              {loadingSlow ? 'Server is waking up, please wait...' : 'Loading vehicles...'}
+            </div>
+          </div>
+        ) : error ? (
+          <div className="loading-overlay">
+            <div style={{ textAlign: 'center' }}>
+              <div className="loading-spinner">{error}</div>
+              <button
+                onClick={() => fetchVehicles()}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem 1.5rem',
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         ) : viewMode === 'map' ? (
           /* Map View - Full Screen */
