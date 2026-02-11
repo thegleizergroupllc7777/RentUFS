@@ -1,13 +1,8 @@
 const express = require('express');
-const axios = require('axios');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
 
 const router = express.Router();
-
-// Insurance API configuration - uses TeqMobility env variables
-const INSURANCE_API_URL = process.env.TEQMOBILITY_API_URL || '';
-const INSURANCE_API_KEY = process.env.TEQMOBILITY_API_KEY || '';
 
 // Insurance plans with pricing (configurable via API or static)
 const INSURANCE_PLANS = {
@@ -86,34 +81,11 @@ const INSURANCE_PLANS = {
 };
 
 // Get available insurance plans
+// Plan selection is static; actual coverage is activated via TeqMobility in bookings flow
 router.get('/plans', auth, async (req, res) => {
   try {
-    const { totalDays, vehicleValue } = req.query;
+    const { totalDays } = req.query;
 
-    // If external insurance API is configured, fetch plans from there
-    if (INSURANCE_API_URL && INSURANCE_API_KEY) {
-      try {
-        const response = await axios.get(`${INSURANCE_API_URL}/plans`, {
-          headers: {
-            'Authorization': `Bearer ${INSURANCE_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          params: {
-            days: totalDays,
-            vehicleValue: vehicleValue
-          }
-        });
-
-        return res.json({
-          plans: response.data.plans || Object.values(INSURANCE_PLANS),
-          source: 'api'
-        });
-      } catch (apiError) {
-        console.error('Insurance API error, falling back to static plans:', apiError.message);
-      }
-    }
-
-    // Return static plans with calculated totals
     const plans = Object.values(INSURANCE_PLANS).map(plan => ({
       ...plan,
       totalCost: plan.pricePerDay * (parseInt(totalDays) || 1)
@@ -152,41 +124,7 @@ router.post('/quote', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid insurance plan' });
     }
 
-    // If external API is configured, get a real quote
-    if (INSURANCE_API_URL && INSURANCE_API_KEY) {
-      try {
-        const response = await axios.post(`${INSURANCE_API_URL}/quote`, {
-          planId,
-          rental: {
-            startDate: booking.startDate,
-            endDate: booking.endDate,
-            totalDays: booking.totalDays,
-            vehicleType: booking.vehicle.type,
-            vehicleValue: booking.vehicle.pricePerDay * 100 // Estimated value
-          },
-          driver: {
-            firstName: booking.driver.firstName,
-            lastName: booking.driver.lastName,
-            email: booking.driver.email,
-            ...driverInfo
-          }
-        }, {
-          headers: {
-            'Authorization': `Bearer ${INSURANCE_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        return res.json({
-          quote: response.data,
-          source: 'api'
-        });
-      } catch (apiError) {
-        console.error('Insurance quote API error:', apiError.message);
-      }
-    }
-
-    // Return calculated quote using static pricing
+    // Calculate quote using static pricing
     const totalCost = plan.pricePerDay * booking.totalDays;
 
     res.json({
@@ -236,27 +174,6 @@ router.post('/add-to-booking', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid insurance plan' });
     }
 
-    // If external API is configured, purchase the policy
-    let policyNumber = null;
-    if (INSURANCE_API_URL && INSURANCE_API_KEY && planId !== 'none' && quoteId) {
-      try {
-        const response = await axios.post(`${INSURANCE_API_URL}/purchase`, {
-          quoteId,
-          bookingId: booking._id.toString()
-        }, {
-          headers: {
-            'Authorization': `Bearer ${INSURANCE_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        policyNumber = response.data.policyNumber;
-      } catch (apiError) {
-        console.error('Insurance purchase API error:', apiError.message);
-        // Continue with booking even if API fails - can be resolved later
-      }
-    }
-
     const selectedPlan = plan || INSURANCE_PLANS.none;
     const insuranceCost = selectedPlan.pricePerDay * booking.totalDays;
 
@@ -265,10 +182,11 @@ router.post('/add-to-booking', auth, async (req, res) => {
     const priceDifference = insuranceCost - previousInsuranceCost;
 
     // Update booking with insurance
+    // Actual coverage is activated via TeqMobility when pickup inspection is completed
     booking.insurance = {
       type: planId,
-      provider: INSURANCE_API_URL ? 'external' : 'internal',
-      policyNumber,
+      provider: 'teqmobility',
+      policyNumber: null,
       costPerDay: selectedPlan.pricePerDay,
       totalCost: insuranceCost,
       coverage: selectedPlan.coverage
