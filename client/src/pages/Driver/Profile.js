@@ -129,6 +129,7 @@ const DriverProfile = () => {
     phone: '',
     email: '',
     profileImage: '',
+    dateOfBirth: '',
     address: {
       street: '',
       apt: '',
@@ -203,6 +204,7 @@ const DriverProfile = () => {
         phone: user.phone || '',
         email: user.email || '',
         profileImage: user.profileImage || '',
+        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : '',
         address: {
           street: user.address?.street || '',
           apt: user.address?.apt || '',
@@ -434,6 +436,7 @@ const DriverProfile = () => {
         firstName: profileData.firstName,
         lastName: profileData.lastName,
         phone: profileData.phone,
+        dateOfBirth: profileData.dateOfBirth || undefined,
         address: profileData.address
       }, { headers: { Authorization: `Bearer ${token}` } });
       setUser(response.data);
@@ -919,6 +922,17 @@ const DriverProfile = () => {
             <label className="form-label">Phone Number</label>
             <input type="tel" className="form-input" value={profileData.phone}
               onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))} placeholder="(555) 123-4567" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Date of Birth</label>
+            <input type="date" className="form-input" value={profileData.dateOfBirth}
+              onChange={(e) => setProfileData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+              max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]} />
+            {!profileData.dateOfBirth && (
+              <p style={{ fontSize: '0.85rem', color: '#f59e0b', marginTop: '0.25rem' }}>
+                Required for insurance coverage on rentals
+              </p>
+            )}
           </div>
 
           <div style={{ borderTop: '1px solid #333', paddingTop: '1.5rem', marginTop: '1rem' }}>

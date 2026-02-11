@@ -419,7 +419,7 @@ const Register = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Date of Birth {formData.userType === 'driver' && '*'}</label>
+                    <label className="form-label">Date of Birth *</label>
                     <input
                       type="date"
                       name="dateOfBirth"
@@ -427,13 +427,11 @@ const Register = () => {
                       value={formData.dateOfBirth}
                       onChange={handleChange}
                       max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]}
-                      required={formData.userType === 'driver'}
+                      required
                     />
-                    {formData.userType === 'driver' && (
-                      <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                        You must be at least 21 years old to rent vehicles
-                      </p>
-                    )}
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      You must be at least 21 years old{formData.userType === 'driver' ? ' to rent vehicles' : ''}
+                    </p>
                   </div>
 
                   {/* Address */}

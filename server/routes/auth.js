@@ -31,8 +31,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Validate age for drivers (must be at least 21)
-    if (userType === 'driver' && dateOfBirth) {
+    // Validate age (must be at least 21)
+    if (dateOfBirth) {
       const birthDate = new Date(dateOfBirth);
       const today = new Date();
       const age = today.getFullYear() - birthDate.getFullYear();
@@ -44,7 +44,7 @@ router.post('/register', async (req, res) => {
 
       if (exactAge < 21) {
         return res.status(400).json({
-          message: 'You must be at least 21 years old to register as a driver.'
+          message: 'You must be at least 21 years old to register.'
         });
       }
     }
@@ -98,8 +98,8 @@ router.post('/register', async (req, res) => {
       };
     }
 
-    // Add driver license info if provided (for drivers)
-    if (driverLicense && userType === 'driver') {
+    // Add driver license info if provided (for all user types - needed for insurance)
+    if (driverLicense) {
       userData.driverLicense = {
         licenseNumber: driverLicense.licenseNumber,
         state: driverLicense.state,
