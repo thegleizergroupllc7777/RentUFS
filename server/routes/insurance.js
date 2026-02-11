@@ -5,10 +5,9 @@ const Booking = require('../models/Booking');
 
 const router = express.Router();
 
-// Insurance API configuration
-// Configure these environment variables with your insurance provider's details
-const INSURANCE_API_URL = process.env.INSURANCE_API_URL || '';
-const INSURANCE_API_KEY = process.env.INSURANCE_API_KEY || '';
+// Insurance API configuration - uses TeqMobility env variables
+const INSURANCE_API_URL = process.env.TEQMOBILITY_API_URL || '';
+const INSURANCE_API_KEY = process.env.TEQMOBILITY_API_KEY || '';
 
 // Insurance plans with pricing (configurable via API or static)
 const INSURANCE_PLANS = {
