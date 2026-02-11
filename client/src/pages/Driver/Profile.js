@@ -2015,7 +2015,7 @@ const DriverProfile = () => {
 
   const tabs = [
     { id: 'profile', label: 'My Profile' },
-    ...(isDriver && !isHost ? [{ id: 'license', label: "Driver's License" }] : []),
+    { id: 'license', label: "Driver's License" },
     { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
@@ -2089,7 +2089,7 @@ const DriverProfile = () => {
             {/* Main Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
               {activeTab === 'profile' && renderProfileTab()}
-              {activeTab === 'license' && isDriver && !isHost && renderLicenseTab()}
+              {activeTab === 'license' && renderLicenseTab()}
               {activeTab === 'payment' && renderPaymentTab()}
               {activeTab === 'tax' && isHost && renderTaxTab()}
               {activeTab === 'reports' && isHost && renderReportsTab()}
