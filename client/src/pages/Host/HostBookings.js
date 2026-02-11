@@ -45,7 +45,7 @@ const HostBookings = () => {
   const [expandedPastBookingId, setExpandedPastBookingId] = useState(null);
 
   // Past bookings rental type sub-filter
-  const [pastRentalFilter, setPastRentalFilter] = useState('all');
+  const [pastTimeFilter, setPastTimeFilter] = useState('all');
 
   // Cancel reservation modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -490,66 +490,89 @@ const HostBookings = () => {
               ) : activeTab === 'past' ? (
                 /* Compact list view for past bookings */
                 <>
-                {/* Rental type sub-filters */}
+                {/* Time-based sub-filters */}
                 <div style={{
                   display: 'flex',
                   gap: '0.5rem',
                   marginBottom: '1rem',
                   flexWrap: 'wrap'
                 }}>
-                  {[
-                    { key: 'all', label: 'All' },
-                    { key: 'daily', label: 'Daily' },
-                    { key: 'weekly', label: 'Weekly' },
-                    { key: 'monthly', label: 'Monthly' }
-                  ].map(({ key, label }) => {
-                    // Infer rental type from duration if not explicitly set
-                    const getRentalType = (b) => {
-                      if (b.rentalType && b.rentalType !== 'daily') return b.rentalType;
-                      if (b.rentalType === 'daily') return 'daily';
-                      // For older bookings without rentalType, infer from duration
-                      const days = b.totalDays || 1;
-                      if (days >= 28) return 'monthly';
-                      if (days >= 7) return 'weekly';
-                      return 'daily';
+                  {(() => {
+                    const now = new Date();
+                    const todayStr = toLocalDateStr(now);
+                    // Start of this week (Sunday)
+                    const weekStart = new Date(now);
+                    weekStart.setDate(now.getDate() - now.getDay());
+                    const weekStartStr = toLocalDateStr(weekStart);
+                    // Start of this month
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const monthStartStr = toLocalDateStr(monthStart);
+
+                    const getBookingEndStr = (b) => {
+                      return toLocalDateStr(toLocalDate(b.endDate));
                     };
-                    const count = key === 'all'
-                      ? past.length
-                      : past.filter(b => getRentalType(b) === key).length;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setPastRentalFilter(key)}
-                        style={{
-                          padding: '0.4rem 1rem',
-                          borderRadius: '9999px',
-                          border: pastRentalFilter === key ? '2px solid #10b981' : '1px solid #4b5563',
-                          background: pastRentalFilter === key ? '#10b981' : 'transparent',
-                          color: pastRentalFilter === key ? '#000' : '#9ca3af',
-                          cursor: 'pointer',
-                          fontWeight: '600',
-                          fontSize: '0.85rem'
-                        }}
-                      >
-                        {label} ({count})
-                      </button>
-                    );
-                  })}
+
+                    const filters = [
+                      { key: 'all', label: 'All' },
+                      { key: 'today', label: 'Today' },
+                      { key: 'week', label: 'This Week' },
+                      { key: 'month', label: 'This Month' }
+                    ];
+
+                    return filters.map(({ key, label }) => {
+                      const count = key === 'all'
+                        ? past.length
+                        : past.filter(b => {
+                            const endStr = getBookingEndStr(b);
+                            if (key === 'today') return endStr === todayStr;
+                            if (key === 'week') return endStr >= weekStartStr && endStr <= todayStr;
+                            if (key === 'month') return endStr >= monthStartStr && endStr <= todayStr;
+                            return true;
+                          }).length;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setPastTimeFilter(key)}
+                          style={{
+                            padding: '0.4rem 1rem',
+                            borderRadius: '9999px',
+                            border: pastTimeFilter === key ? '2px solid #10b981' : '1px solid #4b5563',
+                            background: pastTimeFilter === key ? '#10b981' : 'transparent',
+                            color: pastTimeFilter === key ? '#000' : '#9ca3af',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {label} ({count})
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
                 {(() => {
-                  // Infer rental type from duration if not explicitly set
-                  const getRentalType = (b) => {
-                    if (b.rentalType && b.rentalType !== 'daily') return b.rentalType;
-                    if (b.rentalType === 'daily') return 'daily';
-                    const days = b.totalDays || 1;
-                    if (days >= 28) return 'monthly';
-                    if (days >= 7) return 'weekly';
-                    return 'daily';
-                  };
-                  const filtered = activeBookings.filter(b => pastRentalFilter === 'all' || getRentalType(b) === pastRentalFilter);
+                  const now = new Date();
+                  const todayStr = toLocalDateStr(now);
+                  const weekStart = new Date(now);
+                  weekStart.setDate(now.getDate() - now.getDay());
+                  const weekStartStr = toLocalDateStr(weekStart);
+                  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                  const monthStartStr = toLocalDateStr(monthStart);
+
+                  const getBookingEndStr = (b) => toLocalDateStr(toLocalDate(b.endDate));
+
+                  const filtered = activeBookings.filter(b => {
+                    if (pastTimeFilter === 'all') return true;
+                    const endStr = getBookingEndStr(b);
+                    if (pastTimeFilter === 'today') return endStr === todayStr;
+                    if (pastTimeFilter === 'week') return endStr >= weekStartStr && endStr <= todayStr;
+                    if (pastTimeFilter === 'month') return endStr >= monthStartStr && endStr <= todayStr;
+                    return true;
+                  });
+                  const filterLabel = pastTimeFilter === 'all' ? '' : pastTimeFilter === 'today' ? 'today\'s' : pastTimeFilter === 'week' ? 'this week\'s' : 'this month\'s';
                   return filtered.length === 0 ? (
                   <div className="empty-state">
-                    <p>No {pastRentalFilter} bookings.</p>
+                    <p>No {filterLabel} past bookings.</p>
                   </div>
                 ) : (
                 <div className="compact-bookings-list">
