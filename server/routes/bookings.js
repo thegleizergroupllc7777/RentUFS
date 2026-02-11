@@ -635,7 +635,7 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     await booking.save();
 
     // Set vehicle back to available after trip completion
-    await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+    await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true });
 
     res.json({
       success: true,
@@ -939,6 +939,9 @@ router.post('/:id/host-cancel', auth, async (req, res) => {
     }
 
     await booking.save();
+
+    // Set vehicle back to available after host cancellation
+    await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true });
 
     // Send cancellation email to driver
     try {
