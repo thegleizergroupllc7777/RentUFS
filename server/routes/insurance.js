@@ -194,9 +194,9 @@ router.post('/add-to-booking', auth, async (req, res) => {
     // Update total price to include insurance
     booking.totalPrice = booking.totalPrice + priceDifference;
 
-    // Update revenue split: platform keeps platformFee + insurance
-    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + insuranceCost;
-    // Host earnings stays the same (rental subtotal only)
+    // Update revenue split: RentUFS keeps driverFee + hostFee + insurance
+    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + (booking.hostPlatformFee || 0) + insuranceCost;
+    // Host earnings stays the same (rental subtotal minus host fee only)
 
     await booking.save();
 
@@ -244,8 +244,8 @@ router.post('/remove-from-booking', auth, async (req, res) => {
     const insuranceCost = booking.insurance?.totalCost || 0;
     booking.totalPrice = booking.totalPrice - insuranceCost;
 
-    // Update revenue split: platform only keeps platformFee when no insurance
-    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays);
+    // Update revenue split: RentUFS keeps driverFee + hostFee when no insurance
+    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + (booking.hostPlatformFee || 0);
 
     // Reset insurance to none
     booking.insurance = {
