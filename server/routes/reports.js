@@ -113,6 +113,7 @@ router.get('/host', auth, async (req, res) => {
         vehicleStats[vehicleId] = {
           vehicleId,
           vehicleName,
+          vehicleNickname: booking.vehicle.nickname || null,
           vehicleImage: booking.vehicle.images?.[0] || null,
           totalBookings: 0,
           confirmedBookings: 0,

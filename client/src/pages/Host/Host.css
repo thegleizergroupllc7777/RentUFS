@@ -1658,6 +1658,12 @@
   color: #1f2937;
 }
 
+.report-fleet-nickname {
+  font-size: 0.8rem;
+  color: #10b981;
+  font-style: italic;
+}
+
 .report-fleet-bookings {
   font-size: 0.8rem;
   color: #6b7280;
