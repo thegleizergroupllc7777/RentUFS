@@ -359,7 +359,10 @@ const HostReservationDetail = () => {
                   {booking.insurance?.type && booking.insurance.type !== 'none' && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                       <span style={{ color: '#9ca3af' }}>Insurance</span>
-                      <span style={{ color: '#fff' }}>{booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'}</span>
+                      <span style={{ color: '#fff' }}>
+                        {booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'}
+                        {booking.insurance.totalCost > 0 && ` ($${booking.insurance.totalCost.toFixed(2)})`}
+                      </span>
                     </div>
                   )}
                   <div style={{
@@ -367,7 +370,7 @@ const HostReservationDetail = () => {
                     borderTop: '1px solid #333', paddingTop: '0.75rem', marginTop: '0.5rem'
                   }}>
                     <span style={{ color: '#fff', fontWeight: '600' }}>Total</span>
-                    <span style={{ color: '#10b981', fontWeight: '700', fontSize: '1.125rem' }}>${booking.totalPrice}</span>
+                    <span style={{ color: '#10b981', fontWeight: '700', fontSize: '1.125rem' }}>${(booking.totalPrice || 0).toFixed(2)}</span>
                   </div>
                   {booking.hostEarnings > 0 && (
                     <>
