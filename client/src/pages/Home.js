@@ -26,7 +26,7 @@ const Home = () => {
                   Browse Cars
                 </button>
               </Link>
-              <Link to={isAuthenticated ? "/host/add-vehicle" : "/register?type=host"}>
+              <Link to={isAuthenticated ? "/host/register" : "/register?type=host"}>
                 <button className="btn btn-secondary btn-lg">
                   List Your Car
                 </button>
@@ -78,7 +78,7 @@ const Home = () => {
           <p className="text-lg mb-3" style={{ color: '#000000' }}>
             Join our community today as a driver or host
           </p>
-          <Link to={isAuthenticated ? "/host/dashboard" : "/register"}>
+          <Link to={isAuthenticated ? "/host/register" : "/register"}>
             <button className="btn btn-primary btn-lg" style={{ background: '#000000', color: '#00FF66' }}>
               {isAuthenticated ? 'Go to Dashboard' : 'Sign Up Now'}
             </button>
