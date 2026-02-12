@@ -57,8 +57,23 @@ const HostBookings = () => {
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
-    fetchBookings();
-    fetchUnreadCounts();
+    const token = localStorage.getItem('token');
+    if (!token) { setLoading(false); return; }
+    const headers = { Authorization: `Bearer ${token}` };
+
+    // Fetch bookings and unread counts in parallel
+    Promise.all([
+      axios.get(`${API_URL}/api/bookings/host-bookings`, { headers }),
+      axios.get(`${API_URL}/api/messages/unread/per-booking?role=host`, { headers }).catch(() => ({ data: { counts: {} } }))
+    ]).then(([bookingsRes, unreadRes]) => {
+      setBookings(bookingsRes.data);
+      setUnreadCounts(unreadRes.data.counts || {});
+    }).catch(err => {
+      console.error('Error fetching bookings:', err);
+    }).finally(() => {
+      setLoading(false);
+    });
+
     const interval = setInterval(fetchUnreadCounts, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -85,8 +100,6 @@ const HostBookings = () => {
       setBookings(response.data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
