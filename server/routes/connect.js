@@ -217,10 +217,10 @@ router.get('/pending-payouts', auth, async (req, res) => {
     // Calculate totals
     const totalPending = pendingBookings.reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
 
-    // Get bookings that are eligible for payout (7 days after completion)
+    // Get bookings that are eligible for payout (immediately after completion)
     const now = new Date();
     const eligibleBookings = pendingBookings.filter(b => {
-      const eligibleDate = b.payoutEligibleDate || new Date(b.endDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const eligibleDate = b.payoutEligibleDate || new Date();
       return eligibleDate <= now;
     });
     const totalEligible = eligibleBookings.reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
@@ -234,7 +234,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
         endDate: b.endDate,
         hostEarnings: b.hostEarnings,
         payoutStatus: b.payoutStatus,
-        payoutEligibleDate: b.payoutEligibleDate || new Date(b.endDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+        payoutEligibleDate: b.payoutEligibleDate || b.endDate
       })),
       totalPending,
       totalEligible,
@@ -318,13 +318,9 @@ router.post('/transfer-earnings', auth, async (req, res) => {
       return res.status(400).json({ message: 'Host payout account is not set up or enabled' });
     }
 
-    // Check hold period (7 days after trip end)
-    const holdEndDate = new Date(booking.endDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-    if (new Date() < holdEndDate) {
-      return res.status(400).json({
-        message: 'Funds are still in hold period',
-        holdEndDate: holdEndDate
-      });
+    // Verify booking is completed before transferring
+    if (booking.status !== 'completed') {
+      return res.status(400).json({ message: 'Booking must be completed before payout' });
     }
 
     // Create transfer to host's Connect account
@@ -370,15 +366,13 @@ router.post('/transfer-all-eligible', auth, async (req, res) => {
       return res.status(400).json({ message: 'Payout account not set up or not enabled' });
     }
 
-    // Find all eligible bookings (completed, paid, past hold period)
-    const holdDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Find all eligible bookings (completed and paid)
     const eligibleBookings = await Booking.find({
       host: user._id,
       status: 'completed',
       paymentStatus: 'paid',
       payoutStatus: { $in: ['pending', 'eligible'] },
-      hostEarnings: { $gt: 0 },
-      endDate: { $lt: holdDate }
+      hostEarnings: { $gt: 0 }
     }).populate('vehicle', 'make model year');
 
     if (eligibleBookings.length === 0) {
