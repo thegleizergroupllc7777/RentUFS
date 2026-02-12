@@ -85,160 +85,133 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
 
   const carsharePlan = plans.find(p => p.id === 'carshare');
   const ridesharePlan = plans.find(p => p.id === 'rideshare');
-  const hasCoverage = selectedPlan === 'carshare' || selectedPlan === 'rideshare';
+
+  // Build display list: coverage plans + decline option
+  const displayPlans = [];
+  if (carsharePlan) {
+    displayPlans.push({
+      ...carsharePlan,
+      displayName: 'Liability Coverage',
+      displayDescription: 'Car Share — Liability protection',
+      badges: [
+        { label: 'Liability', included: true },
+        { label: 'Roadside', included: true },
+        { label: 'Collision', included: false },
+        { label: 'Comprehensive', included: false },
+      ]
+    });
+  }
+  if (ridesharePlan) {
+    displayPlans.push({
+      ...ridesharePlan,
+      displayName: 'Full Coverage',
+      displayDescription: 'Ride Share — Collision + Liability',
+      recommended: true,
+      badges: [
+        { label: 'Liability', included: true },
+        { label: 'Collision', included: true },
+        { label: 'Comprehensive', included: true },
+        { label: 'Personal Injury', included: true },
+        { label: 'Roadside', included: true },
+      ]
+    });
+  }
 
   return (
     <div className="insurance-section">
       <h2>Trip Protection</h2>
       <p className="insurance-subtitle">
-        Coverage powered by TeqMobility. Begins at pickup and ends at return.
+        Choose a protection plan for your trip. Coverage begins at pickup and ends at return.
       </p>
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="insurance-toggle-container">
-        {/* Car Share — Liability */}
-        {carsharePlan && (
+      <div className="insurance-plans">
+        {displayPlans.map((plan) => (
           <div
-            className={`insurance-option ${selectedPlan === 'carshare' ? 'active' : ''}`}
-            onClick={() => handleSelectPlan(selectedPlan === 'carshare' ? 'none' : 'carshare')}
+            key={plan.id}
+            className={`insurance-plan ${selectedPlan === plan.id ? 'selected' : ''} ${plan.recommended ? 'recommended' : ''}`}
+            onClick={() => !updating && handleSelectPlan(plan.id)}
           >
-            <div className="option-top">
-              <div className="option-info">
-                <div className="option-icon shield-on">&#x1F6E1;</div>
-                <div className="option-text">
-                  <h3>Liability Coverage</h3>
-                  <p>Car Share — Liability protection</p>
-                </div>
-              </div>
-              <div className="option-toggle-area">
-                <div className="option-price">
-                  <span className="price-amount">{formatCurrency(carsharePlan.pricePerDay)}</span>
-                  <span className="price-period">/day</span>
-                </div>
-                <label className="toggle-switch" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={selectedPlan === 'carshare'}
-                    onChange={() => handleSelectPlan(selectedPlan === 'carshare' ? 'none' : 'carshare')}
-                    disabled={updating}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            {selectedPlan === 'carshare' && (
-              <div className="option-expanded">
-                <div className="coverage-total">
-                  {formatCurrency(carsharePlan.totalCost)} total for {totalDays} day{totalDays !== 1 ? 's' : ''}
-                </div>
-                <div className="coverage-grid">
-                  {carsharePlan.details && carsharePlan.details.map((detail, index) => (
-                    <div key={index} className="coverage-detail">
-                      <span className="detail-check">&#10003;</span>
-                      <span>{detail}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="coverage-badges">
-                  <span className="badge included">Liability</span>
-                  <span className="badge included">Roadside</span>
-                  <span className="badge excluded">Collision</span>
-                  <span className="badge excluded">Comprehensive</span>
-                </div>
-              </div>
+            {plan.recommended && (
+              <div className="plan-badge">Recommended</div>
             )}
-          </div>
-        )}
 
-        {/* Ride Share — Full Collision */}
-        {ridesharePlan && (
-          <div
-            className={`insurance-option ${selectedPlan === 'rideshare' ? 'active' : ''}`}
-            onClick={() => handleSelectPlan(selectedPlan === 'rideshare' ? 'none' : 'rideshare')}
-          >
-            <div className="option-top">
-              <div className="option-info">
-                <div className="option-icon shield-full">&#x1F6E1;</div>
-                <div className="option-text">
-                  <h3>Full Coverage</h3>
-                  <p>Ride Share — Collision + Liability</p>
-                </div>
-              </div>
-              <div className="option-toggle-area">
-                <div className="option-price">
-                  <span className="price-amount">{formatCurrency(ridesharePlan.pricePerDay)}</span>
-                  <span className="price-period">/day</span>
-                </div>
-                <label className="toggle-switch" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={selectedPlan === 'rideshare'}
-                    onChange={() => handleSelectPlan(selectedPlan === 'rideshare' ? 'none' : 'rideshare')}
-                    disabled={updating}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            {selectedPlan === 'rideshare' && (
-              <div className="option-expanded">
-                <div className="coverage-total">
-                  {formatCurrency(ridesharePlan.totalCost)} total for {totalDays} day{totalDays !== 1 ? 's' : ''}
-                </div>
-                <div className="coverage-grid">
-                  {ridesharePlan.details && ridesharePlan.details.map((detail, index) => (
-                    <div key={index} className="coverage-detail">
-                      <span className="detail-check">&#10003;</span>
-                      <span>{detail}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="coverage-badges">
-                  <span className="badge included">Liability</span>
-                  <span className="badge included">Collision</span>
-                  <span className="badge included">Comprehensive</span>
-                  <span className="badge included">Personal Injury</span>
-                  <span className="badge included">Roadside</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Decline option */}
-        <div
-          className={`insurance-option decline-option ${!hasCoverage ? 'active' : ''}`}
-          onClick={() => handleSelectPlan('none')}
-        >
-          <div className="option-top">
-            <div className="option-info">
-              <div className="option-icon shield-off">&#x2715;</div>
-              <div className="option-text">
-                <h3>Decline Coverage</h3>
-                <p>I have my own insurance</p>
-              </div>
-            </div>
-            <div className="option-toggle-area">
-              <div className="option-price">
-                <span className="price-free">$0</span>
-              </div>
-              <label className="toggle-switch" onClick={(e) => e.stopPropagation()}>
+            <div className="plan-header">
+              <div className="plan-radio">
                 <input
-                  type="checkbox"
-                  checked={!hasCoverage}
-                  onChange={() => handleSelectPlan(hasCoverage ? 'none' : 'rideshare')}
+                  type="radio"
+                  name="insurance"
+                  checked={selectedPlan === plan.id}
+                  onChange={() => handleSelectPlan(plan.id)}
                   disabled={updating}
                 />
-                <span className="toggle-slider decline-slider"></span>
-              </label>
+              </div>
+              <div className="plan-title-section">
+                <h3 className="plan-name">{plan.displayName}</h3>
+                <p className="plan-description">{plan.displayDescription}</p>
+              </div>
+              <div className="plan-price">
+                <span className="price-amount">{formatCurrency(plan.pricePerDay)}</span>
+                <span className="price-period">/day</span>
+                <div className="price-total">
+                  {formatCurrency(plan.totalCost)} total for {totalDays} day{totalDays !== 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
+
+            {plan.details && plan.details.length > 0 && (
+              <div className="plan-details">
+                <ul>
+                  {plan.details.map((detail, index) => (
+                    <li key={index}>
+                      <span className="check-icon">&#10003;</span>
+                      {detail}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {plan.badges && (
+              <div className="plan-coverage">
+                {plan.badges.map((badge, index) => (
+                  <div key={index} className={`coverage-item ${badge.included ? 'included' : 'excluded'}`}>
+                    <span className="coverage-icon">{badge.included ? '\u2713' : '\u2715'}</span>
+                    {badge.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Decline Coverage option */}
+        <div
+          className={`insurance-plan decline-plan ${selectedPlan === 'none' ? 'selected decline-selected' : ''}`}
+          onClick={() => !updating && handleSelectPlan('none')}
+        >
+          <div className="plan-header">
+            <div className="plan-radio">
+              <input
+                type="radio"
+                name="insurance"
+                checked={selectedPlan === 'none'}
+                onChange={() => handleSelectPlan('none')}
+                disabled={updating}
+              />
+            </div>
+            <div className="plan-title-section">
+              <h3 className="plan-name">Decline Coverage</h3>
+              <p className="plan-description">I have my own insurance</p>
+            </div>
+            <div className="plan-price">
+              <span className="price-free">$0</span>
             </div>
           </div>
 
-          {!hasCoverage && (
-            <div className="option-expanded decline-expanded">
+          {selectedPlan === 'none' && (
+            <div className="decline-warning-section">
               <div className="decline-warning">
                 <span className="warning-icon">&#9888;</span>
                 <span>You are responsible for providing your own coverage. Verify with your insurer that rental vehicles are covered under your policy.</span>
