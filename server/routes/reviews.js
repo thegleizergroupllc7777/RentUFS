@@ -23,25 +23,31 @@ router.post('/', auth, async (req, res) => {
 
     await review.save();
 
-    // Update vehicle rating if it's a vehicle review
+    // Update vehicle rating using aggregation instead of fetching all reviews
     if (reviewType === 'vehicle') {
-      const reviews = await Review.find({ vehicle: vehicleId, reviewType: 'vehicle' });
-      const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+      const [vehicleStats] = await Review.aggregate([
+        { $match: { vehicle: review.vehicle, reviewType: 'vehicle' } },
+        { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } }
+      ]);
 
-      await Vehicle.findByIdAndUpdate(vehicleId, {
-        rating: avgRating,
-        reviewCount: reviews.length
-      });
+      if (vehicleStats) {
+        await Vehicle.findByIdAndUpdate(vehicleId, {
+          rating: vehicleStats.avgRating,
+          reviewCount: vehicleStats.count
+        });
+      }
     }
 
-    // Update user rating
-    const userReviews = await Review.find({ reviewee: revieweeId });
-    if (userReviews.length > 0) {
-      const avgRating = userReviews.reduce((sum, r) => sum + r.rating, 0) / userReviews.length;
+    // Update user rating using aggregation instead of fetching all reviews
+    const [userStats] = await Review.aggregate([
+      { $match: { reviewee: review.reviewee } },
+      { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } }
+    ]);
 
+    if (userStats) {
       await User.findByIdAndUpdate(revieweeId, {
-        rating: avgRating,
-        reviewCount: userReviews.length
+        rating: userStats.avgRating,
+        reviewCount: userStats.count
       });
     }
 
@@ -59,7 +65,8 @@ router.get('/vehicle/:vehicleId', async (req, res) => {
       reviewType: 'vehicle'
     })
       .populate('reviewer', 'firstName lastName profileImage')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(reviews);
   } catch (error) {
@@ -72,7 +79,8 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const reviews = await Review.find({ reviewee: req.params.userId })
       .populate('reviewer', 'firstName lastName profileImage')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(reviews);
   } catch (error) {

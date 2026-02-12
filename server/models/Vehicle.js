@@ -142,5 +142,8 @@ const vehicleSchema = new mongoose.Schema({
 
 // Add 2dsphere index for geospatial queries
 vehicleSchema.index({ geoLocation: '2dsphere' });
+// Performance indexes for common query patterns
+vehicleSchema.index({ host: 1 });
+vehicleSchema.index({ availability: 1 });
 
 module.exports = mongoose.model('Vehicle', vehicleSchema);

@@ -281,6 +281,13 @@ bookingSchema.pre('save', async function(next) {
   next();
 });
 
+// Performance indexes for common query patterns
+bookingSchema.index({ driver: 1, status: 1 });
+bookingSchema.index({ host: 1, status: 1 });
+bookingSchema.index({ vehicle: 1, status: 1, startDate: 1, endDate: 1 });
+bookingSchema.index({ status: 1, createdAt: 1 });
+bookingSchema.index({ status: 1, endDate: 1 });
+
 const Booking = mongoose.model('Booking', bookingSchema);
 
 module.exports = Booking;

@@ -42,4 +42,8 @@ const reviewSchema = new mongoose.Schema({
   }
 });
 
+// Performance indexes for common query patterns
+reviewSchema.index({ vehicle: 1, reviewType: 1 });
+reviewSchema.index({ reviewee: 1 });
+
 module.exports = mongoose.model('Review', reviewSchema);

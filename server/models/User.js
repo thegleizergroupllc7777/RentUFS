@@ -222,4 +222,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+// Performance index for password reset token lookup
+userSchema.index({ resetPasswordToken: 1, resetPasswordExpires: 1 });
+
 module.exports = mongoose.model('User', userSchema);

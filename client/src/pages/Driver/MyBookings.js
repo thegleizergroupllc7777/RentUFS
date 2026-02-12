@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
@@ -132,7 +132,7 @@ const MyBookings = () => {
   useEffect(() => {
     fetchBookings();
     fetchUnreadCounts();
-    const interval = setInterval(fetchUnreadCounts, 10000);
+    const interval = setInterval(fetchUnreadCounts, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -347,33 +347,30 @@ const MyBookings = () => {
     return colors[status] || '#6b7280';
   };
 
-  const categorizeBookings = () => {
+  const { current, upcoming, past } = useMemo(() => {
     const todayStr = toLocalDateStr(new Date());
 
-    // Current: only bookings that have been explicitly started (status 'active')
-    const current = bookings.filter(booking => {
-      const endStr = toLocalDateStr(toLocalDate(booking.endDate));
-      return booking.status === 'active' && endStr >= todayStr;
-    });
+    const current = [];
+    const upcoming = [];
+    const past = [];
 
-    // Upcoming: pending or confirmed bookings (not cancelled/completed)
-    const upcoming = bookings.filter(booking => {
+    // Single pass through bookings instead of 3 separate filter calls
+    for (const booking of bookings) {
       const endStr = toLocalDateStr(toLocalDate(booking.endDate));
-      return (booking.status === 'pending' || booking.status === 'confirmed') && endStr >= todayStr
-        && booking.status !== 'cancelled' && booking.status !== 'completed';
-    });
 
-    // Past: ended, completed, or cancelled bookings
-    const past = bookings.filter(booking => {
-      const endStr = toLocalDateStr(toLocalDate(booking.endDate));
-      if (booking.status === 'completed' || booking.status === 'cancelled') return true;
-      return endStr < todayStr;
-    });
+      if (booking.status === 'completed' || booking.status === 'cancelled') {
+        past.push(booking);
+      } else if (booking.status === 'active' && endStr >= todayStr) {
+        current.push(booking);
+      } else if ((booking.status === 'pending' || booking.status === 'confirmed') && endStr >= todayStr) {
+        upcoming.push(booking);
+      } else {
+        past.push(booking);
+      }
+    }
 
     return { current, upcoming, past };
-  };
-
-  const { current, upcoming, past } = categorizeBookings();
+  }, [bookings]);
 
   // Calculate unread counts per tab
   const getTabUnreadCount = (tabBookings) => {
