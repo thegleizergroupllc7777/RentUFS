@@ -165,7 +165,12 @@ const HostReports = () => {
                       <div className="report-income-card main">
                         <span className="report-income-label">Your Earnings</span>
                         <span className="report-income-amount">{formatCurrency(reportData.summary.hostEarnings || 0)}</span>
-                        <span className="report-income-sub">Rental income from {reportData.summary.confirmedBookings} booking{reportData.summary.confirmedBookings !== 1 ? 's' : ''}</span>
+                        <span className="report-income-sub">
+                          Rental income from {reportData.summary.confirmedBookings} booking{reportData.summary.confirmedBookings !== 1 ? 's' : ''}
+                          {(reportData.summary.hostPlatformFees || 0) > 0 && (
+                            <> (after {formatCurrency(reportData.summary.hostPlatformFees)} in platform fees)</>
+                          )}
+                        </span>
                       </div>
                       <div className="report-income-card">
                         <span className="report-income-label">Total Collected</span>
@@ -338,6 +343,9 @@ const HostReports = () => {
                               <div className="report-fleet-metric">
                                 <span className="report-fleet-metric-label">Your Earnings</span>
                                 <span className="report-fleet-metric-value">{formatCurrency(vehicle.hostEarnings || 0)}</span>
+                                {(vehicle.hostPlatformFees || 0) > 0 && (
+                                  <span className="report-fleet-metric-label" style={{ fontSize: '0.7rem', marginTop: '0.15rem' }}>({formatCurrency(vehicle.hostPlatformFees)} in fees)</span>
+                                )}
                               </div>
                               <div className="report-fleet-metric">
                                 <span className="report-fleet-metric-label">Total Collected</span>

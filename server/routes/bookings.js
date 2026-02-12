@@ -186,15 +186,19 @@ router.post('/', auth, async (req, res) => {
     const resolvedPickupTime = pickupTime || '10:00';
     const resolvedDropoffTime = resolvedPickupTime;
 
-    // Platform transaction fee: $1.50 per day
+    // Platform transaction fee: $1.50 per day (charged to driver)
     const platformFeePerDay = 1.50;
     const platformFee = platformFeePerDay * totalDays;
     const rentalSubtotal = totalPrice; // Rental amount before fees
     totalPrice = totalPrice + platformFee;
 
-    // Revenue split: host gets rental subtotal, platform keeps fee (+ insurance added later)
-    const hostEarnings = rentalSubtotal;
-    const platformRevenue = platformFee;
+    // Host platform fee: $1.50 per day (deducted from host earnings, goes to RentUFS)
+    const hostPlatformFeePerDay = 1.50;
+    const hostPlatformFee = hostPlatformFeePerDay * totalDays;
+
+    // Revenue split: host gets rental subtotal minus host fee, platform (RentUFS) keeps driver fee + host fee (+ insurance added later)
+    const hostEarnings = rentalSubtotal - hostPlatformFee;
+    const platformRevenue = platformFee + hostPlatformFee;
 
     const booking = new Booking({
       vehicle: vehicleId,
@@ -211,6 +215,8 @@ router.post('/', auth, async (req, res) => {
       totalPrice,
       platformFeePerDay,
       platformFee,
+      hostPlatformFeePerDay,
+      hostPlatformFee,
       hostEarnings,
       platformRevenue,
       status: 'awaiting_payment',
@@ -230,7 +236,7 @@ router.post('/', auth, async (req, res) => {
 router.get('/my-bookings', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({ driver: req.user._id, status: { $ne: 'awaiting_payment' } })
-      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory')
+      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory -hostPlatformFeePerDay -hostPlatformFee -hostEarnings -platformRevenue')
       .populate('vehicle', 'nickname make model year images registrationImage pricePerDay')
       .populate('host', 'firstName lastName email phone profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
       .sort({ createdAt: -1 })
@@ -274,6 +280,16 @@ router.get('/:id', auth, async (req, res) => {
     if (booking.driver._id.toString() !== req.user._id.toString() &&
         booking.host._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // Strip host-only financial fields when driver is viewing
+    if (booking.driver._id.toString() === req.user._id.toString()) {
+      const bookingObj = booking.toObject();
+      delete bookingObj.hostPlatformFeePerDay;
+      delete bookingObj.hostPlatformFee;
+      delete bookingObj.hostEarnings;
+      delete bookingObj.platformRevenue;
+      return res.json(bookingObj);
     }
 
     res.json(booking);
@@ -422,9 +438,13 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
       booking.insurance.totalCost = (booking.insurance.totalCost || 0) + extensionInsurance;
     }
 
-    // Extension rental goes to host, platform fee + insurance to platform
-    booking.hostEarnings = (booking.hostEarnings || 0) + extensionRental;
-    booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionInsurance;
+    // Host platform fee on extension: $1.50/day (deducted from host, goes to RentUFS)
+    const extensionHostFee = extensionDays * (booking.hostPlatformFeePerDay || 1.50);
+    booking.hostPlatformFee = (booking.hostPlatformFee || 0) + extensionHostFee;
+
+    // Extension rental minus host fee goes to host; driver fee + host fee + insurance to RentUFS
+    booking.hostEarnings = (booking.hostEarnings || 0) + extensionRental - extensionHostFee;
+    booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee + extensionInsurance;
 
     // Track extension history
     if (!booking.extensions) {

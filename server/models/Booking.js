@@ -74,8 +74,16 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  // Revenue split: platform keeps platformFee + insurance, host gets the rest
+  // Revenue split: platform keeps platformFee + insurance + hostPlatformFee, host gets the rest
   hostEarnings: {
+    type: Number,
+    default: 0
+  },
+  hostPlatformFeePerDay: {
+    type: Number,
+    default: 1.50
+  },
+  hostPlatformFee: {
     type: Number,
     default: 0
   },

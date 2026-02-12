@@ -368,14 +368,19 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       const newEndDate = new Date(booking.endDate);
       newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
+      // Host platform fee on extension: $1.50/day (deducted from host, goes to RentUFS)
+      const extensionHostFee = extensionDays * (booking.hostPlatformFeePerDay || 1.50);
+
       // Update booking
       booking.endDate = newEndDate;
       booking.totalDays = booking.totalDays + extensionDays;
       booking.totalPrice = booking.totalPrice + extensionCost;
       booking.platformFee = (booking.platformFee || 0) + extensionPlatformFee;
+      booking.hostPlatformFee = (booking.hostPlatformFee || 0) + extensionHostFee;
 
-      // Update host earnings (rental goes to host, platform fee stays with platform)
-      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost;
+      // Update host earnings (rental minus host fee goes to host, all fees go to RentUFS)
+      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost - extensionHostFee;
+      booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee;
 
       // Track extension
       if (!booking.extensions) {
@@ -482,11 +487,16 @@ router.post('/webhook', async (req, res) => {
             const newEndDate = new Date(existingBooking.endDate);
             newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
+            // Host platform fee on extension: $1.50/day (deducted from host, goes to RentUFS)
+            const extensionHostFee = extensionDays * (existingBooking.hostPlatformFeePerDay || 1.50);
+
             existingBooking.endDate = newEndDate;
             existingBooking.totalDays = existingBooking.totalDays + extensionDays;
             existingBooking.totalPrice = existingBooking.totalPrice + extensionCost;
             existingBooking.platformFee = (existingBooking.platformFee || 0) + extensionPlatformFee;
-            existingBooking.hostEarnings = (existingBooking.hostEarnings || 0) + rentalCost;
+            existingBooking.hostPlatformFee = (existingBooking.hostPlatformFee || 0) + extensionHostFee;
+            existingBooking.hostEarnings = (existingBooking.hostEarnings || 0) + rentalCost - extensionHostFee;
+            existingBooking.platformRevenue = (existingBooking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee;
 
             if (!existingBooking.extensions) {
               existingBooking.extensions = [];
