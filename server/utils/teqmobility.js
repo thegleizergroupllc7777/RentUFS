@@ -44,6 +44,9 @@ const STATE_ABBR = {
   'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC'
 };
 
+// Strip non-alphanumeric characters from zip codes (TeqMobility rejects hyphens, spaces, etc.)
+const sanitizeZip = (zip) => (zip || '').replace(/[^a-zA-Z0-9]/g, '');
+
 const toStateAbbr = (state) => {
   if (!state) return '';
   const trimmed = state.trim();
@@ -116,7 +119,7 @@ const upsertOwner = async (host) => {
       line1: addr.street || addr.line1 || '',
       city: addr.city || '',
       state: toStateAbbr(addr.state),
-      zip_code: addr.zipCode || ''
+      zip_code: sanitizeZip(addr.zipCode)
     };
   }
 
@@ -202,7 +205,7 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
       line1: driver.address?.street || '',
       city: driver.address?.city || '',
       state: toStateAbbr(driver.address?.state),
-      zip_code: driver.address?.zipCode || ''
+      zip_code: sanitizeZip(driver.address?.zipCode)
     }
   };
 
@@ -213,7 +216,7 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     pickup_address: {
       state: toStateAbbr(vehicle.location?.state),
       city: vehicle.location?.city || '',
-      zip_code: vehicle.location?.zipCode || '',
+      zip_code: sanitizeZip(vehicle.location?.zipCode),
       line1: vehicle.location?.address || ''
     }
   };
