@@ -920,9 +920,16 @@ router.post('/:id/host-cancel', auth, async (req, res) => {
     let refundResult = null;
     if (booking.paymentStatus === 'paid' && booking.paymentSessionId) {
       try {
-        // Retrieve the checkout session to get the payment intent
-        const session = await stripe.checkout.sessions.retrieve(booking.paymentSessionId);
-        const paymentIntentId = session.payment_intent;
+        let paymentIntentId;
+
+        // paymentSessionId may be a checkout session ID (cs_...) or a payment intent ID (pi_...)
+        if (booking.paymentSessionId.startsWith('pi_')) {
+          paymentIntentId = booking.paymentSessionId;
+        } else {
+          // Retrieve the checkout session to get the payment intent
+          const session = await stripe.checkout.sessions.retrieve(booking.paymentSessionId);
+          paymentIntentId = session.payment_intent;
+        }
 
         if (paymentIntentId) {
           // Create a full refund
