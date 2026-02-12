@@ -5,12 +5,14 @@ const Booking = require('../models/Booking');
 const router = express.Router();
 
 // Insurance plans with pricing (configurable via API or static)
+// teqCoverageType maps to TeqMobility API coverage types: LIABILITY or FULL_COVERAGE
 const INSURANCE_PLANS = {
   none: {
     id: 'none',
     name: 'No Insurance',
     description: 'I will use my own insurance coverage',
     pricePerDay: 0,
+    teqCoverageType: null,
     coverage: {
       liability: false,
       collision: false,
@@ -24,6 +26,7 @@ const INSURANCE_PLANS = {
     name: 'Basic Protection',
     description: 'Liability coverage only - protects against third-party claims',
     pricePerDay: 15,
+    teqCoverageType: 'LIABILITY',
     coverage: {
       liability: true,
       collision: false,
@@ -42,6 +45,7 @@ const INSURANCE_PLANS = {
     name: 'Standard Protection',
     description: 'Collision and liability coverage - covers most rental situations',
     pricePerDay: 29,
+    teqCoverageType: 'FULL_COVERAGE',
     coverage: {
       liability: true,
       collision: true,
@@ -61,6 +65,7 @@ const INSURANCE_PLANS = {
     name: 'Premium Protection',
     description: 'Full comprehensive coverage - complete peace of mind',
     pricePerDay: 45,
+    teqCoverageType: 'FULL_COVERAGE',
     coverage: {
       liability: true,
       collision: true,

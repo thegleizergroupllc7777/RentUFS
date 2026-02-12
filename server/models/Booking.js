@@ -208,6 +208,7 @@ const bookingSchema = new mongoose.Schema({
   teqMobility: {
     coverageId: { type: String, default: null },
     ownerId: { type: String, default: null },
+    coverageType: { type: String, enum: ['LIABILITY', 'FULL_COVERAGE', null], default: null },
     status: { type: String, default: null },
     cardUrl: { type: String, default: null },
     cardImage: { type: String, default: null },

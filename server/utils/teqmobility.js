@@ -65,6 +65,22 @@ const isConfigured = () => {
 };
 
 /**
+ * Map RentUFS insurance plan type to TeqMobility coverage type.
+ * TeqMobility supports: LIABILITY, FULL_COVERAGE
+ */
+const planToTeqCoverageType = (planType) => {
+  switch (planType) {
+    case 'basic':
+      return 'LIABILITY';
+    case 'standard':
+    case 'premium':
+      return 'FULL_COVERAGE';
+    default:
+      return 'FULL_COVERAGE'; // Default to full coverage for safety
+  }
+};
+
+/**
  * 1. Upsert Owner - Creates or updates an owner (the vehicle host)
  * PUT /api/v2/owners
  */
@@ -209,8 +225,12 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     }
   };
 
+  // Map the selected insurance plan to TeqMobility coverage type (LIABILITY or FULL_COVERAGE)
+  const coverageType = planToTeqCoverageType(booking.insurance?.type);
+
   const body = {
     usage: 'RIDESHARE',
+    type: coverageType,
     external_id: booking._id.toString(),
     driver: driverObj,
     pickup_address: {
@@ -299,6 +319,7 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
       coverageId: coverage.id,
       ownerId: owner.id,
       status: coverage.status,
+      coverageType: coverage.type || planToTeqCoverageType(booking.insurance?.type),
       cardUrl: coverage.card_url || null
     };
   } catch (error) {
@@ -345,6 +366,7 @@ const stopRentalCoverage = async (vinOrCoverageId) => {
 
 module.exports = {
   isConfigured,
+  planToTeqCoverageType,
   upsertOwner,
   upsertVehicle,
   changeVehicleOwner,

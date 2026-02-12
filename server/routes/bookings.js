@@ -556,6 +556,7 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
           const teqData = {
             coverageId: coverageResult.coverageId || null,
             ownerId: coverageResult.ownerId || null,
+            coverageType: coverageResult.coverageType || null,
             status: coverageResult.success ? coverageResult.status : 'failed',
             cardUrl: coverageResult.cardUrl || null,
             cardImage: null,
@@ -636,36 +637,12 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     booking.payoutStatus = 'pending';
     booking.payoutEligibleDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    // TeqMobility Dynamic Insurance - Stop on-rent coverage (non-blocking)
-    if (booking.teqMobility?.coverageId) {
-      const stopResult = await stopRentalCoverage(booking.teqMobility.coverageId);
-      booking.teqMobility.stoppedAt = new Date();
-      if (stopResult.success) {
-        booking.teqMobility.status = stopResult.status;
-      } else {
-        // Try stopping by VIN as fallback
-        const vinStopResult = await stopRentalCoverage(booking.vehicle.vin);
-        if (vinStopResult.success) {
-          booking.teqMobility.status = vinStopResult.status;
-        } else {
-          booking.teqMobility.error = stopResult.error || 'Failed to stop coverage';
-        }
-      }
-    } else if (booking.vehicle?.vin) {
-      // No coverage ID stored, try by VIN
-      const stopResult = await stopRentalCoverage(booking.vehicle.vin);
-      if (stopResult.success) {
-        booking.teqMobility = booking.teqMobility || {};
-        booking.teqMobility.stoppedAt = new Date();
-        booking.teqMobility.status = stopResult.status;
-      }
-    }
-
     await booking.save();
 
     // Set vehicle back to available after trip completion
     await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true });
 
+    // Respond immediately - don't block on TeqMobility stop call
     res.json({
       success: true,
       message: 'Vehicle returned successfully! Thank you for renting with us!',
@@ -675,6 +652,43 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
         returnInspection: booking.returnInspection
       }
     });
+
+    // TeqMobility Dynamic Insurance - Stop on-rent coverage (fire-and-forget)
+    // Runs in background after response is sent so return flow isn't delayed
+    (async () => {
+      try {
+        let stopResult;
+        if (booking.teqMobility?.coverageId) {
+          stopResult = await stopRentalCoverage(booking.teqMobility.coverageId);
+          if (!stopResult.success && booking.vehicle?.vin) {
+            // Try stopping by VIN as fallback
+            stopResult = await stopRentalCoverage(booking.vehicle.vin);
+          }
+        } else if (booking.vehicle?.vin) {
+          stopResult = await stopRentalCoverage(booking.vehicle.vin);
+        }
+
+        if (stopResult) {
+          const teqUpdate = {
+            'teqMobility.stoppedAt': new Date(),
+            'teqMobility.status': stopResult.success ? stopResult.status : (booking.teqMobility?.status || 'failed'),
+          };
+          if (!stopResult.success) {
+            teqUpdate['teqMobility.error'] = stopResult.error || 'Failed to stop coverage';
+          }
+          await Booking.findByIdAndUpdate(booking._id, { $set: teqUpdate });
+          if (stopResult.success) {
+            console.log(`🛡️ TeqMobility: Coverage stopped for booking ${booking._id}`);
+          }
+        }
+      } catch (bgErr) {
+        console.error('🛡️ TeqMobility: Background coverage stop error:', bgErr.message);
+        await Booking.findByIdAndUpdate(booking._id, {
+          $set: { 'teqMobility.error': bgErr.message, 'teqMobility.stoppedAt': new Date() }
+        }).catch(() => {});
+      }
+    })();
+    return; // Prevent outer catch from trying to send response
   } catch (error) {
     console.error('Return inspection error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
