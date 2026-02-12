@@ -140,17 +140,14 @@ const HostReservationDetail = () => {
       if (!token) { navigate('/login'); return; }
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/bookings/host-bookings`, { headers });
-      const found = response.data.find(b => b._id === bookingId);
-
-      if (!found) {
-        setError('Reservation not found');
-        setLoading(false);
-        return;
-      }
-      setBooking(found);
+      const response = await axios.get(`${API_URL}/api/bookings/${bookingId}`, { headers });
+      setBooking(response.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load reservation');
+      if (err.response?.status === 404) {
+        setError('Reservation not found');
+      } else {
+        setError(err.response?.data?.message || 'Failed to load reservation');
+      }
     } finally {
       setLoading(false);
     }
