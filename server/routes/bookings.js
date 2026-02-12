@@ -520,26 +520,22 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
     // Mark vehicle as unavailable while actively rented
     await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, { availability: false });
 
-    // TeqMobility Dynamic Insurance - Start on-rent coverage (non-blocking)
+    // Fetch driver for TeqMobility before sending response
     const driver = await User.findById(req.user._id);
-    const coverageResult = await startRentalCoverage(
-      booking.host,
-      driver,
-      booking.vehicle,
-      booking
-    );
 
+    // Initialize TeqMobility status as pending
     booking.teqMobility = {
-      coverageId: coverageResult.coverageId || null,
-      ownerId: coverageResult.ownerId || null,
-      status: coverageResult.success ? coverageResult.status : 'failed',
-      cardUrl: coverageResult.cardUrl || null,
-      startedAt: coverageResult.success ? new Date() : null,
-      error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
+      coverageId: null,
+      ownerId: null,
+      status: 'pending',
+      cardUrl: null,
+      startedAt: null,
+      error: null
     };
 
     await booking.save();
 
+    // Respond immediately - don't block on TeqMobility
     res.json({
       success: true,
       message: 'Reservation started successfully! Drive safely!',
@@ -547,13 +543,36 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
         _id: booking._id,
         status: booking.status,
         pickupInspection: booking.pickupInspection,
-        insuranceCoverage: coverageResult.success ? {
-          active: true,
-          coverageId: coverageResult.coverageId,
-          cardUrl: coverageResult.cardUrl
-        } : null
+        insuranceCoverage: null // Updated asynchronously
       }
     });
+
+    // TeqMobility Dynamic Insurance - Start on-rent coverage (fire-and-forget)
+    // Runs in background after response is sent so booking isn't delayed
+    startRentalCoverage(booking.host, driver, booking.vehicle, booking)
+      .then(async (coverageResult) => {
+        try {
+          await Booking.findByIdAndUpdate(booking._id, {
+            teqMobility: {
+              coverageId: coverageResult.coverageId || null,
+              ownerId: coverageResult.ownerId || null,
+              status: coverageResult.success ? coverageResult.status : 'failed',
+              cardUrl: coverageResult.cardUrl || null,
+              startedAt: coverageResult.success ? new Date() : null,
+              error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
+            }
+          });
+          if (coverageResult.success) {
+            console.log(`🛡️ TeqMobility: Coverage activated for booking ${booking._id}`);
+          }
+        } catch (dbErr) {
+          console.error('🛡️ TeqMobility: Failed to save coverage result:', dbErr.message);
+        }
+      })
+      .catch((err) => {
+        console.error('🛡️ TeqMobility: Background coverage error:', err.message);
+      });
+    return; // Prevent outer catch from trying to send response
   } catch (error) {
     console.error('Start inspection error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
