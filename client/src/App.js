@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
+import HostRoute from './components/HostRoute';
 
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
@@ -17,6 +18,7 @@ import ReservationDetail from './pages/Driver/ReservationDetail';
 import DriverProfile from './pages/Driver/Profile';
 
 // Host pages
+import HostRegistration from './pages/Host/HostRegistration';
 import HostDashboard from './pages/Host/HostDashboard';
 import AddVehicle from './pages/Host/AddVehicle';
 import EditVehicle from './pages/Host/EditVehicle';
@@ -68,70 +70,80 @@ function App() {
               }
             />
 
-            {/* Host Routes */}
+            {/* Host Registration (for drivers becoming hosts) */}
+            <Route
+              path="/host/register"
+              element={
+                <PrivateRoute>
+                  <HostRegistration />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Host Routes (requires host or both userType) */}
             <Route
               path="/host/dashboard"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <HostDashboard />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
             <Route
               path="/host/add-vehicle"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <AddVehicle />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
             <Route
               path="/host/edit-vehicle/:id"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <EditVehicle />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
             <Route
               path="/host/bookings"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <HostBookings />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
             <Route
               path="/host/reservation/:bookingId"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <HostReservationDetail />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
             <Route
               path="/host/reports"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <HostReports />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
 
             <Route
               path="/host/tax-settings"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <HostTaxSettings />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
             <Route
               path="/host/payouts"
               element={
-                <PrivateRoute>
+                <HostRoute>
                   <HostPayouts />
-                </PrivateRoute>
+                </HostRoute>
               }
             />
 

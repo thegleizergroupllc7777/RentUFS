@@ -82,11 +82,8 @@ const Navbar = () => {
         localStorage.setItem('activeMode', 'host');
         navigate('/host/dashboard');
       } else {
-        // User needs to become a host (will be set to 'both')
-        await updateUserType('host');
-        setActiveMode('host');
-        localStorage.setItem('activeMode', 'host');
-        navigate('/host/dashboard');
+        // User needs to register as a host first
+        navigate('/host/register');
       }
     } catch (error) {
       console.error('Failed to switch to host:', error);
