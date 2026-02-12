@@ -9,6 +9,8 @@ import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
+import { PayoutsContent } from '../Host/Payouts';
+import '../Host/Payouts.css';
 import './Driver.css';
 
 const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
@@ -234,10 +236,6 @@ const DriverProfile = () => {
   }, [reportPeriod]);
 
   const handleTabChange = (tab) => {
-    if (tab === 'payouts') {
-      navigate('/host/payouts');
-      return;
-    }
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -2311,6 +2309,7 @@ const DriverProfile = () => {
               {activeTab === 'license' && renderLicenseTab()}
               {activeTab === 'payment' && renderPaymentTab()}
               {activeTab === 'tax' && isHost && renderTaxTab()}
+              {activeTab === 'payouts' && isHost && <PayoutsContent />}
               {activeTab === 'reports' && isHost && renderReportsTab()}
               {activeTab === 'settings' && renderSettingsTab()}
             </div>

@@ -8,9 +8,13 @@
 .payouts-container {
   flex: 1;
   max-width: 1200px;
+  padding: 0;
+  width: 100%;
+}
+
+.payouts-page .payouts-container {
   margin: 0 auto;
   padding: 2rem 1.5rem;
-  width: 100%;
 }
 
 .payouts-header {
@@ -379,7 +383,7 @@
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1.5rem;
 }
 
