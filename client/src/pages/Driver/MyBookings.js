@@ -973,6 +973,16 @@ const MyBookings = () => {
                           </button>
                         )}
 
+                        {booking.status === 'active' && booking.teqMobility?.cardUrl && (
+                          <button
+                            onClick={() => window.open(booking.teqMobility.cardUrl, '_blank', 'noopener,noreferrer')}
+                            className="btn btn-secondary"
+                            style={{ background: '#0ea5e9', color: 'white', border: 'none' }}
+                          >
+                            View Insurance Card
+                          </button>
+                        )}
+
                         {canExtend(booking) && (
                           <button
                             onClick={() => openExtendModal(booking)}
