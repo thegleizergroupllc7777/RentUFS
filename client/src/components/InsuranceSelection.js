@@ -90,11 +90,11 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
         {plans.map((plan) => (
           <div
             key={plan.id}
-            className={`insurance-plan ${selectedPlan === plan.id ? 'selected' : ''} ${plan.id === 'premium' ? 'recommended' : ''}`}
+            className={`insurance-plan ${selectedPlan === plan.id ? 'selected' : ''} ${plan.id === 'full_coverage' ? 'recommended' : ''}`}
             onClick={() => !updating && handleSelectPlan(plan.id)}
           >
-            {plan.id === 'premium' && (
-              <div className="plan-badge">Most Popular</div>
+            {plan.id === 'full_coverage' && (
+              <div className="plan-badge">Recommended</div>
             )}
 
             <div className="plan-header">
@@ -152,10 +152,6 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
                 <div className={`coverage-item ${plan.coverage.comprehensive ? 'included' : 'excluded'}`}>
                   <span className="coverage-icon">{plan.coverage.comprehensive ? '&#10003;' : '&#10005;'}</span>
                   Comprehensive
-                </div>
-                <div className={`coverage-item ${plan.coverage.roadsideAssistance ? 'included' : 'excluded'}`}>
-                  <span className="coverage-icon">{plan.coverage.roadsideAssistance ? '&#10003;' : '&#10005;'}</span>
-                  Roadside
                 </div>
               </div>
             )}

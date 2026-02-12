@@ -177,7 +177,7 @@ const bookingSchema = new mongoose.Schema({
   insurance: {
     type: {
       type: String,
-      enum: ['none', 'basic', 'standard', 'premium'],
+      enum: ['none', 'liability', 'full_coverage'],
       default: 'none'
     },
     provider: {

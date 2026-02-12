@@ -66,14 +66,13 @@ const isConfigured = () => {
 
 /**
  * Map RentUFS insurance plan type to TeqMobility coverage type.
- * TeqMobility supports: LIABILITY, FULL_COVERAGE
+ * Plan IDs directly match TeqMobility types: liability → LIABILITY, full_coverage → FULL_COVERAGE
  */
 const planToTeqCoverageType = (planType) => {
   switch (planType) {
-    case 'basic':
+    case 'liability':
       return 'LIABILITY';
-    case 'standard':
-    case 'premium':
+    case 'full_coverage':
       return 'FULL_COVERAGE';
     default:
       return 'FULL_COVERAGE'; // Default to full coverage for safety

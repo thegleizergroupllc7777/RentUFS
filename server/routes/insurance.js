@@ -4,8 +4,7 @@ const Booking = require('../models/Booking');
 
 const router = express.Router();
 
-// Insurance plans with pricing (configurable via API or static)
-// teqCoverageType maps to TeqMobility API coverage types: LIABILITY or FULL_COVERAGE
+// Insurance plans aligned with TeqMobility coverage types: LIABILITY and FULL_COVERAGE
 const INSURANCE_PLANS = {
   none: {
     id: 'none',
@@ -16,71 +15,43 @@ const INSURANCE_PLANS = {
     coverage: {
       liability: false,
       collision: false,
-      comprehensive: false,
-      personalInjury: false,
-      roadsideAssistance: false
+      comprehensive: false
     }
   },
-  basic: {
-    id: 'basic',
-    name: 'Basic Protection',
+  liability: {
+    id: 'liability',
+    name: 'Liability Protection',
     description: 'Liability coverage only - protects against third-party claims',
     pricePerDay: 15,
     teqCoverageType: 'LIABILITY',
     coverage: {
       liability: true,
       collision: false,
-      comprehensive: false,
-      personalInjury: false,
-      roadsideAssistance: false
+      comprehensive: false
     },
     details: [
-      'Up to $50,000 liability coverage',
+      'Third-party bodily injury coverage',
       'Third-party property damage',
       'Basic legal protection'
     ]
   },
-  standard: {
-    id: 'standard',
-    name: 'Standard Protection',
-    description: 'Collision and liability coverage - covers most rental situations',
+  full_coverage: {
+    id: 'full_coverage',
+    name: 'Full Coverage Protection',
+    description: 'Complete coverage - liability, collision, and comprehensive protection',
     pricePerDay: 29,
     teqCoverageType: 'FULL_COVERAGE',
     coverage: {
       liability: true,
       collision: true,
-      comprehensive: false,
-      personalInjury: false,
-      roadsideAssistance: true
+      comprehensive: true
     },
     details: [
-      'Up to $100,000 liability coverage',
+      'Liability coverage (bodily injury & property damage)',
       'Collision damage waiver (CDW)',
+      'Comprehensive coverage (theft, vandalism, weather)',
       '24/7 roadside assistance',
       '$500 deductible'
-    ]
-  },
-  premium: {
-    id: 'premium',
-    name: 'Premium Protection',
-    description: 'Full comprehensive coverage - complete peace of mind',
-    pricePerDay: 45,
-    teqCoverageType: 'FULL_COVERAGE',
-    coverage: {
-      liability: true,
-      collision: true,
-      comprehensive: true,
-      personalInjury: true,
-      roadsideAssistance: true
-    },
-    details: [
-      'Up to $300,000 liability coverage',
-      'Full collision damage waiver',
-      'Comprehensive coverage (theft, vandalism, weather)',
-      'Personal injury protection',
-      '24/7 roadside assistance',
-      '$0 deductible',
-      'Loss of use coverage'
     ]
   }
 };
@@ -263,9 +234,7 @@ router.post('/remove-from-booking', auth, async (req, res) => {
       coverage: {
         liability: false,
         collision: false,
-        comprehensive: false,
-        personalInjury: false,
-        roadsideAssistance: false
+        comprehensive: false
       }
     };
 
