@@ -13,16 +13,14 @@ const teqApi = axios.create({
   }
 });
 
-// Add auth header to every request
-// TeqMobility uses x-api-key header for authentication
+// Add auth headers to every request
+// TeqMobility docs show Bearer token auth; send both Bearer and x-api-key for compatibility
 teqApi.interceptors.request.use((config) => {
   if (TEQMOBILITY_API_KEY) {
+    config.headers['Authorization'] = `Bearer ${TEQMOBILITY_API_KEY}`;
     config.headers['x-api-key'] = TEQMOBILITY_API_KEY;
   }
-  // Only log non-coverage requests in detail (coverage logs its own discovery)
-  if (!config.url.includes('coverage') && !config.url.includes('on-rent')) {
-    console.log(`🛡️ TeqMobility: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
-  }
+  console.log(`🛡️ TeqMobility: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
 
@@ -170,7 +168,7 @@ const changeVehicleOwner = async (vin, ownerId) => {
 
 /**
  * 4. Start On-Rent Coverage - Starts insurance coverage for a rental
- * Tries multiple endpoint patterns (POST and PUT) to discover the correct one.
+ * POST /api/v1/coverages/on-rent (confirmed from TeqMobility API docs)
  * @param {string} vehicleId - TeqMobility vehicle ID (from upsertVehicle response)
  * @param {string} vin - Vehicle VIN
  */
@@ -180,10 +178,8 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     lastname: driver.lastName,
     email: driver.email,
     phone: driver.phone || '',
-    license: {
-      number: driver.driverLicense?.licenseNumber || '',
-      state: toStateAbbr(driver.driverLicense?.state),
-    },
+    dl_number: driver.driverLicense?.licenseNumber || '',
+    dl_state: toStateAbbr(driver.driverLicense?.state),
     address: {
       line1: driver.address?.street || '',
       city: driver.address?.city || '',
@@ -194,138 +190,64 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
 
   // Add driver birth_date if available
   if (driver.dateOfBirth) {
-    driverBody.license.birth_date = new Date(driver.dateOfBirth).toISOString().split('T')[0];
+    driverBody.birth_date = new Date(driver.dateOfBirth).toISOString().split('T')[0];
   }
 
   // Add license expiration if available
   if (driver.driverLicense?.expirationDate) {
-    driverBody.license.expiration_date = new Date(driver.driverLicense.expirationDate).toISOString().split('T')[0];
+    driverBody.dl_expiration_date = new Date(driver.driverLicense.expirationDate).toISOString().split('T')[0];
   }
 
-  const pickupAddress = {
-    state: toStateAbbr(vehicle.location?.state),
-    city: vehicle.location?.city || '',
-    zip_code: vehicle.location?.zipCode || '',
-    line1: vehicle.location?.address || ''
-  };
-
-  // Body without VIN (for endpoints that have VIN in URL)
-  const bodyWithoutVin = {
+  const body = {
+    vin: vin,
+    vehicle_id: vehicleId,
     usage: 'RIDESHARE',
     external_id: booking._id.toString(),
     driver: driverBody,
-    pickup_address: pickupAddress
-  };
-
-  // Body with VIN (for endpoints without VIN in URL)
-  const bodyWithVin = {
-    ...bodyWithoutVin,
-    vin: vin,
-    vehicle_id: vehicleId
-  };
-
-  console.log(`🛡️ TeqMobility: Starting coverage discovery - vehicleId=${vehicleId}, vin=${vin}`);
-
-  // Build endpoint variants to try: both POST and PUT, v1 and v2, various paths
-  // Known working patterns: PUT /api/v2/owners, PUT /api/v1/vehicles, POST /api/v1/vehicles/{vin}/switch-owner
-  const endpoints = [];
-
-  // Pattern 1: Nested under vehicles (matches switch-owner pattern) — most likely
-  endpoints.push({ method: 'post', url: `/api/v1/vehicles/${vin}/on-rent`, body: bodyWithoutVin });
-  endpoints.push({ method: 'put', url: `/api/v1/vehicles/${vin}/on-rent`, body: bodyWithoutVin });
-  endpoints.push({ method: 'post', url: `/api/v2/vehicles/${vin}/on-rent`, body: bodyWithoutVin });
-  endpoints.push({ method: 'put', url: `/api/v2/vehicles/${vin}/on-rent`, body: bodyWithoutVin });
-
-  // Pattern 2: coverage (singular) under vehicles
-  endpoints.push({ method: 'post', url: `/api/v1/vehicles/${vin}/coverage`, body: bodyWithoutVin });
-  endpoints.push({ method: 'put', url: `/api/v1/vehicles/${vin}/coverage`, body: bodyWithoutVin });
-  endpoints.push({ method: 'post', url: `/api/v2/vehicles/${vin}/coverage`, body: bodyWithoutVin });
-  endpoints.push({ method: 'put', url: `/api/v2/vehicles/${vin}/coverage`, body: bodyWithoutVin });
-
-  // Pattern 3: coverages/on-rent with VIN in body
-  endpoints.push({ method: 'post', url: `/api/v2/coverages/on-rent`, body: bodyWithVin });
-  endpoints.push({ method: 'put', url: `/api/v2/coverages/on-rent`, body: bodyWithVin });
-  endpoints.push({ method: 'post', url: `/api/v1/coverages/on-rent`, body: bodyWithVin });
-
-  // Pattern 4: coverages (generic) with type in body
-  endpoints.push({ method: 'post', url: `/api/v2/coverages`, body: { ...bodyWithVin, type: 'ON_RENT' } });
-  endpoints.push({ method: 'put', url: `/api/v2/coverages`, body: { ...bodyWithVin, type: 'ON_RENT' } });
-  endpoints.push({ method: 'post', url: `/api/v1/coverages`, body: { ...bodyWithVin, type: 'ON_RENT' } });
-
-  // Pattern 5: coverage (singular, no path param)
-  endpoints.push({ method: 'put', url: `/api/v2/coverage`, body: { ...bodyWithVin, type: 'ON_RENT' } });
-  endpoints.push({ method: 'put', url: `/api/v1/coverage`, body: { ...bodyWithVin, type: 'ON_RENT' } });
-
-  // Pattern 6: start-coverage action on vehicle (like switch-owner)
-  endpoints.push({ method: 'post', url: `/api/v1/vehicles/${vin}/start-coverage`, body: bodyWithoutVin });
-  endpoints.push({ method: 'post', url: `/api/v2/vehicles/${vin}/start-coverage`, body: bodyWithoutVin });
-
-  // Pattern 7: coverages/on-rent/{vin}
-  endpoints.push({ method: 'post', url: `/api/v2/coverages/on-rent/${vin}`, body: bodyWithoutVin });
-  endpoints.push({ method: 'post', url: `/api/v1/coverages/on-rent/${vin}`, body: bodyWithoutVin });
-
-  // Deduplicate: add vehicleId-based paths only if different from VIN
-  if (vehicleId && vehicleId !== vin) {
-    endpoints.push({ method: 'post', url: `/api/v2/coverages/on-rent/${vehicleId}`, body: bodyWithoutVin });
-    endpoints.push({ method: 'post', url: `/api/v1/coverages/on-rent/${vehicleId}`, body: bodyWithoutVin });
-  }
-
-  let lastError = null;
-  let attemptCount = 0;
-  for (const { method, url, body } of endpoints) {
-    attemptCount++;
-    try {
-      const response = await teqApi[method](url, body);
-      console.log(`🛡️ TeqMobility: ✅ Coverage started via ${method.toUpperCase()} ${url} (attempt ${attemptCount}/${endpoints.length})`);
-      return response.data;
-    } catch (err) {
-      const status = err.response?.status;
-      lastError = err;
-      // Only continue on 404 (route doesn't exist). Stop on other errors — endpoint exists but request is wrong.
-      if (status !== 404) {
-        const msg = err.response?.data?.message || err.message;
-        console.log(`🛡️ TeqMobility: ⚠️ Non-404 from ${method.toUpperCase()} ${url} → HTTP ${status}: ${msg}`);
-        console.log(`🛡️ TeqMobility: Full response:`, JSON.stringify(err.response?.data, null, 2));
-        throw err;
-      }
+    pickup_address: {
+      state: toStateAbbr(vehicle.location?.state),
+      city: vehicle.location?.city || '',
+      zip_code: vehicle.location?.zipCode || '',
+      line1: vehicle.location?.address || ''
     }
-  }
+  };
 
-  // All endpoints returned 404
-  console.error(`🛡️ TeqMobility: ❌ All ${attemptCount} coverage endpoint variants returned 404. Contact TeqMobility support for the correct API endpoint.`);
-  throw lastError;
+  console.log(`🛡️ TeqMobility: Starting on-rent coverage - vehicleId=${vehicleId}, vin=${vin}`);
+  console.log(`🛡️ TeqMobility: Coverage request body:`, JSON.stringify(body, null, 2));
+
+  try {
+    const response = await teqApi.post('/api/v1/coverages/on-rent', body);
+    console.log(`🛡️ TeqMobility: ✅ Coverage started successfully`);
+    console.log(`🛡️ TeqMobility: Coverage response:`, JSON.stringify(response.data, null, 2));
+    return response.data;
+  } catch (err) {
+    const status = err.response?.status;
+    const respData = err.response?.data;
+    console.error(`🛡️ TeqMobility: ❌ Coverage start failed - HTTP ${status}`);
+    console.error(`🛡️ TeqMobility: Response:`, JSON.stringify(respData, null, 2));
+    throw err;
+  }
 };
 
 /**
  * 5. Stop On-Rent Coverage - Stops insurance coverage when rental ends
- * Tries multiple endpoint patterns.
+ * POST /api/v1/coverages/on-rent/{coverageId}/stop (confirmed from TeqMobility API docs)
  */
 const stopOnRentCoverage = async (coverageId) => {
-  const endpoints = [
-    `/api/v2/coverages/${coverageId}/stop`,
-    `/api/v1/coverages/${coverageId}/stop`,
-    `/api/v2/coverages/on-rent/${coverageId}/stop`,
-    `/api/v1/coverages/on-rent/${coverageId}/stop`,
-  ];
+  console.log(`🛡️ TeqMobility: Stopping on-rent coverage - coverageId=${coverageId}`);
 
-  let lastError = null;
-  for (const endpoint of endpoints) {
-    try {
-      console.log(`🛡️ TeqMobility: Trying stop endpoint: POST ${endpoint}`);
-      const response = await teqApi.post(endpoint, {});
-      console.log(`🛡️ TeqMobility: ✅ Coverage stopped via ${endpoint}`);
-      return response.data;
-    } catch (err) {
-      const status = err.response?.status;
-      const msg = err.response?.data?.message || '';
-      console.log(`🛡️ TeqMobility: ❌ POST ${endpoint} → HTTP ${status}, msg: ${msg}`);
-      lastError = err;
-      if (status !== 404) {
-        throw err;
-      }
-    }
+  try {
+    const response = await teqApi.post(`/api/v1/coverages/on-rent/${coverageId}/stop`, {});
+    console.log(`🛡️ TeqMobility: ✅ Coverage stopped successfully`);
+    console.log(`🛡️ TeqMobility: Stop response:`, JSON.stringify(response.data, null, 2));
+    return response.data;
+  } catch (err) {
+    const status = err.response?.status;
+    const respData = err.response?.data;
+    console.error(`🛡️ TeqMobility: ❌ Coverage stop failed - HTTP ${status}`);
+    console.error(`🛡️ TeqMobility: Response:`, JSON.stringify(respData, null, 2));
+    throw err;
   }
-  throw lastError;
 };
 
 /**
