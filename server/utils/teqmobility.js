@@ -169,10 +169,11 @@ const changeVehicleOwner = async (vin, ownerId) => {
 
 /**
  * 4. Start On-Rent Coverage - Starts insurance coverage for a rental
- * POST /api/v1/coverages/on-rent/{vehicleId}
+ * Tries multiple endpoint variants to find the correct one.
  * @param {string} vehicleId - TeqMobility vehicle ID (from upsertVehicle response)
+ * @param {string} vin - Vehicle VIN
  */
-const startOnRentCoverage = async (vehicleId, driver, vehicle, booking) => {
+const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => {
   const body = {
     usage: 'RIDESHARE',
     external_id: booking._id.toString(),
@@ -210,19 +211,65 @@ const startOnRentCoverage = async (vehicleId, driver, vehicle, booking) => {
     body.driver.license.expiration_date = new Date(driver.driverLicense.expirationDate).toISOString().split('T')[0];
   }
 
-  const response = await teqApi.post(`/api/v1/coverages/on-rent/${vehicleId}`, body);
-  console.log('🛡️ TeqMobility: On-rent coverage started -', response.data.id, 'Status:', response.data.status);
-  return response.data;
+  // Try endpoint variants — v2 first (owners already use v2), then v1 fallbacks
+  const endpoints = [
+    `/api/v2/coverages/on-rent/${vehicleId}`,
+    `/api/v2/coverages/on-rent/${vin}`,
+    `/api/v1/coverages/on-rent/${vehicleId}`,
+    `/api/v1/coverages/on-rent/${vin}`,
+  ];
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`🛡️ TeqMobility: Trying coverage endpoint: POST ${endpoint}`);
+      const response = await teqApi.post(endpoint, body);
+      console.log(`🛡️ TeqMobility: ✅ Coverage started via ${endpoint} - ID: ${response.data.id}, Status: ${response.data.status}`);
+      return response.data;
+    } catch (err) {
+      const status = err.response?.status;
+      const code = err.response?.data?.code;
+      console.log(`🛡️ TeqMobility: ❌ ${endpoint} failed (HTTP ${status}, code: ${code})`);
+      lastError = err;
+      // Only retry on 404 NOT_FOUND (route doesn't exist) — stop on other errors
+      if (status !== 404) {
+        throw err;
+      }
+    }
+  }
+
+  // All endpoints returned 404
+  console.error('🛡️ TeqMobility: All coverage endpoint variants returned 404');
+  throw lastError;
 };
 
 /**
  * 5. Stop On-Rent Coverage - Stops insurance coverage when rental ends
- * POST /api/v1/coverages/on-rent/{vin_or_coverage_id}/stop
+ * Tries v2 first, then v1 fallback.
  */
-const stopOnRentCoverage = async (vinOrCoverageId) => {
-  const response = await teqApi.post(`/api/v1/coverages/on-rent/${vinOrCoverageId}/stop`, {});
-  console.log('🛡️ TeqMobility: On-rent coverage stopped for', vinOrCoverageId);
-  return response.data;
+const stopOnRentCoverage = async (coverageId) => {
+  const endpoints = [
+    `/api/v2/coverages/on-rent/${coverageId}/stop`,
+    `/api/v1/coverages/on-rent/${coverageId}/stop`,
+  ];
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`🛡️ TeqMobility: Trying stop endpoint: POST ${endpoint}`);
+      const response = await teqApi.post(endpoint, {});
+      console.log(`🛡️ TeqMobility: ✅ Coverage stopped via ${endpoint}`);
+      return response.data;
+    } catch (err) {
+      const status = err.response?.status;
+      console.log(`🛡️ TeqMobility: ❌ ${endpoint} failed (HTTP ${status})`);
+      lastError = err;
+      if (status !== 404) {
+        throw err;
+      }
+    }
+  }
+  throw lastError;
 };
 
 /**
@@ -257,8 +304,8 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
       await changeVehicleOwner(vehicle.vin, owner.id);
     }
 
-    // Step 4: Start on-rent coverage (use TeqMobility vehicle ID, not raw VIN)
-    const coverage = await startOnRentCoverage(vehicleResult.id, driver, vehicle, booking);
+    // Step 4: Start on-rent coverage (tries multiple endpoint variants)
+    const coverage = await startOnRentCoverage(vehicleResult.id, vehicle.vin, driver, vehicle, booking);
 
     return {
       success: true,
