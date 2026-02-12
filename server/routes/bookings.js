@@ -641,9 +641,9 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     };
     booking.status = 'completed';
 
-    // Set payout eligible date to 7 days after trip completion for host earnings
-    booking.payoutStatus = 'pending';
-    booking.payoutEligibleDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    // Mark earnings as immediately eligible for next payout cycle
+    booking.payoutStatus = 'eligible';
+    booking.payoutEligibleDate = new Date();
 
     // TeqMobility Dynamic Insurance - Stop on-rent coverage (non-blocking)
     if (booking.teqMobility?.coverageId) {

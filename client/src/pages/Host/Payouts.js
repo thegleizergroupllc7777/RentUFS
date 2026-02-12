@@ -180,7 +180,7 @@ const PayoutsContent = () => {
             <p>Connect your bank account to receive earnings from your vehicle rentals.</p>
             <ul className="setup-benefits">
               <li>Weekly automatic payouts (every Monday)</li>
-              <li>7-day hold after trip completion for security</li>
+              <li>Earnings available after trip completion</li>
               <li>View earnings and payout history</li>
               <li>Secure bank account connection via Stripe</li>
             </ul>
@@ -257,7 +257,7 @@ const PayoutsContent = () => {
             <div className="earnings-item">
               <span className="earnings-label">Ready for Payout</span>
               <span className="earnings-amount highlight">{formatCurrency(pendingPayouts?.totalEligible)}</span>
-              <span className="earnings-note">Past 7-day hold</span>
+              <span className="earnings-note">Completed trips</span>
             </div>
             <div className="earnings-item">
               <span className="earnings-label">Total Paid Out</span>
@@ -311,7 +311,7 @@ const PayoutsContent = () => {
                       <th>Vehicle</th>
                       <th>Driver</th>
                       <th>Trip End</th>
-                      <th>Eligible Date</th>
+                      <th>Completed</th>
                       <th>Amount</th>
                       <th>Status</th>
                     </tr>
@@ -385,8 +385,8 @@ const PayoutsContent = () => {
           </div>
           <div className="info-item">
             <div className="info-icon">2</div>
-            <h4>7-Day Hold</h4>
-            <p>Funds are held for 7 days to allow for any damage claims or disputes.</p>
+            <h4>Earnings Ready</h4>
+            <p>Your earnings become available for payout immediately after trip completion.</p>
           </div>
           <div className="info-item">
             <div className="info-icon">3</div>
