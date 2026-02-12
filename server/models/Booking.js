@@ -79,6 +79,10 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  hostPlatformFeePerDay: {
+    type: Number,
+    default: 1.50
+  },
   hostPlatformFee: {
     type: Number,
     default: 0
