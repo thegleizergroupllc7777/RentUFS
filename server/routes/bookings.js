@@ -298,6 +298,66 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// Proxy insurance card URL to display inline (avoids X-Frame-Options blocking)
+router.get('/:id/insurance-card', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only allow driver or host to view
+    if (booking.driver.toString() !== req.user._id.toString() &&
+        booking.host.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // If a local screenshot image exists, redirect to it
+    if (booking.teqMobility?.cardImage) {
+      return res.redirect(`/uploads/${booking.teqMobility.cardImage}`);
+    }
+
+    // Proxy the external card URL
+    const cardUrl = booking.teqMobility?.cardUrl;
+    if (!cardUrl) {
+      return res.status(404).json({ message: 'Insurance card not available' });
+    }
+
+    const axios = require('axios');
+    const response = await axios.get(cardUrl, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      headers: { 'Accept': 'text/html,application/xhtml+xml,application/pdf,image/*,*/*' }
+    });
+
+    const contentType = response.headers['content-type'] || 'text/html';
+    res.set('Content-Type', contentType);
+    // Remove headers that block embedding
+    res.removeHeader('X-Frame-Options');
+    res.set('Content-Security-Policy', "frame-ancestors 'self'");
+
+    // For HTML responses, inject a <base> tag so relative resources resolve correctly
+    if (contentType.includes('text/html')) {
+      let html = Buffer.from(response.data).toString('utf-8');
+      const baseUrl = new URL(cardUrl);
+      const baseTag = `<base href="${baseUrl.origin}/">`;
+      if (html.includes('<head>')) {
+        html = html.replace('<head>', `<head>${baseTag}`);
+      } else if (html.includes('<HEAD>')) {
+        html = html.replace('<HEAD>', `<HEAD>${baseTag}`);
+      } else {
+        html = baseTag + html;
+      }
+      return res.send(html);
+    }
+
+    res.send(Buffer.from(response.data));
+  } catch (error) {
+    console.error('Insurance card proxy error:', error.message);
+    res.status(502).json({ message: 'Failed to load insurance card' });
+  }
+});
+
 // Request booking extension (creates extension request, needs payment)
 router.post('/:id/extend', auth, async (req, res) => {
   try {
