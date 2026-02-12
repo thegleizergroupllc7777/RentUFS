@@ -230,7 +230,8 @@ router.post('/', auth, async (req, res) => {
 router.get('/my-bookings', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({ driver: req.user._id, status: { $ne: 'awaiting_payment' } })
-      .populate('vehicle')
+      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory')
+      .populate('vehicle', 'nickname make model year images registrationImage pricePerDay')
       .populate('host', 'firstName lastName email phone profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
       .sort({ createdAt: -1 })
       .lean();
@@ -245,7 +246,8 @@ router.get('/my-bookings', auth, async (req, res) => {
 router.get('/host-bookings', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({ host: req.user._id, status: { $ne: 'awaiting_payment' } })
-      .populate('vehicle')
+      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory')
+      .populate('vehicle', 'nickname make model year images registrationImage pricePerDay vin')
       .populate('driver', 'firstName lastName email phone profileImage')
       .sort({ createdAt: -1 })
       .lean();

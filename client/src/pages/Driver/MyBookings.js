@@ -130,8 +130,23 @@ const MyBookings = () => {
   const [cancelModal, setCancelModal] = useState({ open: false, booking: null, fee: 0, loading: false, isLate: false });
 
   useEffect(() => {
-    fetchBookings();
-    fetchUnreadCounts();
+    const token = localStorage.getItem('token');
+    if (!token) { setLoading(false); return; }
+    const headers = { Authorization: `Bearer ${token}` };
+
+    // Fetch bookings and unread counts in parallel
+    Promise.all([
+      axios.get(`${API_URL}/api/bookings/my-bookings`, { headers }),
+      axios.get(`${API_URL}/api/messages/unread/per-booking?role=driver`, { headers }).catch(() => ({ data: { counts: {} } }))
+    ]).then(([bookingsRes, unreadRes]) => {
+      setBookings(bookingsRes.data);
+      setUnreadCounts(unreadRes.data.counts || {});
+    }).catch(err => {
+      console.error('Error fetching bookings:', err);
+    }).finally(() => {
+      setLoading(false);
+    });
+
     const interval = setInterval(fetchUnreadCounts, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -145,8 +160,6 @@ const MyBookings = () => {
       setBookings(response.data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
