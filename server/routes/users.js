@@ -448,6 +448,13 @@ router.put('/driver-license', auth, async (req, res) => {
       faceVerified: typeof faceVerified === 'boolean' ? faceVerified : user.driverLicense?.faceVerified
     };
 
+    // Auto-verify when all required license documents and info are provided
+    const dl = user.driverLicense;
+    if (dl.licenseNumber && dl.state && dl.expirationDate && dl.licenseImage && dl.verificationSelfie) {
+      dl.verified = true;
+      dl.faceVerified = true;
+    }
+
     await user.save();
     console.log('✅ Driver license updated for:', user.email);
 
