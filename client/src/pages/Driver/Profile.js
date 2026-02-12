@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import axios from 'axios';
@@ -1331,7 +1331,7 @@ const DriverProfile = () => {
     const vehicleStats = reportData?.vehicleStats || [];
     const recentBookings = reportData?.recentBookings || [];
 
-    const totalEarnings = summary.totalRevenue || 0;
+    const hostEarnings = summary.hostEarnings || 0;
     const totalBookings = summary.totalBookings || 0;
     const confirmedBookings = summary.confirmedBookings || 0;
     const cancelledBookings = summary.cancelledBookings || 0;
@@ -1347,27 +1347,42 @@ const DriverProfile = () => {
       pending: '#f59e0b'
     };
 
+    const periodLabels = {
+      week: 'This Week',
+      month: 'This Month',
+      year: 'This Year',
+      all: 'All Time'
+    };
+
     return (
     <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333' }}>
-      <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Earnings & Reports</h3>
-      <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
-        View your earnings summary and booking analytics.
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+        <div>
+          <h3 style={{ marginBottom: '0.25rem', color: '#fff', fontSize: '1.25rem' }}>Your Earnings</h3>
+          <p style={{ fontSize: '0.85rem', color: '#9ca3af', margin: 0 }}>
+            How your vehicles are performing
+          </p>
+        </div>
+        <Link to="/host/reports" style={{ fontSize: '0.85rem', color: '#10b981', textDecoration: 'none', fontWeight: '500' }}>
+          View Full Reports
+        </Link>
+      </div>
 
       {/* Period Selector */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1.5rem', background: '#111', borderRadius: '8px', padding: '0.25rem' }}>
         {[
-          { value: 'week', label: 'This Week' },
-          { value: 'month', label: 'This Month' },
-          { value: 'year', label: 'This Year' },
+          { value: 'week', label: 'Week' },
+          { value: 'month', label: 'Month' },
+          { value: 'year', label: 'Year' },
           { value: 'all', label: 'All Time' }
         ].map(p => (
           <button key={p.value} onClick={() => setReportPeriod(p.value)}
             style={{
-              padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', cursor: 'pointer',
-              border: reportPeriod === p.value ? '1px solid #10b981' : '1px solid #333',
-              background: reportPeriod === p.value ? 'rgba(16,185,129,0.1)' : 'transparent',
-              color: reportPeriod === p.value ? '#10b981' : '#9ca3af'
+              flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer',
+              border: 'none',
+              background: reportPeriod === p.value ? '#10b981' : 'transparent',
+              color: reportPeriod === p.value ? '#000' : '#9ca3af',
+              transition: 'all 0.2s'
             }}>
             {p.label}
           </button>
@@ -1380,81 +1395,96 @@ const DriverProfile = () => {
         <p style={{ color: '#ef4444', textAlign: 'center', padding: '2rem 0' }}>{reportError}</p>
       ) : reportData ? (
         <>
-          {/* Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #333', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>Total Earnings</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981', margin: 0 }}>
-                ${totalEarnings.toFixed(2)}
-              </p>
-            </div>
-            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #333', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>Bookings</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>
-                {totalBookings}
-              </p>
-            </div>
-            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #333', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>Avg per Booking</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>
-                ${avgPerBooking.toFixed(2)}
-              </p>
-            </div>
+          {/* Hero Earnings Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.04) 100%)',
+            borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid rgba(16,185,129,0.25)',
+            marginBottom: '1rem', textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.35rem 0', fontWeight: '500' }}>
+              You earned {periodLabels[reportPeriod] ? periodLabels[reportPeriod].toLowerCase() : ''}
+            </p>
+            <p style={{ fontSize: '2.25rem', fontWeight: '800', color: '#10b981', margin: '0 0 0.25rem 0', letterSpacing: '-0.02em' }}>
+              ${hostEarnings.toFixed(2)}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>
+              from {confirmedBookings} completed booking{confirmedBookings !== 1 ? 's' : ''}
+            </p>
           </div>
 
-          {/* Additional Stats Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #333', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>Days Booked</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>
-                {totalDaysBooked}
-              </p>
+          {/* Key Stats Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: pendingRevenue > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '0.85rem 0.75rem', border: '1px solid #222' }}>
+              <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.3rem 0', fontWeight: '500' }}>Total Bookings</p>
+              <p style={{ fontSize: '1.35rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>{totalBookings}</p>
+            </div>
+            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '0.85rem 0.75rem', border: '1px solid #222' }}>
+              <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.3rem 0', fontWeight: '500' }}>Avg / Booking</p>
+              <p style={{ fontSize: '1.35rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>${avgPerBooking.toFixed(0)}</p>
+            </div>
+            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '0.85rem 0.75rem', border: '1px solid #222' }}>
+              <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.3rem 0', fontWeight: '500' }}>Days Rented</p>
+              <p style={{ fontSize: '1.35rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>{totalDaysBooked}</p>
             </div>
             {pendingRevenue > 0 && (
-              <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #333', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>Pending Revenue</p>
-                <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f59e0b', margin: 0 }}>
-                  ${pendingRevenue.toFixed(2)}
-                </p>
+              <div style={{ background: '#111', borderRadius: '0.5rem', padding: '0.85rem 0.75rem', border: '1px solid #332800' }}>
+                <p style={{ fontSize: '0.7rem', color: '#f59e0b', margin: '0 0 0.3rem 0', fontWeight: '500' }}>Pending</p>
+                <p style={{ fontSize: '1.35rem', fontWeight: '700', color: '#f59e0b', margin: 0 }}>${pendingRevenue.toFixed(0)}</p>
               </div>
             )}
           </div>
 
-          {/* Booking Status Breakdown */}
+          {/* Booking Breakdown - visual bar */}
           {totalBookings > 0 && (
-            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1.25rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
-              <h4 style={{ fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Booking Status</h4>
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                {[
-                  { label: 'Confirmed / Active', count: confirmedBookings, color: statusColors.confirmed },
-                  { label: 'Cancelled', count: cancelledBookings, color: statusColors.cancelled }
-                ].filter(s => s.count > 0).map(s => (
-                  <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>{s.label}</span>
-                    <span style={{ fontSize: '0.85rem', color: s.color, fontWeight: '600' }}>{s.count}</span>
+            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #222', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Booking Breakdown</p>
+              {/* Progress bar */}
+              <div style={{ height: '8px', borderRadius: '4px', background: '#222', overflow: 'hidden', marginBottom: '0.75rem', display: 'flex' }}>
+                {confirmedBookings > 0 && (
+                  <div style={{ width: `${(confirmedBookings / totalBookings) * 100}%`, background: '#10b981', transition: 'width 0.3s' }} />
+                )}
+                {cancelledBookings > 0 && (
+                  <div style={{ width: `${(cancelledBookings / totalBookings) * 100}%`, background: '#ef4444', transition: 'width 0.3s' }} />
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }} />
+                  <span style={{ fontSize: '0.8rem', color: '#d1d5db' }}>Confirmed / Active</span>
+                  <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: '700', marginLeft: '0.25rem' }}>{confirmedBookings}</span>
+                </div>
+                {cancelledBookings > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
+                    <span style={{ fontSize: '0.8rem', color: '#d1d5db' }}>Cancelled</span>
+                    <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: '700', marginLeft: '0.25rem' }}>{cancelledBookings}</span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
 
           {/* Vehicle Earnings */}
           {vehicleStats.length > 0 && (
-            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1.25rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
-              <h4 style={{ fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Earnings by Vehicle</h4>
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
+            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #222', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Earnings by Vehicle</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                 {vehicleStats.map((v, i) => (
-                  <div key={v.vehicleId || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: i < vehicleStats.length - 1 ? '1px solid #333' : 'none' }}>
-                    <div>
-                      <p style={{ fontSize: '0.9rem', color: '#f9fafb', fontWeight: '500', margin: 0 }}>
+                  <div key={v.vehicleId || i} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '0.65rem 0',
+                    borderBottom: i < vehicleStats.length - 1 ? '1px solid #222' : 'none'
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '0.9rem', color: '#f9fafb', fontWeight: '600', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {v.vehicleName}
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
-                        {v.confirmedBookings} booking{v.confirmedBookings !== 1 ? 's' : ''} · {v.totalDays || 0} days
+                        {v.confirmedBookings} booking{v.confirmedBookings !== 1 ? 's' : ''} &middot; {v.totalDays || 0} days
                       </p>
                     </div>
-                    <span style={{ fontSize: '1rem', fontWeight: '600', color: '#10b981' }}>
-                      ${(v.totalRevenue || 0).toFixed(2)}
+                    <span style={{ fontSize: '1rem', fontWeight: '700', color: '#10b981', flexShrink: 0, marginLeft: '1rem' }}>
+                      ${(v.hostEarnings || v.totalRevenue || 0).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -1464,26 +1494,30 @@ const DriverProfile = () => {
 
           {/* Recent Bookings */}
           {recentBookings.length > 0 && (
-            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1.25rem', border: '1px solid #333' }}>
-              <h4 style={{ fontSize: '0.9rem', color: '#d1d5db', marginBottom: '0.75rem' }}>Recent Bookings</h4>
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                {recentBookings.slice(0, 5).map(b => (
-                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid #222' }}>
-                    <div>
+            <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #222' }}>
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Recent Activity</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                {recentBookings.slice(0, 5).map((b, i) => (
+                  <div key={b.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '0.6rem 0',
+                    borderBottom: i < Math.min(recentBookings.length, 5) - 1 ? '1px solid #222' : 'none'
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '0.85rem', color: '#f9fafb', margin: 0 }}>{b.vehicleName}</p>
                       <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
-                        {b.driverName} · {b.totalDays} day{b.totalDays !== 1 ? 's' : ''}
+                        {b.driverName} &middot; {b.totalDays} day{b.totalDays !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '0.9rem', fontWeight: '600', color: b.paymentStatus === 'paid' ? '#10b981' : '#f59e0b', margin: 0 }}>
-                        ${Number(b.totalPrice || 0).toFixed(2)}
-                      </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
                       <span style={{
-                        fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: '600', textTransform: 'uppercase',
+                        fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: '600', textTransform: 'uppercase',
                         background: statusColors[b.status] || '#6b7280', color: '#fff'
                       }}>
                         {b.status}
+                      </span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '600', color: b.paymentStatus === 'paid' ? '#10b981' : '#f59e0b' }}>
+                        ${Number(b.totalPrice || 0).toFixed(2)}
                       </span>
                     </div>
                   </div>
