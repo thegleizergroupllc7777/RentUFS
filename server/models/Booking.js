@@ -210,6 +210,7 @@ const bookingSchema = new mongoose.Schema({
     ownerId: { type: String, default: null },
     status: { type: String, default: null },
     cardUrl: { type: String, default: null },
+    cardImage: { type: String, default: null },
     startedAt: { type: Date, default: null },
     stoppedAt: { type: Date, default: null },
     error: { type: String, default: null }
