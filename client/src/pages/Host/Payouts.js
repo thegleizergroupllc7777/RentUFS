@@ -5,6 +5,93 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import './Payouts.css';
 
+// Expandable reservation detail card
+const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isEligible = !isPaid && new Date(booking.payoutEligibleDate) <= new Date();
+  const rentalSubtotal = (booking.pricePerDay || 0) * (booking.totalDays || 0);
+
+  return (
+    <div className={`reservation-card ${expanded ? 'expanded' : ''}`}>
+      <div className="reservation-card-header" onClick={() => setExpanded(!expanded)}>
+        <div className="reservation-card-left">
+          <span className="reservation-id">{booking.reservationId}</span>
+          <span className="reservation-vehicle">
+            {booking.vehicleNickname || booking.vehicle}
+          </span>
+        </div>
+        <div className="reservation-card-right">
+          <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : booking.hostEarnings)}</span>
+          {isPaid ? (
+            <span className="status-badge paid">Paid</span>
+          ) : (
+            <span className={`status-badge ${isEligible ? 'eligible' : 'pending'}`}>
+              {isEligible ? 'Eligible' : 'Pending'}
+            </span>
+          )}
+          <span className={`expand-arrow ${expanded ? 'rotated' : ''}`}>&#9662;</span>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="reservation-card-details">
+          <div className="detail-section">
+            <h4>Trip Details</h4>
+            <div className="detail-row">
+              <span className="detail-label">Driver</span>
+              <span className="detail-value">{booking.driver}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Trip Dates</span>
+              <span className="detail-value">{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Duration</span>
+              <span className="detail-value">{booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}</span>
+            </div>
+            {isPaid && booking.payoutDate && (
+              <div className="detail-row">
+                <span className="detail-label">Paid On</span>
+                <span className="detail-value">{formatDate(booking.payoutDate)}</span>
+              </div>
+            )}
+            {!isPaid && (
+              <div className="detail-row">
+                <span className="detail-label">Completed</span>
+                <span className="detail-value">{formatDate(booking.payoutEligibleDate)}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="detail-section">
+            <h4>Earnings Breakdown</h4>
+            <div className="detail-row">
+              <span className="detail-label">Daily Rate</span>
+              <span className="detail-value">{formatCurrency(booking.pricePerDay)}/day</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Rental Subtotal</span>
+              <span className="detail-value">{formatCurrency(rentalSubtotal)}</span>
+            </div>
+            <div className="detail-row deduction">
+              <span className="detail-label">Host Service Fee</span>
+              <span className="detail-value">-{formatCurrency(booking.hostPlatformFee)}</span>
+            </div>
+            <div className="detail-row total">
+              <span className="detail-label">Your Earnings</span>
+              <span className="detail-value">{formatCurrency(booking.hostEarnings)}</span>
+            </div>
+          </div>
+
+          <div className="detail-section detail-section-note">
+            <p>The driver paid {formatCurrency(booking.totalPrice)} total (includes driver service fee{booking.insuranceCost > 0 ? ' + insurance' : ''}). Your earnings are the rental subtotal minus the host service fee.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Embeddable payouts content (used both standalone and inside Profile sidebar)
 const PayoutsContent = () => {
   const [loading, setLoading] = useState(true);
@@ -304,36 +391,18 @@ const PayoutsContent = () => {
                   <span>Completed trips will appear here</span>
                 </div>
               ) : (
-                <table className="payouts-table">
-                  <thead>
-                    <tr>
-                      <th>Reservation</th>
-                      <th>Vehicle</th>
-                      <th>Driver</th>
-                      <th>Trip End</th>
-                      <th>Completed</th>
-                      <th>Amount</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingPayouts?.pendingBookings?.map(booking => (
-                      <tr key={booking.id}>
-                        <td>{booking.reservationId}</td>
-                        <td>{booking.vehicle}</td>
-                        <td>{booking.driver}</td>
-                        <td>{formatDate(booking.endDate)}</td>
-                        <td>{formatDate(booking.payoutEligibleDate)}</td>
-                        <td className="amount">{formatCurrency(booking.hostEarnings)}</td>
-                        <td>
-                          <span className={`status-badge ${new Date(booking.payoutEligibleDate) <= new Date() ? 'eligible' : 'pending'}`}>
-                            {new Date(booking.payoutEligibleDate) <= new Date() ? 'Eligible' : 'Pending'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="reservation-cards">
+                  <p className="cards-hint">Tap a reservation to see the full breakdown</p>
+                  {pendingPayouts.pendingBookings.map(booking => (
+                    <ReservationCard
+                      key={booking.id}
+                      booking={booking}
+                      formatCurrency={formatCurrency}
+                      formatDate={formatDate}
+                      isPaid={false}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -346,28 +415,18 @@ const PayoutsContent = () => {
                   <span>Completed payouts will appear here</span>
                 </div>
               ) : (
-                <table className="payouts-table">
-                  <thead>
-                    <tr>
-                      <th>Reservation</th>
-                      <th>Vehicle</th>
-                      <th>Driver</th>
-                      <th>Payout Date</th>
-                      <th>Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payoutHistory?.payouts?.map(payout => (
-                      <tr key={payout.id}>
-                        <td>{payout.reservationId}</td>
-                        <td>{payout.vehicle}</td>
-                        <td>{payout.driver}</td>
-                        <td>{formatDate(payout.payoutDate)}</td>
-                        <td className="amount">{formatCurrency(payout.payoutAmount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="reservation-cards">
+                  <p className="cards-hint">Tap a reservation to see the full breakdown</p>
+                  {payoutHistory.payouts.map(payout => (
+                    <ReservationCard
+                      key={payout.id}
+                      booking={payout}
+                      formatCurrency={formatCurrency}
+                      formatDate={formatDate}
+                      isPaid={true}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           )}
