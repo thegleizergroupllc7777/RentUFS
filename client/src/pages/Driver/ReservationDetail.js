@@ -133,7 +133,7 @@ const ReservationDetail = () => {
       transactions.push({
         date: booking.createdAt,
         type: 'Insurance',
-        description: `${booking.insurance.type} coverage`,
+        description: `${booking.insurance.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} coverage`,
         amount: booking.insurance.totalCost
       });
     }

@@ -199,9 +199,7 @@ const bookingSchema = new mongoose.Schema({
     coverage: {
       liability: { type: Boolean, default: false },
       collision: { type: Boolean, default: false },
-      comprehensive: { type: Boolean, default: false },
-      personalInjury: { type: Boolean, default: false },
-      roadsideAssistance: { type: Boolean, default: false }
+      comprehensive: { type: Boolean, default: false }
     }
   },
   // TeqMobility Dynamic Insurance

@@ -795,7 +795,7 @@ const HostBookings = () => {
                                 <div style={{ marginTop: '0.75rem', fontSize: '0.875rem' }}>
                                   <span style={{ color: '#9ca3af' }}>Insurance:</span>
                                   <span style={{ color: '#fff', marginLeft: '0.5rem' }}>
-                                    {booking.insurance.type} (${booking.insurance.price})
+                                    {booking.insurance.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} (${booking.insurance.totalCost?.toFixed(2)})
                                   </span>
                                 </div>
                               )}

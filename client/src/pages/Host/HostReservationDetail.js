@@ -362,7 +362,7 @@ const HostReservationDetail = () => {
                   {booking.insurance?.type && booking.insurance.type !== 'none' && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                       <span style={{ color: '#9ca3af' }}>Insurance</span>
-                      <span style={{ color: '#fff', textTransform: 'capitalize' }}>{booking.insurance.type}</span>
+                      <span style={{ color: '#fff' }}>{booking.insurance.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                     </div>
                   )}
                   <div style={{

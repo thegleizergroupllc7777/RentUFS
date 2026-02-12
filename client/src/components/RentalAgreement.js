@@ -349,7 +349,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             <div className="agreement-field">
               <span className="field-label">Insurance:</span>
               <span className="field-value">
-                {booking.insurance.type} (${booking.insurance.costPerDay?.toFixed(2)}/day)
+                {booking.insurance.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} (${booking.insurance.costPerDay?.toFixed(2)}/day)
               </span>
             </div>
           )}
