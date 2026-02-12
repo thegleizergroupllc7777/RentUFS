@@ -792,7 +792,7 @@ const HostBookings = () => {
                                 <div style={{ marginTop: '0.75rem', fontSize: '0.875rem' }}>
                                   <span style={{ color: '#9ca3af' }}>Insurance:</span>
                                   <span style={{ color: '#fff', marginLeft: '0.5rem' }}>
-                                    RentUFS Protection (${booking.insurance.price})
+                                    {booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'} (${booking.insurance.price})
                                   </span>
                                 </div>
                               )}

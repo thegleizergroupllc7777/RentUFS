@@ -133,7 +133,7 @@ const ReservationDetail = () => {
       transactions.push({
         date: booking.createdAt,
         type: 'Insurance',
-        description: 'RentUFS Protection',
+        description: booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage',
         amount: booking.insurance.totalCost
       });
     }

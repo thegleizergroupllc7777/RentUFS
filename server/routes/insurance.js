@@ -4,7 +4,8 @@ const Booking = require('../models/Booking');
 
 const router = express.Router();
 
-// Insurance plans — 2 categories modeled after TeqMobility coverage
+// Insurance plans — 2 TeqMobility coverage categories + decline
+// Pricing is placeholder — update to match carrier agreement
 const INSURANCE_PLANS = {
   none: {
     id: 'none',
@@ -12,6 +13,7 @@ const INSURANCE_PLANS = {
     description: 'I have my own insurance and choose not to add coverage through RentUFS',
     pricePerDay: 0,
     category: 'decline',
+    usage: null,
     coverage: {
       liability: false,
       collision: false,
@@ -25,12 +27,34 @@ const INSURANCE_PLANS = {
       'Check with your insurer before declining'
     ]
   },
-  protection: {
-    id: 'protection',
-    name: 'RentUFS Protection',
-    description: 'Comprehensive coverage powered by TeqMobility — full peace of mind for your trip',
+  carshare: {
+    id: 'carshare',
+    name: 'Liability Coverage',
+    description: 'Car Share — Liability protection for your rental trip',
+    pricePerDay: 15,
+    category: 'carshare',
+    usage: 'CARSHARE',
+    coverage: {
+      liability: true,
+      collision: false,
+      comprehensive: false,
+      personalInjury: false,
+      roadsideAssistance: true
+    },
+    details: [
+      'Liability coverage up to $300,000',
+      'Third-party bodily injury and property damage',
+      '24/7 roadside assistance',
+      'Coverage in your name from pickup to return'
+    ]
+  },
+  rideshare: {
+    id: 'rideshare',
+    name: 'Full Coverage',
+    description: 'Ride Share — Full collision and liability protection',
     pricePerDay: 29,
-    category: 'covered',
+    category: 'rideshare',
+    usage: 'RIDESHARE',
     coverage: {
       liability: true,
       collision: true,
@@ -88,8 +112,9 @@ router.post('/quote', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    // Map legacy plan IDs to new 2-category structure
-    const resolvedPlanId = ['basic', 'standard', 'premium'].includes(planId) ? 'protection' : planId;
+    // Map legacy plan IDs to new category structure
+    const LEGACY_MAP = { basic: 'carshare', standard: 'rideshare', premium: 'rideshare', protection: 'rideshare' };
+    const resolvedPlanId = LEGACY_MAP[planId] || planId;
     const plan = INSURANCE_PLANS[resolvedPlanId];
     if (!plan) {
       return res.status(400).json({ message: 'Invalid insurance plan' });
@@ -140,8 +165,9 @@ router.post('/add-to-booking', auth, async (req, res) => {
       return res.status(400).json({ message: 'Cannot modify insurance after payment' });
     }
 
-    // Map legacy plan IDs to new 2-category structure
-    const resolvedPlanId = ['basic', 'standard', 'premium'].includes(planId) ? 'protection' : planId;
+    // Map legacy plan IDs to new category structure
+    const LEGACY_MAP = { basic: 'carshare', standard: 'rideshare', premium: 'rideshare', protection: 'rideshare' };
+    const resolvedPlanId = LEGACY_MAP[planId] || planId;
     const plan = INSURANCE_PLANS[resolvedPlanId];
     if (!plan && resolvedPlanId !== 'none') {
       return res.status(400).json({ message: 'Invalid insurance plan' });

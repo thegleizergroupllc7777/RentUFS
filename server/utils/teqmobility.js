@@ -209,8 +209,11 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     }
   };
 
+  // Set usage based on insurance plan: carshare → CARSHARE, rideshare/default → RIDESHARE
+  const usageType = booking.insurance?.type === 'carshare' ? 'CARSHARE' : 'RIDESHARE';
+
   const body = {
-    usage: 'RIDESHARE',
+    usage: usageType,
     external_id: booking._id.toString(),
     driver: driverObj,
     pickup_address: {

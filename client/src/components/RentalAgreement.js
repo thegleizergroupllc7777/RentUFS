@@ -349,7 +349,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             <div className="agreement-field">
               <span className="field-label">Insurance:</span>
               <span className="field-value">
-                RentUFS Protection (${booking.insurance.costPerDay?.toFixed(2)}/day)
+                {booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'} (${booking.insurance.costPerDay?.toFixed(2)}/day)
               </span>
             </div>
           )}
