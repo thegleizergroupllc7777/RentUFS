@@ -605,6 +605,91 @@ router.patch('/payment-methods/:cardId/default', auth, async (req, res) => {
 // Account Management (Deactivate / Delete)
 // ==========================================
 
+// Remove host account (downgrade from 'both' to 'driver')
+router.post('/account/remove-host', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.userType !== 'both') {
+      return res.status(400).json({ message: 'You do not have a host account to remove.' });
+    }
+
+    // Check for active host bookings
+    const Booking = require('../models/Booking');
+    const now = new Date();
+    const activeHostBookings = await Booking.countDocuments({
+      host: user._id,
+      status: { $in: ['active', 'confirmed', 'pending'] },
+      endDate: { $gte: now }
+    });
+
+    if (activeHostBookings > 0) {
+      return res.status(400).json({
+        message: `You have ${activeHostBookings} active host booking(s). Please complete or cancel all host bookings before removing your host account.`
+      });
+    }
+
+    // Set all vehicles to unavailable
+    const Vehicle = require('../models/Vehicle');
+    await Vehicle.updateMany(
+      { host: user._id },
+      { availability: false }
+    );
+
+    // Downgrade to driver only
+    user.userType = 'driver';
+    await user.save();
+
+    console.log(`✅ Host account removed for: ${user.email} (now driver only)`);
+    res.json(user);
+  } catch (error) {
+    console.error('❌ Error removing host account:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Remove driver account (downgrade from 'both' to 'host')
+router.post('/account/remove-driver', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.userType !== 'both') {
+      return res.status(400).json({ message: 'You do not have a driver account to remove.' });
+    }
+
+    // Check for active driver bookings
+    const Booking = require('../models/Booking');
+    const now = new Date();
+    const activeDriverBookings = await Booking.countDocuments({
+      driver: user._id,
+      status: { $in: ['active', 'confirmed', 'pending'] },
+      endDate: { $gte: now }
+    });
+
+    if (activeDriverBookings > 0) {
+      return res.status(400).json({
+        message: `You have ${activeDriverBookings} active driver booking(s). Please complete or cancel all driver bookings before removing your driver account.`
+      });
+    }
+
+    // Downgrade to host only
+    user.userType = 'host';
+    await user.save();
+
+    console.log(`✅ Driver account removed for: ${user.email} (now host only)`);
+    res.json(user);
+  } catch (error) {
+    console.error('❌ Error removing driver account:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Deactivate account (soft disable - can be reactivated on login)
 router.post('/account/deactivate', auth, async (req, res) => {
   try {
