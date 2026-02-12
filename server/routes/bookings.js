@@ -6,6 +6,7 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
+const { captureCardImage } = require('../utils/screenshotCard');
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 
@@ -552,16 +553,25 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
     startRentalCoverage(booking.host, driver, booking.vehicle, booking)
       .then(async (coverageResult) => {
         try {
-          await Booking.findByIdAndUpdate(booking._id, {
-            teqMobility: {
-              coverageId: coverageResult.coverageId || null,
-              ownerId: coverageResult.ownerId || null,
-              status: coverageResult.success ? coverageResult.status : 'failed',
-              cardUrl: coverageResult.cardUrl || null,
-              startedAt: coverageResult.success ? new Date() : null,
-              error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
+          const teqData = {
+            coverageId: coverageResult.coverageId || null,
+            ownerId: coverageResult.ownerId || null,
+            status: coverageResult.success ? coverageResult.status : 'failed',
+            cardUrl: coverageResult.cardUrl || null,
+            cardImage: null,
+            startedAt: coverageResult.success ? new Date() : null,
+            error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
+          };
+
+          // Capture insurance card as a screenshot image
+          if (coverageResult.success && coverageResult.cardUrl) {
+            const imagePath = await captureCardImage(coverageResult.cardUrl, booking._id.toString());
+            if (imagePath) {
+              teqData.cardImage = imagePath;
             }
-          });
+          }
+
+          await Booking.findByIdAndUpdate(booking._id, { teqMobility: teqData });
           if (coverageResult.success) {
             console.log(`🛡️ TeqMobility: Coverage activated for booking ${booking._id}`);
           }

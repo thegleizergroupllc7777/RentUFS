@@ -974,7 +974,7 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {booking.status === 'active' && booking.teqMobility?.cardUrl && (
+                        {booking.status === 'active' && (booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl) && (
                           <button
                             onClick={() => setInsuranceCardModal({ open: true, booking })}
                             className="btn btn-secondary"
@@ -1349,26 +1349,23 @@ const MyBookings = () => {
                 x
               </button>
             </div>
-            <p style={{ color: '#6b7280', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
+            <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
               {insuranceCardModal.booking.vehicle?.nickname || `${insuranceCardModal.booking.vehicle?.year} ${insuranceCardModal.booking.vehicle?.make} ${insuranceCardModal.booking.vehicle?.model}`}
-            </p>
-            <p style={{ color: '#0ea5e9', marginBottom: '1rem', fontSize: '0.75rem', fontWeight: '600' }}>
-              Powered by Teq Mobility
             </p>
             <div style={{
               borderRadius: '0.5rem',
               overflow: 'hidden',
               background: '#f3f4f6',
-              width: '100%',
-              height: '500px'
+              width: '100%'
             }}>
-              <iframe
-                src={insuranceCardModal.booking.teqMobility.cardUrl}
-                title="Insurance Card"
+              <img
+                src={insuranceCardModal.booking.teqMobility.cardImage
+                  ? `${API_URL}/uploads/${insuranceCardModal.booking.teqMobility.cardImage}`
+                  : insuranceCardModal.booking.teqMobility.cardUrl}
+                alt="Insurance Card"
                 style={{
                   width: '100%',
-                  height: '100%',
-                  border: 'none'
+                  display: 'block'
                 }}
               />
             </div>
@@ -1379,13 +1376,6 @@ const MyBookings = () => {
                 style={{ flex: 1 }}
               >
                 Close
-              </button>
-              <button
-                onClick={() => window.open(insuranceCardModal.booking.teqMobility.cardUrl, '_blank', 'noopener,noreferrer')}
-                className="btn btn-secondary"
-                style={{ flex: 1, background: '#0ea5e9', color: 'white', border: 'none' }}
-              >
-                Open in New Tab
               </button>
             </div>
           </div>
