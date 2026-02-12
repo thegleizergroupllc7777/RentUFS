@@ -325,31 +325,151 @@
   font-size: 0.875rem;
 }
 
-.payouts-table {
-  width: 100%;
-  border-collapse: collapse;
+/* Reservation Cards */
+.reservation-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.payouts-table th {
-  text-align: left;
-  color: #9ca3af;
+.cards-hint {
+  color: #6b7280;
+  font-size: 0.8125rem;
+  margin-bottom: 0.25rem;
+}
+
+.reservation-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.reservation-card:hover {
+  border-color: #333;
+}
+
+.reservation-card.expanded {
+  border-color: #10b981;
+}
+
+.reservation-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.reservation-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.reservation-id {
+  color: #10b981;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.reservation-vehicle {
+  color: #d1d5db;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reservation-card-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.reservation-amount {
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.expand-arrow {
+  color: #6b7280;
   font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+
+.expand-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.reservation-card-details {
+  border-top: 1px solid #2a2a2a;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.detail-section h4 {
+  color: #9ca3af;
+  font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #222;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
 }
 
-.payouts-table td {
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.375rem 0;
+}
+
+.detail-label {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.detail-value {
   color: #d1d5db;
   font-size: 0.875rem;
-  padding: 1rem;
-  border-bottom: 1px solid #1a1a1a;
+  font-weight: 500;
 }
 
-.payouts-table td.amount {
+.detail-row.deduction .detail-value {
+  color: #f87171;
+}
+
+.detail-row.total {
+  border-top: 1px solid #333;
+  margin-top: 0.375rem;
+  padding-top: 0.75rem;
+}
+
+.detail-row.total .detail-label {
   color: #fff;
   font-weight: 600;
+}
+
+.detail-row.total .detail-value {
+  color: #10b981;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.detail-section-note p {
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .status-badge {
@@ -368,6 +488,11 @@
 .status-badge.pending {
   background: rgba(245, 158, 11, 0.1);
   color: #f59e0b;
+}
+
+.status-badge.paid {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
 }
 
 /* Info Section */
@@ -489,13 +614,12 @@
     gap: 1rem;
   }
 
-  .payouts-table {
-    font-size: 0.8125rem;
+  .reservation-card-header {
+    padding: 0.875rem 1rem;
   }
 
-  .payouts-table th,
-  .payouts-table td {
-    padding: 0.5rem;
+  .reservation-amount {
+    font-size: 1rem;
   }
 
   .info-grid {
