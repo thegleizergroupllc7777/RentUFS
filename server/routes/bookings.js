@@ -258,7 +258,16 @@ router.get('/host-bookings', auth, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json(bookings);
+    // Strip driver commission from host view
+    const adjustedBookings = bookings.map(b => {
+      b.totalPrice = (b.totalPrice || 0) - (b.platformFee || 0);
+      delete b.platformFee;
+      delete b.platformFeePerDay;
+      delete b.platformRevenue;
+      return b;
+    });
+
+    res.json(adjustedBookings);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -288,6 +297,17 @@ router.get('/:id', auth, async (req, res) => {
       delete bookingObj.hostPlatformFeePerDay;
       delete bookingObj.hostPlatformFee;
       delete bookingObj.hostEarnings;
+      delete bookingObj.platformRevenue;
+      return res.json(bookingObj);
+    }
+
+    // Strip driver commission fields when host is viewing
+    if (booking.host._id.toString() === req.user._id.toString()) {
+      const bookingObj = booking.toObject();
+      // Adjust totalPrice to exclude driver commission (show rental + insurance only)
+      bookingObj.totalPrice = (bookingObj.totalPrice || 0) - (bookingObj.platformFee || 0);
+      delete bookingObj.platformFee;
+      delete bookingObj.platformFeePerDay;
       delete bookingObj.platformRevenue;
       return res.json(bookingObj);
     }
