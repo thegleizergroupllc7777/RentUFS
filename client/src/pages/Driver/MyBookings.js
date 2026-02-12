@@ -124,6 +124,7 @@ const MyBookings = () => {
   const [inspectionModal, setInspectionModal] = useState({ open: false, booking: null, type: null });
   const [reconciling, setReconciling] = useState({});
   const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
+  const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [cancelModal, setCancelModal] = useState({ open: false, booking: null, fee: 0, loading: false, isLate: false });
@@ -975,7 +976,7 @@ const MyBookings = () => {
 
                         {booking.status === 'active' && booking.teqMobility?.cardUrl && (
                           <button
-                            onClick={() => window.open(booking.teqMobility.cardUrl, '_blank', 'noopener,noreferrer')}
+                            onClick={() => setInsuranceCardModal({ open: true, booking })}
                             className="btn btn-secondary"
                             style={{ background: '#0ea5e9', color: 'white', border: 'none' }}
                           >
@@ -1305,6 +1306,88 @@ const MyBookings = () => {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Insurance Card Modal */}
+      {insuranceCardModal.open && insuranceCardModal.booking && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '1.5rem',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, color: '#1f2937' }}>Insurance Card</h2>
+              <button
+                onClick={() => setInsuranceCardModal({ open: false, booking: null })}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                x
+              </button>
+            </div>
+            <p style={{ color: '#6b7280', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
+              {insuranceCardModal.booking.vehicle?.nickname || `${insuranceCardModal.booking.vehicle?.year} ${insuranceCardModal.booking.vehicle?.make} ${insuranceCardModal.booking.vehicle?.model}`}
+            </p>
+            <p style={{ color: '#0ea5e9', marginBottom: '1rem', fontSize: '0.75rem', fontWeight: '600' }}>
+              Powered by Teq Mobility
+            </p>
+            <div style={{
+              borderRadius: '0.5rem',
+              overflow: 'hidden',
+              background: '#f3f4f6',
+              width: '100%',
+              height: '500px'
+            }}>
+              <iframe
+                src={insuranceCardModal.booking.teqMobility.cardUrl}
+                title="Insurance Card"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+              <button
+                onClick={() => setInsuranceCardModal({ open: false, booking: null })}
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.open(insuranceCardModal.booking.teqMobility.cardUrl, '_blank', 'noopener,noreferrer')}
+                className="btn btn-secondary"
+                style={{ flex: 1, background: '#0ea5e9', color: 'white', border: 'none' }}
+              >
+                Open in New Tab
+              </button>
+            </div>
           </div>
         </div>
       )}
