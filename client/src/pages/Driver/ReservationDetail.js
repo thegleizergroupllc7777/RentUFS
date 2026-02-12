@@ -133,7 +133,7 @@ const ReservationDetail = () => {
       transactions.push({
         date: booking.createdAt,
         type: 'Insurance',
-        description: `${booking.insurance.type} coverage`,
+        description: 'RentUFS Protection',
         amount: booking.insurance.totalCost
       });
     }

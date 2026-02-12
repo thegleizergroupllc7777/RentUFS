@@ -4,63 +4,33 @@ const Booking = require('../models/Booking');
 
 const router = express.Router();
 
-// Insurance plans with pricing (configurable via API or static)
+// Insurance plans — 2 categories modeled after TeqMobility coverage
 const INSURANCE_PLANS = {
   none: {
     id: 'none',
-    name: 'No Insurance',
-    description: 'I will use my own insurance coverage',
+    name: 'Decline Coverage',
+    description: 'I have my own insurance and choose not to add coverage through RentUFS',
     pricePerDay: 0,
+    category: 'decline',
     coverage: {
       liability: false,
       collision: false,
       comprehensive: false,
       personalInjury: false,
       roadsideAssistance: false
-    }
-  },
-  basic: {
-    id: 'basic',
-    name: 'Basic Protection',
-    description: 'Liability coverage only - protects against third-party claims',
-    pricePerDay: 15,
-    coverage: {
-      liability: true,
-      collision: false,
-      comprehensive: false,
-      personalInjury: false,
-      roadsideAssistance: false
     },
     details: [
-      'Up to $50,000 liability coverage',
-      'Third-party property damage',
-      'Basic legal protection'
+      'You are responsible for providing your own coverage',
+      'Your personal auto policy may or may not cover rental vehicles',
+      'Check with your insurer before declining'
     ]
   },
-  standard: {
-    id: 'standard',
-    name: 'Standard Protection',
-    description: 'Collision and liability coverage - covers most rental situations',
+  protection: {
+    id: 'protection',
+    name: 'RentUFS Protection',
+    description: 'Comprehensive coverage powered by TeqMobility — full peace of mind for your trip',
     pricePerDay: 29,
-    coverage: {
-      liability: true,
-      collision: true,
-      comprehensive: false,
-      personalInjury: false,
-      roadsideAssistance: true
-    },
-    details: [
-      'Up to $100,000 liability coverage',
-      'Collision damage waiver (CDW)',
-      '24/7 roadside assistance',
-      '$500 deductible'
-    ]
-  },
-  premium: {
-    id: 'premium',
-    name: 'Premium Protection',
-    description: 'Full comprehensive coverage - complete peace of mind',
-    pricePerDay: 45,
+    category: 'covered',
     coverage: {
       liability: true,
       collision: true,
@@ -69,13 +39,12 @@ const INSURANCE_PLANS = {
       roadsideAssistance: true
     },
     details: [
-      'Up to $300,000 liability coverage',
-      'Full collision damage waiver',
+      'Liability coverage up to $300,000',
+      'Collision damage waiver (CDW)',
       'Comprehensive coverage (theft, vandalism, weather)',
       'Personal injury protection',
       '24/7 roadside assistance',
-      '$0 deductible',
-      'Loss of use coverage'
+      'Coverage in your name from pickup to return'
     ]
   }
 };
@@ -119,7 +88,9 @@ router.post('/quote', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    const plan = INSURANCE_PLANS[planId];
+    // Map legacy plan IDs to new 2-category structure
+    const resolvedPlanId = ['basic', 'standard', 'premium'].includes(planId) ? 'protection' : planId;
+    const plan = INSURANCE_PLANS[resolvedPlanId];
     if (!plan) {
       return res.status(400).json({ message: 'Invalid insurance plan' });
     }
@@ -169,8 +140,10 @@ router.post('/add-to-booking', auth, async (req, res) => {
       return res.status(400).json({ message: 'Cannot modify insurance after payment' });
     }
 
-    const plan = INSURANCE_PLANS[planId];
-    if (!plan && planId !== 'none') {
+    // Map legacy plan IDs to new 2-category structure
+    const resolvedPlanId = ['basic', 'standard', 'premium'].includes(planId) ? 'protection' : planId;
+    const plan = INSURANCE_PLANS[resolvedPlanId];
+    if (!plan && resolvedPlanId !== 'none') {
       return res.status(400).json({ message: 'Invalid insurance plan' });
     }
 
@@ -184,7 +157,7 @@ router.post('/add-to-booking', auth, async (req, res) => {
     // Update booking with insurance
     // Actual coverage is activated via TeqMobility when pickup inspection is completed
     booking.insurance = {
-      type: planId,
+      type: resolvedPlanId,
       provider: 'teqmobility',
       policyNumber: null,
       costPerDay: selectedPlan.pricePerDay,
