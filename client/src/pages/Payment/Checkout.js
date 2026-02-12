@@ -291,7 +291,7 @@ const Checkout = () => {
 
               {booking.insurance && booking.insurance.totalCost > 0 && (
                 <div className="summary-item insurance">
-                  <span className="label">Insurance ({booking.insurance.type}):</span>
+                  <span className="label">RentUFS Protection ($29.00/day x {booking.totalDays}):</span>
                   <span className="value">${booking.insurance.totalCost.toFixed(2)}</span>
                 </div>
               )}
