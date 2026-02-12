@@ -1368,18 +1368,51 @@ const MyBookings = () => {
               background: '#f3f4f6',
               width: '100%'
             }}>
-              <img
-                src={insuranceCardModal.booking.teqMobility.cardImage
-                  ? `${API_URL}/uploads/${insuranceCardModal.booking.teqMobility.cardImage}`
-                  : insuranceCardModal.booking.teqMobility.cardUrl}
-                alt="Insurance Card"
-                style={{
-                  width: '100%',
-                  display: 'block'
-                }}
-              />
+              {insuranceCardModal.booking.teqMobility.cardImage ? (
+                <img
+                  src={getImageUrl(`/uploads/${insuranceCardModal.booking.teqMobility.cardImage}`)}
+                  alt="Insurance Card"
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    display: 'block'
+                  }}
+                />
+              ) : insuranceCardModal.booking.teqMobility.cardUrl ? (
+                <iframe
+                  src={insuranceCardModal.booking.teqMobility.cardUrl}
+                  title="Insurance Card"
+                  style={{
+                    width: '100%',
+                    height: '500px',
+                    border: 'none',
+                    display: 'block'
+                  }}
+                />
+              ) : (
+                <p style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                  Insurance card not available
+                </p>
+              )}
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+            {insuranceCardModal.booking.teqMobility.cardUrl && (
+              <a
+                href={insuranceCardModal.booking.teqMobility.cardUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  marginTop: '0.75rem',
+                  color: '#3b82f6',
+                  fontSize: '0.875rem',
+                  textDecoration: 'none'
+                }}
+              >
+                Open in New Tab
+              </a>
+            )}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
               <button
                 onClick={() => setInsuranceCardModal({ open: false, booking: null })}
                 className="btn btn-secondary"
