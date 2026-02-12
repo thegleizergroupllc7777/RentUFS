@@ -269,7 +269,7 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate('vehicle')
-      .populate('driver', 'firstName lastName email phone')
+      .populate('driver', 'firstName lastName email phone profileImage')
       .populate('host', 'firstName lastName email phone');
 
     if (!booking) {
