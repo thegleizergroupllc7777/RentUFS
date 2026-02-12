@@ -168,7 +168,7 @@ const changeVehicleOwner = async (vin, ownerId) => {
 
 /**
  * 4. Start On-Rent Coverage - Starts insurance coverage for a rental
- * POST /api/v1/coverages/on-rent/{vin} (confirmed from TeqMobility API docs)
+ * POST /api/v1/coverages/on-rent/{vin}/start (current endpoint, legacy path without /start was deprecated 2/14/2025)
  * VIN is a path parameter, body contains usage + optional fields
  * @param {string} vehicleId - TeqMobility vehicle ID (from upsertVehicle response)
  * @param {string} vin - Vehicle VIN (17-char, used as path param)
@@ -218,11 +218,11 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     }
   };
 
-  console.log(`🛡️ TeqMobility: Starting on-rent coverage - POST /api/v1/coverages/on-rent/${vin}`);
+  console.log(`🛡️ TeqMobility: Starting on-rent coverage - POST /api/v1/coverages/on-rent/${vin}/start`);
   console.log(`🛡️ TeqMobility: Coverage request body:`, JSON.stringify(body, null, 2));
 
   try {
-    const response = await teqApi.post(`/api/v1/coverages/on-rent/${vin}`, body);
+    const response = await teqApi.post(`/api/v1/coverages/on-rent/${vin}/start`, body);
     console.log(`🛡️ TeqMobility: ✅ Coverage started successfully`);
     console.log(`🛡️ TeqMobility: Coverage response:`, JSON.stringify(response.data, null, 2));
     return response.data;
