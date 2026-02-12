@@ -649,6 +649,7 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
                 <h4 style="margin-top: 0; color: #1d4ed8;">Driver Information</h4>
                 <p style="margin: 5px 0;"><strong>Name:</strong> ${driver.firstName} ${driver.lastName}</p>
                 <p style="margin: 5px 0;"><strong>Email:</strong> ${driver.email}</p>
+                ${driver.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${driver.phone}</p>` : ''}
               </div>
 
               <div class="next-steps">
@@ -692,7 +693,7 @@ Booking Details:
 
 Driver Information:
 - Name: ${driver.firstName} ${driver.lastName}
-- Email: ${driver.email}
+- Email: ${driver.email}${driver.phone ? `\n- Phone: ${driver.phone}` : ''}
 
 Next Steps:
 - Ensure your vehicle is clean and ready
@@ -1075,6 +1076,7 @@ Updated Booking Details:
                 <h4 style="margin-top: 0; color: #1d4ed8;">Driver Information</h4>
                 <p style="margin: 5px 0;"><strong>Name:</strong> ${driver.firstName} ${driver.lastName}</p>
                 <p style="margin: 5px 0;"><strong>Email:</strong> ${driver.email}</p>
+                ${driver.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${driver.phone}</p>` : ''}
               </div>
 
               <div class="updated">
@@ -1097,7 +1099,7 @@ Updated Booking Details:
         </body>
         </html>
       `,
-      text: `Hi ${host.firstName},\n\nA booking for your ${vehicle.year} ${vehicle.make} ${vehicle.model} has been extended by ${extensionDays} day(s).\n${textContent}\nDriver: ${driver.firstName} ${driver.lastName} (${driver.email})\n\nThe RentUFS Team`
+      text: `Hi ${host.firstName},\n\nA booking for your ${vehicle.year} ${vehicle.make} ${vehicle.model} has been extended by ${extensionDays} day(s).\n${textContent}\nDriver: ${driver.firstName} ${driver.lastName} (${driver.email})${driver.phone ? `\nPhone: ${driver.phone}` : ''}\n\nThe RentUFS Team`
     };
 
     // Send both emails
