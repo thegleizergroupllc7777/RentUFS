@@ -264,7 +264,8 @@ router.get('/', async (req, res) => {
         }
         vehicles = await Vehicle.find(query)
           .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
-          .sort({ createdAt: -1 });
+          .sort({ createdAt: -1 })
+          .lean();
       }
     } else if (location) {
       // Location without radius - use text search
@@ -276,12 +277,15 @@ router.get('/', async (req, res) => {
       }
       vehicles = await Vehicle.find(query)
         .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
     } else {
-      // No location filter - return all available vehicles
+      // No location filter - return all available vehicles (limit to 100 for performance)
       vehicles = await Vehicle.find({ availability: true })
         .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean();
     }
 
     // Resolve relative image paths to full URLs
@@ -303,7 +307,7 @@ router.get('/', async (req, res) => {
           // Booking spans the entire requested period
           { startDate: { $lte: start }, endDate: { $gte: end } }
         ]
-      }).select('vehicle');
+      }).select('vehicle').lean();
 
       // Get IDs of unavailable vehicles
       const unavailableVehicleIds = overlappingBookings.map(b => b.vehicle.toString());
@@ -322,7 +326,8 @@ router.get('/', async (req, res) => {
 router.get('/host/my-vehicles', auth, async (req, res) => {
   try {
     const vehicles = await Vehicle.find({ host: req.user._id })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Resolve relative image paths to full URLs
     vehicles.forEach(v => resolveImageUrls(v, req));

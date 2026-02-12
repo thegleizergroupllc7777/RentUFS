@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
@@ -105,6 +105,22 @@ const HostDashboard = () => {
     }
   };
 
+  // Memoize vehicle grouping by zip code to avoid recalculating on every render
+  const groupedVehicles = useMemo(() => {
+    const grouped = {};
+    vehicles.forEach(v => {
+      const zip = v.location?.zipCode || 'No Zip Code';
+      if (!grouped[zip]) grouped[zip] = [];
+      grouped[zip].push(v);
+    });
+    const sortedZips = Object.keys(grouped).sort((a, b) => {
+      if (a === 'No Zip Code') return 1;
+      if (b === 'No Zip Code') return -1;
+      return a.localeCompare(b);
+    });
+    return { grouped, sortedZips };
+  }, [vehicles]);
+
   if (loading) {
     return (
       <div className="host-page">
@@ -198,21 +214,7 @@ const HostDashboard = () => {
                 </button>
               </div>
 
-              {(() => {
-              // Group vehicles by zip code
-              const grouped = {};
-              vehicles.forEach(v => {
-                const zip = v.location?.zipCode || 'No Zip Code';
-                if (!grouped[zip]) grouped[zip] = [];
-                grouped[zip].push(v);
-              });
-              const sortedZips = Object.keys(grouped).sort((a, b) => {
-                if (a === 'No Zip Code') return 1;
-                if (b === 'No Zip Code') return -1;
-                return a.localeCompare(b);
-              });
-
-              return sortedZips.map(zip => (
+              {groupedVehicles.sortedZips.map(zip => (
                 <div key={zip} style={{ marginBottom: '2rem' }}>
                   <div style={{
                     display: 'flex',
@@ -233,7 +235,7 @@ const HostDashboard = () => {
                       {zip}
                     </span>
                     {(() => {
-                      const loc = grouped[zip][0]?.location;
+                      const loc = groupedVehicles.grouped[zip][0]?.location;
                       const cityState = [loc?.city, loc?.state].filter(Boolean).join(', ');
                       return cityState ? (
                         <span style={{ color: '#4b5563', fontSize: '0.95rem', fontWeight: '500' }}>
@@ -242,14 +244,14 @@ const HostDashboard = () => {
                       ) : null;
                     })()}
                     <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                      {grouped[zip].length} vehicle{grouped[zip].length !== 1 ? 's' : ''}
+                      {groupedVehicles.grouped[zip].length} vehicle{groupedVehicles.grouped[zip].length !== 1 ? 's' : ''}
                     </span>
                   </div>
 
                   {/* Grid View */}
                   {viewMode === 'grid' && (
                   <div className="host-vehicles-grid">
-                    {grouped[zip].map(vehicle => (
+                    {groupedVehicles.grouped[zip].map(vehicle => (
                 <div key={vehicle._id} className={`host-vehicle-card ${rentedVehicleIds.has(String(vehicle._id)) ? 'rented' : ''}`}>
                   <div className="host-vehicle-image">
                     {vehicle.images?.[0] ? (
@@ -317,7 +319,7 @@ const HostDashboard = () => {
                   {/* List View */}
                   {viewMode === 'list' && (
                   <div className="host-vehicles-list">
-                    {grouped[zip].map(vehicle => {
+                    {groupedVehicles.grouped[zip].map(vehicle => {
                       const isRented = rentedVehicleIds.has(String(vehicle._id));
                       return (
                     <div key={vehicle._id} className={`host-vehicle-card-list ${isRented ? 'rented' : ''}`}>
@@ -381,8 +383,7 @@ const HostDashboard = () => {
                   </div>
                   )}
                 </div>
-              ));
-            })()}
+              ))}
             </>
           )}
         </div>

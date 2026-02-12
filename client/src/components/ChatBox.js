@@ -55,10 +55,10 @@ const ChatBox = ({ bookingId, currentUserId, otherUserName, currentRole, onClose
     fetchMessages();
     // Delay initial mark-as-read by 3 seconds so Navbar can display the badge first
     const initialMarkRead = setTimeout(() => markAsRead(), 3000);
-    // Poll for new messages every 5 seconds
-    pollRef.current = setInterval(fetchMessages, 5000);
-    // Periodically mark messages as read while chat is open (every 15s)
-    markReadRef.current = setInterval(markAsRead, 15000);
+    // Poll for new messages every 10 seconds
+    pollRef.current = setInterval(fetchMessages, 10000);
+    // Periodically mark messages as read while chat is open (every 30s)
+    markReadRef.current = setInterval(markAsRead, 30000);
     return () => {
       clearTimeout(initialMarkRead);
       if (pollRef.current) clearInterval(pollRef.current);

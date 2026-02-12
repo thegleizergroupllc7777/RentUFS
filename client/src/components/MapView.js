@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { Link } from 'react-router-dom';
 import getImageUrl from '../config/imageUrl';
@@ -21,16 +21,26 @@ const mapOptions = {
   fullscreenControl: true,
 };
 
-// Custom marker icon (car pin)
-const createMarkerIcon = (isSelected) => ({
+// Pre-created marker icons to avoid recreating objects on every render
+const MARKER_ICON_DEFAULT = {
   path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-  fillColor: isSelected ? '#2563eb' : '#dc2626',
+  fillColor: '#dc2626',
   fillOpacity: 1,
   strokeColor: '#ffffff',
   strokeWeight: 2,
-  scale: isSelected ? 2 : 1.7,
+  scale: 1.7,
   anchor: { x: 12, y: 24 },
-});
+};
+
+const MARKER_ICON_SELECTED = {
+  path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
+  fillColor: '#2563eb',
+  fillOpacity: 1,
+  strokeColor: '#ffffff',
+  strokeWeight: 2,
+  scale: 2,
+  anchor: { x: 12, y: 24 },
+};
 
 const MapView = ({
   vehicles = [],
@@ -127,12 +137,12 @@ const MapView = ({
     );
   }
 
-  // Filter vehicles with valid coordinates
-  const vehiclesWithCoords = vehicles.filter(v =>
+  // Filter vehicles with valid coordinates (memoized)
+  const vehiclesWithCoords = useMemo(() => vehicles.filter(v =>
     v && v.location && v.location.coordinates &&
     Array.isArray(v.location.coordinates) &&
     v.location.coordinates.length >= 2
-  );
+  ), [vehicles]);
 
   return (
     <div style={{ height, width: '100%' }}>
@@ -152,7 +162,7 @@ const MapView = ({
             <Marker
               key={vehicle._id}
               position={{ lat, lng }}
-              icon={createMarkerIcon(isSelected)}
+              icon={isSelected ? MARKER_ICON_SELECTED : MARKER_ICON_DEFAULT}
               onClick={() => handleMarkerClick(vehicle)}
               onMouseOver={() => setHoveredVehicle(vehicle._id)}
               onMouseOut={() => setHoveredVehicle(null)}

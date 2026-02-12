@@ -42,25 +42,32 @@ const expireStaleBookings = async () => {
     const staleConfirmed = await Booking.find({
       status: 'confirmed',
       endDate: { $lt: cutoff }
-    });
-    for (const booking of staleConfirmed) {
-      booking.status = 'cancelled';
-      booking.cancellationReason = 'Booking expired — rental period passed without pickup';
-      booking.cancelledAt = new Date();
-      await booking.save();
-      await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+    }).select('vehicle').lean();
+
+    if (staleConfirmed.length > 0) {
+      const staleConfirmedIds = staleConfirmed.map(b => b._id);
+      await Booking.updateMany(
+        { _id: { $in: staleConfirmedIds } },
+        { status: 'cancelled', cancellationReason: 'Booking expired — rental period passed without pickup', cancelledAt: new Date() }
+      );
+      const vehicleIds = staleConfirmed.map(b => b.vehicle);
+      await Vehicle.updateMany({ _id: { $in: vehicleIds } }, { availability: true });
     }
 
     // Active bookings well past end date — trip ended but return inspection never completed
     const staleActive = await Booking.find({
       status: 'active',
       endDate: { $lt: cutoff }
-    });
-    for (const booking of staleActive) {
-      booking.status = 'completed';
-      booking.completedAt = new Date();
-      await booking.save();
-      await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+    }).select('vehicle').lean();
+
+    if (staleActive.length > 0) {
+      const staleActiveIds = staleActive.map(b => b._id);
+      await Booking.updateMany(
+        { _id: { $in: staleActiveIds } },
+        { status: 'completed', completedAt: new Date() }
+      );
+      const vehicleIds = staleActive.map(b => b.vehicle);
+      await Vehicle.updateMany({ _id: { $in: vehicleIds } }, { availability: true });
     }
 
     const total = staleConfirmed.length + staleActive.length;
@@ -225,7 +232,8 @@ router.get('/my-bookings', auth, async (req, res) => {
     const bookings = await Booking.find({ driver: req.user._id, status: { $ne: 'awaiting_payment' } })
       .populate('vehicle')
       .populate('host', 'firstName lastName email phone profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(bookings);
   } catch (error) {
@@ -239,7 +247,8 @@ router.get('/host-bookings', auth, async (req, res) => {
     const bookings = await Booking.find({ host: req.user._id, status: { $ne: 'awaiting_payment' } })
       .populate('vehicle')
       .populate('driver', 'firstName lastName email phone profileImage')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(bookings);
   } catch (error) {
@@ -708,29 +717,26 @@ router.get('/:id/available-vehicles', auth, async (req, res) => {
       host: req.user._id,
       _id: { $ne: booking.vehicle._id },
       availability: true
-    });
+    }).lean();
 
-    // Check for conflicting bookings on each vehicle
-    const availableVehicles = [];
+    // Batch query: find all conflicting bookings for ALL host vehicles at once
+    const vehicleIds = hostVehicles.map(v => v._id);
+    const conflictingBookings = await Booking.find({
+      vehicle: { $in: vehicleIds },
+      _id: { $ne: booking._id },
+      status: { $in: ['pending', 'confirmed', 'active'] },
+      $or: [
+        { startDate: { $gte: booking.startDate, $lte: booking.endDate } },
+        { endDate: { $gte: booking.startDate, $lte: booking.endDate } },
+        { startDate: { $lte: booking.startDate }, endDate: { $gte: booking.endDate } }
+      ]
+    }).select('vehicle').lean();
 
-    for (const vehicle of hostVehicles) {
-      // Check if this vehicle has any conflicting bookings
-      const conflictingBooking = await Booking.findOne({
-        vehicle: vehicle._id,
-        _id: { $ne: booking._id },
-        status: { $in: ['pending', 'confirmed', 'active'] },
-        $or: [
-          // Booking starts during the period
-          { startDate: { $gte: booking.startDate, $lte: booking.endDate } },
-          // Booking ends during the period
-          { endDate: { $gte: booking.startDate, $lte: booking.endDate } },
-          // Booking spans the entire period
-          { startDate: { $lte: booking.startDate }, endDate: { $gte: booking.endDate } }
-        ]
-      });
+    const conflictedVehicleIds = new Set(conflictingBookings.map(b => b.vehicle.toString()));
 
-      if (!conflictingBooking) {
-        // Calculate price for this vehicle
+    const availableVehicles = hostVehicles
+      .filter(vehicle => !conflictedVehicleIds.has(vehicle._id.toString()))
+      .map(vehicle => {
         let newTotalPrice;
         if (booking.rentalType === 'weekly') {
           const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
@@ -744,14 +750,13 @@ router.get('/:id/available-vehicles', auth, async (req, res) => {
 
         const priceDifference = newTotalPrice - booking.totalPrice;
 
-        availableVehicles.push({
-          ...vehicle.toObject(),
+        return {
+          ...vehicle,
           newTotalPrice,
           priceDifference,
           currentBookingPrice: booking.totalPrice
-        });
-      }
-    }
+        };
+      });
 
     res.json({
       bookingId: booking._id,

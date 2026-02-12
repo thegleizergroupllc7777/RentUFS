@@ -37,58 +37,58 @@ const VehicleDetail = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchVehicle();
-    fetchReviews();
+    const fetchData = async () => {
+      try {
+        // Fetch vehicle and reviews in parallel
+        const requests = [
+          axios.get(`${API_URL}/api/vehicles/${id}`),
+          axios.get(`${API_URL}/api/reviews/vehicle/${id}`)
+        ];
+
+        // Also fetch active booking in parallel if user is logged in
+        const token = localStorage.getItem('token');
+        if (user && token) {
+          requests.push(
+            axios.get(`${API_URL}/api/bookings/my-bookings`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          );
+        }
+
+        const results = await Promise.allSettled(requests);
+
+        // Handle vehicle response
+        if (results[0].status === 'fulfilled') {
+          setVehicle(results[0].value.data);
+        }
+
+        // Handle reviews response
+        if (results[1].status === 'fulfilled') {
+          setReviews(results[1].value.data);
+        }
+
+        // Handle active booking response
+        if (results[2]?.status === 'fulfilled') {
+          const now = new Date();
+          const currentBooking = results[2].value.data.find(booking => {
+            if (booking.vehicle?._id !== id) return false;
+            if (!['active', 'confirmed'].includes(booking.status)) return false;
+            const endDate = new Date(booking.endDate);
+            return endDate >= now;
+          });
+          if (currentBooking) {
+            setActiveBooking(currentBooking);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching vehicle data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [id, user]);
-
-  const fetchActiveBooking = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const headers = { Authorization: `Bearer ${token}` };
-      const now = new Date();
-
-      // Only check the driver's own bookings for this vehicle
-      const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, { headers });
-      const currentBooking = response.data.find(booking => {
-        if (booking.vehicle?._id !== id) return false;
-        if (!['active', 'confirmed'].includes(booking.status)) return false;
-        // Only show if the booking end date hasn't passed
-        const endDate = new Date(booking.endDate);
-        return endDate >= now;
-      });
-      if (currentBooking) {
-        setActiveBooking(currentBooking);
-      }
-    } catch (error) {
-      console.error('Error fetching active booking:', error);
-    }
-  };
-
-  const fetchVehicle = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/vehicles/${id}`);
-      setVehicle(response.data);
-      // Fetch driver's active booking on this vehicle
-      if (user) {
-        fetchActiveBooking();
-      }
-    } catch (error) {
-      console.error('Error fetching vehicle:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchReviews = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/reviews/vehicle/${id}`);
-      setReviews(response.data);
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-    }
-  };
 
   const handleBookingChange = (e) => {
     const { name, value } = e.target;
