@@ -105,6 +105,13 @@ const MapView = ({
     }
   };
 
+  // Filter vehicles with valid coordinates (memoized, must be before early returns)
+  const vehiclesWithCoords = useMemo(() => vehicles.filter(v =>
+    v && v.location && v.location.coordinates &&
+    Array.isArray(v.location.coordinates) &&
+    v.location.coordinates.length >= 2
+  ), [vehicles]);
+
   if (loadError) {
     return (
       <div style={{
@@ -136,13 +143,6 @@ const MapView = ({
       </div>
     );
   }
-
-  // Filter vehicles with valid coordinates (memoized)
-  const vehiclesWithCoords = useMemo(() => vehicles.filter(v =>
-    v && v.location && v.location.coordinates &&
-    Array.isArray(v.location.coordinates) &&
-    v.location.coordinates.length >= 2
-  ), [vehicles]);
 
   return (
     <div style={{ height, width: '100%' }}>
