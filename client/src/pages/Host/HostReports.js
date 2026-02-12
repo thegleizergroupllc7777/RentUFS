@@ -261,27 +261,40 @@ const HostReports = () => {
                       )}
                     </div>
 
-                    {/* Recent Bookings Table */}
-                    {reportData.recentBookings.length > 0 && (
-                      <div style={{ marginTop: '1.5rem' }}>
-                        <h4 className="report-subsection-title">Recent Bookings</h4>
-                        <div className="report-bookings-list">
-                          {reportData.recentBookings.map((booking) => (
-                            <div key={booking.id} className="report-booking-row">
-                              <div className="report-booking-info">
-                                <span className="report-booking-vehicle">{booking.vehicleName}</span>
-                                <span className="report-booking-detail">{booking.driverName} &middot; {formatDate(booking.startDate)} - {formatDate(booking.endDate)} ({booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''})</span>
-                              </div>
-                              <div className="report-booking-right">
-                                <span className="report-booking-price">{formatCurrency(booking.totalPrice)}</span>
-                                <div className="report-booking-badges">
-                                  <span className={`status-badge status-${booking.status}`}>{booking.status}</span>
-                                  <span className={`status-badge payment-${booking.paymentStatus}`}>{booking.paymentStatus}</span>
-                                </div>
+                  </div>
+                )}
+              </div>
+
+              {/* RECENT ACTIVITY */}
+              <div className="report-accordion-item">
+                <button className={`report-accordion-header ${openSections.recent ? 'open' : ''}`} onClick={() => toggleSection('recent')}>
+                  <div className="report-accordion-title">
+                    <span className="report-accordion-icon">&#9201;</span>
+                    <span>Recent Activity</span>
+                  </div>
+                  <span className="report-accordion-arrow">{openSections.recent ? '\u25B2' : '\u25BC'}</span>
+                </button>
+                {openSections.recent && (
+                  <div className="report-accordion-body">
+                    {reportData.recentBookings.length === 0 ? (
+                      <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem 0' }}>No recent activity for this period</p>
+                    ) : (
+                      <div className="report-bookings-list">
+                        {reportData.recentBookings.map((booking) => (
+                          <div key={booking.id} className="report-booking-row">
+                            <div className="report-booking-info">
+                              <span className="report-booking-vehicle">{booking.vehicleName}</span>
+                              <span className="report-booking-detail">{booking.driverName} &middot; {formatDate(booking.startDate)} - {formatDate(booking.endDate)} ({booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''})</span>
+                            </div>
+                            <div className="report-booking-right">
+                              <span className="report-booking-price">{formatCurrency(booking.totalPrice)}</span>
+                              <div className="report-booking-badges">
+                                <span className={`status-badge status-${booking.status}`}>{booking.status}</span>
+                                <span className={`status-badge payment-${booking.paymentStatus}`}>{booking.paymentStatus}</span>
                               </div>
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -315,6 +328,9 @@ const HostReports = () => {
                               )}
                               <div className="report-fleet-info">
                                 <span className="report-fleet-name">{vehicle.vehicleName}</span>
+                                {vehicle.vehicleNickname && (
+                                  <span className="report-fleet-nickname">"{vehicle.vehicleNickname}"</span>
+                                )}
                                 <span className="report-fleet-bookings">{vehicle.totalBookings} booking{vehicle.totalBookings !== 1 ? 's' : ''} ({vehicle.confirmedBookings} confirmed)</span>
                               </div>
                             </div>
