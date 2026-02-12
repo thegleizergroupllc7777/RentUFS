@@ -1812,6 +1812,44 @@ const DriverProfile = () => {
     }
   };
 
+  const handleRemoveHostAccount = async () => {
+    setSettingsLoading(true);
+    setSettingsError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/users/account/remove-host`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser(response.data);
+      localStorage.setItem('activeMode', 'driver');
+      setSettingsMessage('Host account removed. You are now a driver only.');
+      setSettingsAction(null);
+    } catch (err) {
+      setSettingsError(err.response?.data?.message || 'Failed to remove host account.');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleRemoveDriverAccount = async () => {
+    setSettingsLoading(true);
+    setSettingsError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/users/account/remove-driver`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser(response.data);
+      localStorage.setItem('activeMode', 'host');
+      setSettingsMessage('Driver account removed. You are now a host only.');
+      setSettingsAction(null);
+    } catch (err) {
+      setSettingsError(err.response?.data?.message || 'Failed to remove driver account.');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   const renderSettingsTab = () => (
     <div>
       <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
@@ -1845,6 +1883,153 @@ const DriverProfile = () => {
         }}>
           {settingsError}
         </div>
+      )}
+
+      {/* Remove Host / Driver Account - only for users with both */}
+      {user?.userType === 'both' && (
+        <>
+          {/* Remove Host Account */}
+          <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
+            <h3 style={{ color: '#f97316', marginBottom: '0.5rem' }}>Remove Host Account</h3>
+            <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.5' }}>
+              Remove your host account and keep your driver account active. Your vehicle listings will be hidden
+              from the marketplace. Your driver profile and booking history will remain intact.
+            </p>
+
+            {settingsAction === 'remove-host' ? (
+              <div style={{
+                background: 'rgba(249, 115, 22, 0.1)',
+                border: '1px solid #f97316',
+                borderRadius: '0.5rem',
+                padding: '1rem'
+              }}>
+                <p style={{ color: '#fb923c', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  Are you sure you want to remove your host account?
+                </p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                  Your vehicle listings will be hidden. You can register as a host again later if you change your mind.
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={handleRemoveHostAccount}
+                    disabled={settingsLoading}
+                    style={{
+                      background: '#f97316',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '0.375rem',
+                      fontWeight: '600',
+                      cursor: settingsLoading ? 'not-allowed' : 'pointer',
+                      opacity: settingsLoading ? 0.6 : 1
+                    }}
+                  >
+                    {settingsLoading ? 'Processing...' : 'Yes, Remove Host Account'}
+                  </button>
+                  <button
+                    onClick={() => { setSettingsAction(null); setSettingsError(''); }}
+                    style={{
+                      background: 'transparent',
+                      color: '#9ca3af',
+                      border: '1px solid #6b7280',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setSettingsAction('remove-host'); setSettingsError(''); setSettingsMessage(''); }}
+                style={{
+                  background: 'transparent',
+                  color: '#f97316',
+                  border: '1px solid #f97316',
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '0.375rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Remove Host Account
+              </button>
+            )}
+          </div>
+
+          {/* Remove Driver Account */}
+          <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
+            <h3 style={{ color: '#f97316', marginBottom: '0.5rem' }}>Remove Driver Account</h3>
+            <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.5' }}>
+              Remove your driver account and keep your host account active. You will no longer be able to
+              rent vehicles from other hosts. Your vehicle listings and host earnings will remain intact.
+            </p>
+
+            {settingsAction === 'remove-driver' ? (
+              <div style={{
+                background: 'rgba(249, 115, 22, 0.1)',
+                border: '1px solid #f97316',
+                borderRadius: '0.5rem',
+                padding: '1rem'
+              }}>
+                <p style={{ color: '#fb923c', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  Are you sure you want to remove your driver account?
+                </p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                  You will no longer be able to rent vehicles. You can register as a driver again later if you change your mind.
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={handleRemoveDriverAccount}
+                    disabled={settingsLoading}
+                    style={{
+                      background: '#f97316',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '0.375rem',
+                      fontWeight: '600',
+                      cursor: settingsLoading ? 'not-allowed' : 'pointer',
+                      opacity: settingsLoading ? 0.6 : 1
+                    }}
+                  >
+                    {settingsLoading ? 'Processing...' : 'Yes, Remove Driver Account'}
+                  </button>
+                  <button
+                    onClick={() => { setSettingsAction(null); setSettingsError(''); }}
+                    style={{
+                      background: 'transparent',
+                      color: '#9ca3af',
+                      border: '1px solid #6b7280',
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setSettingsAction('remove-driver'); setSettingsError(''); setSettingsMessage(''); }}
+                style={{
+                  background: 'transparent',
+                  color: '#f97316',
+                  border: '1px solid #f97316',
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '0.375rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Remove Driver Account
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {/* Deactivate Account */}
