@@ -168,18 +168,36 @@ const changeVehicleOwner = async (vin, ownerId) => {
 
 /**
  * 4. Start On-Rent Coverage - Starts insurance coverage for a rental
- * POST /api/v1/coverages/on-rent (confirmed from TeqMobility API docs)
+ * POST /api/v1/coverages/on-rent/{vin} (confirmed from TeqMobility API docs)
+ * VIN is a path parameter, body contains usage + optional fields
  * @param {string} vehicleId - TeqMobility vehicle ID (from upsertVehicle response)
- * @param {string} vin - Vehicle VIN
+ * @param {string} vin - Vehicle VIN (17-char, used as path param)
  */
 const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => {
-  const driverBody = {
-    firstname: driver.firstName,
-    lastname: driver.lastName,
-    email: driver.email,
+  // Driver object (required) — uses nested license and address objects per API docs
+  // birth_date is required in license object per API docs
+  const birthDate = driver.dateOfBirth
+    ? new Date(driver.dateOfBirth).toISOString().split('T')[0]
+    : '';
+  if (!birthDate) {
+    console.warn('🛡️ TeqMobility: Driver missing required birth_date for coverage');
+  }
+
+  const licenseObj = {
+    number: driver.driverLicense?.licenseNumber || '',
+    state: toStateAbbr(driver.driverLicense?.state),
+    birth_date: birthDate
+  };
+  if (driver.driverLicense?.expirationDate) {
+    licenseObj.expiration_date = new Date(driver.driverLicense.expirationDate).toISOString().split('T')[0];
+  }
+
+  const driverObj = {
+    firstname: driver.firstName || '',
+    lastname: driver.lastName || '',
+    email: driver.email || '',
     phone: driver.phone || '',
-    dl_number: driver.driverLicense?.licenseNumber || '',
-    dl_state: toStateAbbr(driver.driverLicense?.state),
+    license: licenseObj,
     address: {
       line1: driver.address?.street || '',
       city: driver.address?.city || '',
@@ -188,22 +206,10 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     }
   };
 
-  // Add driver birth_date if available
-  if (driver.dateOfBirth) {
-    driverBody.birth_date = new Date(driver.dateOfBirth).toISOString().split('T')[0];
-  }
-
-  // Add license expiration if available
-  if (driver.driverLicense?.expirationDate) {
-    driverBody.dl_expiration_date = new Date(driver.driverLicense.expirationDate).toISOString().split('T')[0];
-  }
-
   const body = {
-    vin: vin,
-    vehicle_id: vehicleId,
     usage: 'RIDESHARE',
     external_id: booking._id.toString(),
-    driver: driverBody,
+    driver: driverObj,
     pickup_address: {
       state: toStateAbbr(vehicle.location?.state),
       city: vehicle.location?.city || '',
@@ -212,11 +218,11 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     }
   };
 
-  console.log(`🛡️ TeqMobility: Starting on-rent coverage - vehicleId=${vehicleId}, vin=${vin}`);
+  console.log(`🛡️ TeqMobility: Starting on-rent coverage - POST /api/v1/coverages/on-rent/${vin}`);
   console.log(`🛡️ TeqMobility: Coverage request body:`, JSON.stringify(body, null, 2));
 
   try {
-    const response = await teqApi.post('/api/v1/coverages/on-rent', body);
+    const response = await teqApi.post(`/api/v1/coverages/on-rent/${vin}`, body);
     console.log(`🛡️ TeqMobility: ✅ Coverage started successfully`);
     console.log(`🛡️ TeqMobility: Coverage response:`, JSON.stringify(response.data, null, 2));
     return response.data;
