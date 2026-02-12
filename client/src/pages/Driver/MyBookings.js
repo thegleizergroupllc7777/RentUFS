@@ -1368,19 +1368,9 @@ const MyBookings = () => {
               background: '#f3f4f6',
               width: '100%'
             }}>
-              {insuranceCardModal.booking.teqMobility.cardImage ? (
-                <img
-                  src={getImageUrl(`/uploads/${insuranceCardModal.booking.teqMobility.cardImage}`)}
-                  alt="Insurance Card"
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block'
-                  }}
-                />
-              ) : insuranceCardModal.booking.teqMobility.cardUrl ? (
+              {(insuranceCardModal.booking.teqMobility.cardImage || insuranceCardModal.booking.teqMobility.cardUrl) ? (
                 <iframe
-                  src={insuranceCardModal.booking.teqMobility.cardUrl}
+                  src={`${API_URL}/api/bookings/${insuranceCardModal.booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
                   title="Insurance Card"
                   style={{
                     width: '100%',
@@ -1395,23 +1385,6 @@ const MyBookings = () => {
                 </p>
               )}
             </div>
-            {insuranceCardModal.booking.teqMobility.cardUrl && (
-              <a
-                href={insuranceCardModal.booking.teqMobility.cardUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'block',
-                  textAlign: 'center',
-                  marginTop: '0.75rem',
-                  color: '#3b82f6',
-                  fontSize: '0.875rem',
-                  textDecoration: 'none'
-                }}
-              >
-                Open in New Tab
-              </a>
-            )}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
               <button
                 onClick={() => setInsuranceCardModal({ open: false, booking: null })}
