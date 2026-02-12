@@ -93,6 +93,9 @@ router.get('/host', auth, async (req, res) => {
     );
     const pendingRevenue = realPendingBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
 
+    // Total host platform fees deducted from host earnings
+    const totalHostPlatformFees = paidBookings.reduce((sum, b) => sum + (Number(b.hostPlatformFee) || 0), 0);
+
     // Count abandoned bookings (status=pending, never completed) for reference
     const abandonedBookings = bookings.filter(b =>
       b.status === 'pending' &&
@@ -120,6 +123,7 @@ router.get('/host', auth, async (req, res) => {
           totalDays: 0,
           totalRevenue: 0,
           hostEarnings: 0,
+          hostPlatformFees: 0,
           platformRevenue: 0,
           pendingRevenue: 0
         };
@@ -134,6 +138,7 @@ router.get('/host', auth, async (req, res) => {
       if (booking.paymentStatus === 'paid') {
         vehicleStats[vehicleId].totalRevenue += (Number(booking.totalPrice) || 0);
         vehicleStats[vehicleId].totalDays += (Number(booking.totalDays) || 0);
+        vehicleStats[vehicleId].hostPlatformFees += (Number(booking.hostPlatformFee) || 0);
 
         // Calculate per-vehicle earnings split
         if (typeof booking.hostEarnings === 'number' && booking.hostEarnings > 0) {
@@ -205,6 +210,7 @@ router.get('/host', auth, async (req, res) => {
         cancelledBookings: bookings.filter(b => b.status === 'cancelled').length,
         totalRevenue,
         hostEarnings: totalHostEarnings,
+        hostPlatformFees: totalHostPlatformFees,
         platformRevenue: totalPlatformRevenue,
         pendingRevenue, // Only confirmed/active bookings awaiting payment
         pendingBookingsCount: realPendingBookings.length,
