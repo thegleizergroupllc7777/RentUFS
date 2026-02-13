@@ -84,7 +84,7 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           </div>
 
           <div className="detail-section detail-section-note">
-            <p>The driver paid {formatCurrency(booking.totalPrice)} total (includes driver service fee{booking.insuranceCost > 0 ? ' + insurance' : ''}). Your earnings are the rental subtotal minus the host service fee.</p>
+            <p>Your earnings are the rental subtotal minus the host service fee.</p>
           </div>
         </div>
       )}
