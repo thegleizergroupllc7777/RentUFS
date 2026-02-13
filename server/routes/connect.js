@@ -237,11 +237,8 @@ router.get('/pending-payouts', auth, async (req, res) => {
         totalDays: b.totalDays,
         rentalType: b.rentalType,
         pricePerDay: b.pricePerDay,
-        totalPrice: b.totalPrice,
-        platformFee: b.platformFee,
         hostPlatformFee: b.hostPlatformFee,
         hostEarnings: b.hostEarnings,
-        insuranceCost: b.insurance?.totalCost || 0,
         payoutStatus: b.payoutStatus,
         payoutEligibleDate: b.payoutEligibleDate || b.endDate
       })),
@@ -287,11 +284,8 @@ router.get('/payout-history', auth, async (req, res) => {
         totalDays: b.totalDays,
         rentalType: b.rentalType,
         pricePerDay: b.pricePerDay,
-        totalPrice: b.totalPrice,
-        platformFee: b.platformFee,
         hostPlatformFee: b.hostPlatformFee,
         hostEarnings: b.hostEarnings,
-        insuranceCost: b.insurance?.totalCost || 0,
         payoutAmount: b.payoutAmount,
         payoutDate: b.payoutDate,
         payoutId: b.payoutId
