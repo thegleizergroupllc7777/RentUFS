@@ -378,16 +378,6 @@ const ReservationDetail = () => {
                       ${booking.pricePerDay}/{booking.rentalType === 'weekly' ? 'week' : booking.rentalType === 'monthly' ? 'month' : 'day'}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#9ca3af' }}>Payment</span>
-                    <span style={{
-                      color: booking.paymentStatus === 'paid' ? '#10b981' : booking.paymentStatus === 'refunded' ? '#f59e0b' : '#9ca3af',
-                      fontWeight: '600',
-                      textTransform: 'capitalize'
-                    }}>
-                      {booking.paymentStatus}
-                    </span>
-                  </div>
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -396,7 +386,17 @@ const ReservationDetail = () => {
                     marginTop: '0.5rem'
                   }}>
                     <span style={{ color: '#fff', fontWeight: '600' }}>Total</span>
-                    <span style={{ color: '#10b981', fontWeight: '700', fontSize: '1.125rem' }}>${booking.totalPrice}</span>
+                    <span style={{ color: '#10b981', fontWeight: '700', fontSize: '1.125rem' }}>${(booking.totalPrice || 0).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                    <span style={{ color: '#9ca3af' }}>Payment</span>
+                    <span style={{
+                      color: booking.paymentStatus === 'paid' ? '#10b981' : booking.paymentStatus === 'refunded' ? '#f59e0b' : '#9ca3af',
+                      fontWeight: '600',
+                      textTransform: 'capitalize'
+                    }}>
+                      {booking.paymentStatus}
+                    </span>
                   </div>
                 </div>
               </div>
