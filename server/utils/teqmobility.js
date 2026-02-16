@@ -253,10 +253,24 @@ const extractCardUrl = (data) => {
     data.card_url, data.cardUrl, data.card_link, data.cardLink,
     data.certificate_url, data.certificateUrl,
     data.insurance_card_url, data.insuranceCardUrl,
-    data.card?.url, data.card?.link
+    data.id_card_url, data.idCardUrl, data.idcard_url,
+    data.id_card, data.idCard,
+    data.document_url, data.documentUrl, data.documents_url,
+    data.pdf_url, data.pdfUrl,
+    data.card?.url, data.card?.link,
+    data.id_card?.url, data.document?.url
   ];
   for (const val of candidates) {
     if (val && typeof val === 'string' && val.startsWith('http')) return val;
+  }
+  // Deep scan: search all string values for URLs containing known insurance card patterns
+  for (const [key, val] of Object.entries(data)) {
+    if (typeof val === 'string' && val.startsWith('http') &&
+        (val.includes('idcard') || val.includes('id_card') || val.includes('/card') ||
+         val.includes('certificate') || val.includes('document') || val.includes('.pdf'))) {
+      console.log(`🛡️ TeqMobility: Found card URL via deep scan in field "${key}": ${val}`);
+      return val;
+    }
   }
   return null;
 };
