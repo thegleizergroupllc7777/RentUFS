@@ -33,7 +33,7 @@ const INSURANCE_PLANS = {
     description: 'Car Share — Liability protection for your rental trip',
     pricePerDay: 15,
     category: 'carshare',
-    usage: 'CARSHARE',
+    usage: 'PERSONAL',
     coverage: {
       liability: true,
       collision: false,

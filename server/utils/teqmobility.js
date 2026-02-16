@@ -209,8 +209,9 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
     }
   };
 
-  // Set usage based on insurance plan: carshare → CARSHARE, rideshare/default → RIDESHARE
-  const usageType = booking.insurance?.type === 'carshare' ? 'CARSHARE' : 'RIDESHARE';
+  // Set usage based on insurance plan: carshare → PERSONAL, rideshare/default → RIDESHARE
+  // TeqMobility API accepts: RIDESHARE, PERSONAL, OFF_RENT
+  const usageType = booking.insurance?.type === 'carshare' ? 'PERSONAL' : 'RIDESHARE';
 
   const body = {
     usage: usageType,
