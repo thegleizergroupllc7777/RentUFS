@@ -75,8 +75,92 @@ const sendExtensionReminderSMS = async (driver, booking, vehicle, host) => {
   return sendSMS(driver.phone, body);
 };
 
+// Notify host when a new booking request is received
+const sendNewBookingNotificationSMS = async (host, driver, booking, vehicle) => {
+  const startDate = new Date(booking.startDate).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+  const endDate = new Date(booking.endDate).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+  const body = `Hi ${host.firstName}, you have a new booking request from ${driver.firstName} ${driver.lastName} for your ${vehicle.year} ${vehicle.make} ${vehicle.model}. Dates: ${startDate} - ${endDate} ($${booking.totalPrice}). Review it here: ${clientUrl}/host/bookings - RentUFS`;
+
+  return sendSMS(host.phone, body);
+};
+
+// Notify driver when booking is confirmed by host
+const sendBookingConfirmedSMS = async (driver, booking, vehicle, host) => {
+  const startDate = new Date(booking.startDate).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+  const pickupTime = booking.pickupTime || '10:00';
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+  const body = `Great news, ${driver.firstName}! Your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental has been confirmed by ${host.firstName}. Pickup: ${startDate} at ${pickupTime}. View details: ${clientUrl}/my-bookings - RentUFS`;
+
+  return sendSMS(driver.phone, body);
+};
+
+// Notify driver when booking is marked active (vehicle picked up)
+const sendBookingActiveSMS = async (driver, booking, vehicle) => {
+  const endDate = new Date(booking.endDate).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+  const dropoffTime = booking.dropoffTime || '10:00';
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+  const body = `Hi ${driver.firstName}, your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental is now active! Please return the vehicle by ${endDate} at ${dropoffTime}. Manage your booking: ${clientUrl}/my-bookings - RentUFS`;
+
+  return sendSMS(driver.phone, body);
+};
+
+// Notify driver when booking is completed
+const sendBookingCompletedSMS = async (driver, booking, vehicle) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+  const body = `Hi ${driver.firstName}, your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental is now complete. Thank you for using RentUFS! Leave a review: ${clientUrl}/my-bookings - RentUFS`;
+
+  return sendSMS(driver.phone, body);
+};
+
+// Notify driver when booking is cancelled
+const sendBookingCancelledSMS = async (driver, booking, vehicle, reason) => {
+  const reasonText = reason ? ` Reason: ${reason}` : '';
+
+  const body = `Hi ${driver.firstName}, your ${vehicle.year} ${vehicle.make} ${vehicle.model} reservation (${booking.reservationId}) has been cancelled.${reasonText} If you were charged, a refund will be processed. - RentUFS`;
+
+  return sendSMS(driver.phone, body);
+};
+
+// Notify host when driver cancels a booking
+const sendDriverCancelledNotificationSMS = async (host, driver, booking, vehicle) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+  const body = `Hi ${host.firstName}, ${driver.firstName} ${driver.lastName} has cancelled their reservation (${booking.reservationId}) for your ${vehicle.year} ${vehicle.make} ${vehicle.model}. Your vehicle is now available again. View details: ${clientUrl}/host/bookings - RentUFS`;
+
+  return sendSMS(host.phone, body);
+};
+
+// URGENT: Notify driver when booking is overdue (past return time) - insurance coverage at risk
+const sendOverdueReminderSMS = async (driver, booking, vehicle, overdueInfo) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+  const body = `URGENT: ${driver.firstName}, your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental is ${overdueInfo} past due! Your insurance coverage may no longer be active. Please extend your reservation immediately to continue coverage: ${clientUrl}/my-bookings - RentUFS`;
+
+  return sendSMS(driver.phone, body);
+};
+
 module.exports = {
   isSmsConfigured,
   sendSMS,
-  sendExtensionReminderSMS
+  sendExtensionReminderSMS,
+  sendNewBookingNotificationSMS,
+  sendBookingConfirmedSMS,
+  sendBookingActiveSMS,
+  sendBookingCompletedSMS,
+  sendBookingCancelledSMS,
+  sendDriverCancelledNotificationSMS,
+  sendOverdueReminderSMS
 };

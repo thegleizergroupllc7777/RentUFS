@@ -5,6 +5,7 @@ const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const { sendBookingConfirmationToDriver, sendBookingNotificationToHost } = require('../utils/emailService');
+const { sendNewBookingNotificationSMS, sendBookingConfirmedSMS } = require('../utils/smsService');
 
 const router = express.Router();
 
@@ -187,6 +188,11 @@ router.post('/verify-payment', auth, async (req, res) => {
           .catch(err => console.error('Failed to send driver confirmation email:', err));
         sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
           .catch(err => console.error('Failed to send host notification email:', err));
+        // Send SMS notifications alongside emails
+        sendBookingConfirmedSMS(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation SMS:', err));
+        sendNewBookingNotificationSMS(booking.host, booking.driver, booking, booking.vehicle)
+          .catch(err => console.error('Failed to send host notification SMS:', err));
       }
 
       res.json({
@@ -241,6 +247,11 @@ router.post('/confirm-payment', auth, async (req, res) => {
           .catch(err => console.error('Failed to send driver confirmation email:', err));
         sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
           .catch(err => console.error('Failed to send host notification email:', err));
+        // Send SMS notifications alongside emails
+        sendBookingConfirmedSMS(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation SMS:', err));
+        sendNewBookingNotificationSMS(booking.host, booking.driver, booking, booking.vehicle)
+          .catch(err => console.error('Failed to send host notification SMS:', err));
       }
 
       res.json({
@@ -549,6 +560,11 @@ router.post('/webhook', async (req, res) => {
               .catch(err => console.error('Failed to send driver confirmation email:', err));
             sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
               .catch(err => console.error('Failed to send host notification email:', err));
+            // Send SMS notifications alongside emails
+            sendBookingConfirmedSMS(booking.driver, booking, booking.vehicle, booking.host)
+              .catch(err => console.error('Failed to send driver confirmation SMS:', err));
+            sendNewBookingNotificationSMS(booking.host, booking.driver, booking, booking.vehicle)
+              .catch(err => console.error('Failed to send host notification SMS:', err));
           }
         }
       } catch (err) {
@@ -600,6 +616,11 @@ router.post('/webhook', async (req, res) => {
                 .catch(err => console.error('Failed to send driver confirmation email:', err));
               sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
                 .catch(err => console.error('Failed to send host notification email:', err));
+              // Send SMS notifications alongside emails
+              sendBookingConfirmedSMS(booking.driver, booking, booking.vehicle, booking.host)
+                .catch(err => console.error('Failed to send driver confirmation SMS:', err));
+              sendNewBookingNotificationSMS(booking.host, booking.driver, booking, booking.vehicle)
+                .catch(err => console.error('Failed to send host notification SMS:', err));
             }
           }
         }
@@ -676,6 +697,11 @@ router.post('/reconcile/:bookingId', auth, async (req, res) => {
           .catch(err => console.error('Failed to send driver confirmation email:', err));
         sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
           .catch(err => console.error('Failed to send host notification email:', err));
+        // Send SMS notifications alongside emails
+        sendBookingConfirmedSMS(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation SMS:', err));
+        sendNewBookingNotificationSMS(booking.host, booking.driver, booking, booking.vehicle)
+          .catch(err => console.error('Failed to send host notification SMS:', err));
       }
 
       console.log(`✅ Reconciled booking ${bookingId} - payment ${successfulPayment.id} found`);
@@ -716,6 +742,11 @@ router.post('/reconcile/:bookingId', auth, async (req, res) => {
           .catch(err => console.error('Failed to send driver confirmation email:', err));
         sendBookingNotificationToHost(booking.host, booking, booking.vehicle, booking.driver)
           .catch(err => console.error('Failed to send host notification email:', err));
+        // Send SMS notifications alongside emails
+        sendBookingConfirmedSMS(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => console.error('Failed to send driver confirmation SMS:', err));
+        sendNewBookingNotificationSMS(booking.host, booking.driver, booking, booking.vehicle)
+          .catch(err => console.error('Failed to send host notification SMS:', err));
       }
 
       console.log(`✅ Reconciled booking ${bookingId} - checkout session ${successfulSession.id} found`);
