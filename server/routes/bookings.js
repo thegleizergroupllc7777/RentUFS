@@ -376,6 +376,88 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
   }
 });
 
+// Retry TeqMobility insurance card fetch for an active booking
+router.post('/:id/retry-insurance', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('host', 'firstName lastName email phone dateOfBirth driverLicense address hostInfo');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only allow driver or host to retry
+    if (booking.driver.toString() !== req.user._id.toString() &&
+        booking.host.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    if (booking.status !== 'active') {
+      return res.status(400).json({ message: 'Insurance card is only available for active bookings' });
+    }
+
+    if (!booking.insurance?.type || booking.insurance.type === 'none') {
+      return res.status(400).json({ message: 'No insurance selected for this booking' });
+    }
+
+    // If card is already available, no need to retry
+    if (booking.teqMobility?.cardUrl || booking.teqMobility?.cardImage) {
+      return res.json({
+        success: true,
+        message: 'Insurance card already available',
+        teqMobility: booking.teqMobility
+      });
+    }
+
+    // Fetch driver
+    const driver = await User.findById(booking.driver);
+
+    console.log(`🛡️ TeqMobility: Retrying insurance card fetch for booking ${booking._id}`);
+
+    const coverageResult = await startRentalCoverage(booking.host, driver, booking.vehicle, booking);
+
+    const teqData = {
+      coverageId: coverageResult.coverageId || null,
+      ownerId: coverageResult.ownerId || null,
+      status: coverageResult.success ? coverageResult.status : 'failed',
+      cardUrl: coverageResult.cardUrl || null,
+      cardImage: null,
+      startedAt: coverageResult.success ? new Date() : null,
+      error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
+    };
+
+    // Capture insurance card as a screenshot image
+    if (coverageResult.success && coverageResult.cardUrl) {
+      const imagePath = await captureCardImage(coverageResult.cardUrl, booking._id.toString());
+      if (imagePath) {
+        teqData.cardImage = imagePath;
+      }
+    }
+
+    await Booking.findByIdAndUpdate(booking._id, { teqMobility: teqData });
+
+    if (coverageResult.success) {
+      console.log(`🛡️ TeqMobility: ✅ Retry succeeded for booking ${booking._id}`);
+      res.json({
+        success: true,
+        message: 'Insurance card retrieved successfully',
+        teqMobility: teqData
+      });
+    } else {
+      console.error(`🛡️ TeqMobility: ❌ Retry failed for booking ${booking._id}:`, coverageResult.error || coverageResult.reason);
+      res.json({
+        success: false,
+        message: `Insurance provider error: ${coverageResult.error || coverageResult.reason}`,
+        teqMobility: teqData
+      });
+    }
+  } catch (error) {
+    console.error('Retry insurance error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Request booking extension (creates extension request, needs payment)
 router.post('/:id/extend', auth, async (req, res) => {
   try {
