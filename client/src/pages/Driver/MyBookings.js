@@ -130,7 +130,15 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
         responseType: 'text'
       });
       setCardHtml(response.data);
-    } catch {
+    } catch (err) {
+      // If backend says card URL is stale/invalid (404), reset to trigger retry flow
+      if (err.response?.status === 404) {
+        setHasCard(false);
+        setCardError(false);
+        // Auto-retry to get a fresh card from TeqMobility
+        handleRetry();
+        return;
+      }
       setCardError(true);
     } finally {
       setCardLoading(false);

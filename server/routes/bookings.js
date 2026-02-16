@@ -417,26 +417,64 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     }
 
     const axios = require('axios');
-    const response = await axios.get(cardUrl, {
-      responseType: 'arraybuffer',
-      timeout: 10000,
-      headers: { 'Accept': 'text/html,application/xhtml+xml,application/pdf,image/*,*/*' }
-    });
+    let response;
+    try {
+      response = await axios.get(cardUrl, {
+        responseType: 'arraybuffer',
+        timeout: 10000,
+        headers: { 'Accept': 'text/html,application/xhtml+xml,application/pdf,image/*,*/*' }
+      });
+    } catch (proxyErr) {
+      console.error(`🛡️ Insurance card proxy failed for URL ${cardUrl}:`, proxyErr.message);
+      // Clear the stale cardUrl so retry will fetch a fresh one
+      await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
+      return res.status(404).json({ message: 'Insurance card URL is no longer valid. Please retry.' });
+    }
 
     const contentType = response.headers['content-type'] || 'text/html';
+    const buf = Buffer.from(response.data);
+
+    // Validate the response contains actual data (not an error page disguised as image)
+    if (buf.length < 100) {
+      console.error(`🛡️ Insurance card response too small (${buf.length} bytes), likely invalid`);
+      await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
+      return res.status(404).json({ message: 'Insurance card data is invalid. Please retry.' });
+    }
+
+    // Validate image magic bytes if content-type claims it's an image
+    if (contentType.includes('image/')) {
+      const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+      const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
+      const isGif = buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46;
+      if (!isPng && !isJpeg && !isGif) {
+        console.error(`🛡️ Insurance card claims image content-type but data doesn't match (first bytes: ${buf.slice(0, 4).toString('hex')})`);
+        await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
+        return res.status(404).json({ message: 'Insurance card image is corrupt. Please retry.' });
+      }
+    }
+
+    // Validate PDF magic bytes
+    if (contentType.includes('application/pdf')) {
+      const pdfHeader = buf.slice(0, 5).toString('ascii');
+      if (pdfHeader !== '%PDF-') {
+        console.error(`🛡️ Insurance card claims PDF but data doesn't match (header: ${pdfHeader})`);
+        await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
+        return res.status(404).json({ message: 'Insurance card PDF is corrupt. Please retry.' });
+      }
+    }
 
     // Raw mode: pass through the actual file for download / open in new tab
     if (isRaw) {
       res.set('Content-Type', contentType);
       res.set('Content-Disposition', 'inline');
-      return res.send(Buffer.from(response.data));
+      return res.send(buf);
     }
 
     // HTML wrapping mode for inline display via srcdoc
     res.set('Content-Disposition', 'inline');
 
     if (contentType.includes('application/pdf')) {
-      const pdfBase64 = Buffer.from(response.data).toString('base64');
+      const pdfBase64 = buf.toString('base64');
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#f3f4f6}embed{width:100%;height:100%;border:none}.fallback{padding:2rem;text-align:center;font-family:system-ui,sans-serif}.fallback a{display:inline-block;margin-top:1rem;padding:0.75rem 1.5rem;background:#0ea5e9;color:white;border-radius:0.5rem;text-decoration:none}</style>
@@ -449,7 +487,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     }
 
     if (contentType.includes('image/')) {
-      const imgBase64 = Buffer.from(response.data).toString('base64');
+      const imgBase64 = buf.toString('base64');
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
 <style>*{margin:0;padding:0}body{background:#f3f4f6;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;height:auto}</style>
@@ -460,7 +498,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
 
     // For HTML responses, inject a <base> tag so relative resources resolve correctly
     if (contentType.includes('text/html')) {
-      let html = Buffer.from(response.data).toString('utf-8');
+      let html = buf.toString('utf-8');
       const baseUrl = new URL(cardUrl);
       const baseTag = `<base href="${baseUrl.origin}/">`;
       if (html.includes('<head>')) {
@@ -475,7 +513,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     }
 
     res.set('Content-Type', contentType);
-    res.send(Buffer.from(response.data));
+    res.send(buf);
   } catch (error) {
     console.error('Insurance card proxy error:', error.message);
     res.status(502).json({ message: 'Failed to load insurance card' });
@@ -519,19 +557,29 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
         });
       }
     }
-    // If we have a cardUrl saved (even if cardImage is missing), use it directly
+    // If we have a cardUrl saved (even if cardImage is missing), try to re-download it
     if (booking.teqMobility?.cardUrl) {
-      // Try to re-download the card file
       const imagePath = await captureCardImage(booking.teqMobility.cardUrl, booking._id.toString());
       if (imagePath) {
-        booking.teqMobility.cardImage = imagePath;
-        await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardImage': imagePath });
+        // Verify the downloaded file is valid (not empty or too small)
+        const fs = require('fs');
+        const dlPath = path.join(__dirname, '..', 'uploads', imagePath);
+        const stat = fs.existsSync(dlPath) ? fs.statSync(dlPath) : null;
+        if (stat && stat.size > 100) {
+          booking.teqMobility.cardImage = imagePath;
+          await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardImage': imagePath });
+          return res.json({
+            success: true,
+            message: 'Insurance card retrieved successfully',
+            teqMobility: booking.teqMobility
+          });
+        }
       }
-      return res.json({
-        success: true,
-        message: 'Insurance card already available',
-        teqMobility: booking.teqMobility
-      });
+      // cardUrl is stale/broken — clear it and fall through to re-fetch from TeqMobility
+      console.log(`🛡️ Insurance card URL is stale or download failed, clearing and re-fetching from TeqMobility`);
+      await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
+      booking.teqMobility.cardUrl = null;
+      booking.teqMobility.cardImage = null;
     }
 
     // Fetch driver
