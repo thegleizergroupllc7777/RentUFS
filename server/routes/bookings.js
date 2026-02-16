@@ -369,9 +369,28 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
 
     const contentType = response.headers['content-type'] || 'text/html';
     res.set('Content-Type', contentType);
+    // Force inline display (prevents browser from downloading PDFs)
+    res.set('Content-Disposition', 'inline');
     // Remove headers that block embedding
     res.removeHeader('X-Frame-Options');
     res.set('Content-Security-Policy', "frame-ancestors 'self'");
+
+    // For PDF responses, wrap in an HTML page with embedded PDF viewer for reliable iframe display
+    if (contentType.includes('application/pdf')) {
+      const pdfBase64 = Buffer.from(response.data).toString('base64');
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Insurance Card</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  embed, object { width: 100%; height: 100vh; }
+</style>
+</head><body>
+<embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
+</body></html>`;
+      res.set('Content-Type', 'text/html');
+      return res.send(html);
+    }
 
     // For HTML responses, inject a <base> tag so relative resources resolve correctly
     if (contentType.includes('text/html')) {
