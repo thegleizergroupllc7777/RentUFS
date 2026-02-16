@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const Booking = require('../models/Booking');
 const { Counter } = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
@@ -349,9 +350,16 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    // If a local screenshot image exists, redirect to it
+    // If a local screenshot image exists, verify file exists then redirect
     if (booking.teqMobility?.cardImage) {
-      return res.redirect(`/uploads/${booking.teqMobility.cardImage}`);
+      const fs = require('fs');
+      const imagePath = path.join(__dirname, '..', 'uploads', booking.teqMobility.cardImage);
+      if (fs.existsSync(imagePath)) {
+        return res.redirect(`/uploads/${booking.teqMobility.cardImage}`);
+      }
+      // File was lost (e.g. ephemeral filesystem redeploy) — clear stale reference and fall through
+      console.log(`🛡️ Insurance card image missing on disk: ${imagePath}, falling through to cardUrl proxy`);
+      await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardImage': null });
     }
 
     // Proxy the external card URL
@@ -368,7 +376,6 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     });
 
     const contentType = response.headers['content-type'] || 'text/html';
-    res.set('Content-Type', contentType);
     // Force inline display (prevents browser from downloading PDFs)
     res.set('Content-Disposition', 'inline');
     // Remove headers that block embedding
@@ -381,12 +388,36 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
 <style>
-  * { margin: 0; padding: 0; }
-  body { background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-  embed, object { width: 100%; height: 100vh; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #f3f4f6; }
+  object, iframe { width: 100%; height: 100%; border: none; }
+  .fallback { padding: 2rem; text-align: center; font-family: system-ui, sans-serif; }
+  .fallback a { display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #0ea5e9; color: white; border-radius: 0.5rem; text-decoration: none; }
 </style>
 </head><body>
-<embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
+<object data="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
+  <div class="fallback">
+    <p>Your browser cannot display this PDF inline.</p>
+    <a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a>
+  </div>
+</object>
+</body></html>`;
+      res.set('Content-Type', 'text/html');
+      return res.send(html);
+    }
+
+    // For image responses, wrap in HTML for consistent display
+    if (contentType.includes('image/')) {
+      const imgBase64 = Buffer.from(response.data).toString('base64');
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Insurance Card</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  img { max-width: 100%; height: auto; }
+</style>
+</head><body>
+<img src="data:${contentType};base64,${imgBase64}" alt="Insurance Card">
 </body></html>`;
       res.set('Content-Type', 'text/html');
       return res.send(html);
@@ -407,6 +438,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.send(html);
     }
 
+    res.set('Content-Type', contentType);
     res.send(Buffer.from(response.data));
   } catch (error) {
     console.error('Insurance card proxy error:', error.message);
