@@ -196,28 +196,40 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           width: '100%'
         }}>
           {hasCard && !iframeError ? (
-            <iframe
-              src={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
-              title="Insurance Card"
-              style={{
-                width: '100%',
-                height: '500px',
-                border: 'none',
-                display: 'block'
-              }}
-              onError={() => setIframeError(true)}
-              onLoad={(e) => {
-                try {
-                  // Check if the iframe loaded an error response
-                  const doc = e.target.contentDocument;
-                  if (doc && doc.body && doc.body.textContent.includes('Failed to load')) {
-                    setIframeError(true);
+            <>
+              <iframe
+                src={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
+                title="Insurance Card"
+                style={{
+                  width: '100%',
+                  height: '500px',
+                  border: 'none',
+                  display: 'block'
+                }}
+                sandbox="allow-same-origin allow-scripts allow-popups"
+                onError={() => setIframeError(true)}
+                onLoad={(e) => {
+                  try {
+                    const doc = e.target.contentDocument;
+                    if (doc && doc.body && doc.body.textContent.includes('Failed to load')) {
+                      setIframeError(true);
+                    }
+                  } catch (_) {
+                    // Cross-origin - content loaded from external source, that's fine
                   }
-                } catch (_) {
-                  // Cross-origin - content loaded from external source, that's fine
-                }
-              }}
-            />
+                }}
+              />
+              <div style={{ padding: '0.5rem', textAlign: 'center', background: '#e5e7eb' }}>
+                <a
+                  href={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#0ea5e9', fontSize: '0.85rem', textDecoration: 'underline' }}
+                >
+                  Open in new tab
+                </a>
+              </div>
+            </>
           ) : retrying ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
