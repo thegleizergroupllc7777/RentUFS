@@ -320,30 +320,6 @@ const HostReservationDetail = () => {
             </div>
           )}
 
-          {/* Send Reminder button for active bookings (non-overdue too) */}
-          {booking.status === 'active' && !isOverdue() && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              marginBottom: '1.5rem'
-            }}>
-              <button
-                onClick={handleSendReminder}
-                disabled={sendingReminder}
-                className="btn btn-secondary"
-                style={{
-                  background: '#f59e0b',
-                  color: '#000',
-                  border: 'none',
-                  fontWeight: '600',
-                  opacity: sendingReminder ? 0.7 : 1
-                }}
-              >
-                {sendingReminder ? 'Sending...' : 'Send SMS Reminder'}
-              </button>
-            </div>
-          )}
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }}>
             {/* Left Column - Inspection Photos */}
             <div>
