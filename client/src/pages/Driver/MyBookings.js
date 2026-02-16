@@ -117,6 +117,7 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
   const [cardHtml, setCardHtml] = useState(null);
   const [cardBlobUrl, setCardBlobUrl] = useState(null);
+  const [cardIsPdf, setCardIsPdf] = useState(false);
   const [cardError, setCardError] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
 
@@ -127,7 +128,7 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
     };
   }, [cardBlobUrl]);
 
-  // Fetch insurance card as blob — use blob URL for PDFs (srcdoc sandbox blocks PDF plugins)
+  // Fetch insurance card as arraybuffer — detect real type from magic bytes on the frontend
   const fetchCardContent = async () => {
     setCardLoading(true);
     setCardError(false);
@@ -135,22 +136,27 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
         headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
+        responseType: 'arraybuffer'
       });
-      const blob = response.data;
-      const mime = blob.type || '';
+      const bytes = new Uint8Array(response.data);
 
-      if (mime === 'application/pdf' || mime.startsWith('image/')) {
-        // PDF or image: use blob URL directly in iframe src (avoids sandbox issues)
-        if (cardBlobUrl) URL.revokeObjectURL(cardBlobUrl);
-        setCardBlobUrl(URL.createObjectURL(blob));
-        setCardHtml(null);
-      } else {
-        // HTML or other: read as text for srcdoc
-        const text = await blob.text();
-        setCardHtml(text);
-        setCardBlobUrl(null);
-      }
+      // Detect REAL file type from magic bytes — don't trust Content-Type header
+      const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
+      const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+      const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8;
+
+      let mime;
+      if (isPdf) mime = 'application/pdf';
+      else if (isPng) mime = 'image/png';
+      else if (isJpeg) mime = 'image/jpeg';
+      else mime = response.headers['content-type'] || 'application/octet-stream';
+
+      // Create blob with the CORRECT mime type
+      const blob = new Blob([response.data], { type: mime });
+      if (cardBlobUrl) URL.revokeObjectURL(cardBlobUrl);
+      setCardBlobUrl(URL.createObjectURL(blob));
+      setCardIsPdf(isPdf);
+      setCardHtml(null);
     } catch (err) {
       // If backend says card URL is stale/invalid (404), reset to trigger retry flow
       if (err.response?.status === 404) {
@@ -222,33 +228,34 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   };
 
   const handleDownload = () => {
+    // If we already have a blob URL with correct type, use it directly
+    if (cardBlobUrl) {
+      const a = document.createElement('a');
+      a.href = cardBlobUrl;
+      a.download = `insurance-card-${booking.reservationId}.${cardIsPdf ? 'pdf' : 'png'}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
     const token = localStorage.getItem('token');
     axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
       headers: { Authorization: `Bearer ${token}` },
-      responseType: 'blob'
+      responseType: 'arraybuffer'
     }).then(response => {
-      const url = URL.createObjectURL(response.data);
+      const bytes = new Uint8Array(response.data);
+      const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+      const mime = isPdf ? 'application/pdf' : 'image/png';
+      const blob = new Blob([response.data], { type: mime });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const ext = response.data.type.includes('pdf') ? 'pdf' : 'png';
-      a.download = `insurance-card-${booking.reservationId}.${ext}`;
+      a.download = `insurance-card-${booking.reservationId}.${isPdf ? 'pdf' : 'png'}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }).catch(() => {
-      if (cardHtml) {
-        const blob = new Blob([cardHtml], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `insurance-card-${booking.reservationId}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    });
+    }).catch(() => {});
   };
 
   return (
@@ -268,18 +275,20 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
         </p>
         <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6', width: '100%' }}>
           {hasCard && cardBlobUrl && !cardError ? (
-            <iframe
-              src={cardBlobUrl}
-              title="Insurance Card"
-              style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
-            />
-          ) : hasCard && cardHtml && !cardError ? (
-            <iframe
-              srcDoc={cardHtml}
-              title="Insurance Card"
-              style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
-              sandbox="allow-same-origin"
-            />
+            cardIsPdf ? (
+              <object
+                data={cardBlobUrl}
+                type="application/pdf"
+                style={{ width: '100%', height: '500px', display: 'block' }}
+              >
+                <div style={{ padding: '2rem', textAlign: 'center' }}>
+                  <p style={{ color: '#374151', marginBottom: '1rem' }}>PDF cannot be displayed inline in this browser.</p>
+                  <button onClick={handleOpenNewTab} className="btn btn-primary" style={{ background: '#0ea5e9' }}>Open PDF in New Tab</button>
+                </div>
+              </object>
+            ) : (
+              <img src={cardBlobUrl} alt="Insurance Card" style={{ width: '100%', height: 'auto', display: 'block' }} />
+            )
           ) : hasCard && cardLoading ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <p style={{ color: '#374151', fontWeight: 600 }}>Loading insurance card...</p>
