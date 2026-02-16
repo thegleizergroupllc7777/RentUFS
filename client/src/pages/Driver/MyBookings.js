@@ -855,6 +855,15 @@ const MyBookings = () => {
                         <div className="booking-detail-item">
                           <strong>Rate:</strong> ${booking.pricePerDay}/day
                         </div>
+                        {booking.insurance?.type && booking.insurance.type !== 'none' && (
+                          <div className="booking-detail-item">
+                            <strong>Insurance:</strong>{' '}
+                            {booking.insurance.type === 'carshare' ? 'Car Share Coverage' :
+                             booking.insurance.type === 'rideshare' ? 'Ride Share Coverage' :
+                             booking.insurance.type.charAt(0).toUpperCase() + booking.insurance.type.slice(1) + ' Coverage'}
+                            {booking.insurance.totalCost > 0 && ` ($${booking.insurance.totalCost.toFixed(2)})`}
+                          </div>
+                        )}
                       </div>
 
                       {/* Host Contact Info - Only shown when booking is confirmed/active and paid */}

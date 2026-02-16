@@ -1225,14 +1225,16 @@ const HostBookings = () => {
                             View Insurance Card
                           </button>
                         )}
-                        <button
-                          onClick={() => handleSendReminder(booking._id)}
-                          disabled={sendingReminder === booking._id}
-                          className="btn btn-secondary"
-                          style={{ background: '#f59e0b', color: '#000', border: 'none' }}
-                        >
-                          {sendingReminder === booking._id ? 'Sending...' : 'Send Reminder'}
-                        </button>
+                        {isOverdue(booking) && (
+                          <button
+                            onClick={() => handleSendReminder(booking._id)}
+                            disabled={sendingReminder === booking._id}
+                            className="btn btn-secondary"
+                            style={{ background: '#f59e0b', color: '#000', border: 'none' }}
+                          >
+                            {sendingReminder === booking._id ? 'Sending...' : 'Send Reminder'}
+                          </button>
+                        )}
                         <button
                           onClick={() => handleUpdateStatus(booking._id, 'completed')}
                           className="btn btn-success"
