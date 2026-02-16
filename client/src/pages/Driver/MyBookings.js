@@ -115,30 +115,32 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
   const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
-  const [iframeError, setIframeError] = useState(false);
-  const [blobUrl, setBlobUrl] = useState(null);
+  const [cardHtml, setCardHtml] = useState(null);
+  const [cardError, setCardError] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
 
-  // Fetch insurance card content as blob to avoid cross-origin iframe blocking
-  useEffect(() => {
-    if (hasCard && !blobUrl && !cardLoading) {
-      setCardLoading(true);
+  // Fetch insurance card HTML content for srcdoc display
+  const fetchCardContent = async () => {
+    setCardLoading(true);
+    setCardError(false);
+    try {
       const token = localStorage.getItem('token');
-      axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card`, {
+      const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card`, {
         headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
-      }).then(response => {
-        const url = URL.createObjectURL(response.data);
-        setBlobUrl(url);
-      }).catch(() => {
-        setIframeError(true);
-      }).finally(() => {
-        setCardLoading(false);
+        responseType: 'text'
       });
+      setCardHtml(response.data);
+    } catch {
+      setCardError(true);
+    } finally {
+      setCardLoading(false);
     }
-    return () => {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    };
+  };
+
+  useEffect(() => {
+    if (hasCard) {
+      fetchCardContent();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCard]);
 
@@ -173,82 +175,80 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
     }
   };
 
+  const handleOpenNewTab = () => {
+    const token = localStorage.getItem('token');
+    axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    }).then(response => {
+      const url = URL.createObjectURL(response.data);
+      window.open(url, '_blank');
+    }).catch(() => {
+      if (cardHtml) {
+        const blob = new Blob([cardHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      }
+    });
+  };
+
+  const handleDownload = () => {
+    const token = localStorage.getItem('token');
+    axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    }).then(response => {
+      const url = URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = response.data.type.includes('pdf') ? 'pdf' : 'png';
+      a.download = `insurance-card-${booking.reservationId}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }).catch(() => {
+      if (cardHtml) {
+        const blob = new Blob([cardHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `insurance-card-${booking.reservationId}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    });
+  };
+
   return (
     <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.7)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem'
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
     }}>
       <div style={{
-        background: 'white',
-        borderRadius: '1rem',
-        padding: '1.5rem',
-        maxWidth: '600px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto'
+        background: 'white', borderRadius: '1rem', padding: '1.5rem', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflow: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2 style={{ margin: 0, color: '#1f2937' }}>Insurance Card</h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
-              color: '#6b7280'
-            }}
-          >
-            x
-          </button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>x</button>
         </div>
         <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
           {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
         </p>
-        <div style={{
-          borderRadius: '0.5rem',
-          overflow: 'hidden',
-          background: '#f3f4f6',
-          width: '100%'
-        }}>
-          {hasCard && !iframeError ? (
-            blobUrl ? (
-              <>
-                <iframe
-                  src={blobUrl}
-                  title="Insurance Card"
-                  style={{
-                    width: '100%',
-                    height: '500px',
-                    border: 'none',
-                    display: 'block'
-                  }}
-                />
-                <div style={{ padding: '0.5rem', textAlign: 'center', background: '#e5e7eb' }}>
-                  <a
-                    href={blobUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: '#0ea5e9', fontSize: '0.85rem', textDecoration: 'underline' }}
-                  >
-                    Open in new tab
-                  </a>
-                </div>
-              </>
-            ) : (
-              <div style={{ padding: '3rem', textAlign: 'center' }}>
-                <p style={{ color: '#374151', fontWeight: 600 }}>Loading insurance card...</p>
-              </div>
-            )
+        <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6', width: '100%' }}>
+          {hasCard && cardHtml && !cardError ? (
+            <iframe
+              srcDoc={cardHtml}
+              title="Insurance Card"
+              style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
+              sandbox="allow-same-origin"
+            />
+          ) : hasCard && cardLoading ? (
+            <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <p style={{ color: '#374151', fontWeight: 600 }}>Loading insurance card...</p>
+            </div>
           ) : retrying ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
@@ -258,92 +258,52 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           ) : (
             <div style={{ padding: '1.5rem' }}>
               <div style={{
-                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                borderRadius: '0.75rem',
-                padding: '1.5rem',
-                color: 'white',
-                position: 'relative',
-                overflow: 'hidden'
+                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', borderRadius: '0.75rem', padding: '1.5rem',
+                color: 'white', position: 'relative', overflow: 'hidden'
               }}>
                 <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '6rem', opacity: 0.1 }}>&#128737;</div>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '0.25rem' }}>
-                  RentUFS Trip Protection
-                </div>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '0.25rem' }}>RentUFS Trip Protection</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
                   {booking.insurance?.type === 'carshare' ? 'Car Share — Liability Coverage' : 'Ride Share — Full Coverage'}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
-                  <div>
-                    <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Reservation</div>
-                    <div style={{ fontWeight: 600 }}>{booking.reservationId}</div>
-                  </div>
-                  <div>
-                    <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Vehicle</div>
-                    <div style={{ fontWeight: 600 }}>
-                      {booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Coverage Period</div>
-                    <div style={{ fontWeight: 600 }}>
-                      {new Date(booking.startDate).toLocaleDateString()} — {new Date(booking.endDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Daily Rate</div>
-                    <div style={{ fontWeight: 600 }}>
-                      ${booking.insurance?.costPerDay?.toFixed(2) || '0.00'}/day
-                    </div>
-                  </div>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Reservation</div><div style={{ fontWeight: 600 }}>{booking.reservationId}</div></div>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Vehicle</div><div style={{ fontWeight: 600 }}>{booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}</div></div>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Coverage Period</div><div style={{ fontWeight: 600 }}>{new Date(booking.startDate).toLocaleDateString()} — {new Date(booking.endDate).toLocaleDateString()}</div></div>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Daily Rate</div><div style={{ fontWeight: 600 }}>${booking.insurance?.costPerDay?.toFixed(2) || '0.00'}/day</div></div>
                 </div>
                 <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
                   <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Coverage Includes</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {booking.insurance?.coverage?.liability && (
-                      <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Liability</span>
-                    )}
-                    {booking.insurance?.coverage?.collision && (
-                      <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Collision</span>
-                    )}
-                    {booking.insurance?.coverage?.comprehensive && (
-                      <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Comprehensive</span>
-                    )}
-                    {booking.insurance?.coverage?.personalInjury && (
-                      <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Personal Injury</span>
-                    )}
-                    {booking.insurance?.coverage?.roadsideAssistance && (
-                      <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Roadside Assistance</span>
-                    )}
+                    {booking.insurance?.coverage?.liability && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Liability</span>}
+                    {booking.insurance?.coverage?.collision && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Collision</span>}
+                    {booking.insurance?.coverage?.comprehensive && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Comprehensive</span>}
+                    {booking.insurance?.coverage?.personalInjury && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Personal Injury</span>}
+                    {booking.insurance?.coverage?.roadsideAssistance && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Roadside Assistance</span>}
                   </div>
                 </div>
-                <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', opacity: 0.6, textAlign: 'right' }}>
-                  Underwritten by TeqMobility
-                </div>
+                <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', opacity: 0.6, textAlign: 'right' }}>Underwritten by TeqMobility</div>
               </div>
-              {retryError && (
-                <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>
-                  {retryError}
-                </p>
-              )}
-              <button
-                onClick={handleRetry}
-                disabled={retrying}
-                className="btn btn-primary"
-                style={{ width: '100%', marginTop: '0.75rem', background: '#0ea5e9' }}
-              >
+              {retryError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>{retryError}</p>}
+              {cardError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>Could not display card inline. Use the buttons below to open or download it.</p>}
+              <button onClick={handleRetry} disabled={retrying} className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', background: '#0ea5e9' }}>
                 {retrying ? 'Retrying...' : 'Retry — Fetch Insurance Card'}
               </button>
             </div>
           )}
         </div>
+        {hasCard && (
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+            <button onClick={handleOpenNewTab} className="btn btn-primary" style={{ flex: 1, background: '#0ea5e9' }}>
+              Open in New Tab
+            </button>
+            <button onClick={handleDownload} className="btn btn-primary" style={{ flex: 1, background: '#10b981' }}>
+              Download
+            </button>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
-          <button
-            onClick={onClose}
-            className="btn btn-secondary"
-            style={{ flex: 1 }}
-          >
-            Close
-          </button>
+          <button onClick={onClose} className="btn btn-secondary" style={{ flex: 1 }}>Close</button>
         </div>
       </div>
     </div>
