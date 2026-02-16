@@ -242,6 +242,61 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
 };
 
 /**
+ * 4b. Get Active Coverage for a vehicle
+ * Tries GET /api/v1/vehicles/{vin} to retrieve active coverage details
+ * Used when start returns "already has active On Rent coverage"
+ */
+const getActiveCoverage = async (vin) => {
+  console.log(`🛡️ TeqMobility: Fetching active coverage for VIN ${vin}`);
+
+  // Try GET /api/v1/vehicles/{vin} — response may include active coverage
+  try {
+    const vehicleResp = await teqApi.get(`/api/v1/vehicles/${vin}`);
+    console.log(`🛡️ TeqMobility: Vehicle lookup response:`, JSON.stringify(vehicleResp.data, null, 2));
+
+    // Check if the vehicle response includes coverage info
+    const vData = vehicleResp.data;
+    if (vData.active_coverage || vData.coverage || vData.on_rent_coverage) {
+      const cov = vData.active_coverage || vData.coverage || vData.on_rent_coverage;
+      return {
+        id: cov.id || cov.coverage_id,
+        status: cov.status || 'active',
+        card_url: cov.card_url || null
+      };
+    }
+
+    // If vehicle has a coverage_id field directly
+    if (vData.coverage_id) {
+      return {
+        id: vData.coverage_id,
+        status: 'active',
+        card_url: vData.card_url || null
+      };
+    }
+  } catch (err) {
+    console.log(`🛡️ TeqMobility: Vehicle lookup failed (${err.response?.status}), trying coverages endpoint`);
+  }
+
+  // Try GET /api/v1/coverages/on-rent/{vin}
+  try {
+    const covResp = await teqApi.get(`/api/v1/coverages/on-rent/${vin}`);
+    console.log(`🛡️ TeqMobility: Coverage lookup response:`, JSON.stringify(covResp.data, null, 2));
+    const cov = Array.isArray(covResp.data) ? covResp.data[0] : covResp.data;
+    if (cov) {
+      return {
+        id: cov.id || cov.coverage_id,
+        status: cov.status || 'active',
+        card_url: cov.card_url || null
+      };
+    }
+  } catch (err) {
+    console.log(`🛡️ TeqMobility: Coverage lookup by VIN failed (${err.response?.status})`);
+  }
+
+  return null;
+};
+
+/**
  * 5. Stop On-Rent Coverage - Stops insurance coverage when rental ends
  * POST /api/v1/coverages/on-rent/{coverageId}/stop (confirmed from TeqMobility API docs)
  */
@@ -294,8 +349,37 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
       await changeVehicleOwner(vehicle.vin, owner.id);
     }
 
-    // Step 4: Start on-rent coverage (tries multiple endpoint variants)
-    const coverage = await startOnRentCoverage(vehicleResult.id, vehicle.vin, driver, vehicle, booking);
+    // Step 4: Start on-rent coverage
+    let coverage;
+    try {
+      coverage = await startOnRentCoverage(vehicleResult.id, vehicle.vin, driver, vehicle, booking);
+    } catch (startErr) {
+      const errMsg = startErr.response?.data?.message || startErr.message || '';
+
+      // If coverage already exists, fetch the existing coverage details
+      if (errMsg.toLowerCase().includes('already has active')) {
+        console.log('🛡️ TeqMobility: Coverage already active, fetching existing coverage...');
+        const existing = await getActiveCoverage(vehicle.vin);
+        if (existing) {
+          return {
+            success: true,
+            coverageId: existing.id,
+            ownerId: owner.id,
+            status: existing.status || 'active',
+            cardUrl: existing.card_url || null
+          };
+        }
+        // If we couldn't fetch details but coverage is confirmed active, return partial success
+        return {
+          success: true,
+          coverageId: null,
+          ownerId: owner.id,
+          status: 'active',
+          cardUrl: null
+        };
+      }
+      throw startErr; // Re-throw non-duplicate errors
+    }
 
     return {
       success: true,
@@ -353,6 +437,7 @@ module.exports = {
   changeVehicleOwner,
   startOnRentCoverage,
   stopOnRentCoverage,
+  getActiveCoverage,
   startRentalCoverage,
   stopRentalCoverage
 };
