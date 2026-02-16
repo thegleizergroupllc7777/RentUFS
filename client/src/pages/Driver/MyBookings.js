@@ -115,6 +115,7 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
   const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
+  const [iframeError, setIframeError] = useState(false);
 
   // Auto-retry on mount if card data is missing
   useEffect(() => {
@@ -194,7 +195,7 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           background: '#f3f4f6',
           width: '100%'
         }}>
-          {hasCard ? (
+          {hasCard && !iframeError ? (
             <iframe
               src={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
               title="Insurance Card"
@@ -203,6 +204,18 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
                 height: '500px',
                 border: 'none',
                 display: 'block'
+              }}
+              onError={() => setIframeError(true)}
+              onLoad={(e) => {
+                try {
+                  // Check if the iframe loaded an error response
+                  const doc = e.target.contentDocument;
+                  if (doc && doc.body && doc.body.textContent.includes('Failed to load')) {
+                    setIframeError(true);
+                  }
+                } catch (_) {
+                  // Cross-origin - content loaded from external source, that's fine
+                }
               }}
             />
           ) : retrying ? (

@@ -30,6 +30,7 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
   const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
+  const [iframeError, setIframeError] = useState(false);
 
   useEffect(() => {
     if (!hasCard && !retrying) {
@@ -75,11 +76,20 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
         </p>
         <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6', width: '100%' }}>
-          {hasCard ? (
+          {hasCard && !iframeError ? (
             <iframe
               src={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
               title="Insurance Card"
               style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
+              onError={() => setIframeError(true)}
+              onLoad={(e) => {
+                try {
+                  const doc = e.target.contentDocument;
+                  if (doc && doc.body && doc.body.textContent.includes('Failed to load')) {
+                    setIframeError(true);
+                  }
+                } catch (_) {}
+              }}
             />
           ) : retrying ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
