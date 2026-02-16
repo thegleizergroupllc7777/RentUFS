@@ -6,7 +6,8 @@ import Footer from '../components/Footer';
 import './Home.css';
 
 const Home = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const isHost = user?.userType === 'host' || user?.userType === 'both';
   return (
     <div className="home-page">
       <Navbar />
@@ -21,12 +22,12 @@ const Home = () => {
               Join thousands of drivers and hosts on <span style={{color: '#00FF66', fontWeight: 'bold'}}>UFS</span>, the trusted peer-to-peer car rental marketplace.
             </p>
             <div className="hero-buttons">
-              <Link to="/marketplace">
+              <Link to={isHost ? "/host/dashboard" : "/marketplace"}>
                 <button className="btn btn-primary btn-lg">
-                  Browse Cars
+                  {isHost ? 'My Dashboard' : 'Browse Cars'}
                 </button>
               </Link>
-              <Link to={isAuthenticated ? "/host/register" : "/register?type=host"}>
+              <Link to={isHost ? "/host/add-vehicle" : (isAuthenticated ? "/host/add-vehicle" : "/register?type=host")}>
                 <button className="btn btn-secondary btn-lg">
                   List Your Car
                 </button>
@@ -78,9 +79,9 @@ const Home = () => {
           <p className="text-lg mb-3" style={{ color: '#000000' }}>
             Join our community today as a driver or host
           </p>
-          <Link to={isAuthenticated ? "/host/register" : "/register"}>
+          <Link to={isAuthenticated ? (isHost ? "/host/dashboard" : "/marketplace") : "/register"}>
             <button className="btn btn-primary btn-lg" style={{ background: '#000000', color: '#00FF66' }}>
-              {isAuthenticated ? 'Go to Dashboard' : 'Sign Up Now'}
+              {isAuthenticated ? (isHost ? 'Go to Dashboard' : 'Browse Cars') : 'Sign Up Now'}
             </button>
           </Link>
         </div>
