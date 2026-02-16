@@ -25,71 +25,37 @@ const toLocalDate = (dateVal) => {
   return new Date(datePart + 'T00:00:00');
 };
 
-// Insurance Card Modal with auto-retry
+// Helper: fetch insurance card and open in new tab with correct MIME type
+const openInsuranceCardInNewTab = async (bookingId) => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get(`${API_URL}/api/bookings/${bookingId}/insurance-card?format=raw`, {
+    headers: { Authorization: `Bearer ${token}` },
+    responseType: 'arraybuffer'
+  });
+  const bytes = new Uint8Array(response.data);
+  // Detect REAL file type from magic bytes
+  const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+  const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8;
+  let mime;
+  if (isPdf) mime = 'application/pdf';
+  else if (isPng) mime = 'image/png';
+  else if (isJpeg) mime = 'image/jpeg';
+  else mime = 'application/pdf';
+  const blob = new Blob([response.data], { type: mime });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+};
+
+// Insurance Card Modal — only shown when card needs to be fetched from provider
 const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
-  const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
-  const [cardHtml, setCardHtml] = useState(null);
-  const [cardBlobUrl, setCardBlobUrl] = useState(null);
-  const [cardIsPdf, setCardIsPdf] = useState(false);
-  const [cardError, setCardError] = useState(false);
-  const [cardLoading, setCardLoading] = useState(false);
+  const [opening, setOpening] = useState(false);
 
-  // Cleanup blob URL on unmount
+  // Auto-retry on mount to fetch from TeqMobility
   useEffect(() => {
-    return () => {
-      if (cardBlobUrl) URL.revokeObjectURL(cardBlobUrl);
-    };
-  }, [cardBlobUrl]);
-
-  // Fetch insurance card as arraybuffer — detect real type from magic bytes on the frontend
-  const fetchCardContent = async () => {
-    setCardLoading(true);
-    setCardError(false);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'arraybuffer'
-      });
-      const bytes = new Uint8Array(response.data);
-
-      // Detect REAL file type from magic bytes — don't trust Content-Type header
-      const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
-      const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
-      const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8;
-
-      let mime;
-      if (isPdf) mime = 'application/pdf';
-      else if (isPng) mime = 'image/png';
-      else if (isJpeg) mime = 'image/jpeg';
-      else mime = response.headers['content-type'] || 'application/octet-stream';
-
-      // Create blob with the CORRECT mime type
-      const blob = new Blob([response.data], { type: mime });
-      if (cardBlobUrl) URL.revokeObjectURL(cardBlobUrl);
-      setCardBlobUrl(URL.createObjectURL(blob));
-      setCardIsPdf(isPdf);
-      setCardHtml(null);
-    } catch {
-      setCardError(true);
-    } finally {
-      setCardLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (hasCard) {
-      fetchCardContent();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCard]);
-
-  useEffect(() => {
-    if (!hasCard && !retrying) {
-      handleRetry();
-    }
+    handleRetry();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -104,8 +70,16 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success && (response.data.teqMobility?.cardUrl || response.data.teqMobility?.cardImage)) {
-        setHasCard(true);
         onBookingUpdate(response.data.teqMobility);
+        // Card is now available — open it in new tab
+        setOpening(true);
+        try {
+          await openInsuranceCardInNewTab(booking._id);
+          onClose();
+        } catch {
+          setRetryError('Card retrieved but could not open. Please try the button on the booking again.');
+          setOpening(false);
+        }
       } else {
         setRetryError(response.data.message || 'Could not retrieve insurance card from provider');
       }
@@ -116,62 +90,14 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
     }
   };
 
-  const handleOpenNewTab = () => {
-    const token = localStorage.getItem('token');
-    // Open raw file directly in a new tab via authenticated fetch
-    axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'blob'
-    }).then(response => {
-      const url = URL.createObjectURL(response.data);
-      window.open(url, '_blank');
-    }).catch(() => {
-      // Fallback: open the HTML content in a new tab
-      if (cardHtml) {
-        const blob = new Blob([cardHtml], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      }
-    });
-  };
-
-  const handleDownload = () => {
-    // If we already have a blob URL with correct type, use it directly
-    if (cardBlobUrl) {
-      const a = document.createElement('a');
-      a.href = cardBlobUrl;
-      a.download = `insurance-card-${booking.reservationId}.${cardIsPdf ? 'pdf' : 'png'}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      return;
-    }
-    const token = localStorage.getItem('token');
-    axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'arraybuffer'
-    }).then(response => {
-      const bytes = new Uint8Array(response.data);
-      const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
-      const mime = isPdf ? 'application/pdf' : 'image/png';
-      const blob = new Blob([response.data], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `insurance-card-${booking.reservationId}.${isPdf ? 'pdf' : 'png'}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }).catch(() => {});
-  };
-
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
     }}>
-      <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
+      <div style={{
+        background: 'white', borderRadius: '1rem', padding: '1.5rem', maxWidth: '450px', width: '100%'
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2 style={{ margin: 0, color: '#1f2937' }}>Insurance Card</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>x</button>
@@ -179,82 +105,26 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
         <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
           {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
         </p>
-        <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6', width: '100%' }}>
-          {hasCard && cardBlobUrl && !cardError ? (
-            cardIsPdf ? (
-              <object
-                data={cardBlobUrl}
-                type="application/pdf"
-                style={{ width: '100%', height: '500px', display: 'block' }}
-              >
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <p style={{ color: '#374151', marginBottom: '1rem' }}>PDF cannot be displayed inline in this browser.</p>
-                  <button onClick={handleOpenNewTab} className="btn btn-primary" style={{ background: '#0ea5e9' }}>Open PDF in New Tab</button>
-                </div>
-              </object>
-            ) : (
-              <img src={cardBlobUrl} alt="Insurance Card" style={{ width: '100%', height: 'auto', display: 'block' }} />
-            )
-          ) : hasCard && cardLoading ? (
-            <div style={{ padding: '3rem', textAlign: 'center' }}>
-              <p style={{ color: '#374151', fontWeight: 600 }}>Loading insurance card...</p>
-            </div>
-          ) : retrying ? (
-            <div style={{ padding: '3rem', textAlign: 'center' }}>
+        <div style={{ borderRadius: '0.5rem', background: '#f3f4f6', padding: '2rem', textAlign: 'center' }}>
+          {retrying || opening ? (
+            <>
               <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
-              <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>Retrieving Insurance Card...</p>
+              <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>
+                {opening ? 'Opening Insurance Card...' : 'Retrieving Insurance Card...'}
+              </p>
               <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Contacting insurance provider</p>
-            </div>
+            </>
           ) : (
-            <div style={{ padding: '1.5rem' }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', borderRadius: '0.75rem', padding: '1.5rem',
-                color: 'white', position: 'relative', overflow: 'hidden'
-              }}>
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '6rem', opacity: 0.1 }}>&#128737;</div>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '0.25rem' }}>RentUFS Trip Protection</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
-                  {booking.insurance?.type === 'carshare' ? 'Car Share — Liability Coverage' : 'Ride Share — Full Coverage'}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
-                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Reservation</div><div style={{ fontWeight: 600 }}>{booking.reservationId}</div></div>
-                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Vehicle</div><div style={{ fontWeight: 600 }}>{booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}</div></div>
-                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Coverage Period</div><div style={{ fontWeight: 600 }}>{new Date(booking.startDate).toLocaleDateString()} — {new Date(booking.endDate).toLocaleDateString()}</div></div>
-                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Daily Rate</div><div style={{ fontWeight: 600 }}>${booking.insurance?.costPerDay?.toFixed(2) || '0.00'}/day</div></div>
-                </div>
-                <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                  <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Coverage Includes</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {booking.insurance?.coverage?.liability && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Liability</span>}
-                    {booking.insurance?.coverage?.collision && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Collision</span>}
-                    {booking.insurance?.coverage?.comprehensive && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Comprehensive</span>}
-                    {booking.insurance?.coverage?.personalInjury && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Personal Injury</span>}
-                    {booking.insurance?.coverage?.roadsideAssistance && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Roadside Assistance</span>}
-                  </div>
-                </div>
-                <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', opacity: 0.6, textAlign: 'right' }}>Underwritten by TeqMobility</div>
-              </div>
-              {retryError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>{retryError}</p>}
-              {cardError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>Could not display card inline. Use the buttons below to open or download it.</p>}
-              <button onClick={handleRetry} disabled={retrying} className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', background: '#0ea5e9' }}>
-                {retrying ? 'Retrying...' : 'Retry — Fetch Insurance Card'}
+            <>
+              <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>Insurance card not available yet</p>
+              {retryError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: '0.75rem' }}>{retryError}</p>}
+              <button onClick={handleRetry} className="btn btn-primary" style={{ background: '#0ea5e9', width: '100%' }}>
+                Retry — Fetch Insurance Card
               </button>
-            </div>
+            </>
           )}
         </div>
-        {hasCard && (
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
-            <button onClick={handleOpenNewTab} className="btn btn-primary" style={{ flex: 1, background: '#0ea5e9' }}>
-              Open in New Tab
-            </button>
-            <button onClick={handleDownload} className="btn btn-primary" style={{ flex: 1, background: '#10b981' }}>
-              Download
-            </button>
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
-          <button onClick={onClose} className="btn btn-secondary" style={{ flex: 1 }}>Close</button>
-        </div>
+        <button onClick={onClose} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }}>Close</button>
       </div>
     </div>
   );
@@ -1453,7 +1323,20 @@ const HostBookings = () => {
                       <>
                         {booking.insurance?.type && booking.insurance.type !== 'none' && (
                           <button
-                            onClick={() => setInsuranceCardModal({ open: true, booking })}
+                            onClick={async () => {
+                              // If card exists, open directly in new tab
+                              if (booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl) {
+                                try {
+                                  await openInsuranceCardInNewTab(booking._id);
+                                } catch {
+                                  // Fetch failed — show modal to retry
+                                  setInsuranceCardModal({ open: true, booking });
+                                }
+                              } else {
+                                // No card yet — show modal to fetch from provider
+                                setInsuranceCardModal({ open: true, booking });
+                              }
+                            }}
                             className="btn btn-secondary"
                             style={{ background: '#0ea5e9', color: 'white', border: 'none' }}
                           >
