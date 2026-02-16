@@ -56,7 +56,7 @@ const Home = () => {
               <div className="feature-icon">💰</div>
               <h3 className="feature-title">For Hosts</h3>
               <p className="feature-description">
-                List your car and start earning. Set your own prices and availability. We handle insurance and payments.
+                List your car and start earning. No commission — just a flat low fee. Set your own prices and availability. We handle insurance and payments.
               </p>
             </div>
 
