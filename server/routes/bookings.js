@@ -29,16 +29,13 @@ const cleanupStaleBookings = async () => {
 };
 
 // Auto-expire confirmed/active bookings whose rental period has fully passed
-// Uses a 1-day buffer to avoid premature expiration due to UTC/timezone mismatch
 const expireStaleBookings = async () => {
   try {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    // Subtract 1 day as buffer — only expire bookings that ended BEFORE yesterday
-    const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - 1);
+    // Use midnight today as cutoff — any booking that ended before today is expired
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
 
-    // Confirmed bookings well past end date — rental window expired without pickup
+    // Confirmed bookings past end date — rental window expired without pickup
     const staleConfirmed = await Booking.find({
       status: 'confirmed',
       endDate: { $lt: cutoff }
