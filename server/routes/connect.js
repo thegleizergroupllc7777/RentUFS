@@ -226,22 +226,28 @@ router.get('/pending-payouts', auth, async (req, res) => {
     const totalEligible = eligibleBookings.reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
 
     res.json({
-      pendingBookings: pendingBookings.map(b => ({
-        id: b._id,
-        reservationId: b.reservationId,
-        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
-        vehicleNickname: b.vehicle?.nickname || null,
-        driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
-        startDate: b.startDate,
-        endDate: b.endDate,
-        totalDays: b.totalDays,
-        rentalType: b.rentalType,
-        pricePerDay: b.pricePerDay,
-        hostPlatformFee: b.hostPlatformFee,
-        hostEarnings: b.hostEarnings,
-        payoutStatus: b.payoutStatus,
-        payoutEligibleDate: b.payoutEligibleDate || b.endDate
-      })),
+      pendingBookings: pendingBookings.map(b => {
+        // Always compute from per-day rate to fix legacy bookings that stored a flat fee
+        const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+        const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
+        const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee);
+        return {
+          id: b._id,
+          reservationId: b.reservationId,
+          vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
+          vehicleNickname: b.vehicle?.nickname || null,
+          driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
+          startDate: b.startDate,
+          endDate: b.endDate,
+          totalDays: b.totalDays,
+          rentalType: b.rentalType,
+          pricePerDay: b.pricePerDay,
+          hostPlatformFee: correctHostFee,
+          hostEarnings: correctEarnings,
+          payoutStatus: b.payoutStatus,
+          payoutEligibleDate: b.payoutEligibleDate || b.endDate
+        };
+      }),
       totalPending,
       totalEligible,
       payoutsEnabled: user.stripeConnectPayoutsEnabled
@@ -273,23 +279,27 @@ router.get('/payout-history', auth, async (req, res) => {
     const totalPaidOut = paidBookings.reduce((sum, b) => sum + (b.payoutAmount || 0), 0);
 
     res.json({
-      payouts: paidBookings.map(b => ({
-        id: b._id,
-        reservationId: b.reservationId,
-        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
-        vehicleNickname: b.vehicle?.nickname || null,
-        driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
-        startDate: b.startDate,
-        endDate: b.endDate,
-        totalDays: b.totalDays,
-        rentalType: b.rentalType,
-        pricePerDay: b.pricePerDay,
-        hostPlatformFee: b.hostPlatformFee,
-        hostEarnings: b.hostEarnings,
-        payoutAmount: b.payoutAmount,
-        payoutDate: b.payoutDate,
-        payoutId: b.payoutId
-      })),
+      payouts: paidBookings.map(b => {
+        // Always compute from per-day rate to fix legacy bookings that stored a flat fee
+        const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+        return {
+          id: b._id,
+          reservationId: b.reservationId,
+          vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
+          vehicleNickname: b.vehicle?.nickname || null,
+          driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
+          startDate: b.startDate,
+          endDate: b.endDate,
+          totalDays: b.totalDays,
+          rentalType: b.rentalType,
+          pricePerDay: b.pricePerDay,
+          hostPlatformFee: correctHostFee,
+          hostEarnings: b.hostEarnings,
+          payoutAmount: b.payoutAmount,
+          payoutDate: b.payoutDate,
+          payoutId: b.payoutId
+        };
+      }),
       totalPaidOut
     });
   } catch (error) {
@@ -337,9 +347,21 @@ router.post('/transfer-earnings', auth, async (req, res) => {
       return res.status(400).json({ message: 'Booking must be completed before payout' });
     }
 
+    // Recalculate correct host earnings from per-day values (fixes legacy bookings with flat $1.50 fee)
+    const correctHostFee = (booking.hostPlatformFeePerDay || 1.50) * (booking.totalDays || 0);
+    const rentalSubtotal = (booking.pricePerDay || 0) * (booking.totalDays || 0);
+    const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee);
+
+    // Fix stored values if they were wrong
+    if (booking.hostPlatformFee !== correctHostFee || booking.hostEarnings !== correctEarnings) {
+      console.log(`💰 Correcting host fee for ${booking.reservationId}: $${booking.hostPlatformFee} -> $${correctHostFee}, earnings: $${booking.hostEarnings} -> $${correctEarnings}`);
+      booking.hostPlatformFee = correctHostFee;
+      booking.hostEarnings = correctEarnings;
+    }
+
     // Create transfer to host's Connect account
     const transfer = await stripe.transfers.create({
-      amount: Math.round(booking.hostEarnings * 100), // Convert to cents
+      amount: Math.round(correctEarnings * 100), // Convert to cents
       currency: 'usd',
       destination: host.stripeConnectAccountId,
       description: `Payout for ${booking.reservationId} - ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`,
@@ -354,10 +376,10 @@ router.post('/transfer-earnings', auth, async (req, res) => {
     booking.payoutStatus = 'paid';
     booking.payoutId = transfer.id;
     booking.payoutDate = new Date();
-    booking.payoutAmount = booking.hostEarnings;
+    booking.payoutAmount = correctEarnings;
     await booking.save();
 
-    console.log(`Transferred $${booking.hostEarnings} to host ${host._id} for booking ${booking.reservationId}`);
+    console.log(`Transferred $${correctEarnings} to host ${host._id} for booking ${booking.reservationId}`);
 
     res.json({
       success: true,
@@ -391,6 +413,18 @@ router.post('/transfer-all-eligible', auth, async (req, res) => {
 
     if (eligibleBookings.length === 0) {
       return res.json({ success: true, message: 'No eligible payouts found', transferred: 0 });
+    }
+
+    // Recalculate correct earnings for each booking (fixes legacy bookings with flat $1.50 fee)
+    for (const b of eligibleBookings) {
+      const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+      const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
+      const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee);
+      if (b.hostPlatformFee !== correctHostFee || b.hostEarnings !== correctEarnings) {
+        console.log(`💰 Correcting host fee for ${b.reservationId}: $${b.hostPlatformFee} -> $${correctHostFee}, earnings: $${b.hostEarnings} -> $${correctEarnings}`);
+        b.hostPlatformFee = correctHostFee;
+        b.hostEarnings = correctEarnings;
+      }
     }
 
     // Calculate total
