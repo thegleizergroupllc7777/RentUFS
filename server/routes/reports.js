@@ -53,6 +53,19 @@ router.get('/host', auth, async (req, res) => {
       ...dateFilter
     }).populate('vehicle').populate('driver', 'firstName lastName email');
 
+    // Helper: compute correct financial values from per-day rates (fixes legacy bookings)
+    const computeBookingFinancials = (b) => {
+      const totalDays = Number(b.totalDays) || 0;
+      const pricePerDay = Number(b.pricePerDay) || 0;
+      const rentalSubtotal = pricePerDay * totalDays;
+      const hostFee = (Number(b.hostPlatformFeePerDay) || 1.50) * totalDays;
+      const driverFee = (Number(b.platformFeePerDay) || 1.50) * totalDays;
+      const insuranceCost = Number(b.insurance?.totalCost) || 0;
+      const hostEarnings = Math.max(0, rentalSubtotal - hostFee);
+      const platformRevenue = driverFee + hostFee + insuranceCost;
+      return { rentalSubtotal, hostFee, driverFee, insuranceCost, hostEarnings, platformRevenue };
+    };
+
     // Calculate overall stats
     const totalBookings = bookings.length;
     const confirmedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed' || b.status === 'active');
@@ -61,27 +74,9 @@ router.get('/host', auth, async (req, res) => {
     // Use Number() to ensure proper addition (not string concatenation)
     const totalRevenue = paidBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
 
-    // Revenue split: host earnings vs platform revenue
-    // For bookings that have hostEarnings set, use it; otherwise compute from totalPrice - platformFee - insurance
-    const totalHostEarnings = paidBookings.reduce((sum, b) => {
-      if (typeof b.hostEarnings === 'number' && b.hostEarnings > 0) {
-        return sum + b.hostEarnings;
-      }
-      // Fallback for older bookings without hostEarnings field
-      const fee = Number(b.platformFee) || 1.50;
-      const insurance = Number(b.insurance?.totalCost) || 0;
-      return sum + Math.max(0, (Number(b.totalPrice) || 0) - fee - insurance);
-    }, 0);
-
-    const totalPlatformRevenue = paidBookings.reduce((sum, b) => {
-      if (typeof b.platformRevenue === 'number' && b.platformRevenue > 0) {
-        return sum + b.platformRevenue;
-      }
-      // Fallback for older bookings
-      const fee = Number(b.platformFee) || 1.50;
-      const insurance = Number(b.insurance?.totalCost) || 0;
-      return sum + fee + insurance;
-    }, 0);
+    // Revenue split: always compute from per-day rates for accuracy
+    const totalHostEarnings = paidBookings.reduce((sum, b) => sum + computeBookingFinancials(b).hostEarnings, 0);
+    const totalPlatformRevenue = paidBookings.reduce((sum, b) => sum + computeBookingFinancials(b).platformRevenue, 0);
 
     // Only count as "pending revenue" bookings that are:
     // 1. Actually confirmed/active (not abandoned checkout attempts)
@@ -93,8 +88,8 @@ router.get('/host', auth, async (req, res) => {
     );
     const pendingRevenue = realPendingBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
 
-    // Total host platform fees deducted from host earnings
-    const totalHostPlatformFees = paidBookings.reduce((sum, b) => sum + (Number(b.hostPlatformFee) || 0), 0);
+    // Total host platform fees deducted from host earnings (always compute from per-day rate)
+    const totalHostPlatformFees = paidBookings.reduce((sum, b) => sum + computeBookingFinancials(b).hostFee, 0);
 
     // Count abandoned bookings (status=pending, never completed) for reference
     const abandonedBookings = bookings.filter(b =>
@@ -136,25 +131,12 @@ router.get('/host', auth, async (req, res) => {
       }
 
       if (booking.paymentStatus === 'paid') {
+        const financials = computeBookingFinancials(booking);
         vehicleStats[vehicleId].totalRevenue += (Number(booking.totalPrice) || 0);
         vehicleStats[vehicleId].totalDays += (Number(booking.totalDays) || 0);
-        vehicleStats[vehicleId].hostPlatformFees += (Number(booking.hostPlatformFee) || 0);
-
-        // Calculate per-vehicle earnings split
-        if (typeof booking.hostEarnings === 'number' && booking.hostEarnings > 0) {
-          vehicleStats[vehicleId].hostEarnings += booking.hostEarnings;
-        } else {
-          const fee = Number(booking.platformFee) || 1.50;
-          const ins = Number(booking.insurance?.totalCost) || 0;
-          vehicleStats[vehicleId].hostEarnings += Math.max(0, (Number(booking.totalPrice) || 0) - fee - ins);
-        }
-        if (typeof booking.platformRevenue === 'number' && booking.platformRevenue > 0) {
-          vehicleStats[vehicleId].platformRevenue += booking.platformRevenue;
-        } else {
-          const fee = Number(booking.platformFee) || 1.50;
-          const ins = Number(booking.insurance?.totalCost) || 0;
-          vehicleStats[vehicleId].platformRevenue += fee + ins;
-        }
+        vehicleStats[vehicleId].hostPlatformFees += financials.hostFee;
+        vehicleStats[vehicleId].hostEarnings += financials.hostEarnings;
+        vehicleStats[vehicleId].platformRevenue += financials.platformRevenue;
       } else if (['confirmed', 'active'].includes(booking.status) && booking.paymentStatus === 'pending') {
         // Only count confirmed/active bookings awaiting payment as real pending revenue
         vehicleStats[vehicleId].pendingRevenue += (Number(booking.totalPrice) || 0);
@@ -171,7 +153,7 @@ router.get('/host', auth, async (req, res) => {
       if (!dailyRevenue[date]) {
         dailyRevenue[date] = 0;
       }
-      dailyRevenue[date] += (Number(booking.totalPrice) || 0);
+      dailyRevenue[date] += computeBookingFinancials(booking).hostEarnings;
     });
 
     // Fill in missing dates with 0
