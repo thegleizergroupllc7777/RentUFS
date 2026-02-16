@@ -230,7 +230,8 @@ router.get('/pending-payouts', auth, async (req, res) => {
         // Always compute from per-day rate to fix legacy bookings that stored a flat fee
         const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
         const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
-        const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee);
+        const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+        const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
         return {
           id: b._id,
           reservationId: b.reservationId,
@@ -243,6 +244,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
           rentalType: b.rentalType,
           pricePerDay: b.pricePerDay,
           hostPlatformFee: correctHostFee,
+          hostProcessingFee: hostProcessingFee,
           hostEarnings: correctEarnings,
           payoutStatus: b.payoutStatus,
           payoutEligibleDate: b.payoutEligibleDate || b.endDate
@@ -282,6 +284,7 @@ router.get('/payout-history', auth, async (req, res) => {
       payouts: paidBookings.map(b => {
         // Always compute from per-day rate to fix legacy bookings that stored a flat fee
         const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+        const hostProcessingFee = Number(b.hostProcessingFee) || 0;
         return {
           id: b._id,
           reservationId: b.reservationId,
@@ -294,6 +297,7 @@ router.get('/payout-history', auth, async (req, res) => {
           rentalType: b.rentalType,
           pricePerDay: b.pricePerDay,
           hostPlatformFee: correctHostFee,
+          hostProcessingFee: hostProcessingFee,
           hostEarnings: b.hostEarnings,
           payoutAmount: b.payoutAmount,
           payoutDate: b.payoutDate,
@@ -350,7 +354,8 @@ router.post('/transfer-earnings', auth, async (req, res) => {
     // Recalculate correct host earnings from per-day values (fixes legacy bookings with flat $1.50 fee)
     const correctHostFee = (booking.hostPlatformFeePerDay || 1.50) * (booking.totalDays || 0);
     const rentalSubtotal = (booking.pricePerDay || 0) * (booking.totalDays || 0);
-    const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee);
+    const hostProcessingFee = Number(booking.hostProcessingFee) || 0;
+    const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
 
     // Fix stored values if they were wrong
     if (booking.hostPlatformFee !== correctHostFee || booking.hostEarnings !== correctEarnings) {
@@ -419,7 +424,8 @@ router.post('/transfer-all-eligible', auth, async (req, res) => {
     for (const b of eligibleBookings) {
       const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
       const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
-      const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee);
+      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+      const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
       if (b.hostPlatformFee !== correctHostFee || b.hostEarnings !== correctEarnings) {
         console.log(`💰 Correcting host fee for ${b.reservationId}: $${b.hostPlatformFee} -> $${correctHostFee}, earnings: $${b.hostEarnings} -> $${correctEarnings}`);
         b.hostPlatformFee = correctHostFee;

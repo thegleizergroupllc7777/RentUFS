@@ -61,9 +61,10 @@ router.get('/host', auth, async (req, res) => {
       const hostFee = (Number(b.hostPlatformFeePerDay) || 1.50) * totalDays;
       const driverFee = (Number(b.platformFeePerDay) || 1.50) * totalDays;
       const insuranceCost = Number(b.insurance?.totalCost) || 0;
-      const hostEarnings = Math.max(0, rentalSubtotal - hostFee);
+      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+      const hostEarnings = Math.max(0, rentalSubtotal - hostFee - hostProcessingFee);
       const platformRevenue = driverFee + hostFee + insuranceCost;
-      return { rentalSubtotal, hostFee, driverFee, insuranceCost, hostEarnings, platformRevenue };
+      return { rentalSubtotal, hostFee, driverFee, insuranceCost, hostProcessingFee, hostEarnings, platformRevenue };
     };
 
     // Calculate overall stats
