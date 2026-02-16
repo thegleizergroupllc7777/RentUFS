@@ -372,19 +372,23 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       const imagePath = path.join(__dirname, '..', 'uploads', booking.teqMobility.cardImage);
       if (fs.existsSync(imagePath)) {
         const fileData = fs.readFileSync(imagePath);
-        const ext = booking.teqMobility.cardImage.split('.').pop().toLowerCase();
-        const isPdf = ext === 'pdf';
+
+        // Detect real type from magic bytes — file extension may be wrong (e.g. PDF saved as .png)
+        const filePdf = fileData.slice(0, 5).toString('ascii') === '%PDF-';
+        const filePng = fileData[0] === 0x89 && fileData[1] === 0x50 && fileData[2] === 0x4E && fileData[3] === 0x47;
+        const fileJpeg = fileData[0] === 0xFF && fileData[1] === 0xD8;
+        const fileGif = fileData[0] === 0x47 && fileData[1] === 0x49 && fileData[2] === 0x46;
+        const fileMime = filePdf ? 'application/pdf' : filePng ? 'image/png' : fileJpeg ? 'image/jpeg' : fileGif ? 'image/gif' : 'application/octet-stream';
 
         // Raw mode: serve the actual file directly (for download / open in new tab)
         if (isRaw) {
-          const mimeType = isPdf ? 'application/pdf' : ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
-          res.set('Content-Type', mimeType);
-          res.set('Content-Disposition', 'inline');
+          res.set('Content-Type', fileMime);
+          res.set('Content-Disposition', filePdf ? 'inline; filename="insurance-card.pdf"' : 'inline');
           return res.send(fileData);
         }
 
         // HTML mode: wrap in self-contained HTML for srcdoc display
-        if (isPdf) {
+        if (filePdf) {
           const pdfBase64 = fileData.toString('base64');
           const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
@@ -397,11 +401,10 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
           return res.send(html);
         }
         const imgBase64 = fileData.toString('base64');
-        const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
         const imgHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
 <style>*{margin:0;padding:0}body{background:#f3f4f6;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;height:auto}</style>
-</head><body><img src="data:${mimeType};base64,${imgBase64}" alt="Insurance Card"></body></html>`;
+</head><body><img src="data:${fileMime};base64,${imgBase64}" alt="Insurance Card"></body></html>`;
         res.set('Content-Type', 'text/html');
         return res.send(imgHtml);
       }
@@ -431,37 +434,48 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.status(404).json({ message: 'Insurance card URL is no longer valid. Please retry.' });
     }
 
-    const contentType = response.headers['content-type'] || 'text/html';
+    const headerContentType = response.headers['content-type'] || '';
     const buf = Buffer.from(response.data);
 
-    // Validate the response contains actual data (not an error page disguised as image)
+    // Validate the response contains actual data
     if (buf.length < 100) {
       console.error(`🛡️ Insurance card response too small (${buf.length} bytes), likely invalid`);
       await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
       return res.status(404).json({ message: 'Insurance card data is invalid. Please retry.' });
     }
 
-    // Validate image magic bytes if content-type claims it's an image
-    if (contentType.includes('image/')) {
-      const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
-      const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
-      const isGif = buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46;
-      if (!isPng && !isJpeg && !isGif) {
-        console.error(`🛡️ Insurance card claims image content-type but data doesn't match (first bytes: ${buf.slice(0, 4).toString('hex')})`);
+    // Detect REAL content type from magic bytes — don't trust the header
+    const isPdf = buf.slice(0, 5).toString('ascii') === '%PDF-';
+    const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+    const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
+    const isGif = buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46;
+    const isImage = isPng || isJpeg || isGif;
+
+    // Determine the real content type based on magic bytes, falling back to header
+    let contentType;
+    if (isPdf) {
+      contentType = 'application/pdf';
+    } else if (isPng) {
+      contentType = 'image/png';
+    } else if (isJpeg) {
+      contentType = 'image/jpeg';
+    } else if (isGif) {
+      contentType = 'image/gif';
+    } else if (headerContentType.includes('text/html')) {
+      contentType = 'text/html';
+    } else {
+      // Unknown binary — check if it looks like HTML text
+      const firstChars = buf.slice(0, 100).toString('utf-8').trim().toLowerCase();
+      if (firstChars.startsWith('<!doctype') || firstChars.startsWith('<html')) {
+        contentType = 'text/html';
+      } else {
+        console.error(`🛡️ Insurance card: unrecognized format (header: ${headerContentType}, first bytes: ${buf.slice(0, 8).toString('hex')})`);
         await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
-        return res.status(404).json({ message: 'Insurance card image is corrupt. Please retry.' });
+        return res.status(404).json({ message: 'Insurance card format not recognized. Please retry.' });
       }
     }
 
-    // Validate PDF magic bytes
-    if (contentType.includes('application/pdf')) {
-      const pdfHeader = buf.slice(0, 5).toString('ascii');
-      if (pdfHeader !== '%PDF-') {
-        console.error(`🛡️ Insurance card claims PDF but data doesn't match (header: ${pdfHeader})`);
-        await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': null, 'teqMobility.cardImage': null });
-        return res.status(404).json({ message: 'Insurance card PDF is corrupt. Please retry.' });
-      }
-    }
+    console.log(`🛡️ Insurance card: header says "${headerContentType}", detected as "${contentType}" (${buf.length} bytes)`);
 
     // Raw mode: pass through the actual file for download / open in new tab
     if (isRaw) {
@@ -473,7 +487,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     // HTML wrapping mode for inline display via srcdoc
     res.set('Content-Disposition', 'inline');
 
-    if (contentType.includes('application/pdf')) {
+    if (isPdf) {
       const pdfBase64 = buf.toString('base64');
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
@@ -486,7 +500,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.send(html);
     }
 
-    if (contentType.includes('image/')) {
+    if (isImage) {
       const imgBase64 = buf.toString('base64');
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
@@ -497,7 +511,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     }
 
     // For HTML responses, inject a <base> tag so relative resources resolve correctly
-    if (contentType.includes('text/html')) {
+    if (contentType === 'text/html') {
       let html = buf.toString('utf-8');
       const baseUrl = new URL(cardUrl);
       const baseTag = `<base href="${baseUrl.origin}/">`;

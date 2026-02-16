@@ -11,27 +11,22 @@ if (!fs.existsSync(CARDS_DIR)) {
 }
 
 /**
- * Capture a screenshot of the insurance card URL and save it as a PNG.
- * For PDF URLs, downloads the PDF directly instead of trying to render via Puppeteer
- * (headless Chrome cannot navigate to PDF URLs — causes ERR_ABORTED).
- * Returns the relative path (from uploads/) to the saved file.
+ * Capture/download an insurance card from a URL and save it locally.
+ * Always downloads first to detect the real file type from content,
+ * rather than relying on URL patterns or content-type headers.
  *
- * @param {string} cardUrl - The URL to screenshot or download
+ * @param {string} cardUrl - The URL to download
  * @param {string} bookingId - Booking ID (used for filename)
  * @returns {Promise<string>} Relative path to the saved file
  */
 const captureCardImage = async (cardUrl, bookingId) => {
-  // For PDF URLs, download the file directly instead of using Puppeteer
-  if (cardUrl.toLowerCase().endsWith('.pdf') || cardUrl.includes('/idcards/')) {
-    return downloadCard(cardUrl, bookingId);
-  }
-
-  // For non-PDF URLs, try Puppeteer screenshot
-  return screenshotCard(cardUrl, bookingId);
+  // Always try direct download first — detect type from actual content
+  return downloadCard(cardUrl, bookingId);
 };
 
 /**
- * Download a card file (PDF/image) directly and save it.
+ * Download a card file and save it with the correct extension
+ * based on magic bytes, not content-type header.
  */
 const downloadCard = async (cardUrl, bookingId) => {
   try {
@@ -41,61 +36,29 @@ const downloadCard = async (cardUrl, bookingId) => {
       headers: { 'Accept': 'application/pdf,image/*,*/*' }
     });
 
-    const contentType = response.headers['content-type'] || '';
-    const ext = contentType.includes('pdf') ? 'pdf' : 'png';
+    const buf = Buffer.from(response.data);
+
+    // Detect real type from magic bytes
+    const isPdf = buf.slice(0, 5).toString('ascii') === '%PDF-';
+    const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+    const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
+
+    let ext;
+    if (isPdf) ext = 'pdf';
+    else if (isPng) ext = 'png';
+    else if (isJpeg) ext = 'jpg';
+    else ext = 'pdf'; // Default to pdf since TeqMobility mostly returns PDFs
+
     const filename = `card-${bookingId}.${ext}`;
     const filePath = path.join(CARDS_DIR, filename);
 
-    fs.writeFileSync(filePath, Buffer.from(response.data));
-    console.log(`🛡️ Insurance card downloaded: ${filename} (${contentType})`);
+    fs.writeFileSync(filePath, buf);
+    const headerType = response.headers['content-type'] || 'unknown';
+    console.log(`🛡️ Insurance card downloaded: ${filename} (header: ${headerType}, detected: ${ext}, ${buf.length} bytes)`);
     return `insurance-cards/${filename}`;
   } catch (err) {
     console.error('🛡️ Insurance card download failed:', err.message);
     return null;
-  }
-};
-
-/**
- * Use Puppeteer to screenshot an HTML insurance card page.
- */
-const screenshotCard = async (cardUrl, bookingId) => {
-  const filename = `card-${bookingId}.png`;
-  const filePath = path.join(CARDS_DIR, filename);
-
-  let browser;
-  try {
-    const puppeteer = require('puppeteer-core');
-    const chromium = require('@sparticuz/chromium');
-
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: 'shell'
-    });
-
-    const page = await browser.newPage();
-    await page.setViewport({ width: 600, height: 400 });
-    await page.goto(cardUrl, { waitUntil: 'networkidle0', timeout: 15000 });
-
-    // Wait a moment for any animations/rendering to settle
-    await new Promise((r) => setTimeout(r, 500));
-
-    await page.screenshot({
-      path: filePath,
-      fullPage: true,
-      type: 'png'
-    });
-
-    console.log(`🛡️ Insurance card screenshot saved: ${filename}`);
-    return `insurance-cards/${filename}`;
-  } catch (err) {
-    console.error('🛡️ Insurance card screenshot failed:', err.message);
-    // If Puppeteer fails, try direct download as fallback
-    return downloadCard(cardUrl, bookingId);
-  } finally {
-    if (browser) {
-      await browser.close().catch(() => {});
-    }
   }
 };
 
