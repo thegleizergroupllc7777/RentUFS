@@ -128,6 +128,7 @@ const HostReservationDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAgreement, setShowAgreement] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   useEffect(() => {
     fetchBooking();
@@ -151,6 +152,52 @@ const HostReservationDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Send SMS extension reminder to driver
+  const handleSendReminder = async () => {
+    setSendingReminder(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/bookings/${bookingId}/send-extension-reminder`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert(response.data.message || 'Reminder sent!');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to send reminder';
+      alert(msg);
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
+  // Check if booking is overdue (past return date/time)
+  const isOverdue = () => {
+    if (!booking || booking.status !== 'active') return false;
+    const now = new Date();
+    const endDate = new Date(booking.endDate);
+    const datePart = (typeof booking.endDate === 'string' ? booking.endDate : booking.endDate.toISOString()).split('T')[0];
+    const endLocal = new Date(datePart + 'T00:00:00');
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endLocal.setHours(hours, minutes, 0, 0);
+    return now > endLocal;
+  };
+
+  // Calculate how overdue a booking is
+  const getOverdueInfo = () => {
+    if (!booking) return '';
+    const now = new Date();
+    const datePart = (typeof booking.endDate === 'string' ? booking.endDate : booking.endDate.toISOString()).split('T')[0];
+    const endLocal = new Date(datePart + 'T00:00:00');
+    const dropoffTime = booking.dropoffTime || '10:00';
+    const [hours, minutes] = dropoffTime.split(':').map(Number);
+    endLocal.setHours(hours, minutes, 0, 0);
+    const diffMs = now - endLocal;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays >= 1) return `${diffDays} day${diffDays > 1 ? 's' : ''} overdue`;
+    return `${Math.max(1, diffHours)} hour${diffHours !== 1 ? 's' : ''} overdue`;
   };
 
   const getStatusColor = (status) => {
@@ -229,6 +276,73 @@ const HostReservationDetail = () => {
               {booking.status}
             </div>
           </div>
+
+          {/* Overdue Warning Banner with Send Reminder */}
+          {isOverdue() && (
+            <div style={{
+              background: 'linear-gradient(90deg, #ef4444, #dc2626)',
+              color: 'white',
+              padding: '1rem 1.25rem',
+              marginBottom: '1.5rem',
+              borderRadius: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem'
+            }}>
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '1.05rem', marginBottom: '0.25rem' }}>
+                  {getOverdueInfo()} - Renter should extend or return immediately!
+                </div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  Insurance coverage may no longer be active. Send the driver an SMS reminder to extend.
+                </div>
+              </div>
+              <button
+                onClick={handleSendReminder}
+                disabled={sendingReminder}
+                style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  color: '#dc2626',
+                  border: 'none',
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '0.5rem',
+                  fontWeight: '700',
+                  fontSize: '0.9rem',
+                  cursor: sendingReminder ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  opacity: sendingReminder ? 0.7 : 1
+                }}
+              >
+                {sendingReminder ? 'Sending...' : 'Send SMS Reminder'}
+              </button>
+            </div>
+          )}
+
+          {/* Send Reminder button for active bookings (non-overdue too) */}
+          {booking.status === 'active' && !isOverdue() && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginBottom: '1.5rem'
+            }}>
+              <button
+                onClick={handleSendReminder}
+                disabled={sendingReminder}
+                className="btn btn-secondary"
+                style={{
+                  background: '#f59e0b',
+                  color: '#000',
+                  border: 'none',
+                  fontWeight: '600',
+                  opacity: sendingReminder ? 0.7 : 1
+                }}
+              >
+                {sendingReminder ? 'Sending...' : 'Send SMS Reminder'}
+              </button>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }}>
             {/* Left Column - Inspection Photos */}
