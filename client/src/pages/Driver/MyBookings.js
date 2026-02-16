@@ -993,7 +993,7 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {booking.status === 'active' && (booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl) && (
+                        {booking.status === 'active' && booking.insurance?.type && booking.insurance.type !== 'none' && (
                           <button
                             onClick={() => setInsuranceCardModal({ open: true, booking })}
                             className="btn btn-secondary"
@@ -1377,7 +1377,7 @@ const MyBookings = () => {
               background: '#f3f4f6',
               width: '100%'
             }}>
-              {(insuranceCardModal.booking.teqMobility.cardImage || insuranceCardModal.booking.teqMobility.cardUrl) ? (
+              {(insuranceCardModal.booking.teqMobility?.cardImage || insuranceCardModal.booking.teqMobility?.cardUrl) ? (
                 <iframe
                   src={`${API_URL}/api/bookings/${insuranceCardModal.booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
                   title="Insurance Card"
@@ -1389,9 +1389,71 @@ const MyBookings = () => {
                   }}
                 />
               ) : (
-                <p style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
-                  Insurance card not available
-                </p>
+                <div style={{ padding: '1.5rem' }}>
+                  <div style={{
+                    background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                    borderRadius: '0.75rem',
+                    padding: '1.5rem',
+                    color: 'white',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '6rem', opacity: 0.1 }}>&#128737;</div>
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '0.25rem' }}>
+                      RentUFS Trip Protection
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
+                      {insuranceCardModal.booking.insurance?.type === 'carshare' ? 'Car Share — Liability Coverage' : 'Ride Share — Full Coverage'}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
+                      <div>
+                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Reservation</div>
+                        <div style={{ fontWeight: 600 }}>{insuranceCardModal.booking.reservationId}</div>
+                      </div>
+                      <div>
+                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Vehicle</div>
+                        <div style={{ fontWeight: 600 }}>
+                          {insuranceCardModal.booking.vehicle?.year} {insuranceCardModal.booking.vehicle?.make} {insuranceCardModal.booking.vehicle?.model}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Coverage Period</div>
+                        <div style={{ fontWeight: 600 }}>
+                          {new Date(insuranceCardModal.booking.startDate).toLocaleDateString()} — {new Date(insuranceCardModal.booking.endDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Daily Rate</div>
+                        <div style={{ fontWeight: 600 }}>
+                          ${insuranceCardModal.booking.insurance?.costPerDay?.toFixed(2) || '0.00'}/day
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                      <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Coverage Includes</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {insuranceCardModal.booking.insurance?.coverage?.liability && (
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Liability</span>
+                        )}
+                        {insuranceCardModal.booking.insurance?.coverage?.collision && (
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Collision</span>
+                        )}
+                        {insuranceCardModal.booking.insurance?.coverage?.comprehensive && (
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Comprehensive</span>
+                        )}
+                        {insuranceCardModal.booking.insurance?.coverage?.personalInjury && (
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Personal Injury</span>
+                        )}
+                        {insuranceCardModal.booking.insurance?.coverage?.roadsideAssistance && (
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Roadside Assistance</span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', opacity: 0.6, textAlign: 'right' }}>
+                      Underwritten by TeqMobility
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
