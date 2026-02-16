@@ -32,17 +32,20 @@ async function backfillHostPlatformFee() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('Connected to MongoDB\n');
 
-    // Find bookings with hostPlatformFee of 0 or missing
-    const bookings = await Booking.find({
-      $or: [
-        { hostPlatformFee: 0 },
-        { hostPlatformFee: { $exists: false } },
-        { hostPlatformFee: null }
-      ],
+    // Find all bookings and check if hostPlatformFee matches feePerDay * totalDays
+    // This catches both missing fees (0/null) and flat fees that weren't multiplied by totalDays
+    const allBookings = await Booking.find({
       totalDays: { $gt: 0 }
     }).sort({ createdAt: 1 });
 
-    console.log(`Found ${bookings.length} bookings with missing hostPlatformFee\n`);
+    // Filter to bookings where the fee is incorrect
+    const bookings = allBookings.filter(b => {
+      const feePerDay = b.hostPlatformFeePerDay || 1.50;
+      const correctFee = feePerDay * (b.totalDays || 0);
+      return Math.abs((b.hostPlatformFee || 0) - correctFee) > 0.01;
+    });
+
+    console.log(`Found ${bookings.length} bookings with incorrect hostPlatformFee (checked ${allBookings.length} total)\n`);
 
     let updatedUnpaid = 0;
     let updatedPaid = 0;
