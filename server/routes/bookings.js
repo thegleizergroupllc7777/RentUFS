@@ -358,15 +358,32 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
         const fileData = fs.readFileSync(imagePath);
         const isPdf = booking.teqMobility.cardImage.endsWith('.pdf');
         if (isPdf) {
-          // Serve raw PDF with inline disposition — browser's built-in PDF viewer handles display
-          res.set('Content-Type', 'application/pdf');
-          res.set('Content-Disposition', 'inline; filename="insurance-card.pdf"');
+          // Wrap PDF in HTML for reliable iframe display
+          const pdfBase64 = fileData.toString('base64');
+          const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Insurance Card</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#f3f4f6}embed,object,iframe{width:100%;height:100%;border:none}.fallback{padding:2rem;text-align:center;font-family:system-ui,sans-serif}.fallback a{display:inline-block;margin-top:1rem;padding:0.75rem 1.5rem;background:#0ea5e9;color:white;border-radius:0.5rem;text-decoration:none}</style>
+</head><body>
+<embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
+<noembed><div class="fallback"><p>Your browser cannot display this PDF inline.</p><a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a></div></noembed>
+</body></html>`;
+          res.set('Content-Type', 'text/html');
           res.removeHeader('X-Frame-Options');
           res.set('Content-Security-Policy', "frame-ancestors 'self'");
-          return res.send(fileData);
+          return res.send(html);
         }
-        // For images, redirect normally
-        return res.redirect(`/uploads/${booking.teqMobility.cardImage}`);
+        // For images, wrap in HTML for consistent iframe display
+        const imgBase64 = fileData.toString('base64');
+        const ext = booking.teqMobility.cardImage.split('.').pop().toLowerCase();
+        const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+        const imgHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Insurance Card</title>
+<style>*{margin:0;padding:0}body{background:#f3f4f6;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;height:auto}</style>
+</head><body><img src="data:${mimeType};base64,${imgBase64}" alt="Insurance Card"></body></html>`;
+        res.set('Content-Type', 'text/html');
+        res.removeHeader('X-Frame-Options');
+        res.set('Content-Security-Policy', "frame-ancestors 'self'");
+        return res.send(imgHtml);
       }
       // File was lost (e.g. ephemeral filesystem redeploy) — clear stale reference and fall through
       console.log(`🛡️ Insurance card file missing on disk: ${imagePath}, falling through to cardUrl proxy`);
@@ -393,17 +410,29 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     res.removeHeader('X-Frame-Options');
     res.set('Content-Security-Policy', "frame-ancestors 'self'");
 
-    // For PDF responses, serve raw PDF — browser's built-in PDF viewer handles iframe display
+    // For PDF responses, wrap in HTML for reliable iframe display
     if (contentType.includes('application/pdf')) {
-      res.set('Content-Type', 'application/pdf');
-      res.set('Content-Disposition', 'inline; filename="insurance-card.pdf"');
-      return res.send(Buffer.from(response.data));
+      const pdfBase64 = Buffer.from(response.data).toString('base64');
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Insurance Card</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#f3f4f6}embed,object,iframe{width:100%;height:100%;border:none}.fallback{padding:2rem;text-align:center;font-family:system-ui,sans-serif}.fallback a{display:inline-block;margin-top:1rem;padding:0.75rem 1.5rem;background:#0ea5e9;color:white;border-radius:0.5rem;text-decoration:none}</style>
+</head><body>
+<embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
+<noembed><div class="fallback"><p>Your browser cannot display this PDF inline.</p><a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a></div></noembed>
+</body></html>`;
+      res.set('Content-Type', 'text/html');
+      return res.send(html);
     }
 
-    // For image responses, serve raw image
+    // For image responses, wrap in HTML for consistent iframe display
     if (contentType.includes('image/')) {
-      res.set('Content-Type', contentType);
-      return res.send(Buffer.from(response.data));
+      const imgBase64 = Buffer.from(response.data).toString('base64');
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Insurance Card</title>
+<style>*{margin:0;padding:0}body{background:#f3f4f6;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;height:auto}</style>
+</head><body><img src="data:${contentType};base64,${imgBase64}" alt="Insurance Card"></body></html>`;
+      res.set('Content-Type', 'text/html');
+      return res.send(html);
     }
 
     // For HTML responses, inject a <base> tag so relative resources resolve correctly
@@ -1353,6 +1382,42 @@ router.patch('/:id/status', auth, async (req, res) => {
       booking.cancellationReason = hoursUntilPickup <= 24
         ? 'Cancelled by driver (late cancellation - within 24 hours of pickup)'
         : 'Cancelled by driver';
+
+      // Process Stripe refund for driver cancellation
+      if (booking.paymentStatus === 'paid' && booking.paymentSessionId) {
+        try {
+          let paymentIntentId;
+          if (booking.paymentSessionId.startsWith('pi_')) {
+            paymentIntentId = booking.paymentSessionId;
+          } else {
+            const session = await stripe.checkout.sessions.retrieve(booking.paymentSessionId);
+            paymentIntentId = session.payment_intent;
+          }
+
+          if (paymentIntentId) {
+            // Retrieve payment intent to get total amount
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+            const totalPaidCents = paymentIntent.amount_received;
+
+            // Deduct cancellation fee (convert to cents) from refund
+            const feeCents = Math.round(cancellationFee * 100);
+            const refundAmountCents = totalPaidCents - feeCents;
+
+            if (refundAmountCents > 0) {
+              const refund = await stripe.refunds.create({
+                payment_intent: paymentIntentId,
+                amount: refundAmountCents,
+                reason: 'requested_by_customer'
+              });
+              console.log(`✅ Stripe refund for driver cancellation: ${refund.id}, amount: ${refund.amount}, fee retained: ${feeCents}`);
+            }
+            booking.paymentStatus = cancellationFee > 0 ? 'partial_refund' : 'refunded';
+          }
+        } catch (stripeError) {
+          console.error('❌ Stripe refund error on driver cancellation:', stripeError.message);
+          // Still proceed with cancellation even if refund fails
+        }
+      }
     }
 
     booking.status = status;
