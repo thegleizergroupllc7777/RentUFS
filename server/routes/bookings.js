@@ -350,15 +350,33 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    // If a local screenshot image exists, verify file exists then redirect
+    // If a local file exists, verify on disk then serve inline
     if (booking.teqMobility?.cardImage) {
       const fs = require('fs');
       const imagePath = path.join(__dirname, '..', 'uploads', booking.teqMobility.cardImage);
       if (fs.existsSync(imagePath)) {
+        const fileData = fs.readFileSync(imagePath);
+        const isPdf = booking.teqMobility.cardImage.endsWith('.pdf');
+        if (isPdf) {
+          // Wrap PDF in HTML for iframe display
+          const pdfBase64 = fileData.toString('base64');
+          const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Insurance Card</title>
+<style>* { margin: 0; padding: 0; box-sizing: border-box; } html, body { width: 100%; height: 100%; background: #f3f4f6; } object { width: 100%; height: 100%; border: none; } .fallback { padding: 2rem; text-align: center; font-family: system-ui, sans-serif; } .fallback a { display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #0ea5e9; color: white; border-radius: 0.5rem; text-decoration: none; }</style>
+</head><body>
+<object data="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
+  <div class="fallback"><p>Your browser cannot display this PDF inline.</p><a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a></div>
+</object>
+</body></html>`;
+          res.set('Content-Type', 'text/html');
+          res.set('Content-Disposition', 'inline');
+          return res.send(html);
+        }
+        // For images, redirect normally
         return res.redirect(`/uploads/${booking.teqMobility.cardImage}`);
       }
       // File was lost (e.g. ephemeral filesystem redeploy) — clear stale reference and fall through
-      console.log(`🛡️ Insurance card image missing on disk: ${imagePath}, falling through to cardUrl proxy`);
+      console.log(`🛡️ Insurance card file missing on disk: ${imagePath}, falling through to cardUrl proxy`);
       await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardImage': null });
     }
 
@@ -471,8 +489,26 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
       return res.status(400).json({ message: 'No insurance selected for this booking' });
     }
 
-    // If card is already available, no need to retry
-    if (booking.teqMobility?.cardUrl || booking.teqMobility?.cardImage) {
+    // If card file is already available on disk, no need to retry
+    if (booking.teqMobility?.cardImage) {
+      const fs = require('fs');
+      const filePath = path.join(__dirname, '..', 'uploads', booking.teqMobility.cardImage);
+      if (fs.existsSync(filePath)) {
+        return res.json({
+          success: true,
+          message: 'Insurance card already available',
+          teqMobility: booking.teqMobility
+        });
+      }
+    }
+    // If we have a cardUrl saved (even if cardImage is missing), use it directly
+    if (booking.teqMobility?.cardUrl) {
+      // Try to re-download the card file
+      const imagePath = await captureCardImage(booking.teqMobility.cardUrl, booking._id.toString());
+      if (imagePath) {
+        booking.teqMobility.cardImage = imagePath;
+        await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardImage': imagePath });
+      }
       return res.json({
         success: true,
         message: 'Insurance card already available',
@@ -487,19 +523,21 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
 
     const coverageResult = await startRentalCoverage(booking.host, driver, booking.vehicle, booking);
 
+    // Preserve existing data — don't overwrite cardUrl/cardImage if the new response is missing them
+    const existingTeq = booking.teqMobility || {};
     const teqData = {
-      coverageId: coverageResult.coverageId || null,
-      ownerId: coverageResult.ownerId || null,
-      status: coverageResult.success ? coverageResult.status : 'failed',
-      cardUrl: coverageResult.cardUrl || null,
-      cardImage: null,
-      startedAt: coverageResult.success ? new Date() : null,
+      coverageId: coverageResult.coverageId || existingTeq.coverageId || null,
+      ownerId: coverageResult.ownerId || existingTeq.ownerId || null,
+      status: coverageResult.success ? coverageResult.status : (existingTeq.status || 'failed'),
+      cardUrl: coverageResult.cardUrl || existingTeq.cardUrl || null,
+      cardImage: existingTeq.cardImage || null,
+      startedAt: coverageResult.success ? new Date() : (existingTeq.startedAt || null),
       error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
     };
 
-    // Capture insurance card as a screenshot image
-    if (coverageResult.success && coverageResult.cardUrl) {
-      const imagePath = await captureCardImage(coverageResult.cardUrl, booking._id.toString());
+    // Capture insurance card as a local file
+    if (coverageResult.success && teqData.cardUrl && !teqData.cardImage) {
+      const imagePath = await captureCardImage(teqData.cardUrl, booking._id.toString());
       if (imagePath) {
         teqData.cardImage = imagePath;
       }
@@ -516,7 +554,7 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
         const cardUrl = await fetchCoverageCardUrl(teqData.coverageId, booking.vehicle?.vin);
         if (cardUrl) {
           teqData.cardUrl = cardUrl;
-          // Try to capture screenshot
+          // Try to download/capture the card
           const imagePath = await captureCardImage(cardUrl, booking._id.toString());
           if (imagePath) {
             teqData.cardImage = imagePath;
