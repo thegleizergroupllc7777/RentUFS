@@ -77,6 +77,12 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
               <span className="detail-label">Host Service Fee</span>
               <span className="detail-value">-{formatCurrency(booking.hostPlatformFee)}</span>
             </div>
+            {booking.hostProcessingFee > 0 && (
+              <div className="detail-row deduction">
+                <span className="detail-label">Processing Fee</span>
+                <span className="detail-value">-{formatCurrency(booking.hostProcessingFee)}</span>
+              </div>
+            )}
             <div className="detail-row total">
               <span className="detail-label">Your Earnings</span>
               <span className="detail-value">{formatCurrency(booking.hostEarnings)}</span>
@@ -84,7 +90,7 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           </div>
 
           <div className="detail-section detail-section-note">
-            <p>Your earnings are the rental subtotal minus the host service fee.</p>
+            <p>Your earnings are the rental subtotal minus the host service fee and processing fee.</p>
           </div>
         </div>
       )}

@@ -470,6 +470,12 @@ const HostReservationDetail = () => {
                           <span style={{ color: '#9ca3af' }}>-${booking.hostPlatformFee.toFixed(2)}</span>
                         </div>
                       )}
+                      {booking.hostProcessingFee > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                          <span style={{ color: '#9ca3af' }}>Processing Fee</span>
+                          <span style={{ color: '#9ca3af' }}>-${booking.hostProcessingFee.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                         <span style={{ color: '#9ca3af' }}>Your Earnings</span>
                         <span style={{ color: '#10b981', fontWeight: '600' }}>${booking.hostEarnings.toFixed(2)}</span>

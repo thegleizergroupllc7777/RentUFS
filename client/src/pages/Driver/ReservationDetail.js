@@ -138,6 +138,16 @@ const ReservationDetail = () => {
       });
     }
 
+    // Processing fee (driver's half of Stripe fee)
+    if (booking.driverProcessingFee > 0) {
+      transactions.push({
+        date: booking.createdAt,
+        type: 'Processing Fee',
+        description: 'Card processing fee',
+        amount: booking.driverProcessingFee
+      });
+    }
+
     // Extensions
     if (booking.extensions?.length > 0) {
       booking.extensions.forEach((ext, i) => {

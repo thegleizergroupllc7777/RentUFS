@@ -278,7 +278,7 @@ const Checkout = () => {
               <div className="summary-item">
                 <span className="label">Rental subtotal (${(booking.pricePerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
                 <span className="value">
-                  ${((booking.totalPrice - (booking.platformFee || 0) - (booking.insurance?.totalCost || 0)) || 0).toFixed(2)}
+                  ${((booking.totalPrice - (booking.platformFee || 0) - (booking.insurance?.totalCost || 0) - (booking.driverProcessingFee || 0)) || 0).toFixed(2)}
                 </span>
               </div>
 
@@ -293,6 +293,13 @@ const Checkout = () => {
                 <div className="summary-item insurance">
                   <span className="label">{booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'} (${(booking.insurance.costPerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
                   <span className="value">${booking.insurance.totalCost.toFixed(2)}</span>
+                </div>
+              )}
+
+              {(booking.driverProcessingFee > 0) && (
+                <div className="summary-item">
+                  <span className="label">Processing Fee:</span>
+                  <span className="value">${(booking.driverProcessingFee || 0).toFixed(2)}</span>
                 </div>
               )}
 

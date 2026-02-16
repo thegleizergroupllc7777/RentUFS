@@ -1,6 +1,7 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
+const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
 
@@ -191,12 +192,24 @@ router.post('/add-to-booking', auth, async (req, res) => {
       coverage: selectedPlan.coverage
     };
 
-    // Update total price to include insurance
-    booking.totalPrice = booking.totalPrice + priceDifference;
+    // Remove old processing fee from total, add insurance difference
+    const oldDriverProcessingFee = booking.driverProcessingFee || 0;
+    booking.totalPrice = booking.totalPrice - oldDriverProcessingFee + priceDifference;
+
+    // Recalculate processing fee on new base total (rental + platform fee + insurance)
+    const { stripeFee, driverProcessingFee, hostProcessingFee } = calculateProcessingFee(booking.totalPrice);
+    booking.totalPrice = booking.totalPrice + driverProcessingFee;
+    booking.stripeFee = stripeFee;
+    booking.driverProcessingFee = driverProcessingFee;
+    booking.hostProcessingFee = hostProcessingFee;
+
+    // Update host earnings with new processing fee
+    const rentalSubtotal = booking.pricePerDay * booking.totalDays;
+    const hostPlatformFee = booking.hostPlatformFee || (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
+    booking.hostEarnings = rentalSubtotal - hostPlatformFee - hostProcessingFee;
 
     // Update revenue split: RentUFS keeps driverFee + hostFee + insurance
-    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + (booking.hostPlatformFee || 0) + insuranceCost;
-    // Host earnings stays the same (rental subtotal minus host fee only)
+    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + hostPlatformFee + insuranceCost;
 
     await booking.save();
 
@@ -206,9 +219,12 @@ router.post('/add-to-booking', auth, async (req, res) => {
         _id: booking._id,
         insurance: booking.insurance,
         totalPrice: booking.totalPrice,
+        driverProcessingFee: booking.driverProcessingFee,
+        stripeFee: booking.stripeFee,
         priceBreakdown: {
-          rental: booking.pricePerDay * booking.totalDays,
+          rental: rentalSubtotal,
           insurance: insuranceCost,
+          processingFee: driverProcessingFee,
           total: booking.totalPrice
         }
       }
@@ -240,12 +256,25 @@ router.post('/remove-from-booking', auth, async (req, res) => {
       return res.status(400).json({ message: 'Cannot modify insurance after payment' });
     }
 
-    // Remove insurance cost from total
+    // Remove insurance cost and old processing fee from total
     const insuranceCost = booking.insurance?.totalCost || 0;
-    booking.totalPrice = booking.totalPrice - insuranceCost;
+    const oldDriverProcessingFee = booking.driverProcessingFee || 0;
+    booking.totalPrice = booking.totalPrice - insuranceCost - oldDriverProcessingFee;
+
+    // Recalculate processing fee on new base total (rental + platform fee, no insurance)
+    const { stripeFee, driverProcessingFee, hostProcessingFee } = calculateProcessingFee(booking.totalPrice);
+    booking.totalPrice = booking.totalPrice + driverProcessingFee;
+    booking.stripeFee = stripeFee;
+    booking.driverProcessingFee = driverProcessingFee;
+    booking.hostProcessingFee = hostProcessingFee;
+
+    // Update host earnings with new processing fee
+    const rentalSubtotal = booking.pricePerDay * booking.totalDays;
+    const hostPlatformFee = booking.hostPlatformFee || (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
+    booking.hostEarnings = rentalSubtotal - hostPlatformFee - hostProcessingFee;
 
     // Update revenue split: RentUFS keeps driverFee + hostFee when no insurance
-    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + (booking.hostPlatformFee || 0);
+    booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + hostPlatformFee;
 
     // Reset insurance to none
     booking.insurance = {
@@ -270,7 +299,8 @@ router.post('/remove-from-booking', auth, async (req, res) => {
       booking: {
         _id: booking._id,
         insurance: booking.insurance,
-        totalPrice: booking.totalPrice
+        totalPrice: booking.totalPrice,
+        driverProcessingFee: booking.driverProcessingFee
       }
     });
   } catch (error) {

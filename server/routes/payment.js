@@ -6,6 +6,7 @@ const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const { sendBookingConfirmationToDriver, sendBookingNotificationToHost } = require('../utils/emailService');
 const { sendNewBookingNotificationSMS, sendBookingConfirmedSMS } = require('../utils/smsService');
+const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
 
@@ -296,11 +297,14 @@ router.post('/create-extension-payment', auth, async (req, res) => {
       return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
     }
 
-    // Calculate extension costs with platform fee
+    // Calculate extension costs with platform fee + processing fee
     const rentalCost = extensionDays * booking.pricePerDay;
     const platformFeePerDay = booking.platformFeePerDay || 1.50;
     const platformFee = extensionDays * platformFeePerDay;
-    const extensionCost = rentalCost + platformFee;
+    const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
+    const extensionBaseTotal = rentalCost + platformFee + extensionInsurance;
+    const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
+    const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
 
     // Calculate new end date
     const newEndDate = new Date(booking.endDate);
@@ -326,6 +330,8 @@ router.post('/create-extension-payment', auth, async (req, res) => {
         vehicleId: booking.vehicle._id.toString(),
         rentalCost: rentalCost.toString(),
         platformFee: platformFee.toString(),
+        driverProcessingFee: extensionProcessing.driverProcessingFee.toString(),
+        hostProcessingFee: extensionProcessing.hostProcessingFee.toString(),
       },
       description: `Extension: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model} - ${extensionDays} additional day(s)`,
     });
@@ -338,6 +344,8 @@ router.post('/create-extension-payment', auth, async (req, res) => {
         rentalCost,
         platformFeePerDay,
         platformFee,
+        extensionInsurance,
+        driverProcessingFee: extensionProcessing.driverProcessingFee,
         extensionCost,
         pricePerDay: booking.pricePerDay,
         currentEndDate: booking.endDate,
@@ -371,12 +379,14 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
         return res.status(404).json({ message: 'Booking not found' });
       }
 
-      // Calculate new values with platform fee + insurance
+      // Calculate new values with platform fee + insurance + processing fee
       const rentalCost = extensionDays * booking.pricePerDay;
       const platformFeePerDay = booking.platformFeePerDay || 1.50;
       const extensionPlatformFee = extensionDays * platformFeePerDay;
       const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
-      const extensionCost = rentalCost + extensionPlatformFee + extensionInsurance;
+      const extensionBaseTotal = rentalCost + extensionPlatformFee + extensionInsurance;
+      const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
+      const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
       const newEndDate = new Date(booking.endDate);
       newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
@@ -388,13 +398,16 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       booking.totalDays = booking.totalDays + extensionDays;
       booking.totalPrice = booking.totalPrice + extensionCost;
       booking.platformFee = (booking.platformFee || 0) + extensionPlatformFee;
+      booking.driverProcessingFee = (booking.driverProcessingFee || 0) + extensionProcessing.driverProcessingFee;
+      booking.hostProcessingFee = (booking.hostProcessingFee || 0) + extensionProcessing.hostProcessingFee;
+      booking.stripeFee = (booking.stripeFee || 0) + extensionProcessing.stripeFee;
       booking.hostPlatformFee = (booking.hostPlatformFee || 0) + extensionHostFee;
       if (booking.insurance && booking.insurance.totalCost !== undefined) {
         booking.insurance.totalCost = (booking.insurance.totalCost || 0) + extensionInsurance;
       }
 
-      // Update host earnings (rental minus host fee goes to host, all fees + insurance go to RentUFS)
-      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost - extensionHostFee;
+      // Update host earnings (rental minus host fee minus host processing fee goes to host)
+      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost - extensionHostFee - extensionProcessing.hostProcessingFee;
       booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee + extensionInsurance;
 
       // Track extension
@@ -494,12 +507,14 @@ router.post('/webhook', async (req, res) => {
         if (paymentIntent.metadata?.type === 'extension') {
           const extensionDays = parseInt(paymentIntent.metadata.extensionDays, 10);
           if (existingBooking && extensionDays) {
-            // Calculate extension costs with platform fee + insurance
+            // Calculate extension costs with platform fee + insurance + processing fee
             const rentalCost = extensionDays * existingBooking.pricePerDay;
             const platformFeePerDay = existingBooking.platformFeePerDay || 1.50;
             const extensionPlatformFee = extensionDays * platformFeePerDay;
             const extensionInsurance = extensionDays * (existingBooking.insurance?.costPerDay || 0);
-            const extensionCost = rentalCost + extensionPlatformFee + extensionInsurance;
+            const extensionBaseTotal = rentalCost + extensionPlatformFee + extensionInsurance;
+            const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
+            const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
             const newEndDate = new Date(existingBooking.endDate);
             newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
@@ -510,11 +525,14 @@ router.post('/webhook', async (req, res) => {
             existingBooking.totalDays = existingBooking.totalDays + extensionDays;
             existingBooking.totalPrice = existingBooking.totalPrice + extensionCost;
             existingBooking.platformFee = (existingBooking.platformFee || 0) + extensionPlatformFee;
+            existingBooking.driverProcessingFee = (existingBooking.driverProcessingFee || 0) + extensionProcessing.driverProcessingFee;
+            existingBooking.hostProcessingFee = (existingBooking.hostProcessingFee || 0) + extensionProcessing.hostProcessingFee;
+            existingBooking.stripeFee = (existingBooking.stripeFee || 0) + extensionProcessing.stripeFee;
             existingBooking.hostPlatformFee = (existingBooking.hostPlatformFee || 0) + extensionHostFee;
             if (existingBooking.insurance && existingBooking.insurance.totalCost !== undefined) {
               existingBooking.insurance.totalCost = (existingBooking.insurance.totalCost || 0) + extensionInsurance;
             }
-            existingBooking.hostEarnings = (existingBooking.hostEarnings || 0) + rentalCost - extensionHostFee;
+            existingBooking.hostEarnings = (existingBooking.hostEarnings || 0) + rentalCost - extensionHostFee - extensionProcessing.hostProcessingFee;
             existingBooking.platformRevenue = (existingBooking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee + extensionInsurance;
 
             if (!existingBooking.extensions) {

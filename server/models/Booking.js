@@ -91,6 +91,19 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Stripe processing fee split 50/50 between driver and host
+  stripeFee: {
+    type: Number,
+    default: 0
+  },
+  driverProcessingFee: {
+    type: Number,
+    default: 0
+  },
+  hostProcessingFee: {
+    type: Number,
+    default: 0
+  },
   // Payout tracking for host earnings via Stripe Connect
   payoutStatus: {
     type: String,

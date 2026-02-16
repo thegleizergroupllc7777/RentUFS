@@ -275,7 +275,9 @@ const VehicleDetail = () => {
       ? (parseInt(bookingData.quantity, 10) || 1) * 30
       : (parseInt(bookingData.quantity, 10) || 1);
   const platformFee = platformFeePerDay * totalDaysForFee;
-  const totalPrice = rentalSubtotal > 0 ? rentalSubtotal + platformFee : 0;
+  const baseTotal = rentalSubtotal > 0 ? rentalSubtotal + platformFee : 0;
+  const estimatedProcessingFee = baseTotal > 0 ? Math.ceil(((0.029 * baseTotal + 0.30) / (1 - 0.029 / 2)) * 100 / 2) / 100 : 0;
+  const totalPrice = baseTotal + estimatedProcessingFee;
 
   return (
     <div>
@@ -661,6 +663,12 @@ const VehicleDetail = () => {
                         <span>Platform Fee ($1.50/day x {totalDaysForFee})</span>
                         <span>${platformFee.toFixed(2)}</span>
                       </div>
+                      {estimatedProcessingFee > 0 && (
+                        <div className="summary-row">
+                          <span>Processing Fee</span>
+                          <span>${estimatedProcessingFee.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="summary-total">
                         <strong>Total</strong>
                         <strong>${totalPrice.toFixed(2)}</strong>

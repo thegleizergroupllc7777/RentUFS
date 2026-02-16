@@ -1387,10 +1387,25 @@ const MyBookings = () => {
                       ${(extensionDays * 1.50).toFixed(2)}
                     </span>
                   </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ color: '#1e40af' }}>Processing fee:</span>
+                    <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
+                      ${(() => {
+                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50;
+                        const fee = (0.029 * base + 0.30) / (1 - 0.029 / 2);
+                        return (Math.ceil(fee * 100 / 2) / 100).toFixed(2);
+                      })()}
+                    </span>
+                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #bfdbfe', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
                     <span style={{ color: '#1e40af', fontWeight: '600' }}>Total:</span>
                     <span style={{ fontWeight: '600', color: '#059669', fontSize: '1.25rem' }}>
-                      ${(extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50).toFixed(2)}
+                      ${(() => {
+                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50;
+                        const fee = (0.029 * base + 0.30) / (1 - 0.029 / 2);
+                        const driverFee = Math.ceil(fee * 100 / 2) / 100;
+                        return (base + driverFee).toFixed(2);
+                      })()}
                     </span>
                   </div>
                 </div>

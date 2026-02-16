@@ -11,6 +11,7 @@ const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = requir
 const { captureCardImage } = require('../utils/screenshotCard');
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
+const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
 
@@ -214,8 +215,13 @@ router.post('/', auth, async (req, res) => {
     const hostPlatformFeePerDay = 1.50;
     const hostPlatformFee = hostPlatformFeePerDay * totalDays;
 
-    // Revenue split: host gets rental subtotal minus host fee, platform (RentUFS) keeps driver fee + host fee (+ insurance added later)
-    const hostEarnings = rentalSubtotal - hostPlatformFee;
+    // Stripe processing fee split 50/50 between driver and host
+    // baseTotal = rental + driver platform fee (insurance starts at $0, added during checkout)
+    const { stripeFee, driverProcessingFee, hostProcessingFee } = calculateProcessingFee(totalPrice);
+    totalPrice = totalPrice + driverProcessingFee;
+
+    // Revenue split: host gets rental subtotal minus host fee minus their half of Stripe fee
+    const hostEarnings = rentalSubtotal - hostPlatformFee - hostProcessingFee;
     const platformRevenue = platformFee + hostPlatformFee;
 
     const booking = new Booking({
@@ -235,6 +241,9 @@ router.post('/', auth, async (req, res) => {
       platformFee,
       hostPlatformFeePerDay,
       hostPlatformFee,
+      stripeFee,
+      driverProcessingFee,
+      hostProcessingFee,
       hostEarnings,
       platformRevenue,
       status: 'awaiting_payment',
@@ -254,7 +263,7 @@ router.post('/', auth, async (req, res) => {
 router.get('/my-bookings', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({ driver: req.user._id, status: { $ne: 'awaiting_payment' } })
-      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory -hostPlatformFeePerDay -hostPlatformFee -hostEarnings -platformRevenue')
+      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory -hostPlatformFeePerDay -hostPlatformFee -hostProcessingFee -hostEarnings -platformRevenue')
       .populate('vehicle', 'nickname make model year images registrationImage pricePerDay')
       .populate('host', 'firstName lastName email phone profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
       .sort({ createdAt: -1 })
@@ -278,9 +287,11 @@ router.get('/host-bookings', auth, async (req, res) => {
 
     // Strip driver commission from host view
     const adjustedBookings = bookings.map(b => {
-      b.totalPrice = (b.totalPrice || 0) - (b.platformFee || 0);
+      b.totalPrice = (b.totalPrice || 0) - (b.platformFee || 0) - (b.driverProcessingFee || 0);
       delete b.platformFee;
       delete b.platformFeePerDay;
+      delete b.driverProcessingFee;
+      delete b.stripeFee;
       delete b.platformRevenue;
       return b;
     });
@@ -314,6 +325,7 @@ router.get('/:id', auth, async (req, res) => {
       const bookingObj = booking.toObject();
       delete bookingObj.hostPlatformFeePerDay;
       delete bookingObj.hostPlatformFee;
+      delete bookingObj.hostProcessingFee;
       delete bookingObj.hostEarnings;
       delete bookingObj.platformRevenue;
       return res.json(bookingObj);
@@ -322,10 +334,12 @@ router.get('/:id', auth, async (req, res) => {
     // Strip driver commission fields when host is viewing
     if (booking.host._id.toString() === req.user._id.toString()) {
       const bookingObj = booking.toObject();
-      // Adjust totalPrice to exclude driver commission (show rental + insurance only)
-      bookingObj.totalPrice = (bookingObj.totalPrice || 0) - (bookingObj.platformFee || 0);
+      // Adjust totalPrice to exclude driver commission + driver processing fee (show rental + insurance only)
+      bookingObj.totalPrice = (bookingObj.totalPrice || 0) - (bookingObj.platformFee || 0) - (bookingObj.driverProcessingFee || 0);
       delete bookingObj.platformFee;
       delete bookingObj.platformFeePerDay;
+      delete bookingObj.driverProcessingFee;
+      delete bookingObj.stripeFee;
       delete bookingObj.platformRevenue;
       return res.json(bookingObj);
     }
@@ -661,11 +675,13 @@ router.post('/:id/extend', auth, async (req, res) => {
       });
     }
 
-    // Calculate extension cost: rental + platform fee per day + insurance per day
+    // Calculate extension cost: rental + platform fee per day + insurance per day + processing fee
     const rentalCost = extensionDays * booking.pricePerDay;
     const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
-    const extensionCost = rentalCost + extensionPlatformFee + extensionInsurance;
+    const extensionBaseTotal = rentalCost + extensionPlatformFee + extensionInsurance;
+    const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
+    const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
 
     res.json({
       bookingId: booking._id,
@@ -677,7 +693,8 @@ router.post('/:id/extend', auth, async (req, res) => {
       extensionBreakdown: {
         rental: rentalCost,
         platformFee: extensionPlatformFee,
-        insurance: extensionInsurance
+        insurance: extensionInsurance,
+        processingFee: extensionProcessing.driverProcessingFee
       },
       vehicle: {
         id: booking.vehicle._id,
@@ -713,19 +730,24 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
       return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
     }
 
-    // Calculate new values: rental + platform fee + insurance per extension day
+    // Calculate new values: rental + platform fee + insurance + processing fee per extension day
     const newEndDate = new Date(booking.endDate);
     newEndDate.setDate(newEndDate.getDate() + extensionDays);
     const extensionRental = extensionDays * booking.pricePerDay;
     const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
-    const extensionCost = extensionRental + extensionPlatformFee + extensionInsurance;
+    const extensionBaseTotal = extensionRental + extensionPlatformFee + extensionInsurance;
+    const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
+    const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
 
     // Update booking
     booking.endDate = newEndDate;
     booking.totalDays = booking.totalDays + extensionDays;
     booking.totalPrice = booking.totalPrice + extensionCost;
     booking.platformFee = (booking.platformFee || 0) + extensionPlatformFee;
+    booking.driverProcessingFee = (booking.driverProcessingFee || 0) + extensionProcessing.driverProcessingFee;
+    booking.hostProcessingFee = (booking.hostProcessingFee || 0) + extensionProcessing.hostProcessingFee;
+    booking.stripeFee = (booking.stripeFee || 0) + extensionProcessing.stripeFee;
     if (booking.insurance && booking.insurance.totalCost !== undefined) {
       booking.insurance.totalCost = (booking.insurance.totalCost || 0) + extensionInsurance;
     }
@@ -734,8 +756,8 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
     const extensionHostFee = extensionDays * (booking.hostPlatformFeePerDay || 1.50);
     booking.hostPlatformFee = (booking.hostPlatformFee || 0) + extensionHostFee;
 
-    // Extension rental minus host fee goes to host; driver fee + host fee + insurance to RentUFS
-    booking.hostEarnings = (booking.hostEarnings || 0) + extensionRental - extensionHostFee;
+    // Extension rental minus host fee minus host processing fee goes to host
+    booking.hostEarnings = (booking.hostEarnings || 0) + extensionRental - extensionHostFee - extensionProcessing.hostProcessingFee;
     booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee + extensionInsurance;
 
     // Track extension history
