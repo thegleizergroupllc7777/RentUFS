@@ -358,19 +358,12 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
         const fileData = fs.readFileSync(imagePath);
         const isPdf = booking.teqMobility.cardImage.endsWith('.pdf');
         if (isPdf) {
-          // Wrap PDF in HTML for iframe display
-          const pdfBase64 = fileData.toString('base64');
-          const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Insurance Card</title>
-<style>* { margin: 0; padding: 0; box-sizing: border-box; } html, body { width: 100%; height: 100%; background: #f3f4f6; } object { width: 100%; height: 100%; border: none; } .fallback { padding: 2rem; text-align: center; font-family: system-ui, sans-serif; } .fallback a { display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #0ea5e9; color: white; border-radius: 0.5rem; text-decoration: none; }</style>
-</head><body>
-<object data="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
-  <div class="fallback"><p>Your browser cannot display this PDF inline.</p><a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a></div>
-</object>
-</body></html>`;
-          res.set('Content-Type', 'text/html');
-          res.set('Content-Disposition', 'inline');
-          return res.send(html);
+          // Serve raw PDF with inline disposition — browser's built-in PDF viewer handles display
+          res.set('Content-Type', 'application/pdf');
+          res.set('Content-Disposition', 'inline; filename="insurance-card.pdf"');
+          res.removeHeader('X-Frame-Options');
+          res.set('Content-Security-Policy', "frame-ancestors 'self'");
+          return res.send(fileData);
         }
         // For images, redirect normally
         return res.redirect(`/uploads/${booking.teqMobility.cardImage}`);
@@ -400,45 +393,17 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     res.removeHeader('X-Frame-Options');
     res.set('Content-Security-Policy', "frame-ancestors 'self'");
 
-    // For PDF responses, wrap in an HTML page with embedded PDF viewer for reliable iframe display
+    // For PDF responses, serve raw PDF — browser's built-in PDF viewer handles iframe display
     if (contentType.includes('application/pdf')) {
-      const pdfBase64 = Buffer.from(response.data).toString('base64');
-      const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Insurance Card</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; background: #f3f4f6; }
-  object, iframe { width: 100%; height: 100%; border: none; }
-  .fallback { padding: 2rem; text-align: center; font-family: system-ui, sans-serif; }
-  .fallback a { display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #0ea5e9; color: white; border-radius: 0.5rem; text-decoration: none; }
-</style>
-</head><body>
-<object data="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
-  <div class="fallback">
-    <p>Your browser cannot display this PDF inline.</p>
-    <a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a>
-  </div>
-</object>
-</body></html>`;
-      res.set('Content-Type', 'text/html');
-      return res.send(html);
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', 'inline; filename="insurance-card.pdf"');
+      return res.send(Buffer.from(response.data));
     }
 
-    // For image responses, wrap in HTML for consistent display
+    // For image responses, serve raw image
     if (contentType.includes('image/')) {
-      const imgBase64 = Buffer.from(response.data).toString('base64');
-      const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Insurance Card</title>
-<style>
-  * { margin: 0; padding: 0; }
-  body { background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-  img { max-width: 100%; height: auto; }
-</style>
-</head><body>
-<img src="data:${contentType};base64,${imgBase64}" alt="Insurance Card">
-</body></html>`;
-      res.set('Content-Type', 'text/html');
-      return res.send(html);
+      res.set('Content-Type', contentType);
+      return res.send(Buffer.from(response.data));
     }
 
     // For HTML responses, inject a <base> tag so relative resources resolve correctly
