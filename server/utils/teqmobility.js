@@ -406,28 +406,84 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
 /**
  * Full return flow: Stop Coverage
  * Non-blocking: returns result or error, never throws
+ * @param {Object} options - { coverageId, vin } - at least one required
  */
-const stopRentalCoverage = async (vinOrCoverageId) => {
+const stopRentalCoverage = async (options) => {
   if (!isConfigured()) {
     console.log('🛡️ TeqMobility: Not configured, skipping stop coverage');
     return { success: false, reason: 'not_configured' };
   }
 
-  try {
-    const coverage = await stopOnRentCoverage(vinOrCoverageId);
-    return {
-      success: true,
-      coverageId: coverage.id,
-      status: coverage.status
-    };
-  } catch (error) {
-    console.error('🛡️ TeqMobility: Error stopping rental coverage:', error.response?.data || error.message);
-    return {
-      success: false,
-      reason: 'api_error',
-      error: error.response?.data?.message || error.message
-    };
+  // Support legacy string argument (coverageId or vin)
+  let coverageId, vin;
+  if (typeof options === 'string') {
+    // Heuristic: VINs are 17 chars alphanumeric; coverage IDs are typically shorter or numeric
+    if (options.length === 17 && /^[A-HJ-NPR-Z0-9]+$/i.test(options)) {
+      vin = options;
+    } else {
+      coverageId = options;
+    }
+  } else {
+    coverageId = options?.coverageId;
+    vin = options?.vin;
   }
+
+  // Try stopping with coverage ID first
+  if (coverageId) {
+    try {
+      const coverage = await stopOnRentCoverage(coverageId);
+      return {
+        success: true,
+        coverageId: coverage.id,
+        status: coverage.status
+      };
+    } catch (error) {
+      console.error('🛡️ TeqMobility: Stop by coverageId failed:', error.response?.data?.message || error.message);
+      // Fall through to VIN lookup if we have a VIN
+      if (!vin) {
+        return {
+          success: false,
+          reason: 'api_error',
+          error: error.response?.data?.message || error.message
+        };
+      }
+    }
+  }
+
+  // Lookup active coverage by VIN, then stop it
+  if (vin) {
+    console.log(`🛡️ TeqMobility: Looking up active coverage by VIN ${vin} to stop it`);
+    try {
+      const activeCov = await getActiveCoverage(vin);
+      if (activeCov && activeCov.id) {
+        const coverage = await stopOnRentCoverage(activeCov.id);
+        return {
+          success: true,
+          coverageId: coverage.id,
+          status: coverage.status
+        };
+      }
+      console.log('🛡️ TeqMobility: No active coverage found for VIN', vin);
+      return {
+        success: false,
+        reason: 'no_active_coverage',
+        error: 'No active coverage found for this vehicle'
+      };
+    } catch (error) {
+      console.error('🛡️ TeqMobility: Stop by VIN lookup failed:', error.response?.data || error.message);
+      return {
+        success: false,
+        reason: 'api_error',
+        error: error.response?.data?.message || error.message
+      };
+    }
+  }
+
+  return {
+    success: false,
+    reason: 'no_identifier',
+    error: 'No coverageId or VIN provided'
+  };
 };
 
 module.exports = {
