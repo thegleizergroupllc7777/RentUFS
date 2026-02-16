@@ -116,20 +116,41 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [retryError, setRetryError] = useState('');
   const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
   const [cardHtml, setCardHtml] = useState(null);
+  const [cardBlobUrl, setCardBlobUrl] = useState(null);
   const [cardError, setCardError] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
 
-  // Fetch insurance card HTML content for srcdoc display
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (cardBlobUrl) URL.revokeObjectURL(cardBlobUrl);
+    };
+  }, [cardBlobUrl]);
+
+  // Fetch insurance card as blob — use blob URL for PDFs (srcdoc sandbox blocks PDF plugins)
   const fetchCardContent = async () => {
     setCardLoading(true);
     setCardError(false);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card`, {
+      const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
         headers: { Authorization: `Bearer ${token}` },
-        responseType: 'text'
+        responseType: 'blob'
       });
-      setCardHtml(response.data);
+      const blob = response.data;
+      const mime = blob.type || '';
+
+      if (mime === 'application/pdf' || mime.startsWith('image/')) {
+        // PDF or image: use blob URL directly in iframe src (avoids sandbox issues)
+        if (cardBlobUrl) URL.revokeObjectURL(cardBlobUrl);
+        setCardBlobUrl(URL.createObjectURL(blob));
+        setCardHtml(null);
+      } else {
+        // HTML or other: read as text for srcdoc
+        const text = await blob.text();
+        setCardHtml(text);
+        setCardBlobUrl(null);
+      }
     } catch (err) {
       // If backend says card URL is stale/invalid (404), reset to trigger retry flow
       if (err.response?.status === 404) {
@@ -246,7 +267,13 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
         </p>
         <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6', width: '100%' }}>
-          {hasCard && cardHtml && !cardError ? (
+          {hasCard && cardBlobUrl && !cardError ? (
+            <iframe
+              src={cardBlobUrl}
+              title="Insurance Card"
+              style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
+            />
+          ) : hasCard && cardHtml && !cardError ? (
             <iframe
               srcDoc={cardHtml}
               title="Insurance Card"
