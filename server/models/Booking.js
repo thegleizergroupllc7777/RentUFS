@@ -257,6 +257,11 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Track when host last sent SMS extension reminder to driver
+  smsReminderSentAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

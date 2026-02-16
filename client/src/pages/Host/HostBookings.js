@@ -56,6 +56,9 @@ const HostBookings = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
+  // SMS reminder state
+  const [sendingReminder, setSendingReminder] = useState(null);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { setLoading(false); return; }
@@ -115,6 +118,23 @@ const HostBookings = () => {
     } catch (error) {
       console.error('Error updating booking status:', error);
       alert('Failed to update booking status');
+    }
+  };
+
+  // Send SMS extension reminder to driver
+  const handleSendReminder = async (bookingId) => {
+    setSendingReminder(bookingId);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/bookings/${bookingId}/send-extension-reminder`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert(response.data.message || 'Reminder sent!');
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to send reminder';
+      alert(msg);
+    } finally {
+      setSendingReminder(null);
     }
   };
 
@@ -1205,6 +1225,14 @@ const HostBookings = () => {
                             View Insurance Card
                           </button>
                         )}
+                        <button
+                          onClick={() => handleSendReminder(booking._id)}
+                          disabled={sendingReminder === booking._id}
+                          className="btn btn-secondary"
+                          style={{ background: '#f59e0b', color: '#000', border: 'none' }}
+                        >
+                          {sendingReminder === booking._id ? 'Sending...' : 'Send Reminder'}
+                        </button>
                         <button
                           onClick={() => handleUpdateStatus(booking._id, 'completed')}
                           className="btn btn-success"

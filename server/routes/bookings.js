@@ -5,6 +5,7 @@ const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
+const { sendExtensionReminderSMS } = require('../utils/smsService');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
 const { captureCardImage } = require('../utils/screenshotCard');
 
@@ -1204,6 +1205,70 @@ router.patch('/:id/status', auth, async (req, res) => {
 
     res.json({ ...booking.toObject(), cancellationFee });
   } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Host sends SMS reminder to driver to extend reservation
+router.post('/:id/send-extension-reminder', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('driver', 'firstName lastName email phone')
+      .populate('host', 'firstName lastName email phone');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Only the host can send a reminder
+    if (booking.host._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the host can send a reminder' });
+    }
+
+    // Only active bookings can receive reminders
+    if (booking.status !== 'active') {
+      return res.status(400).json({ message: 'Reminders can only be sent for active bookings' });
+    }
+
+    // Check driver has a phone number
+    if (!booking.driver.phone) {
+      return res.status(400).json({ message: 'Driver does not have a phone number on file' });
+    }
+
+    // Rate limit: only allow one SMS reminder per booking per 4 hours
+    if (booking.smsReminderSentAt) {
+      const hoursSinceLast = (Date.now() - new Date(booking.smsReminderSentAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSinceLast < 4) {
+        const nextAvailable = Math.ceil((4 - hoursSinceLast) * 60);
+        return res.status(429).json({
+          message: `SMS reminder already sent. You can send another in ${nextAvailable} minutes.`
+        });
+      }
+    }
+
+    const result = await sendExtensionReminderSMS(
+      booking.driver,
+      booking,
+      booking.vehicle,
+      booking.host
+    );
+
+    if (result.success) {
+      booking.smsReminderSentAt = new Date();
+      await booking.save();
+
+      console.log(`📱 Host ${booking.host.firstName} sent SMS reminder for booking ${booking.reservationId}`);
+      res.json({
+        success: true,
+        message: 'Text message reminder sent to driver',
+        dev: result.dev || false
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to send text message', error: result.error });
+    }
+  } catch (error) {
+    console.error('SMS reminder error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
