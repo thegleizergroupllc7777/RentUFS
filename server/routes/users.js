@@ -20,8 +20,15 @@ function resolveProfileImage(user, req) {
 
 // Helper: get or create Stripe customer for a user
 const getOrCreateStripeCustomer = async (user) => {
+  // If user already has a Stripe customer ID, verify it still exists
+  // (handles live/test key switches where the customer won't exist in the other mode)
   if (user.stripeCustomerId) {
-    return user.stripeCustomerId;
+    try {
+      await stripe.customers.retrieve(user.stripeCustomerId);
+      return user.stripeCustomerId;
+    } catch (err) {
+      console.log(`⚠️ Stripe customer ${user.stripeCustomerId} not found (likely key mode switch), creating new one`);
+    }
   }
   const customer = await stripe.customers.create({
     email: user.email,
