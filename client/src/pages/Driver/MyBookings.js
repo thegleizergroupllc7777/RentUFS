@@ -993,7 +993,7 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {['active', 'confirmed'].includes(booking.status) && (booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl) && (
+                        {booking.status === 'active' && (booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl) && (
                           <button
                             onClick={() => setInsuranceCardModal({ open: true, booking })}
                             className="btn btn-secondary"
