@@ -116,6 +116,31 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [retryError, setRetryError] = useState('');
   const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
   const [iframeError, setIframeError] = useState(false);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [cardLoading, setCardLoading] = useState(false);
+
+  // Fetch insurance card content as blob to avoid cross-origin iframe blocking
+  useEffect(() => {
+    if (hasCard && !blobUrl && !cardLoading) {
+      setCardLoading(true);
+      const token = localStorage.getItem('token');
+      axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      }).then(response => {
+        const url = URL.createObjectURL(response.data);
+        setBlobUrl(url);
+      }).catch(() => {
+        setIframeError(true);
+      }).finally(() => {
+        setCardLoading(false);
+      });
+    }
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCard]);
 
   // Auto-retry on mount if card data is missing
   useEffect(() => {
@@ -196,40 +221,34 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           width: '100%'
         }}>
           {hasCard && !iframeError ? (
-            <>
-              <iframe
-                src={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
-                title="Insurance Card"
-                style={{
-                  width: '100%',
-                  height: '500px',
-                  border: 'none',
-                  display: 'block'
-                }}
-                sandbox="allow-same-origin allow-scripts allow-popups"
-                onError={() => setIframeError(true)}
-                onLoad={(e) => {
-                  try {
-                    const doc = e.target.contentDocument;
-                    if (doc && doc.body && doc.body.textContent.includes('Failed to load')) {
-                      setIframeError(true);
-                    }
-                  } catch (_) {
-                    // Cross-origin - content loaded from external source, that's fine
-                  }
-                }}
-              />
-              <div style={{ padding: '0.5rem', textAlign: 'center', background: '#e5e7eb' }}>
-                <a
-                  href={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#0ea5e9', fontSize: '0.85rem', textDecoration: 'underline' }}
-                >
-                  Open in new tab
-                </a>
+            blobUrl ? (
+              <>
+                <iframe
+                  src={blobUrl}
+                  title="Insurance Card"
+                  style={{
+                    width: '100%',
+                    height: '500px',
+                    border: 'none',
+                    display: 'block'
+                  }}
+                />
+                <div style={{ padding: '0.5rem', textAlign: 'center', background: '#e5e7eb' }}>
+                  <a
+                    href={blobUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#0ea5e9', fontSize: '0.85rem', textDecoration: 'underline' }}
+                  >
+                    Open in new tab
+                  </a>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '3rem', textAlign: 'center' }}>
+                <p style={{ color: '#374151', fontWeight: 600 }}>Loading insurance card...</p>
               </div>
-            </>
+            )
           ) : retrying ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
