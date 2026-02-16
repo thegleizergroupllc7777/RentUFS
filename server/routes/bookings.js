@@ -336,7 +336,7 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Proxy insurance card URL to display inline (avoids X-Frame-Options blocking)
+// Serve insurance card content — returns HTML suitable for srcdoc or raw file for download
 router.get('/:id/insurance-card', auth, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -350,39 +350,45 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    // If a local file exists, verify on disk then serve inline
+    const isRaw = req.query.format === 'raw';
+
+    // If a local file exists, verify on disk then serve
     if (booking.teqMobility?.cardImage) {
       const fs = require('fs');
       const imagePath = path.join(__dirname, '..', 'uploads', booking.teqMobility.cardImage);
       if (fs.existsSync(imagePath)) {
         const fileData = fs.readFileSync(imagePath);
-        const isPdf = booking.teqMobility.cardImage.endsWith('.pdf');
+        const ext = booking.teqMobility.cardImage.split('.').pop().toLowerCase();
+        const isPdf = ext === 'pdf';
+
+        // Raw mode: serve the actual file directly (for download / open in new tab)
+        if (isRaw) {
+          const mimeType = isPdf ? 'application/pdf' : ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+          res.set('Content-Type', mimeType);
+          res.set('Content-Disposition', 'inline');
+          return res.send(fileData);
+        }
+
+        // HTML mode: wrap in self-contained HTML for srcdoc display
         if (isPdf) {
-          // Wrap PDF in HTML for reliable iframe display
           const pdfBase64 = fileData.toString('base64');
           const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#f3f4f6}embed,object,iframe{width:100%;height:100%;border:none}.fallback{padding:2rem;text-align:center;font-family:system-ui,sans-serif}.fallback a{display:inline-block;margin-top:1rem;padding:0.75rem 1.5rem;background:#0ea5e9;color:white;border-radius:0.5rem;text-decoration:none}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#f3f4f6}embed{width:100%;height:100%;border:none}.fallback{padding:2rem;text-align:center;font-family:system-ui,sans-serif}.fallback a{display:inline-block;margin-top:1rem;padding:0.75rem 1.5rem;background:#0ea5e9;color:white;border-radius:0.5rem;text-decoration:none}</style>
 </head><body>
 <embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
 <noembed><div class="fallback"><p>Your browser cannot display this PDF inline.</p><a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a></div></noembed>
 </body></html>`;
           res.set('Content-Type', 'text/html');
-          res.removeHeader('X-Frame-Options');
-          res.set('Content-Security-Policy', "frame-ancestors 'self'");
           return res.send(html);
         }
-        // For images, wrap in HTML for consistent iframe display
         const imgBase64 = fileData.toString('base64');
-        const ext = booking.teqMobility.cardImage.split('.').pop().toLowerCase();
         const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
         const imgHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
 <style>*{margin:0;padding:0}body{background:#f3f4f6;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;height:auto}</style>
 </head><body><img src="data:${mimeType};base64,${imgBase64}" alt="Insurance Card"></body></html>`;
         res.set('Content-Type', 'text/html');
-        res.removeHeader('X-Frame-Options');
-        res.set('Content-Security-Policy', "frame-ancestors 'self'");
         return res.send(imgHtml);
       }
       // File was lost (e.g. ephemeral filesystem redeploy) — clear stale reference and fall through
@@ -404,18 +410,22 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     });
 
     const contentType = response.headers['content-type'] || 'text/html';
-    // Force inline display (prevents browser from downloading PDFs)
-    res.set('Content-Disposition', 'inline');
-    // Remove headers that block embedding
-    res.removeHeader('X-Frame-Options');
-    res.set('Content-Security-Policy', "frame-ancestors 'self'");
 
-    // For PDF responses, wrap in HTML for reliable iframe display
+    // Raw mode: pass through the actual file for download / open in new tab
+    if (isRaw) {
+      res.set('Content-Type', contentType);
+      res.set('Content-Disposition', 'inline');
+      return res.send(Buffer.from(response.data));
+    }
+
+    // HTML wrapping mode for inline display via srcdoc
+    res.set('Content-Disposition', 'inline');
+
     if (contentType.includes('application/pdf')) {
       const pdfBase64 = Buffer.from(response.data).toString('base64');
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Insurance Card</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#f3f4f6}embed,object,iframe{width:100%;height:100%;border:none}.fallback{padding:2rem;text-align:center;font-family:system-ui,sans-serif}.fallback a{display:inline-block;margin-top:1rem;padding:0.75rem 1.5rem;background:#0ea5e9;color:white;border-radius:0.5rem;text-decoration:none}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;background:#f3f4f6}embed{width:100%;height:100%;border:none}.fallback{padding:2rem;text-align:center;font-family:system-ui,sans-serif}.fallback a{display:inline-block;margin-top:1rem;padding:0.75rem 1.5rem;background:#0ea5e9;color:white;border-radius:0.5rem;text-decoration:none}</style>
 </head><body>
 <embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="100%" height="100%">
 <noembed><div class="fallback"><p>Your browser cannot display this PDF inline.</p><a href="data:application/pdf;base64,${pdfBase64}" download="insurance-card.pdf">Download Insurance Card PDF</a></div></noembed>
@@ -424,7 +434,6 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.send(html);
     }
 
-    // For image responses, wrap in HTML for consistent iframe display
     if (contentType.includes('image/')) {
       const imgBase64 = Buffer.from(response.data).toString('base64');
       const html = `<!DOCTYPE html>
@@ -447,6 +456,7 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       } else {
         html = baseTag + html;
       }
+      res.set('Content-Type', 'text/html');
       return res.send(html);
     }
 

@@ -30,30 +30,32 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
   const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
-  const [iframeError, setIframeError] = useState(false);
-  const [blobUrl, setBlobUrl] = useState(null);
+  const [cardHtml, setCardHtml] = useState(null);
+  const [cardError, setCardError] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
 
-  // Fetch insurance card content as blob to avoid cross-origin iframe blocking
-  useEffect(() => {
-    if (hasCard && !blobUrl && !cardLoading) {
-      setCardLoading(true);
+  // Fetch insurance card HTML content for srcdoc display
+  const fetchCardContent = async () => {
+    setCardLoading(true);
+    setCardError(false);
+    try {
       const token = localStorage.getItem('token');
-      axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card`, {
+      const response = await axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card`, {
         headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
-      }).then(response => {
-        const url = URL.createObjectURL(response.data);
-        setBlobUrl(url);
-      }).catch(() => {
-        setIframeError(true);
-      }).finally(() => {
-        setCardLoading(false);
+        responseType: 'text'
       });
+      setCardHtml(response.data);
+    } catch {
+      setCardError(true);
+    } finally {
+      setCardLoading(false);
     }
-    return () => {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    };
+  };
+
+  useEffect(() => {
+    if (hasCard) {
+      fetchCardContent();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCard]);
 
@@ -87,6 +89,56 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
     }
   };
 
+  const handleOpenNewTab = () => {
+    const token = localStorage.getItem('token');
+    // Open raw file directly in a new tab via authenticated fetch
+    axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    }).then(response => {
+      const url = URL.createObjectURL(response.data);
+      window.open(url, '_blank');
+    }).catch(() => {
+      // Fallback: open the HTML content in a new tab
+      if (cardHtml) {
+        const blob = new Blob([cardHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      }
+    });
+  };
+
+  const handleDownload = () => {
+    const token = localStorage.getItem('token');
+    axios.get(`${API_URL}/api/bookings/${booking._id}/insurance-card?format=raw`, {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    }).then(response => {
+      const url = URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = response.data.type.includes('pdf') ? 'pdf' : 'png';
+      a.download = `insurance-card-${booking.reservationId}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }).catch(() => {
+      // Fallback: download the HTML version
+      if (cardHtml) {
+        const blob = new Blob([cardHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `insurance-card-${booking.reservationId}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    });
+  };
+
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -101,26 +153,17 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
         </p>
         <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6', width: '100%' }}>
-          {hasCard && !iframeError ? (
-            blobUrl ? (
-              <>
-                <iframe
-                  src={blobUrl}
-                  title="Insurance Card"
-                  style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
-                />
-                <div style={{ padding: '0.5rem', textAlign: 'center', background: '#e5e7eb' }}>
-                  <a href={blobUrl} target="_blank" rel="noopener noreferrer"
-                    style={{ color: '#0ea5e9', fontSize: '0.85rem', textDecoration: 'underline' }}>
-                    Open in new tab
-                  </a>
-                </div>
-              </>
-            ) : (
-              <div style={{ padding: '3rem', textAlign: 'center' }}>
-                <p style={{ color: '#374151', fontWeight: 600 }}>Loading insurance card...</p>
-              </div>
-            )
+          {hasCard && cardHtml && !cardError ? (
+            <iframe
+              srcDoc={cardHtml}
+              title="Insurance Card"
+              style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
+              sandbox="allow-same-origin"
+            />
+          ) : hasCard && cardLoading ? (
+            <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <p style={{ color: '#374151', fontWeight: 600 }}>Loading insurance card...</p>
+            </div>
           ) : retrying ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
@@ -157,12 +200,23 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
                 <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', opacity: 0.6, textAlign: 'right' }}>Underwritten by TeqMobility</div>
               </div>
               {retryError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>{retryError}</p>}
+              {cardError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>Could not display card inline. Use the buttons below to open or download it.</p>}
               <button onClick={handleRetry} disabled={retrying} className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', background: '#0ea5e9' }}>
                 {retrying ? 'Retrying...' : 'Retry — Fetch Insurance Card'}
               </button>
             </div>
           )}
         </div>
+        {hasCard && (
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+            <button onClick={handleOpenNewTab} className="btn btn-primary" style={{ flex: 1, background: '#0ea5e9' }}>
+              Open in New Tab
+            </button>
+            <button onClick={handleDownload} className="btn btn-primary" style={{ flex: 1, background: '#10b981' }}>
+              Download
+            </button>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
           <button onClick={onClose} className="btn btn-secondary" style={{ flex: 1 }}>Close</button>
         </div>
