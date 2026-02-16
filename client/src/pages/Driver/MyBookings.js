@@ -110,37 +110,22 @@ const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, onSucce
   );
 };
 
-// Helper: fetch insurance card and open in new tab with correct MIME type
-const openInsuranceCardInNewTab = async (bookingId) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/api/bookings/${bookingId}/insurance-card?format=raw`, {
-    headers: { Authorization: `Bearer ${token}` },
-    responseType: 'arraybuffer'
-  });
-  const bytes = new Uint8Array(response.data);
-  // Detect REAL file type from magic bytes
-  const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
-  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
-  const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8;
-  let mime;
-  if (isPdf) mime = 'application/pdf';
-  else if (isPng) mime = 'image/png';
-  else if (isJpeg) mime = 'image/jpeg';
-  else mime = 'application/pdf';
-  const blob = new Blob([response.data], { type: mime });
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-};
-
-// Insurance Card Modal — only shown when card needs to be fetched from provider
+// Insurance Card Modal — displays insurance card inline or retries fetching from provider
 const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
+  const hasCard = !!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
-  const [opening, setOpening] = useState(false);
+  const [cardReady, setCardReady] = useState(hasCard);
+  const [iframeLoading, setIframeLoading] = useState(hasCard);
 
-  // Auto-retry on mount to fetch from TeqMobility
+  const token = localStorage.getItem('token');
+  const cardSrc = `${API_URL}/api/bookings/${booking._id}/insurance-card?token=${encodeURIComponent(token)}`;
+
+  // Auto-retry on mount if card isn't available yet
   useEffect(() => {
-    handleRetry();
+    if (!hasCard) {
+      handleRetry();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -148,23 +133,16 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
     setRetrying(true);
     setRetryError('');
     try {
-      const token = localStorage.getItem('token');
+      const tkn = localStorage.getItem('token');
       const response = await axios.post(
         `${API_URL}/api/bookings/${booking._id}/retry-insurance`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${tkn}` } }
       );
       if (response.data.success && (response.data.teqMobility?.cardUrl || response.data.teqMobility?.cardImage)) {
         onBookingUpdate(response.data.teqMobility);
-        // Card is now available — open it in new tab
-        setOpening(true);
-        try {
-          await openInsuranceCardInNewTab(booking._id);
-          onClose();
-        } catch {
-          setRetryError('Card retrieved but could not open. Please try the button on the booking again.');
-          setOpening(false);
-        }
+        setCardReady(true);
+        setIframeLoading(true);
       } else {
         setRetryError(response.data.message || 'Could not retrieve insurance card from provider');
       }
@@ -181,7 +159,8 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
       background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
     }}>
       <div style={{
-        background: 'white', borderRadius: '1rem', padding: '1.5rem', maxWidth: '450px', width: '100%'
+        background: 'white', borderRadius: '1rem', padding: '1.5rem',
+        maxWidth: cardReady ? '900px' : '450px', width: '100%', maxHeight: '90vh', overflow: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2 style={{ margin: 0, color: '#1f2937' }}>Insurance Card</h2>
@@ -190,25 +169,47 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
         <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
           {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
         </p>
-        <div style={{ borderRadius: '0.5rem', background: '#f3f4f6', padding: '2rem', textAlign: 'center' }}>
-          {retrying || opening ? (
-            <>
-              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
-              <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>
-                {opening ? 'Opening Insurance Card...' : 'Retrieving Insurance Card...'}
-              </p>
-              <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Contacting insurance provider</p>
-            </>
-          ) : (
-            <>
-              <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>Insurance card not available yet</p>
-              {retryError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: '0.75rem' }}>{retryError}</p>}
-              <button onClick={handleRetry} className="btn btn-primary" style={{ background: '#0ea5e9', width: '100%' }}>
-                Retry — Fetch Insurance Card
-              </button>
-            </>
-          )}
-        </div>
+
+        {cardReady ? (
+          <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6' }}>
+            {iframeLoading && (
+              <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
+                <p style={{ color: '#374151', fontWeight: 600 }}>Loading Insurance Card...</p>
+              </div>
+            )}
+            <iframe
+              src={cardSrc}
+              title="Insurance Card"
+              style={{
+                width: '100%',
+                height: '70vh',
+                border: 'none',
+                display: iframeLoading ? 'none' : 'block'
+              }}
+              onLoad={() => setIframeLoading(false)}
+            />
+          </div>
+        ) : (
+          <div style={{ borderRadius: '0.5rem', background: '#f3f4f6', padding: '2rem', textAlign: 'center' }}>
+            {retrying ? (
+              <>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
+                <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>Retrieving Insurance Card...</p>
+                <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Contacting insurance provider</p>
+              </>
+            ) : (
+              <>
+                <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>Insurance card not available yet</p>
+                {retryError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: '0.75rem' }}>{retryError}</p>}
+                <button onClick={handleRetry} className="btn btn-primary" style={{ background: '#0ea5e9', width: '100%' }}>
+                  Retry — Fetch Insurance Card
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         <button onClick={onClose} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }}>Close</button>
       </div>
     </div>
@@ -1100,20 +1101,7 @@ const MyBookings = () => {
 
                         {booking.status === 'active' && booking.insurance?.type && booking.insurance.type !== 'none' && (
                           <button
-                            onClick={async () => {
-                              // If card exists, open directly in new tab
-                              if (booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl) {
-                                try {
-                                  await openInsuranceCardInNewTab(booking._id);
-                                } catch {
-                                  // Fetch failed — show modal to retry
-                                  setInsuranceCardModal({ open: true, booking });
-                                }
-                              } else {
-                                // No card yet — show modal to fetch from provider
-                                setInsuranceCardModal({ open: true, booking });
-                              }
-                            }}
+                            onClick={() => setInsuranceCardModal({ open: true, booking })}
                             className="btn btn-secondary"
                             style={{ background: '#0ea5e9', color: 'white', border: 'none' }}
                           >
@@ -1395,11 +1383,7 @@ const MyBookings = () => {
       )}
 
       {/* Registration Modal */}
-      {registrationModal.open && registrationModal.booking && (() => {
-        const regImage = registrationModal.booking.vehicle?.registrationImage || '';
-        const isPdf = regImage.toLowerCase().endsWith('.pdf');
-        const regUrl = getImageUrl(regImage);
-        return (
+      {registrationModal.open && registrationModal.booking && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1417,7 +1401,7 @@ const MyBookings = () => {
             background: 'white',
             borderRadius: '1rem',
             padding: '1.5rem',
-            maxWidth: isPdf ? '900px' : '600px',
+            maxWidth: '600px',
             width: '100%',
             maxHeight: '90vh',
             overflow: 'auto'
@@ -1445,27 +1429,15 @@ const MyBookings = () => {
               overflow: 'hidden',
               background: '#f3f4f6'
             }}>
-              {isPdf ? (
-                <iframe
-                  src={regUrl}
-                  title="Vehicle Registration"
-                  style={{
-                    width: '100%',
-                    height: '70vh',
-                    border: 'none'
-                  }}
-                />
-              ) : (
-                <img
-                  src={regUrl}
-                  alt="Vehicle Registration"
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block'
-                  }}
-                />
-              )}
+              <img
+                src={getImageUrl(registrationModal.booking.vehicle?.registrationImage)}
+                alt="Vehicle Registration"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block'
+                }}
+              />
             </div>
             <button
               onClick={() => setRegistrationModal({ open: false, booking: null })}
@@ -1476,8 +1448,7 @@ const MyBookings = () => {
             </button>
           </div>
         </div>
-        );
-      })()}
+      )}
 
       {/* Insurance Card Modal */}
       {insuranceCardModal.open && insuranceCardModal.booking && (
