@@ -6,7 +6,7 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
 const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS, sendBookingCompletedSMS, sendBookingCancelledSMS, sendDriverCancelledNotificationSMS } = require('../utils/smsService');
-const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
+const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = require('../utils/teqmobility');
 const { captureCardImage } = require('../utils/screenshotCard');
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
@@ -457,10 +457,30 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
     await Booking.findByIdAndUpdate(booking._id, { teqMobility: teqData });
 
     if (coverageResult.success) {
-      console.log(`🛡️ TeqMobility: ✅ Retry succeeded for booking ${booking._id}`);
+      const hasCard = !!(teqData.cardUrl || teqData.cardImage);
+
+      // If coverage is active but no card URL, try one more time to fetch it
+      if (!hasCard && (teqData.coverageId || booking.vehicle?.vin)) {
+        console.log(`🛡️ TeqMobility: Coverage active but no card URL, trying dedicated fetch...`);
+        const cardUrl = await fetchCoverageCardUrl(teqData.coverageId, booking.vehicle?.vin);
+        if (cardUrl) {
+          teqData.cardUrl = cardUrl;
+          // Try to capture screenshot
+          const imagePath = await captureCardImage(cardUrl, booking._id.toString());
+          if (imagePath) {
+            teqData.cardImage = imagePath;
+          }
+          await Booking.findByIdAndUpdate(booking._id, { teqMobility: teqData });
+        }
+      }
+
+      const cardAvailable = !!(teqData.cardUrl || teqData.cardImage);
+      console.log(`🛡️ TeqMobility: ✅ Retry succeeded for booking ${booking._id}, card available: ${cardAvailable}`);
       res.json({
-        success: true,
-        message: 'Insurance card retrieved successfully',
+        success: cardAvailable,
+        message: cardAvailable
+          ? 'Insurance card retrieved successfully'
+          : 'Coverage is active but insurance card is not yet available from the provider. Please try again in a few minutes.',
         teqMobility: teqData
       });
     } else {
