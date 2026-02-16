@@ -243,7 +243,78 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
 };
 
 /**
- * 4b. Get Active Coverage for a vehicle
+ * Extract card URL from a TeqMobility API response object.
+ * The API may return the card under different field names.
+ */
+const extractCardUrl = (data) => {
+  if (!data || typeof data !== 'object') return null;
+  // Check known field name variations
+  const candidates = [
+    data.card_url, data.cardUrl, data.card_link, data.cardLink,
+    data.certificate_url, data.certificateUrl,
+    data.insurance_card_url, data.insuranceCardUrl,
+    data.card?.url, data.card?.link
+  ];
+  for (const val of candidates) {
+    if (val && typeof val === 'string' && val.startsWith('http')) return val;
+  }
+  return null;
+};
+
+/**
+ * 4b. Fetch the card URL for a coverage by its ID.
+ * Tries multiple endpoints since the card URL may not be in the start response.
+ */
+const fetchCoverageCardUrl = async (coverageId, vin) => {
+  // Try GET /api/v1/coverages/on-rent/{coverageId}/card
+  if (coverageId) {
+    try {
+      const resp = await teqApi.get(`/api/v1/coverages/on-rent/${coverageId}/card`);
+      console.log(`🛡️ TeqMobility: Card endpoint response:`, JSON.stringify(resp.data, null, 2));
+      const url = extractCardUrl(resp.data);
+      if (url) return url;
+      // Some APIs return the card URL directly as a string or redirect
+      if (typeof resp.data === 'string' && resp.data.startsWith('http')) return resp.data;
+    } catch (err) {
+      console.log(`🛡️ TeqMobility: Card endpoint /coverages/on-rent/${coverageId}/card failed (${err.response?.status})`);
+    }
+
+    // Try GET /api/v1/coverages/on-rent/{coverageId} (coverage details may include card)
+    try {
+      const resp = await teqApi.get(`/api/v1/coverages/on-rent/${coverageId}`);
+      console.log(`🛡️ TeqMobility: Coverage detail response:`, JSON.stringify(resp.data, null, 2));
+      const url = extractCardUrl(resp.data);
+      if (url) return url;
+    } catch (err) {
+      console.log(`🛡️ TeqMobility: Coverage detail endpoint failed (${err.response?.status})`);
+    }
+  }
+
+  // Try GET /api/v1/vehicles/{vin} to find card from vehicle's active coverage
+  if (vin) {
+    try {
+      const resp = await teqApi.get(`/api/v1/vehicles/${vin}`);
+      console.log(`🛡️ TeqMobility: Vehicle detail for card:`, JSON.stringify(resp.data, null, 2));
+      const vData = resp.data;
+      // Check vehicle-level card URL
+      let url = extractCardUrl(vData);
+      if (url) return url;
+      // Check nested coverage objects
+      const cov = vData.active_coverage || vData.coverage || vData.on_rent_coverage;
+      if (cov) {
+        url = extractCardUrl(cov);
+        if (url) return url;
+      }
+    } catch (err) {
+      console.log(`🛡️ TeqMobility: Vehicle detail for card failed (${err.response?.status})`);
+    }
+  }
+
+  return null;
+};
+
+/**
+ * 4c. Get Active Coverage for a vehicle
  * Tries GET /api/v1/vehicles/{vin} to retrieve active coverage details
  * Used when start returns "already has active On Rent coverage"
  */
@@ -262,7 +333,7 @@ const getActiveCoverage = async (vin) => {
       return {
         id: cov.id || cov.coverage_id,
         status: cov.status || 'active',
-        card_url: cov.card_url || null
+        card_url: extractCardUrl(cov) || extractCardUrl(vData)
       };
     }
 
@@ -271,7 +342,7 @@ const getActiveCoverage = async (vin) => {
       return {
         id: vData.coverage_id,
         status: 'active',
-        card_url: vData.card_url || null
+        card_url: extractCardUrl(vData)
       };
     }
   } catch (err) {
@@ -287,7 +358,7 @@ const getActiveCoverage = async (vin) => {
       return {
         id: cov.id || cov.coverage_id,
         status: cov.status || 'active',
-        card_url: cov.card_url || null
+        card_url: extractCardUrl(cov)
       };
     }
   } catch (err) {
@@ -352,8 +423,12 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
 
     // Step 4: Start on-rent coverage
     let coverage;
+    let coverageId;
+    let cardUrl = null;
     try {
       coverage = await startOnRentCoverage(vehicleResult.id, vehicle.vin, driver, vehicle, booking);
+      coverageId = coverage.id;
+      cardUrl = extractCardUrl(coverage);
     } catch (startErr) {
       const errMsg = startErr.response?.data?.message || startErr.message || '';
 
@@ -362,12 +437,18 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
         console.log('🛡️ TeqMobility: Coverage already active, fetching existing coverage...');
         const existing = await getActiveCoverage(vehicle.vin);
         if (existing) {
+          coverageId = existing.id;
+          cardUrl = existing.card_url || null;
+          // If no card URL from coverage lookup, try dedicated card endpoints
+          if (!cardUrl && coverageId) {
+            cardUrl = await fetchCoverageCardUrl(coverageId, vehicle.vin);
+          }
           return {
             success: true,
-            coverageId: existing.id,
+            coverageId,
             ownerId: owner.id,
             status: existing.status || 'active',
-            cardUrl: existing.card_url || null
+            cardUrl
           };
         }
         // If we couldn't fetch details but coverage is confirmed active, return partial success
@@ -382,12 +463,18 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
       throw startErr; // Re-throw non-duplicate errors
     }
 
+    // If card URL wasn't in the start response, try dedicated card endpoints
+    if (!cardUrl && coverageId) {
+      console.log('🛡️ TeqMobility: Card URL not in start response, trying dedicated card endpoints...');
+      cardUrl = await fetchCoverageCardUrl(coverageId, vehicle.vin);
+    }
+
     return {
       success: true,
-      coverageId: coverage.id,
+      coverageId,
       ownerId: owner.id,
       status: coverage.status,
-      cardUrl: coverage.card_url || null
+      cardUrl
     };
   } catch (error) {
     const isProfileIncomplete = error.message?.includes('Host profile incomplete');
@@ -495,6 +582,7 @@ module.exports = {
   startOnRentCoverage,
   stopOnRentCoverage,
   getActiveCoverage,
+  fetchCoverageCardUrl,
   startRentalCoverage,
   stopRentalCoverage
 };
