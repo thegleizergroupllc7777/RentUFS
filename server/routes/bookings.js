@@ -56,7 +56,7 @@ const expireStaleBookings = async () => {
     const staleActive = await Booking.find({
       status: 'active',
       endDate: { $lt: cutoff }
-    }).select('vehicle').lean();
+    }).select('vehicle teqMobility').populate('vehicle', 'vin').lean();
 
     if (staleActive.length > 0) {
       const staleActiveIds = staleActive.map(b => b._id);
@@ -64,8 +64,27 @@ const expireStaleBookings = async () => {
         { _id: { $in: staleActiveIds } },
         { status: 'completed', completedAt: new Date() }
       );
-      const vehicleIds = staleActive.map(b => b.vehicle);
+      const vehicleIds = staleActive.map(b => b.vehicle?._id || b.vehicle);
       await Vehicle.updateMany({ _id: { $in: vehicleIds } }, { availability: true });
+
+      // Stop TeqMobility coverage for auto-completed bookings
+      for (const booking of staleActive) {
+        const coverageId = booking.teqMobility?.coverageId;
+        const vin = booking.vehicle?.vin;
+        if (coverageId || vin) {
+          stopRentalCoverage({ coverageId, vin })
+            .then(result => {
+              if (result.success) {
+                Booking.findByIdAndUpdate(booking._id, {
+                  'teqMobility.stoppedAt': new Date(),
+                  'teqMobility.status': result.status
+                }).catch(() => {});
+                console.log(`🧹 TeqMobility: Auto-stopped coverage for expired booking ${booking._id}`);
+              }
+            })
+            .catch(err => console.error(`🧹 TeqMobility: Failed to stop coverage for expired booking ${booking._id}:`, err.message));
+        }
+      }
     }
 
     const total = staleConfirmed.length + staleActive.length;
