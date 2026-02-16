@@ -1395,11 +1395,7 @@ const MyBookings = () => {
       )}
 
       {/* Registration Modal */}
-      {registrationModal.open && registrationModal.booking && (() => {
-        const regImage = registrationModal.booking.vehicle?.registrationImage || '';
-        const isPdf = regImage.toLowerCase().endsWith('.pdf');
-        const regUrl = getImageUrl(regImage);
-        return (
+      {registrationModal.open && registrationModal.booking && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1417,7 +1413,7 @@ const MyBookings = () => {
             background: 'white',
             borderRadius: '1rem',
             padding: '1.5rem',
-            maxWidth: isPdf ? '900px' : '600px',
+            maxWidth: '600px',
             width: '100%',
             maxHeight: '90vh',
             overflow: 'auto'
@@ -1445,27 +1441,15 @@ const MyBookings = () => {
               overflow: 'hidden',
               background: '#f3f4f6'
             }}>
-              {isPdf ? (
-                <iframe
-                  src={regUrl}
-                  title="Vehicle Registration"
-                  style={{
-                    width: '100%',
-                    height: '70vh',
-                    border: 'none'
-                  }}
-                />
-              ) : (
-                <img
-                  src={regUrl}
-                  alt="Vehicle Registration"
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block'
-                  }}
-                />
-              )}
+              <img
+                src={getImageUrl(registrationModal.booking.vehicle?.registrationImage)}
+                alt="Vehicle Registration"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block'
+                }}
+              />
             </div>
             <button
               onClick={() => setRegistrationModal({ open: false, booking: null })}
@@ -1476,8 +1460,7 @@ const MyBookings = () => {
             </button>
           </div>
         </div>
-        );
-      })()}
+      )}
 
       {/* Insurance Card Modal */}
       {insuranceCardModal.open && insuranceCardModal.booking && (
