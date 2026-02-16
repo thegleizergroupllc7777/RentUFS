@@ -25,6 +25,112 @@ const toLocalDate = (dateVal) => {
   return new Date(datePart + 'T00:00:00');
 };
 
+// Insurance Card Modal with auto-retry
+const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState('');
+  const [hasCard, setHasCard] = useState(!!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl));
+
+  useEffect(() => {
+    if (!hasCard && !retrying) {
+      handleRetry();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    setRetryError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/api/bookings/${booking._id}/retry-insurance`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.success && (response.data.teqMobility?.cardUrl || response.data.teqMobility?.cardImage)) {
+        setHasCard(true);
+        onBookingUpdate(response.data.teqMobility);
+      } else {
+        setRetryError(response.data.message || 'Could not retrieve insurance card from provider');
+      }
+    } catch (err) {
+      setRetryError(err.response?.data?.message || 'Failed to contact insurance provider');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
+    }}>
+      <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ margin: 0, color: '#1f2937' }}>Insurance Card</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>x</button>
+        </div>
+        <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
+          {booking.vehicle?.nickname || `${booking.vehicle?.year} ${booking.vehicle?.make} ${booking.vehicle?.model}`}
+        </p>
+        <div style={{ borderRadius: '0.5rem', overflow: 'hidden', background: '#f3f4f6', width: '100%' }}>
+          {hasCard ? (
+            <iframe
+              src={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
+              title="Insurance Card"
+              style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
+            />
+          ) : retrying ? (
+            <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>&#128737;</div>
+              <p style={{ color: '#374151', fontWeight: 600, marginBottom: '0.5rem' }}>Retrieving Insurance Card...</p>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Contacting insurance provider</p>
+            </div>
+          ) : (
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', borderRadius: '0.75rem', padding: '1.5rem',
+                color: 'white', position: 'relative', overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '6rem', opacity: 0.1 }}>&#128737;</div>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '0.25rem' }}>RentUFS Trip Protection</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
+                  {booking.insurance?.type === 'carshare' ? 'Car Share — Liability Coverage' : 'Ride Share — Full Coverage'}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Reservation</div><div style={{ fontWeight: 600 }}>{booking.reservationId}</div></div>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Vehicle</div><div style={{ fontWeight: 600 }}>{booking.vehicle?.year} {booking.vehicle?.make} {booking.vehicle?.model}</div></div>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Coverage Period</div><div style={{ fontWeight: 600 }}>{new Date(booking.startDate).toLocaleDateString()} — {new Date(booking.endDate).toLocaleDateString()}</div></div>
+                  <div><div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Daily Rate</div><div style={{ fontWeight: 600 }}>${booking.insurance?.costPerDay?.toFixed(2) || '0.00'}/day</div></div>
+                </div>
+                <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                  <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Coverage Includes</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {booking.insurance?.coverage?.liability && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Liability</span>}
+                    {booking.insurance?.coverage?.collision && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Collision</span>}
+                    {booking.insurance?.coverage?.comprehensive && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Comprehensive</span>}
+                    {booking.insurance?.coverage?.personalInjury && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Personal Injury</span>}
+                    {booking.insurance?.coverage?.roadsideAssistance && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Roadside Assistance</span>}
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', opacity: 0.6, textAlign: 'right' }}>Underwritten by TeqMobility</div>
+              </div>
+              {retryError && <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>{retryError}</p>}
+              <button onClick={handleRetry} disabled={retrying} className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', background: '#0ea5e9' }}>
+                {retrying ? 'Retrying...' : 'Retry — Fetch Insurance Card'}
+              </button>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+          <button onClick={onClose} className="btn btn-secondary" style={{ flex: 1 }}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const HostBookings = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
@@ -1316,142 +1422,21 @@ const HostBookings = () => {
 
       {/* Insurance Card Modal */}
       {insuranceCardModal.open && insuranceCardModal.booking && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '1rem'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            maxWidth: '600px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0, color: '#1f2937' }}>Insurance Card</h2>
-              <button
-                onClick={() => setInsuranceCardModal({ open: false, booking: null })}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#6b7280'
-                }}
-              >
-                x
-              </button>
-            </div>
-            <p style={{ color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem' }}>
-              {insuranceCardModal.booking.vehicle?.nickname || `${insuranceCardModal.booking.vehicle?.year} ${insuranceCardModal.booking.vehicle?.make} ${insuranceCardModal.booking.vehicle?.model}`}
-            </p>
-            <div style={{
-              borderRadius: '0.5rem',
-              overflow: 'hidden',
-              background: '#f3f4f6',
-              width: '100%'
-            }}>
-              {(insuranceCardModal.booking.teqMobility?.cardImage || insuranceCardModal.booking.teqMobility?.cardUrl) ? (
-                <iframe
-                  src={`${API_URL}/api/bookings/${insuranceCardModal.booking._id}/insurance-card?token=${localStorage.getItem('token')}`}
-                  title="Insurance Card"
-                  style={{
-                    width: '100%',
-                    height: '500px',
-                    border: 'none',
-                    display: 'block'
-                  }}
-                />
-              ) : (
-                <div style={{ padding: '1.5rem' }}>
-                  <div style={{
-                    background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                    borderRadius: '0.75rem',
-                    padding: '1.5rem',
-                    color: 'white',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '6rem', opacity: 0.1 }}>&#128737;</div>
-                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '0.25rem' }}>
-                      RentUFS Trip Protection
-                    </div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
-                      {insuranceCardModal.booking.insurance?.type === 'carshare' ? 'Car Share — Liability Coverage' : 'Ride Share — Full Coverage'}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
-                      <div>
-                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Reservation</div>
-                        <div style={{ fontWeight: 600 }}>{insuranceCardModal.booking.reservationId}</div>
-                      </div>
-                      <div>
-                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Vehicle</div>
-                        <div style={{ fontWeight: 600 }}>
-                          {insuranceCardModal.booking.vehicle?.year} {insuranceCardModal.booking.vehicle?.make} {insuranceCardModal.booking.vehicle?.model}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Coverage Period</div>
-                        <div style={{ fontWeight: 600 }}>
-                          {new Date(insuranceCardModal.booking.startDate).toLocaleDateString()} — {new Date(insuranceCardModal.booking.endDate).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase' }}>Daily Rate</div>
-                        <div style={{ fontWeight: 600 }}>
-                          ${insuranceCardModal.booking.insurance?.costPerDay?.toFixed(2) || '0.00'}/day
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                      <div style={{ opacity: 0.7, fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Coverage Includes</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        {insuranceCardModal.booking.insurance?.coverage?.liability && (
-                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Liability</span>
-                        )}
-                        {insuranceCardModal.booking.insurance?.coverage?.collision && (
-                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Collision</span>
-                        )}
-                        {insuranceCardModal.booking.insurance?.coverage?.comprehensive && (
-                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Comprehensive</span>
-                        )}
-                        {insuranceCardModal.booking.insurance?.coverage?.personalInjury && (
-                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Personal Injury</span>
-                        )}
-                        {insuranceCardModal.booking.insurance?.coverage?.roadsideAssistance && (
-                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem' }}>&#10003; Roadside Assistance</span>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', opacity: 0.6, textAlign: 'right' }}>
-                      Underwritten by TeqMobility
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
-              <button
-                onClick={() => setInsuranceCardModal({ open: false, booking: null })}
-                className="btn btn-secondary"
-                style={{ flex: 1 }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <InsuranceCardModal
+          booking={insuranceCardModal.booking}
+          onClose={() => setInsuranceCardModal({ open: false, booking: null })}
+          onBookingUpdate={(updatedTeqMobility) => {
+            setBookings(prev => prev.map(b =>
+              b._id === insuranceCardModal.booking._id
+                ? { ...b, teqMobility: updatedTeqMobility }
+                : b
+            ));
+            setInsuranceCardModal(prev => ({
+              ...prev,
+              booking: { ...prev.booking, teqMobility: updatedTeqMobility }
+            }));
+          }}
+        />
       )}
 
       {/* Cancel Reservation Modal */}
