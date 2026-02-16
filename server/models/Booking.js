@@ -262,6 +262,11 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Track if automated SMS return reminder has been sent
+  smsReturnReminderSent: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

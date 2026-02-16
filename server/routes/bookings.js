@@ -5,7 +5,7 @@ const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
-const { sendExtensionReminderSMS } = require('../utils/smsService');
+const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS, sendBookingCompletedSMS, sendBookingCancelledSMS, sendDriverCancelledNotificationSMS } = require('../utils/smsService');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
 const { captureCardImage } = require('../utils/screenshotCard');
 
@@ -1014,8 +1014,8 @@ router.post('/:id/host-cancel', auth, async (req, res) => {
     const { reason } = req.body;
     const booking = await Booking.findById(req.params.id)
       .populate('vehicle')
-      .populate('driver', 'firstName lastName email')
-      .populate('host', 'firstName lastName email');
+      .populate('driver', 'firstName lastName email phone')
+      .populate('host', 'firstName lastName email phone');
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -1089,6 +1089,12 @@ router.post('/:id/host-cancel', auth, async (req, res) => {
       await sendBookingCancellationEmail(booking.driver, booking.host, booking, booking.vehicle, reason);
     } catch (emailError) {
       console.error('❌ Cancellation email failed (non-blocking):', emailError);
+    }
+
+    // Send cancellation SMS to driver
+    if (booking.driver?.phone) {
+      sendBookingCancelledSMS(booking.driver, booking, booking.vehicle, reason)
+        .catch(err => console.error('📱 Cancellation SMS failed (non-blocking):', err.message));
     }
 
     res.json({
@@ -1201,6 +1207,38 @@ router.patch('/:id/status', auth, async (req, res) => {
     // Set vehicle back to available when booking is completed or cancelled
     if (['completed', 'cancelled'].includes(status)) {
       await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+    }
+
+    // Send SMS notifications for status changes (non-blocking)
+    try {
+      const populatedBooking = await Booking.findById(booking._id)
+        .populate('vehicle', 'year make model')
+        .populate('driver', 'firstName lastName phone')
+        .populate('host', 'firstName lastName phone');
+
+      if (populatedBooking?.driver?.phone) {
+        if (status === 'confirmed') {
+          sendBookingConfirmedSMS(populatedBooking.driver, populatedBooking, populatedBooking.vehicle, populatedBooking.host)
+            .catch(err => console.error('📱 Failed to send booking confirmed SMS:', err.message));
+        } else if (status === 'active') {
+          sendBookingActiveSMS(populatedBooking.driver, populatedBooking, populatedBooking.vehicle)
+            .catch(err => console.error('📱 Failed to send booking active SMS:', err.message));
+        } else if (status === 'completed') {
+          sendBookingCompletedSMS(populatedBooking.driver, populatedBooking, populatedBooking.vehicle)
+            .catch(err => console.error('📱 Failed to send booking completed SMS:', err.message));
+        } else if (status === 'cancelled') {
+          // Notify the driver about cancellation
+          sendBookingCancelledSMS(populatedBooking.driver, populatedBooking, populatedBooking.vehicle, booking.cancellationReason)
+            .catch(err => console.error('📱 Failed to send booking cancelled SMS:', err.message));
+          // If driver cancelled, also notify the host
+          if (booking.cancelledBy === 'driver' && populatedBooking.host?.phone) {
+            sendDriverCancelledNotificationSMS(populatedBooking.host, populatedBooking.driver, populatedBooking, populatedBooking.vehicle)
+              .catch(err => console.error('📱 Failed to send driver cancelled notification SMS to host:', err.message));
+          }
+        }
+      }
+    } catch (smsErr) {
+      console.error('📱 SMS notification error (non-blocking):', smsErr.message);
     }
 
     res.json({ ...booking.toObject(), cancellationFee });
