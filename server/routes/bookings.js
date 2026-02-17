@@ -307,7 +307,7 @@ router.get('/my-bookings', auth, async (req, res) => {
 router.get('/host-bookings', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({ host: req.user._id, status: { $ne: 'awaiting_payment' } })
-      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory')
+      .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos')
       .populate('vehicle', 'nickname make model year images registrationImage pricePerDay vin')
       .populate('driver', 'firstName lastName email phone profileImage')
       .sort({ createdAt: -1 })
@@ -1128,6 +1128,13 @@ router.get('/:id/available-vehicles', auth, async (req, res) => {
       });
     }
 
+    // Limit to one vehicle swap per reservation
+    if (booking.vehicleSwitchHistory && booking.vehicleSwitchHistory.length > 0) {
+      return res.status(400).json({
+        message: 'This reservation has already had a vehicle swap. Only one swap is allowed per reservation.'
+      });
+    }
+
     // Get all host's vehicles except the current one
     const hostVehicles = await Vehicle.find({
       host: req.user._id,
@@ -1199,6 +1206,13 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     if (!['awaiting_payment', 'pending', 'confirmed'].includes(booking.status)) {
       return res.status(400).json({
         message: 'Can only switch vehicles for pending or confirmed bookings'
+      });
+    }
+
+    // Limit to one vehicle swap per reservation
+    if (booking.vehicleSwitchHistory && booking.vehicleSwitchHistory.length > 0) {
+      return res.status(400).json({
+        message: 'This reservation has already had a vehicle swap. Only one swap is allowed per reservation.'
       });
     }
 

@@ -478,6 +478,13 @@ router.post('/create-vehicle-switch-payment', auth, async (req, res) => {
       return res.status(400).json({ message: 'Booking must be paid to charge a switch difference' });
     }
 
+    // Limit to one vehicle swap per reservation
+    if (booking.vehicleSwitchHistory && booking.vehicleSwitchHistory.length > 0) {
+      return res.status(400).json({
+        message: 'This reservation has already had a vehicle swap. Only one swap is allowed per reservation.'
+      });
+    }
+
     const newVehicle = await Vehicle.findOne({ _id: newVehicleId, host: req.user._id });
     if (!newVehicle) {
       return res.status(404).json({ message: 'New vehicle not found or unauthorized' });
