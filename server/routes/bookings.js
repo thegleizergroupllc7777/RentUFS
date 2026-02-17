@@ -184,6 +184,21 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid date range' });
     }
 
+    // Check if driver already has an overlapping booking (security: prevent unauthorized multi-bookings)
+    const overlappingBooking = await Booking.findOne({
+      driver: req.user._id,
+      _id: { $ne: null },
+      status: { $in: ['awaiting_payment', 'pending', 'confirmed', 'active'] },
+      startDate: { $lt: end },
+      endDate: { $gt: start }
+    });
+
+    if (overlappingBooking) {
+      return res.status(400).json({
+        message: 'You already have a reservation during these dates. Each driver can only have one active reservation per date range.'
+      });
+    }
+
     // Calculate total price based on rental type
     let totalPrice;
     let pricePerDay = vehicle.pricePerDay;
