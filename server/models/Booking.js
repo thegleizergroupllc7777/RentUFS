@@ -169,6 +169,7 @@ const bookingSchema = new mongoose.Schema({
     newPrice: Number,
     priceDifference: Number,
     reason: String,
+    paymentId: { type: String, default: null },
     switchedAt: { type: Date, default: Date.now }
   }],
   // Vehicle inspection photos at pickup
