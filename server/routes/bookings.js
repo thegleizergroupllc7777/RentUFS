@@ -1315,40 +1315,8 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     // Calculate base rental costs
     const currentBaseRental = booking.pricePerDay * booking.totalDays;
     const newBaseRental = calculateBaseRental(booking, newVehicle);
-    const rentalDifference = newBaseRental - currentBaseRental;
 
-    // If booking is already paid and new vehicle costs more, require additional payment
-    if (booking.paymentStatus === 'paid' && rentalDifference > 0) {
-      // Calculate the supplemental charge with processing fee
-      const supplementalProcessing = calculateProcessingFee(rentalDifference);
-      const additionalCharge = rentalDifference + supplementalProcessing.driverProcessingFee;
-
-      return res.json({
-        success: true,
-        requiresPayment: true,
-        message: 'Vehicle costs more — additional payment required from driver',
-        switchDetails: {
-          bookingId: booking._id,
-          reservationId: booking.reservationId,
-          newVehicleId: newVehicleId,
-          newVehicle: {
-            _id: newVehicle._id,
-            year: newVehicle.year,
-            make: newVehicle.make,
-            model: newVehicle.model,
-            pricePerDay: newVehicle.pricePerDay
-          },
-          currentPricePerDay: booking.pricePerDay,
-          newPricePerDay: newVehicle.pricePerDay,
-          rentalDifference: rentalDifference,
-          driverProcessingFee: supplementalProcessing.driverProcessingFee,
-          additionalCharge: additionalCharge,
-          reason: reason || 'Vehicle switched by host'
-        }
-      });
-    }
-
-    // For unpaid bookings, same/lower price, or paid with lower/equal price: apply immediately
+    // Apply the switch immediately — rental difference updates the booking total
     const switchResult = applyVehicleSwitch(booking, newVehicle, newVehicleId, newBaseRental, currentBaseRental, reason);
 
     await booking.save();
@@ -1361,7 +1329,6 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
 
     res.json({
       success: true,
-      requiresPayment: false,
       message: 'Vehicle switched successfully',
       booking: {
         _id: booking._id,

@@ -316,13 +316,11 @@ const HostBookings = () => {
   const handleSwitchVehicle = async (newVehicleId) => {
     if (!selectedBooking) return;
 
-    // Find the selected vehicle to check if payment is required
+    // Confirm if switching to a more expensive vehicle
     const selectedVehicle = availableVehicles.find(v => v._id === newVehicleId);
-    if (selectedVehicle?.requiresPayment) {
+    if (selectedVehicle?.priceDifference > 0) {
       const confirmed = window.confirm(
-        `This vehicle costs more. The driver will be charged an additional $${selectedVehicle.additionalCharge.toFixed(2)} ` +
-        `($${selectedVehicle.priceDifference.toFixed(2)} rental difference + processing fee).\n\n` +
-        `Proceed with the switch?`
+        `This vehicle has a higher rate. The booking total will increase by $${selectedVehicle.priceDifference.toFixed(2)}.\n\nProceed with the switch?`
       );
       if (!confirmed) return;
     }
@@ -341,46 +339,10 @@ const HostBookings = () => {
         }
       );
 
-      if (response.data.requiresPayment) {
-        // Paid booking with price increase — create the additional charge
-        try {
-          const paymentResponse = await axios.post(
-            `${API_URL}/api/payment/create-vehicle-switch-payment`,
-            {
-              bookingId: selectedBooking._id,
-              newVehicleId,
-              reason: switchReason || 'Vehicle switched by host'
-            },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          // Confirm the payment using the driver's existing payment method
-          const confirmResponse = await axios.post(
-            `${API_URL}/api/payment/confirm-vehicle-switch-payment`,
-            {
-              paymentIntentId: paymentResponse.data.switchPaymentDetails?.paymentIntentId,
-              bookingId: selectedBooking._id,
-              newVehicleId,
-              reason: switchReason || 'Vehicle switched by host'
-            },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          const charged = paymentResponse.data.switchPaymentDetails?.additionalCharge || 0;
-          alert(`Vehicle switched successfully! Driver charged an additional $${charged.toFixed(2)}.`);
-        } catch (paymentError) {
-          console.error('Error processing switch payment:', paymentError);
-          alert(
-            `Vehicle switch initiated but additional payment could not be processed automatically. ` +
-            `The driver will see a pending charge of $${response.data.switchDetails?.additionalCharge?.toFixed(2) || '0.00'} on their booking.`
-          );
-        }
-      } else {
-        const diff = response.data.booking?.priceDifference || 0;
-        alert(`Vehicle switched successfully! ${diff !== 0
-          ? `Price ${diff > 0 ? 'increased' : 'decreased'} by $${Math.abs(diff).toFixed(2)}`
-          : 'Price remains the same.'}`);
-      }
+      const diff = response.data.booking?.priceDifference || 0;
+      alert(`Vehicle switched successfully! ${diff !== 0
+        ? `Price ${diff > 0 ? 'increased' : 'decreased'} by $${Math.abs(diff).toFixed(2)}`
+        : 'Price remains the same.'}`);
 
       handleCloseSwitchModal();
       fetchBookings();
@@ -1632,19 +1594,14 @@ const HostBookings = () => {
                                  vehicle.priceDifference < 0 ? `-$${Math.abs(vehicle.priceDifference).toFixed(2)}` :
                                  'Equal switch'}
                               </p>
-                              {vehicle.requiresPayment && (
-                                <p className="price-diff increase" style={{ fontSize: '0.8em', marginTop: '4px' }}>
-                                  Driver will be charged +${vehicle.additionalCharge.toFixed(2)}
-                                </p>
-                              )}
                             </div>
                           </div>
                           <button
-                            className={`btn ${vehicle.requiresPayment ? 'btn-warning' : 'btn-primary'} switch-btn`}
+                            className="btn btn-primary switch-btn"
                             onClick={() => handleSwitchVehicle(vehicle._id)}
                             disabled={switching}
                           >
-                            {switching ? 'Switching...' : vehicle.requiresPayment ? 'Select & Charge' : 'Select'}
+                            {switching ? 'Switching...' : 'Select'}
                           </button>
                         </div>
                       ))}
