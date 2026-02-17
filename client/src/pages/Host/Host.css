@@ -1965,6 +1965,13 @@
   text-transform: capitalize;
 }
 
+.available-vehicle-info p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #1f2937;
+  font-weight: 500;
+}
+
 .price-comparison {
   display: flex;
   gap: 1rem;
