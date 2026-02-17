@@ -1144,11 +1144,8 @@ const MyBookings = () => {
                             {reconciling[booking._id] ? 'Checking...' : 'Check Payment Status'}
                           </button>
                         )}
-                      </div>
 
-                      {/* Message Host - separate row for visibility */}
-                      {booking.status !== 'cancelled' && (
-                        <div style={{ marginTop: '0.75rem' }}>
+                        {booking.status !== 'cancelled' && (
                           <button
                             onClick={() => {
                               const isOpening = openChatBookingId !== booking._id;
@@ -1190,8 +1187,8 @@ const MyBookings = () => {
                               </span>
                             )}
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
                       {/* Chat Box */}
                       {openChatBookingId === booking._id && user && (
