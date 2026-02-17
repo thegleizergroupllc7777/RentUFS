@@ -442,7 +442,7 @@ const VehicleDetail = () => {
                         <strong style={{ color: '#6ee7b7' }}>Duration:</strong> {activeBooking.totalDays} day(s)
                       </div>
                       <div style={{ color: '#ffffff' }}>
-                        <strong style={{ color: '#6ee7b7' }}>Total Price:</strong> ${activeBooking.totalPrice}
+                        <strong style={{ color: '#6ee7b7' }}>Total Price:</strong> ${Number(activeBooking.totalPrice).toFixed(2)}
                       </div>
                     </div>
                     <button
