@@ -1145,49 +1145,47 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {booking.status !== 'cancelled' && (
-                          <button
-                            onClick={() => {
-                              const isOpening = openChatBookingId !== booking._id;
-                              setOpenChatBookingId(isOpening ? booking._id : null);
-                              if (isOpening) {
-                                setUnreadCounts(prev => ({ ...prev, [booking._id]: 0 }));
-                              }
-                            }}
-                            className="btn btn-secondary"
-                            style={{
-                              background: openChatBookingId === booking._id ? '#059669' : '#10b981',
-                              color: '#000',
-                              border: 'none',
-                              position: 'relative'
-                            }}
-                          >
-                            {openChatBookingId === booking._id ? 'Close Chat' : 'Message Host'}
-                            {unreadCounts[booking._id] > 0 && openChatBookingId !== booking._id && (
-                              <span style={{
-                                position: 'absolute',
-                                top: '-8px',
-                                right: '-8px',
-                                background: '#ef4444',
-                                color: '#fff',
-                                fontSize: '0.7rem',
-                                fontWeight: '700',
-                                minWidth: '20px',
-                                height: '20px',
-                                borderRadius: '9999px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '0 5px',
-                                border: '2px solid #1a1a2e',
-                                lineHeight: '1',
-                                animation: 'pulse 2s infinite'
-                              }}>
-                                {unreadCounts[booking._id]}
-                              </span>
-                            )}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => {
+                            const isOpening = openChatBookingId !== booking._id;
+                            setOpenChatBookingId(isOpening ? booking._id : null);
+                            if (isOpening) {
+                              setUnreadCounts(prev => ({ ...prev, [booking._id]: 0 }));
+                            }
+                          }}
+                          className="btn btn-secondary"
+                          style={{
+                            background: openChatBookingId === booking._id ? '#059669' : '#10b981',
+                            color: '#000',
+                            border: 'none',
+                            position: 'relative'
+                          }}
+                        >
+                          {openChatBookingId === booking._id ? 'Close Chat' : 'Message Host'}
+                          {unreadCounts[booking._id] > 0 && openChatBookingId !== booking._id && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '-8px',
+                              right: '-8px',
+                              background: '#ef4444',
+                              color: '#fff',
+                              fontSize: '0.7rem',
+                              fontWeight: '700',
+                              minWidth: '20px',
+                              height: '20px',
+                              borderRadius: '9999px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0 5px',
+                              border: '2px solid #1a1a2e',
+                              lineHeight: '1',
+                              animation: 'pulse 2s infinite'
+                            }}>
+                              {unreadCounts[booking._id]}
+                            </span>
+                          )}
+                        </button>
                       </div>
 
                       {/* Chat Box */}
