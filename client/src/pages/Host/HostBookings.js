@@ -316,9 +316,14 @@ const HostBookings = () => {
   const handleSwitchVehicle = async (newVehicleId) => {
     if (!selectedBooking) return;
 
-    // Confirm if switching to a more expensive vehicle
+    // Confirm if switching to a more expensive vehicle on a paid booking (driver will be auto-charged)
     const selectedVehicle = availableVehicles.find(v => v._id === newVehicleId);
-    if (selectedVehicle?.priceDifference > 0) {
+    if (selectedVehicle?.requiresPayment && selectedVehicle?.additionalCharge > 0) {
+      const confirmed = window.confirm(
+        `This vehicle costs more. The driver will be automatically charged $${selectedVehicle.additionalCharge.toFixed(2)} on their card.\n\nProceed with the switch?`
+      );
+      if (!confirmed) return;
+    } else if (selectedVehicle?.priceDifference > 0) {
       const confirmed = window.confirm(
         `This vehicle has a higher rate. The booking total will increase by $${selectedVehicle.priceDifference.toFixed(2)}.\n\nProceed with the switch?`
       );
@@ -339,10 +344,16 @@ const HostBookings = () => {
         }
       );
 
-      const diff = response.data.booking?.priceDifference || 0;
-      alert(`Vehicle switched successfully! ${diff !== 0
-        ? `Price ${diff > 0 ? 'increased' : 'decreased'} by $${Math.abs(diff).toFixed(2)}`
-        : 'Price remains the same.'}`);
+      // Show appropriate success message based on whether auto-charge happened
+      if (response.data.autoCharge) {
+        const ac = response.data.autoCharge;
+        alert(`Vehicle switched successfully!\n\nDriver was automatically charged $${ac.amount.toFixed(2)} on their ${ac.cardBrand || 'card'} ending in ${ac.cardLast4}.`);
+      } else {
+        const diff = response.data.booking?.priceDifference || 0;
+        alert(`Vehicle switched successfully! ${diff !== 0
+          ? `Price ${diff > 0 ? 'increased' : 'decreased'} by $${Math.abs(diff).toFixed(2)}`
+          : 'Price remains the same.'}`);
+      }
 
       handleCloseSwitchModal();
       fetchBookings();
@@ -1595,6 +1606,16 @@ const HostBookings = () => {
                                  'Equal switch'}
                               </p>
                             </div>
+                            {vehicle.requiresPayment && vehicle.additionalCharge > 0 && (
+                              <p style={{
+                                fontSize: '0.8rem',
+                                color: '#f59e0b',
+                                fontWeight: '600',
+                                marginTop: '0.25rem'
+                              }}>
+                                Driver will be auto-charged ${vehicle.additionalCharge.toFixed(2)}
+                              </p>
+                            )}
                           </div>
                           <button
                             className="btn btn-primary switch-btn"

@@ -773,8 +773,8 @@ router.post('/webhook', async (req, res) => {
           break;
         }
 
-        // Check if this is a vehicle switch payment
-        if (paymentIntent.metadata?.type === 'vehicle_switch') {
+        // Check if this is a vehicle switch payment (manual or auto-charged)
+        if (paymentIntent.metadata?.type === 'vehicle_switch' || paymentIntent.metadata?.type === 'vehicle_switch_auto') {
           const newVehicleId = paymentIntent.metadata.newVehicleId;
           const reason = paymentIntent.metadata.reason;
           if (existingBooking && newVehicleId) {

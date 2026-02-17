@@ -1256,6 +1256,8 @@ function applyVehicleSwitch(booking, newVehicle, newVehicleId, newBaseRental, cu
 }
 
 // Switch booking to a different vehicle
+// If the booking is already paid and the new vehicle costs more,
+// the driver is automatically charged the difference using their saved payment method.
 router.patch('/:id/switch-vehicle', auth, async (req, res) => {
   try {
     const { newVehicleId, reason } = req.body;
@@ -1315,9 +1317,112 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     // Calculate base rental costs
     const currentBaseRental = booking.pricePerDay * booking.totalDays;
     const newBaseRental = calculateBaseRental(booking, newVehicle);
+    const rentalDifference = newBaseRental - currentBaseRental;
 
-    // Apply the switch immediately — rental difference updates the booking total
+    // If booking is paid and new vehicle costs more, auto-charge the driver
+    let autoChargeResult = null;
+    if (booking.paymentStatus === 'paid' && rentalDifference > 0) {
+      // Look up driver's saved payment method
+      const driver = await User.findById(booking.driver._id || booking.driver);
+      if (!driver) {
+        return res.status(400).json({ message: 'Driver account not found' });
+      }
+
+      if (!driver.stripeCustomerId) {
+        return res.status(400).json({
+          message: 'Driver does not have a payment method on file. Cannot auto-charge for the price increase.'
+        });
+      }
+
+      // Find the driver's default payment method
+      const defaultCard = driver.paymentMethods?.find(pm => pm.isDefault && pm.stripePaymentMethodId);
+      const anyCard = driver.paymentMethods?.find(pm => pm.stripePaymentMethodId);
+      const paymentMethod = defaultCard || anyCard;
+
+      if (!paymentMethod) {
+        return res.status(400).json({
+          message: 'Driver does not have a saved card on file. Cannot auto-charge for the price increase.'
+        });
+      }
+
+      // Calculate the additional charge with processing fee
+      const supplementalProcessing = calculateProcessingFee(rentalDifference);
+      const additionalCharge = rentalDifference + supplementalProcessing.driverProcessingFee;
+
+      try {
+        // Create and immediately confirm a PaymentIntent using the driver's saved card
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(additionalCharge * 100), // Convert to cents
+          currency: 'usd',
+          customer: driver.stripeCustomerId,
+          payment_method: paymentMethod.stripePaymentMethodId,
+          confirm: true,
+          automatic_payment_methods: {
+            enabled: true,
+            allow_redirects: 'never'
+          },
+          metadata: {
+            bookingId: booking._id.toString(),
+            newVehicleId: newVehicleId.toString(),
+            type: 'vehicle_switch_auto',
+            hostId: req.user._id.toString(),
+            driverId: (booking.driver._id || booking.driver).toString(),
+            rentalDifference: rentalDifference.toString(),
+            driverProcessingFee: supplementalProcessing.driverProcessingFee.toString(),
+            hostProcessingFee: supplementalProcessing.hostProcessingFee.toString(),
+            reason: reason || 'Vehicle switched by host'
+          },
+          description: `Vehicle switch: ${newVehicle.year} ${newVehicle.make} ${newVehicle.model} (Booking ${booking.reservationId})`
+        });
+
+        if (paymentIntent.status !== 'succeeded') {
+          return res.status(400).json({
+            message: `Auto-charge failed. Payment status: ${paymentIntent.status}. The driver may need to update their payment method.`
+          });
+        }
+
+        autoChargeResult = {
+          paymentIntentId: paymentIntent.id,
+          amount: additionalCharge,
+          rentalDifference,
+          driverProcessingFee: supplementalProcessing.driverProcessingFee,
+          hostProcessingFee: supplementalProcessing.hostProcessingFee,
+          stripeFee: supplementalProcessing.stripeFee,
+          cardLast4: paymentMethod.last4,
+          cardBrand: paymentMethod.cardBrand
+        };
+
+        console.log(`💳 Auto-charged driver $${additionalCharge.toFixed(2)} for vehicle switch on booking ${booking.reservationId} (card ending ${paymentMethod.last4})`);
+      } catch (stripeError) {
+        console.error(`❌ Auto-charge failed for vehicle switch on booking ${booking.reservationId}:`, stripeError.message);
+        return res.status(400).json({
+          message: `Could not charge the driver's card for the price difference: ${stripeError.message}`
+        });
+      }
+    }
+
+    // Apply the switch
     const switchResult = applyVehicleSwitch(booking, newVehicle, newVehicleId, newBaseRental, currentBaseRental, reason);
+
+    // If auto-charged, also update the supplemental processing fees and record payment ID
+    if (autoChargeResult) {
+      booking.driverProcessingFee = (booking.driverProcessingFee || 0) + autoChargeResult.driverProcessingFee;
+      booking.hostProcessingFee = (booking.hostProcessingFee || 0) + autoChargeResult.hostProcessingFee;
+      booking.stripeFee = (booking.stripeFee || 0) + autoChargeResult.stripeFee;
+      // Add the driver processing fee to the total (rental diff already added by applyVehicleSwitch)
+      booking.totalPrice = booking.totalPrice + autoChargeResult.driverProcessingFee;
+
+      // Recalculate host earnings with updated processing fees
+      const hostPlatformFee = (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
+      booking.hostEarnings = newBaseRental - hostPlatformFee - booking.hostProcessingFee;
+
+      // Record payment ID in switch history
+      const lastSwitch = booking.vehicleSwitchHistory[booking.vehicleSwitchHistory.length - 1];
+      if (lastSwitch) {
+        lastSwitch.paymentId = autoChargeResult.paymentIntentId;
+        lastSwitch.newPrice = booking.totalPrice;
+      }
+    }
 
     await booking.save();
 
@@ -1329,16 +1434,25 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Vehicle switched successfully',
+      message: autoChargeResult
+        ? `Vehicle switched successfully. Driver was automatically charged $${autoChargeResult.amount.toFixed(2)} (card ending ${autoChargeResult.cardLast4}).`
+        : 'Vehicle switched successfully',
       booking: {
         _id: booking._id,
         reservationId: booking.reservationId,
         vehicle: booking.vehicle,
         previousPrice: switchResult.previousPrice,
-        newPrice: switchResult.newTotalPrice,
+        newPrice: booking.totalPrice,
         priceDifference: switchResult.rentalDifference,
         status: booking.status
-      }
+      },
+      autoCharge: autoChargeResult ? {
+        amount: autoChargeResult.amount,
+        rentalDifference: autoChargeResult.rentalDifference,
+        processingFee: autoChargeResult.driverProcessingFee,
+        cardLast4: autoChargeResult.cardLast4,
+        cardBrand: autoChargeResult.cardBrand
+      } : null
     });
   } catch (error) {
     console.error('❌ Error switching vehicle:', error);
