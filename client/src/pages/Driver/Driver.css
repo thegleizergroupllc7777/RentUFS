@@ -406,13 +406,7 @@
 .booking-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.booking-actions .btn {
-  padding: 0.5rem 0.875rem;
-  font-size: 0.85rem;
+  gap: 1rem;
 }
 
 @media (max-width: 1024px) {
