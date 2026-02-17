@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
+import ChatBox from '../../components/ChatBox';
 import RentalAgreement from '../../components/RentalAgreement';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
@@ -121,6 +123,7 @@ const InspectionPhotos = ({ title, inspection, completedLabel }) => {
 };
 
 const HostReservationDetail = () => {
+  const { user } = useAuth();
   const { bookingId } = useParams();
   const navigate = useNavigate();
 
@@ -128,6 +131,7 @@ const HostReservationDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAgreement, setShowAgreement] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
 
   useEffect(() => {
@@ -407,6 +411,39 @@ const HostReservationDetail = () => {
                   </div>
                 )}
               </div>
+
+              {/* Message Driver */}
+              {booking.status !== 'cancelled' && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <button
+                    onClick={() => setShowChat(!showChat)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      background: showChat ? '#059669' : '#10b981',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {showChat ? 'Close Chat' : 'Message Driver'}
+                  </button>
+                  {showChat && user && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <ChatBox
+                        bookingId={booking._id}
+                        currentUserId={user._id || user.id}
+                        otherUserName={`${booking.driver?.firstName || ''} ${booking.driver?.lastName || ''}`.trim()}
+                        currentRole="host"
+                        onClose={() => setShowChat(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Reservation Details */}
               <div style={{

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
+import ChatBox from '../../components/ChatBox';
 import RentalAgreement from '../../components/RentalAgreement';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
@@ -39,6 +40,7 @@ const ReservationDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAgreement, setShowAgreement] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     fetchBookingDetails();
@@ -410,6 +412,39 @@ const ReservationDetail = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Message Host */}
+              {booking.status !== 'cancelled' && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <button
+                    onClick={() => setShowChat(!showChat)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      background: showChat ? '#059669' : '#10b981',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {showChat ? 'Close Chat' : 'Message Host'}
+                  </button>
+                  {showChat && user && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <ChatBox
+                        bookingId={booking._id}
+                        currentUserId={user._id || user.id}
+                        otherUserName={`${booking.host?.firstName || ''} ${booking.host?.lastName || ''}`.trim()}
+                        currentRole="driver"
+                        onClose={() => setShowChat(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Transaction History Card */}
               <div style={{
