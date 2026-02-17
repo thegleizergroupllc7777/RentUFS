@@ -276,11 +276,7 @@ const Checkout = () => {
               </div>
 
               <div className="summary-item">
-                <span className="label">Rental subtotal (${(booking.pricePerDay || 0).toFixed(2)}/day x {
-                  booking.rentalType === 'weekly' ? `${booking.quantity || Math.ceil(booking.totalDays / 7)} week${(booking.quantity || Math.ceil(booking.totalDays / 7)) !== 1 ? 's' : ''}` :
-                  booking.rentalType === 'monthly' ? `${booking.quantity || Math.ceil(booking.totalDays / 30)} month${(booking.quantity || Math.ceil(booking.totalDays / 30)) !== 1 ? 's' : ''}` :
-                  `${booking.totalDays} day${booking.totalDays !== 1 ? 's' : ''}`
-                }):</span>
+                <span className="label">Rental subtotal (${(booking.pricePerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
                 <span className="value">
                   ${((booking.totalPrice - (booking.platformFee || 0) - (booking.insurance?.totalCost || 0) - (booking.driverProcessingFee || 0)) || 0).toFixed(2)}
                 </span>
@@ -288,22 +284,14 @@ const Checkout = () => {
 
               {(booking.platformFee > 0 || booking.platformFeePerDay > 0) && (
                 <div className="summary-item">
-                  <span className="label">Platform Fee (${(booking.platformFeePerDay ?? 1.50).toFixed(2)}/day x {
-                    booking.rentalType === 'weekly' ? `${booking.quantity || Math.ceil(booking.totalDays / 7)} week${(booking.quantity || Math.ceil(booking.totalDays / 7)) !== 1 ? 's' : ''}` :
-                    booking.rentalType === 'monthly' ? `${booking.quantity || Math.ceil(booking.totalDays / 30)} month${(booking.quantity || Math.ceil(booking.totalDays / 30)) !== 1 ? 's' : ''}` :
-                    `${booking.totalDays} day${booking.totalDays !== 1 ? 's' : ''}`
-                  }):</span>
+                  <span className="label">Platform Fee (${(booking.platformFeePerDay ?? 1.50).toFixed(2)}/day x {booking.totalDays}):</span>
                   <span className="value">${(booking.platformFee || ((booking.platformFeePerDay ?? 1.50) * booking.totalDays)).toFixed(2)}</span>
                 </div>
               )}
 
               {booking.insurance && booking.insurance.totalCost > 0 && (
                 <div className="summary-item insurance">
-                  <span className="label">{booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'} (${(booking.insurance.costPerDay || 0).toFixed(2)}/day x {
-                    booking.rentalType === 'weekly' ? `${booking.quantity || Math.ceil(booking.totalDays / 7)} week${(booking.quantity || Math.ceil(booking.totalDays / 7)) !== 1 ? 's' : ''}` :
-                    booking.rentalType === 'monthly' ? `${booking.quantity || Math.ceil(booking.totalDays / 30)} month${(booking.quantity || Math.ceil(booking.totalDays / 30)) !== 1 ? 's' : ''}` :
-                    `${booking.totalDays} day${booking.totalDays !== 1 ? 's' : ''}`
-                  }):</span>
+                  <span className="label">{booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'} (${(booking.insurance.costPerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
                   <span className="value">${booking.insurance.totalCost.toFixed(2)}</span>
                 </div>
               )}
