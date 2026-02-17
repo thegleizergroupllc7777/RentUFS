@@ -1317,7 +1317,6 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     // Calculate base rental costs
     const currentBaseRental = booking.pricePerDay * booking.totalDays;
     const newBaseRental = calculateBaseRental(booking, newVehicle);
-    const rentalDifference = newBaseRental - currentBaseRental;
 
     // If booking is paid and new vehicle costs more, auto-charge the driver
     let autoChargeResult = null;
