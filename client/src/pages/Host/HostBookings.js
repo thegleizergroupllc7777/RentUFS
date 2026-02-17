@@ -1286,13 +1286,15 @@ const HostBookings = () => {
                         >
                           Confirm Booking
                         </button>
-                        <button
-                          onClick={() => handleOpenSwitchModal(booking)}
-                          className="btn btn-secondary"
-                          style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
-                        >
-                          Switch Vehicle
-                        </button>
+                        {(!booking.vehicleSwitchHistory || booking.vehicleSwitchHistory.length === 0) && (
+                          <button
+                            onClick={() => handleOpenSwitchModal(booking)}
+                            className="btn btn-secondary"
+                            style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                          >
+                            Switch Vehicle
+                          </button>
+                        )}
                         <button
                           onClick={() => handleUpdateStatus(booking._id, 'cancelled')}
                           className="btn btn-danger"
@@ -1304,13 +1306,15 @@ const HostBookings = () => {
 
                     {booking.status === 'confirmed' && (
                       <>
-                        <button
-                          onClick={() => handleOpenSwitchModal(booking)}
-                          className="btn btn-secondary"
-                          style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
-                        >
-                          Switch Vehicle
-                        </button>
+                        {(!booking.vehicleSwitchHistory || booking.vehicleSwitchHistory.length === 0) && (
+                          <button
+                            onClick={() => handleOpenSwitchModal(booking)}
+                            className="btn btn-secondary"
+                            style={{ backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                          >
+                            Switch Vehicle
+                          </button>
+                        )}
                         {new Date(booking.endDate) < new Date() && (
                           <button
                             onClick={() => handleUpdateStatus(booking._id, 'completed')}
