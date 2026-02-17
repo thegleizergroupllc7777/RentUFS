@@ -319,11 +319,9 @@ const HostBookings = () => {
     // Confirm if switching to a more expensive vehicle
     const selectedVehicle = availableVehicles.find(v => v._id === newVehicleId);
     if (selectedVehicle?.priceDifference > 0) {
-      const isPaid = selectedBooking.paymentStatus === 'paid';
-      const msg = isPaid
-        ? `This vehicle has a higher rate. The booking total will increase by $${selectedVehicle.priceDifference.toFixed(2)}.\n\nThe driver will be prompted to pay the additional amount from their bookings page.\n\nProceed with the switch?`
-        : `This vehicle has a higher rate. The booking total will increase by $${selectedVehicle.priceDifference.toFixed(2)}.\n\nProceed with the switch?`;
-      const confirmed = window.confirm(msg);
+      const confirmed = window.confirm(
+        `This vehicle has a higher rate. The booking total will increase by $${selectedVehicle.priceDifference.toFixed(2)}.\n\nProceed with the switch?`
+      );
       if (!confirmed) return;
     }
 
@@ -341,9 +339,10 @@ const HostBookings = () => {
         }
       );
 
-      // Use the backend message which includes pending charge info
-      const msg = response.data.message || 'Vehicle switched successfully!';
-      alert(msg);
+      const diff = response.data.booking?.priceDifference || 0;
+      alert(`Vehicle switched successfully! ${diff !== 0
+        ? `Price ${diff > 0 ? 'increased' : 'decreased'} by $${Math.abs(diff).toFixed(2)}`
+        : 'Price remains the same.'}`);
 
       handleCloseSwitchModal();
       fetchBookings();

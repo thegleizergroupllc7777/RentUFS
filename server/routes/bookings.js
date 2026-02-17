@@ -1315,19 +1315,9 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     // Calculate base rental costs
     const currentBaseRental = booking.pricePerDay * booking.totalDays;
     const newBaseRental = calculateBaseRental(booking, newVehicle);
-    const rentalDifference = newBaseRental - currentBaseRental;
 
     // Apply the switch immediately — rental difference updates the booking total
     const switchResult = applyVehicleSwitch(booking, newVehicle, newVehicleId, newBaseRental, currentBaseRental, reason);
-
-    // If the booking is already paid and the new vehicle costs more,
-    // record a pending charge for the driver to pay
-    let pendingAmount = 0;
-    if (booking.paymentStatus === 'paid' && rentalDifference > 0) {
-      const supplementalProcessing = calculateProcessingFee(rentalDifference);
-      pendingAmount = rentalDifference + supplementalProcessing.driverProcessingFee;
-      booking.pendingSwitchCharge = (booking.pendingSwitchCharge || 0) + pendingAmount;
-    }
 
     await booking.save();
 
@@ -1335,13 +1325,11 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     await booking.populate('vehicle');
     await booking.populate('driver', 'firstName lastName email');
 
-    console.log(`✅ Vehicle switched for booking ${booking.reservationId}: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}${pendingAmount > 0 ? ` (pending charge: $${pendingAmount.toFixed(2)})` : ''}`);
+    console.log(`✅ Vehicle switched for booking ${booking.reservationId}: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`);
 
     res.json({
       success: true,
-      message: pendingAmount > 0
-        ? `Vehicle switched! Driver will be prompted to pay $${pendingAmount.toFixed(2)} for the rate difference.`
-        : 'Vehicle switched successfully',
+      message: 'Vehicle switched successfully',
       booking: {
         _id: booking._id,
         reservationId: booking.reservationId,
@@ -1349,7 +1337,6 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
         previousPrice: switchResult.previousPrice,
         newPrice: switchResult.newTotalPrice,
         priceDifference: switchResult.rentalDifference,
-        pendingSwitchCharge: booking.pendingSwitchCharge || 0,
         status: booking.status
       }
     });
