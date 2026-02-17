@@ -956,10 +956,10 @@ const MyBookings = () => {
                           <strong>Duration:</strong> {booking.totalDays} days
                         </div>
                         <div className="booking-detail-item">
-                          <strong>Total Price:</strong> ${booking.totalPrice}
+                          <strong>Total Price:</strong> ${Number(booking.totalPrice).toFixed(2)}
                         </div>
                         <div className="booking-detail-item">
-                          <strong>Rate:</strong> ${booking.pricePerDay}/day
+                          <strong>Rate:</strong> ${Number(booking.pricePerDay).toFixed(2)}/day
                         </div>
                         {booking.insurance?.type && booking.insurance.type !== 'none' && (
                           <div className="booking-detail-item">
@@ -1237,7 +1237,7 @@ const MyBookings = () => {
                 Current return: {toLocalDate(extendModal.booking.endDate).toLocaleDateString()}
               </p>
               <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
-                Daily rate: ${extendModal.booking.pricePerDay}
+                Daily rate: ${Number(extendModal.booking.pricePerDay).toFixed(2)}
               </p>
             </div>
 

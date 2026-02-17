@@ -862,7 +862,7 @@ const HostBookings = () => {
 
                         {/* Duration & Price */}
                         <div className="compact-booking-price">
-                          {booking.totalDays}d &middot; ${booking.totalPrice}
+                          {booking.totalDays}d &middot; ${Number(booking.totalPrice).toFixed(2)}
                         </div>
 
                         {/* Status badge */}
@@ -910,11 +910,11 @@ const HostBookings = () => {
                                 </div>
                                 <div>
                                   <span style={{ color: '#9ca3af' }}>Rate:</span>
-                                  <div style={{ color: '#fff', fontWeight: '500' }}>${booking.pricePerDay}/day</div>
+                                  <div style={{ color: '#fff', fontWeight: '500' }}>${Number(booking.pricePerDay).toFixed(2)}/day</div>
                                 </div>
                                 <div>
                                   <span style={{ color: '#9ca3af' }}>Total Price:</span>
-                                  <div style={{ color: '#10b981', fontWeight: '600', fontSize: '1rem' }}>${booking.totalPrice}</div>
+                                  <div style={{ color: '#10b981', fontWeight: '600', fontSize: '1rem' }}>${Number(booking.totalPrice).toFixed(2)}</div>
                                 </div>
                                 <div>
                                   <span style={{ color: '#9ca3af' }}>Payment:</span>
@@ -1254,7 +1254,7 @@ const HostBookings = () => {
                       <strong>Duration:</strong> {booking.totalDays} days
                     </div>
                     <div className="booking-detail-item">
-                      <strong>Total Price:</strong> ${booking.totalPrice}
+                      <strong>Total Price:</strong> ${Number(booking.totalPrice).toFixed(2)}
                     </div>
                   </div>
 
@@ -1463,7 +1463,7 @@ const HostBookings = () => {
                 Renter: {cancelBooking.driver?.firstName} {cancelBooking.driver?.lastName}
               </p>
               <p style={{ margin: '0.25rem 0', color: '#10b981', fontWeight: '600' }}>
-                Total: ${cancelBooking.totalPrice}
+                Total: ${Number(cancelBooking.totalPrice).toFixed(2)}
               </p>
             </div>
 
@@ -1477,7 +1477,7 @@ const HostBookings = () => {
                 color: '#dc2626',
                 fontSize: '0.9rem'
               }}>
-                A full refund of <strong>${cancelBooking.totalPrice}</strong> will be processed to the driver's original payment method.
+                A full refund of <strong>${Number(cancelBooking.totalPrice).toFixed(2)}</strong> will be processed to the driver's original payment method.
               </div>
             )}
 
@@ -1542,7 +1542,7 @@ const HostBookings = () => {
                   <p><strong>Reservation:</strong> {selectedBooking.reservationId}</p>
                   <p><strong>Vehicle:</strong> {selectedBooking.vehicle?.nickname || `${selectedBooking.vehicle?.year} ${selectedBooking.vehicle?.make} ${selectedBooking.vehicle?.model}`}</p>
                   <p><strong>Dates:</strong> {toLocalDate(selectedBooking.startDate).toLocaleDateString()} - {toLocalDate(selectedBooking.endDate).toLocaleDateString()}</p>
-                  <p><strong>Current Price:</strong> ${selectedBooking.totalPrice}</p>
+                  <p><strong>Current Price:</strong> ${Number(selectedBooking.totalPrice).toFixed(2)}</p>
                 </div>
 
                 <div className="switch-reason-section">
