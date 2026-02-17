@@ -1152,30 +1152,32 @@ router.get('/:id/available-vehicles', auth, async (req, res) => {
 
     // Compute base rental cost of the current booking (without fees/insurance)
     const currentBaseRental = booking.pricePerDay * booking.totalDays;
+    const isPaid = booking.paymentStatus === 'paid';
 
     const availableVehicles = hostVehicles
       .filter(vehicle => !conflictedVehicleIds.has(vehicle._id.toString()))
       .map(vehicle => {
-        let newBaseRental;
-        if (booking.rentalType === 'weekly') {
-          const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
-          newBaseRental = booking.quantity * weeklyRate;
-        } else if (booking.rentalType === 'monthly') {
-          const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
-          newBaseRental = booking.quantity * monthlyRate;
-        } else {
-          newBaseRental = booking.totalDays * vehicle.pricePerDay;
-        }
+        const newBaseRental = calculateBaseRental(booking, vehicle);
 
         // Only compare rental portions — insurance and fees stay the same
         const priceDifference = newBaseRental - currentBaseRental;
         const newTotalPrice = booking.totalPrice + priceDifference;
 
+        // If already paid and new vehicle costs more, driver needs to pay the difference
+        const requiresPayment = isPaid && priceDifference > 0;
+        let additionalCharge = 0;
+        if (requiresPayment) {
+          const supplementalProcessing = calculateProcessingFee(priceDifference);
+          additionalCharge = priceDifference + supplementalProcessing.driverProcessingFee;
+        }
+
         return {
           ...vehicle,
           newTotalPrice,
           priceDifference,
-          currentBookingPrice: booking.totalPrice
+          currentBookingPrice: booking.totalPrice,
+          requiresPayment,
+          additionalCharge
         };
       });
 
@@ -1184,6 +1186,7 @@ router.get('/:id/available-vehicles', auth, async (req, res) => {
       currentVehicle: booking.vehicle,
       startDate: booking.startDate,
       endDate: booking.endDate,
+      isPaid,
       availableVehicles
     });
   } catch (error) {
@@ -1191,6 +1194,66 @@ router.get('/:id/available-vehicles', auth, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+
+// Helper: calculate the base rental cost for a vehicle on a booking
+function calculateBaseRental(booking, vehicle) {
+  if (booking.rentalType === 'weekly') {
+    const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
+    return booking.quantity * weeklyRate;
+  } else if (booking.rentalType === 'monthly') {
+    const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
+    return booking.quantity * monthlyRate;
+  }
+  return booking.totalDays * vehicle.pricePerDay;
+}
+
+// Helper: apply vehicle switch to a booking (shared by immediate switch and post-payment confirmation)
+function applyVehicleSwitch(booking, newVehicle, newVehicleId, newBaseRental, currentBaseRental, reason) {
+  const rentalDifference = newBaseRental - currentBaseRental;
+  const newTotalPrice = booking.totalPrice + rentalDifference;
+  const previousVehicle = booking.vehicle._id || booking.vehicle;
+  const previousPrice = booking.totalPrice;
+
+  // Add to switch history
+  if (!booking.vehicleSwitchHistory) {
+    booking.vehicleSwitchHistory = [];
+  }
+  booking.vehicleSwitchHistory.push({
+    previousVehicle: previousVehicle,
+    newVehicle: newVehicleId,
+    previousPrice: previousPrice,
+    newPrice: newTotalPrice,
+    priceDifference: rentalDifference,
+    reason: reason || 'Vehicle switched by host',
+    switchedAt: new Date()
+  });
+
+  // Update booking with new vehicle and price
+  booking.vehicle = newVehicleId;
+  booking.pricePerDay = newVehicle.pricePerDay;
+  booking.totalPrice = newTotalPrice;
+
+  // Recalculate host earnings based on new rental base
+  const hostPlatformFee = (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
+  const hostProcessingFee = booking.hostProcessingFee || 0;
+  booking.hostEarnings = newBaseRental - hostPlatformFee - hostProcessingFee;
+
+  // Update living agreement with vehicle swap amendment
+  if (booking.agreement && booking.agreement.signed) {
+    if (!booking.agreement.amendments) {
+      booking.agreement.amendments = [];
+    }
+    booking.agreement.amendments.push({
+      type: 'vehicle_swap',
+      description: `Vehicle swapped to ${newVehicle.year} ${newVehicle.make} ${newVehicle.model}`,
+      newTotalPrice: newTotalPrice,
+      newVehicleInfo: `${newVehicle.year} ${newVehicle.make} ${newVehicle.model} (VIN: ${newVehicle.vin || 'N/A'})`,
+      acknowledgedAt: new Date()
+    });
+  }
+
+  return { previousVehicle, previousPrice, newTotalPrice, rentalDifference };
+}
 
 // Switch booking to a different vehicle
 router.patch('/:id/switch-vehicle', auth, async (req, res) => {
@@ -1214,8 +1277,8 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only the host can switch vehicles' });
     }
 
-    // Only pending or confirmed bookings can have vehicles switched
-    if (!['pending', 'confirmed'].includes(booking.status)) {
+    // Only awaiting_payment, pending, or confirmed bookings can have vehicles switched
+    if (!['awaiting_payment', 'pending', 'confirmed'].includes(booking.status)) {
       return res.status(400).json({
         message: 'Can only switch vehicles for pending or confirmed bookings'
       });
@@ -1249,66 +1312,44 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
       });
     }
 
-    // Calculate new base rental price (without fees/insurance)
-    let newBaseRental;
-    let newPricePerDay = newVehicle.pricePerDay;
+    // Calculate base rental costs
     const currentBaseRental = booking.pricePerDay * booking.totalDays;
+    const newBaseRental = calculateBaseRental(booking, newVehicle);
+    const rentalDifference = newBaseRental - currentBaseRental;
 
-    if (booking.rentalType === 'weekly') {
-      const weeklyRate = newVehicle.pricePerWeek || (newVehicle.pricePerDay * 7);
-      newBaseRental = booking.quantity * weeklyRate;
-    } else if (booking.rentalType === 'monthly') {
-      const monthlyRate = newVehicle.pricePerMonth || (newVehicle.pricePerDay * 30);
-      newBaseRental = booking.quantity * monthlyRate;
-    } else {
-      newBaseRental = booking.totalDays * newVehicle.pricePerDay;
-    }
+    // If booking is already paid and new vehicle costs more, require additional payment
+    if (booking.paymentStatus === 'paid' && rentalDifference > 0) {
+      // Calculate the supplemental charge with processing fee
+      const supplementalProcessing = calculateProcessingFee(rentalDifference);
+      const additionalCharge = rentalDifference + supplementalProcessing.driverProcessingFee;
 
-    // Only the rental portion changes — insurance and fees stay the same
-    const priceDifference = newBaseRental - currentBaseRental;
-    const newTotalPrice = booking.totalPrice + priceDifference;
-
-    // Store previous vehicle info for history
-    const previousVehicle = booking.vehicle._id;
-    const previousPrice = booking.totalPrice;
-
-    // Add to switch history
-    if (!booking.vehicleSwitchHistory) {
-      booking.vehicleSwitchHistory = [];
-    }
-    booking.vehicleSwitchHistory.push({
-      previousVehicle: previousVehicle,
-      newVehicle: newVehicleId,
-      previousPrice: previousPrice,
-      newPrice: newTotalPrice,
-      priceDifference: priceDifference,
-      reason: reason || 'Vehicle switched by host',
-      switchedAt: new Date()
-    });
-
-    // Update booking with new vehicle and price
-    booking.vehicle = newVehicleId;
-    booking.pricePerDay = newPricePerDay;
-    booking.totalPrice = newTotalPrice;
-
-    // Recalculate host earnings based on new rental base
-    const hostPlatformFee = (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
-    const hostProcessingFee = booking.hostProcessingFee || 0;
-    booking.hostEarnings = newBaseRental - hostPlatformFee - hostProcessingFee;
-
-    // Update living agreement with vehicle swap amendment
-    if (booking.agreement && booking.agreement.signed) {
-      if (!booking.agreement.amendments) {
-        booking.agreement.amendments = [];
-      }
-      booking.agreement.amendments.push({
-        type: 'vehicle_swap',
-        description: `Vehicle swapped to ${newVehicle.year} ${newVehicle.make} ${newVehicle.model}`,
-        newTotalPrice: newTotalPrice,
-        newVehicleInfo: `${newVehicle.year} ${newVehicle.make} ${newVehicle.model} (VIN: ${newVehicle.vin || 'N/A'})`,
-        acknowledgedAt: new Date()
+      return res.json({
+        success: true,
+        requiresPayment: true,
+        message: 'Vehicle costs more — additional payment required from driver',
+        switchDetails: {
+          bookingId: booking._id,
+          reservationId: booking.reservationId,
+          newVehicleId: newVehicleId,
+          newVehicle: {
+            _id: newVehicle._id,
+            year: newVehicle.year,
+            make: newVehicle.make,
+            model: newVehicle.model,
+            pricePerDay: newVehicle.pricePerDay
+          },
+          currentPricePerDay: booking.pricePerDay,
+          newPricePerDay: newVehicle.pricePerDay,
+          rentalDifference: rentalDifference,
+          driverProcessingFee: supplementalProcessing.driverProcessingFee,
+          additionalCharge: additionalCharge,
+          reason: reason || 'Vehicle switched by host'
+        }
       });
     }
+
+    // For unpaid bookings, same/lower price, or paid with lower/equal price: apply immediately
+    const switchResult = applyVehicleSwitch(booking, newVehicle, newVehicleId, newBaseRental, currentBaseRental, reason);
 
     await booking.save();
 
@@ -1320,14 +1361,15 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
 
     res.json({
       success: true,
+      requiresPayment: false,
       message: 'Vehicle switched successfully',
       booking: {
         _id: booking._id,
         reservationId: booking.reservationId,
         vehicle: booking.vehicle,
-        previousPrice: previousPrice,
-        newPrice: newTotalPrice,
-        priceDifference: priceDifference,
+        previousPrice: switchResult.previousPrice,
+        newPrice: switchResult.newTotalPrice,
+        priceDifference: switchResult.rentalDifference,
         status: booking.status
       }
     });

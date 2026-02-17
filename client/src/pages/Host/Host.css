@@ -2021,6 +2021,16 @@
   cursor: not-allowed;
 }
 
+.switch-btn.btn-warning {
+  background: #f59e0b;
+  color: #000000;
+}
+
+.switch-btn.btn-warning:hover:not(:disabled) {
+  background: #d97706;
+  color: #000000;
+}
+
 @media (max-width: 768px) {
   .switch-modal {
     max-height: 95vh;
