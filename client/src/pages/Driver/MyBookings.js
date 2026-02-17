@@ -110,6 +110,78 @@ const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, onSucce
   );
 };
 
+// Vehicle Switch Payment Form Component
+const SwitchPaymentForm = ({ bookingId, amount, onSuccess, onCancel }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setError('');
+
+    try {
+      const { error: submitError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+      });
+
+      if (submitError) {
+        setError(submitError.message);
+        setProcessing(false);
+        return;
+      }
+
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_URL}/api/payment/confirm-vehicle-switch-payment`,
+          { paymentIntentId: paymentIntent.id, bookingId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.success) {
+          onSuccess(response.data);
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Payment failed');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <PaymentElement />
+      {error && <div style={{ marginTop: '1rem', color: '#ef4444', fontSize: '0.875rem' }}>{error}</div>}
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="btn btn-secondary"
+          disabled={processing}
+          style={{ flex: 1 }}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={!stripe || processing}
+          style={{ flex: 1 }}
+        >
+          {processing ? 'Processing...' : `Pay $${amount.toFixed(2)}`}
+        </button>
+      </div>
+    </form>
+  );
+};
+
 // Insurance Card Modal — displays insurance card inline or retries fetching from provider
 const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
   const hasCard = !!(booking.teqMobility?.cardImage || booking.teqMobility?.cardUrl);
@@ -231,6 +303,7 @@ const MyBookings = () => {
   const [reconciling, setReconciling] = useState({});
   const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
   const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
+  const [switchPayment, setSwitchPayment] = useState({ bookingId: null, clientSecret: null, amount: 0, loading: false });
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [cancelModal, setCancelModal] = useState({ open: false, booking: null, fee: 0, loading: false, isLate: false });
@@ -373,6 +446,34 @@ const MyBookings = () => {
   const handleExtensionSuccess = (data) => {
     alert(data.message);
     closeExtendModal();
+    fetchBookings();
+  };
+
+  // Vehicle switch payment handlers
+  const handlePaySwitchCharge = async (bookingId, amount) => {
+    setSwitchPayment(prev => ({ ...prev, bookingId, amount, loading: true }));
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/api/payment/create-vehicle-switch-payment`,
+        { bookingId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSwitchPayment({
+        bookingId,
+        clientSecret: response.data.clientSecret,
+        amount: response.data.switchPaymentDetails.pendingAmount,
+        loading: false
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create payment');
+      setSwitchPayment({ bookingId: null, clientSecret: null, amount: 0, loading: false });
+    }
+  };
+
+  const handleSwitchPaymentSuccess = (data) => {
+    alert(data.message || 'Vehicle switch payment completed!');
+    setSwitchPayment({ bookingId: null, clientSecret: null, amount: 0, loading: false });
     fetchBookings();
   };
 
@@ -820,6 +921,59 @@ const MyBookings = () => {
                             Reservation expired - Vehicle was never picked up. Contact host for assistance.
                           </span>
                           <span style={{ fontSize: '1.25rem' }}>⚠</span>
+                        </div>
+                      )}
+                      {/* Vehicle Switch Charge Banner */}
+                      {booking.pendingSwitchCharge > 0 && (
+                        <div style={{
+                          background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                          color: 'white',
+                          padding: '0.75rem 1rem',
+                          marginBottom: '1rem',
+                          borderRadius: '0.5rem',
+                          fontWeight: '600'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: switchPayment.bookingId === booking._id && switchPayment.clientSecret ? '0.75rem' : 0 }}>
+                            <span>
+                              Vehicle upgraded — additional payment of ${booking.pendingSwitchCharge.toFixed(2)} required
+                            </span>
+                            {switchPayment.bookingId !== booking._id && (
+                              <button
+                                onClick={() => handlePaySwitchCharge(booking._id, booking.pendingSwitchCharge)}
+                                disabled={switchPayment.loading}
+                                style={{
+                                  background: 'white',
+                                  color: '#d97706',
+                                  border: 'none',
+                                  padding: '0.4rem 1rem',
+                                  borderRadius: '0.375rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {switchPayment.loading && switchPayment.bookingId === booking._id ? 'Loading...' : 'Pay Now'}
+                              </button>
+                            )}
+                          </div>
+                          {switchPayment.bookingId === booking._id && switchPayment.clientSecret && stripePromise && (
+                            <div style={{ background: 'white', borderRadius: '0.5rem', padding: '1rem' }}>
+                              <Elements
+                                stripe={stripePromise}
+                                options={{
+                                  clientSecret: switchPayment.clientSecret,
+                                  appearance: { theme: 'stripe' }
+                                }}
+                              >
+                                <SwitchPaymentForm
+                                  bookingId={booking._id}
+                                  amount={switchPayment.amount}
+                                  onSuccess={handleSwitchPaymentSuccess}
+                                  onCancel={() => setSwitchPayment({ bookingId: null, clientSecret: null, amount: 0, loading: false })}
+                                />
+                              </Elements>
+                            </div>
+                          )}
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '0.5rem' }}>

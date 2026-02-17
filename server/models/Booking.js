@@ -168,9 +168,15 @@ const bookingSchema = new mongoose.Schema({
     previousPrice: Number,
     newPrice: Number,
     priceDifference: Number,
+    paymentId: String,
     reason: String,
     switchedAt: { type: Date, default: Date.now }
   }],
+  // Outstanding balance from vehicle switch to a more expensive vehicle (driver must pay)
+  pendingSwitchCharge: {
+    type: Number,
+    default: 0
+  },
   // Vehicle inspection photos at pickup
   pickupInspection: {
     completed: { type: Boolean, default: false },
