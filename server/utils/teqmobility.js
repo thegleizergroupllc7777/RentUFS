@@ -149,7 +149,6 @@ const upsertVehicle = async (vehicle, ownerId) => {
 
   if (vehicle.vehicleValue) {
     body.value_in_cents = Math.round(vehicle.vehicleValue * 100);
-    body.market_value_cents = Math.round(vehicle.vehicleValue * 100);
   }
 
   const response = await teqApi.put('/api/v1/vehicles', body);
