@@ -455,8 +455,14 @@ const MyBookings = () => {
     return booking.status === 'active' && booking.pickupInspection?.completed;
   };
 
+  const getStatusLabel = (status) => {
+    if (status === 'awaiting_payment') return 'Awaiting Payment';
+    return status;
+  };
+
   const getStatusColor = (status) => {
     const colors = {
+      awaiting_payment: '#f97316',
       pending: '#f59e0b',
       confirmed: '#10b981',
       active: '#3b82f6',
@@ -481,7 +487,7 @@ const MyBookings = () => {
         past.push(booking);
       } else if (booking.status === 'active' && endStr >= todayStr) {
         current.push(booking);
-      } else if ((booking.status === 'pending' || booking.status === 'confirmed') && endStr >= todayStr) {
+      } else if (['awaiting_payment', 'pending', 'confirmed'].includes(booking.status) && endStr >= todayStr) {
         upcoming.push(booking);
       } else {
         past.push(booking);
@@ -918,7 +924,7 @@ const MyBookings = () => {
                                 className="booking-status"
                                 style={{ backgroundColor: getStatusColor(booking.status) }}
                               >
-                                {booking.status}
+                                {getStatusLabel(booking.status)}
                               </div>
                               {booking.paymentStatus === 'paid' && (
                                 <div style={{
@@ -1119,7 +1125,7 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                        {['awaiting_payment', 'pending', 'confirmed'].includes(booking.status) && (
                           <button
                             onClick={() => openCancelModal(booking)}
                             className="btn btn-danger"

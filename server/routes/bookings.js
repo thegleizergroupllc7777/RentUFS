@@ -184,6 +184,19 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid date range' });
     }
 
+    // Cancel any of this driver's awaiting_payment bookings that overlap with the requested dates.
+    // These are ghost bookings from abandoned payment flows that the driver can't see in MyBookings.
+    // If the driver is starting a new booking, any prior awaiting_payment one is abandoned.
+    await Booking.updateMany(
+      {
+        driver: req.user._id,
+        status: 'awaiting_payment',
+        startDate: { $lt: end },
+        endDate: { $gt: start }
+      },
+      { status: 'cancelled', cancellationReason: 'Superseded by new booking request', cancelledAt: new Date() }
+    );
+
     // Check if driver already has an overlapping booking (security: prevent unauthorized multi-bookings)
     const overlappingBooking = await Booking.findOne({
       driver: req.user._id,
@@ -277,7 +290,7 @@ router.post('/', auth, async (req, res) => {
 // Get user's bookings (as driver)
 router.get('/my-bookings', auth, async (req, res) => {
   try {
-    const bookings = await Booking.find({ driver: req.user._id, status: { $ne: 'awaiting_payment' } })
+    const bookings = await Booking.find({ driver: req.user._id })
       .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory -hostPlatformFeePerDay -hostPlatformFee -hostProcessingFee -hostEarnings -platformRevenue')
       .populate('vehicle', 'nickname make model year images registrationImage pricePerDay')
       .populate('host', 'firstName lastName email phone profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
