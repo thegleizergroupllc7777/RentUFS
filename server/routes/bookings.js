@@ -1150,21 +1150,26 @@ router.get('/:id/available-vehicles', auth, async (req, res) => {
 
     const conflictedVehicleIds = new Set(conflictingBookings.map(b => b.vehicle.toString()));
 
+    // Compute base rental cost of the current booking (without fees/insurance)
+    const currentBaseRental = booking.pricePerDay * booking.totalDays;
+
     const availableVehicles = hostVehicles
       .filter(vehicle => !conflictedVehicleIds.has(vehicle._id.toString()))
       .map(vehicle => {
-        let newTotalPrice;
+        let newBaseRental;
         if (booking.rentalType === 'weekly') {
           const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
-          newTotalPrice = booking.quantity * weeklyRate;
+          newBaseRental = booking.quantity * weeklyRate;
         } else if (booking.rentalType === 'monthly') {
           const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
-          newTotalPrice = booking.quantity * monthlyRate;
+          newBaseRental = booking.quantity * monthlyRate;
         } else {
-          newTotalPrice = booking.totalDays * vehicle.pricePerDay;
+          newBaseRental = booking.totalDays * vehicle.pricePerDay;
         }
 
-        const priceDifference = newTotalPrice - booking.totalPrice;
+        // Only compare rental portions — insurance and fees stay the same
+        const priceDifference = newBaseRental - currentBaseRental;
+        const newTotalPrice = booking.totalPrice + priceDifference;
 
         return {
           ...vehicle,
@@ -1244,21 +1249,24 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
       });
     }
 
-    // Calculate new price
-    let newTotalPrice;
+    // Calculate new base rental price (without fees/insurance)
+    let newBaseRental;
     let newPricePerDay = newVehicle.pricePerDay;
+    const currentBaseRental = booking.pricePerDay * booking.totalDays;
 
     if (booking.rentalType === 'weekly') {
       const weeklyRate = newVehicle.pricePerWeek || (newVehicle.pricePerDay * 7);
-      newTotalPrice = booking.quantity * weeklyRate;
+      newBaseRental = booking.quantity * weeklyRate;
     } else if (booking.rentalType === 'monthly') {
       const monthlyRate = newVehicle.pricePerMonth || (newVehicle.pricePerDay * 30);
-      newTotalPrice = booking.quantity * monthlyRate;
+      newBaseRental = booking.quantity * monthlyRate;
     } else {
-      newTotalPrice = booking.totalDays * newVehicle.pricePerDay;
+      newBaseRental = booking.totalDays * newVehicle.pricePerDay;
     }
 
-    const priceDifference = newTotalPrice - booking.totalPrice;
+    // Only the rental portion changes — insurance and fees stay the same
+    const priceDifference = newBaseRental - currentBaseRental;
+    const newTotalPrice = booking.totalPrice + priceDifference;
 
     // Store previous vehicle info for history
     const previousVehicle = booking.vehicle._id;
@@ -1282,6 +1290,11 @@ router.patch('/:id/switch-vehicle', auth, async (req, res) => {
     booking.vehicle = newVehicleId;
     booking.pricePerDay = newPricePerDay;
     booking.totalPrice = newTotalPrice;
+
+    // Recalculate host earnings based on new rental base
+    const hostPlatformFee = (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
+    const hostProcessingFee = booking.hostProcessingFee || 0;
+    booking.hostEarnings = newBaseRental - hostPlatformFee - hostProcessingFee;
 
     // Update living agreement with vehicle swap amendment
     if (booking.agreement && booking.agreement.signed) {
