@@ -120,7 +120,7 @@ const PaymentSuccess = () => {
 
               <div className="detail-item">
                 <span className="label">Reservation ID:</span>
-                <span className="value" style={{ fontFamily: 'monospace', fontWeight: '600', color: '#10b981' }}>
+                <span className="value" style={{ fontFamily: 'monospace', fontWeight: '700', color: '#10b981', fontSize: '1.35rem', letterSpacing: '0.5px' }}>
                   {booking.reservationId || `#${booking._id?.slice(-8).toUpperCase()}`}
                 </span>
               </div>
