@@ -329,6 +329,26 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    // Auto-heal vehicles stuck as unavailable with no active bookings
+    const unavailableIds = vehicles.filter(v => !v.availability).map(v => v._id);
+    if (unavailableIds.length > 0) {
+      const activeBookings = await Booking.find({
+        vehicle: { $in: unavailableIds },
+        status: { $in: ['confirmed', 'active'] }
+      }).select('vehicle').lean();
+      const activeVehicleIds = new Set(activeBookings.map(b => String(b.vehicle)));
+      const stuckIds = unavailableIds.filter(id => !activeVehicleIds.has(String(id)));
+      if (stuckIds.length > 0) {
+        await Vehicle.updateMany({ _id: { $in: stuckIds } }, { availability: true });
+        // Update the lean results so the response reflects the fix
+        vehicles.forEach(v => {
+          if (stuckIds.some(id => String(id) === String(v._id))) {
+            v.availability = true;
+          }
+        });
+      }
+    }
+
     // Resolve relative image paths to full URLs
     vehicles.forEach(v => resolveImageUrls(v, req));
 
