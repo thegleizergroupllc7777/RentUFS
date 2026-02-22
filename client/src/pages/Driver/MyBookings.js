@@ -234,19 +234,28 @@ const MyBookings = () => {
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [cancelModal, setCancelModal] = useState({ open: false, booking: null, fee: 0, loading: false, isLate: false });
+  const [reviewedBookingIds, setReviewedBookingIds] = useState(new Set());
+  const [ratingModal, setRatingModal] = useState({ open: false, booking: null });
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { setLoading(false); return; }
     const headers = { Authorization: `Bearer ${token}` };
 
-    // Fetch bookings and unread counts in parallel
+    // Fetch bookings, unread counts, and user's reviews in parallel
     Promise.all([
       axios.get(`${API_URL}/api/bookings/my-bookings`, { headers }),
-      axios.get(`${API_URL}/api/messages/unread/per-booking?role=driver`, { headers }).catch(() => ({ data: { counts: {} } }))
-    ]).then(([bookingsRes, unreadRes]) => {
+      axios.get(`${API_URL}/api/messages/unread/per-booking?role=driver`, { headers }).catch(() => ({ data: { counts: {} } })),
+      axios.get(`${API_URL}/api/reviews/my-reviews`, { headers }).catch(() => ({ data: [] }))
+    ]).then(([bookingsRes, unreadRes, reviewsRes]) => {
       setBookings(bookingsRes.data);
       setUnreadCounts(unreadRes.data.counts || {});
+      const ids = new Set(reviewsRes.data.map(r => String(r.booking)));
+      setReviewedBookingIds(ids);
     }).catch(err => {
       console.error('Error fetching bookings:', err);
     }).finally(() => {
@@ -316,6 +325,40 @@ const MyBookings = () => {
       console.error('Error cancelling booking:', error);
       alert('Failed to cancel booking');
       setCancelModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const openRatingModal = (booking) => {
+    setRatingModal({ open: true, booking });
+    setRatingValue(0);
+    setRatingHover(0);
+    setRatingComment('');
+  };
+
+  const handleSubmitRating = async () => {
+    if (!ratingModal.booking || ratingValue === 0) return;
+    setRatingSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const booking = ratingModal.booking;
+
+      // Submit vehicle review
+      await axios.post(`${API_URL}/api/reviews`, {
+        bookingId: booking._id,
+        vehicleId: booking.vehicle?._id || booking.vehicle,
+        revieweeId: booking.host?._id || booking.host,
+        reviewType: 'vehicle',
+        rating: ratingValue,
+        comment: ratingComment.trim() || `${ratingValue} star rating`
+      }, { headers });
+
+      setReviewedBookingIds(prev => new Set([...prev, String(booking._id)]));
+      setRatingModal({ open: false, booking: null });
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setRatingSubmitting(false);
     }
   };
 
@@ -1186,6 +1229,35 @@ const MyBookings = () => {
                             </span>
                           )}
                         </button>
+
+                        {booking.status === 'completed' && !reviewedBookingIds.has(String(booking._id)) && (
+                          <button
+                            onClick={() => openRatingModal(booking)}
+                            className="btn btn-secondary"
+                            style={{
+                              background: '#f59e0b',
+                              color: '#000',
+                              border: 'none',
+                              fontWeight: '600'
+                            }}
+                          >
+                            Rate
+                          </button>
+                        )}
+
+                        {booking.status === 'completed' && reviewedBookingIds.has(String(booking._id)) && (
+                          <span style={{
+                            padding: '0.5rem 1rem',
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            border: '1px solid #10b981',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.8rem',
+                            color: '#10b981',
+                            fontWeight: '600'
+                          }}>
+                            Rated
+                          </span>
+                        )}
                       </div>
 
                       {/* Chat Box */}
@@ -1472,6 +1544,120 @@ const MyBookings = () => {
             }));
           }}
         />
+      )}
+
+      {/* Rating Modal */}
+      {ratingModal.open && ratingModal.booking && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '450px',
+            width: '100%'
+          }}>
+            <h2 style={{ marginBottom: '1rem', color: '#1f2937' }}>Rate Your Experience</h2>
+
+            <div style={{
+              padding: '1rem',
+              background: '#f9fafb',
+              borderRadius: '0.5rem',
+              marginBottom: '1.5rem'
+            }}>
+              <p style={{ fontWeight: '600', color: '#1f2937', marginBottom: '0.25rem' }}>
+                {ratingModal.booking.vehicle?.nickname || `${ratingModal.booking.vehicle?.year} ${ratingModal.booking.vehicle?.make} ${ratingModal.booking.vehicle?.model}`}
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Host: {ratingModal.booking.host?.firstName} {ratingModal.booking.host?.lastName}
+              </p>
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onClick={() => setRatingValue(star)}
+                    onMouseEnter={() => setRatingHover(star)}
+                    onMouseLeave={() => setRatingHover(0)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '2.5rem',
+                      padding: '0.25rem',
+                      color: star <= (ratingHover || ratingValue) ? '#f59e0b' : '#d1d5db',
+                      transition: 'color 0.15s, transform 0.15s',
+                      transform: star <= (ratingHover || ratingValue) ? 'scale(1.1)' : 'scale(1)'
+                    }}
+                  >
+                    &#9733;
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                {ratingValue === 0 ? 'Select a rating' :
+                 ratingValue === 1 ? 'Poor' :
+                 ratingValue === 2 ? 'Fair' :
+                 ratingValue === 3 ? 'Good' :
+                 ratingValue === 4 ? 'Great' : 'Excellent'}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#1f2937', fontSize: '0.9rem' }}>
+                Comment (optional)
+              </label>
+              <textarea
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+                placeholder="Share your experience..."
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9rem',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={() => setRatingModal({ open: false, booking: null })}
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                disabled={ratingSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitRating}
+                className="btn btn-primary"
+                style={{ flex: 1, opacity: ratingValue === 0 ? 0.5 : 1 }}
+                disabled={ratingValue === 0 || ratingSubmitting}
+              >
+                {ratingSubmitting ? 'Submitting...' : 'Submit Rating'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Cancellation Confirmation Modal */}

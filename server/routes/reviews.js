@@ -57,6 +57,18 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// Get current user's reviews (returns booking IDs they've reviewed)
+router.get('/my-reviews', auth, async (req, res) => {
+  try {
+    const reviews = await Review.find({ reviewer: req.user._id })
+      .select('booking reviewType rating')
+      .lean();
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get vehicle reviews
 router.get('/vehicle/:vehicleId', async (req, res) => {
   try {
