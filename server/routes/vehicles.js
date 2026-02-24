@@ -5,6 +5,7 @@ const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
 const { sendVehicleListedEmail } = require('../utils/emailService');
 const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
+const { isConfigured: tollspotConfigured, preRegisterVehicle, deregisterVehicle } = require('../utils/tollspot');
 
 const router = express.Router();
 
@@ -416,6 +417,22 @@ router.post('/', auth, async (req, res) => {
     const vehicle = new Vehicle(vehicleData);
     await vehicle.save();
 
+    // TollSpot: Pre-register vehicle with toll agencies (fire-and-forget)
+    if (tollspotConfigured()) {
+      preRegisterVehicle(vehicle, req.user._id.toString())
+        .then(async (result) => {
+          if (result.success && result.data) {
+            const tollspotData = {
+              vehicleId: result.data.id || null,
+              status: 'pre_registered'
+            };
+            await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
+            console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} pre-registered (TollSpot ID: ${tollspotData.vehicleId})`);
+          }
+        })
+        .catch(err => console.error('🛣️ TollSpot: Pre-registration error (non-blocking):', err.message));
+    }
+
     // Send vehicle listing confirmation email (async, don't wait for it)
     sendVehicleListedEmail(
       {
@@ -558,6 +575,17 @@ router.delete('/:id', auth, async (req, res) => {
 
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+    }
+
+    // TollSpot: Deregister vehicle from toll agencies (fire-and-forget)
+    if (tollspotConfigured() && vehicle.tollspot?.vehicleId) {
+      deregisterVehicle(vehicle.tollspot.vehicleId)
+        .then(result => {
+          if (result.success) {
+            console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} deregistration scheduled`);
+          }
+        })
+        .catch(err => console.error('🛣️ TollSpot: Deregistration error (non-blocking):', err.message));
     }
 
     res.json({ message: 'Vehicle deleted successfully' });

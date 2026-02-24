@@ -275,6 +275,29 @@ const HostDashboard = () => {
                       </p>
                     )}
 
+                    {vehicle.tollspot?.status && vehicle.tollspot.status !== 'none' && (
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        marginTop: '0.35rem',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        background: vehicle.tollspot.status === 'registered' ? '#064e3b' : '#1a1a2e',
+                        color: vehicle.tollspot.status === 'registered' ? '#34d399' : '#93c5fd',
+                        border: `1px solid ${vehicle.tollspot.status === 'registered' ? '#10b981' : '#3b82f6'}`
+                      }}>
+                        <span style={{ fontSize: '0.7rem' }}>
+                          {vehicle.tollspot.status === 'registered' ? '\u2713' : '\u25CB'}
+                        </span>
+                        Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Registering' :
+                                vehicle.tollspot.status === 'registered' ? 'Active' :
+                                vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
+                      </div>
+                    )}
+
                     <div className="host-vehicle-stats">
                       <div className="stat-item">
                         <span className="stat-label">Pricing</span>
@@ -360,6 +383,16 @@ const HostDashboard = () => {
                           <span>{vehicle.seats} seats</span>
                           <span>{vehicle.tripCount} trip{vehicle.tripCount !== 1 ? 's' : ''}</span>
                           <span>{vehicle.rating > 0 ? `${vehicle.rating.toFixed(1)} rating` : 'No ratings'}</span>
+                          {vehicle.tollspot?.status && vehicle.tollspot.status !== 'none' && (
+                            <span style={{
+                              color: vehicle.tollspot.status === 'registered' ? '#34d399' : '#93c5fd',
+                              fontWeight: '600'
+                            }}>
+                              Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Registering' :
+                                      vehicle.tollspot.status === 'registered' ? 'Active' :
+                                      vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
+                            </span>
+                          )}
                         </div>
 
                         <div className="host-vehicle-actions">
