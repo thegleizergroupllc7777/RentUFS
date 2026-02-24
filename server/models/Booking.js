@@ -262,6 +262,12 @@ const bookingSchema = new mongoose.Schema({
       acknowledgedAt: { type: Date, default: Date.now }
     }]
   },
+  // TollSpot toll monitoring
+  tollspot: {
+    monitorId: { type: Number, default: null },       // TollSpot monitor request ID
+    monitorStarted: { type: Boolean, default: false },
+    error: { type: String, default: null }
+  },
   // Track if return reminder email has been sent
   returnReminderSent: {
     type: Boolean,

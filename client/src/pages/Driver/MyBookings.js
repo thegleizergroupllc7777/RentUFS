@@ -8,6 +8,7 @@ import { formatPhone } from '../../utils/formatPhone';
 import Navbar from '../../components/Navbar';
 import VehicleInspection from '../../components/VehicleInspection';
 import ChatBox from '../../components/ChatBox';
+import TollCharges from '../../components/TollCharges';
 import { useAuth } from '../../context/AuthContext';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
@@ -231,6 +232,7 @@ const MyBookings = () => {
   const [reconciling, setReconciling] = useState({});
   const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
   const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
+  const [tollChargesBookingId, setTollChargesBookingId] = useState(null);
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [cancelModal, setCancelModal] = useState({ open: false, booking: null, fee: 0, loading: false, isLate: false });
@@ -1158,6 +1160,16 @@ const MyBookings = () => {
                           </button>
                         )}
 
+                        {['active', 'completed'].includes(booking.status) && (
+                          <button
+                            onClick={() => setTollChargesBookingId(booking._id)}
+                            className="btn btn-secondary"
+                            style={{ background: '#6366f1', color: 'white', border: 'none' }}
+                          >
+                            View Tolls
+                          </button>
+                        )}
+
                         {canExtend(booking) && (
                           <button
                             onClick={() => openExtendModal(booking)}
@@ -1543,6 +1555,14 @@ const MyBookings = () => {
               booking: { ...prev.booking, teqMobility: updatedTeqMobility }
             }));
           }}
+        />
+      )}
+
+      {/* Toll Charges Modal */}
+      {tollChargesBookingId && (
+        <TollCharges
+          bookingId={tollChargesBookingId}
+          onClose={() => setTollChargesBookingId(null)}
         />
       )}
 

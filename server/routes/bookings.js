@@ -9,6 +9,7 @@ const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../
 const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS, sendBookingCompletedSMS, sendBookingCancelledSMS, sendDriverCancelledNotificationSMS } = require('../utils/smsService');
 const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = require('../utils/teqmobility');
 const { captureCardImage } = require('../utils/screenshotCard');
+const { isConfigured: tollspotConfigured, monitorCharges } = require('../utils/tollspot');
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { calculateProcessingFee } = require('../utils/stripeFee');
@@ -982,6 +983,26 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
         insuranceCoverage: null // Updated asynchronously
       }
     });
+
+    // TollSpot: Start toll monitoring for this trip (fire-and-forget)
+    if (tollspotConfigured()) {
+      monitorCharges(booking, booking.vehicle)
+        .then(async (result) => {
+          if (result.success && result.data) {
+            await Booking.findByIdAndUpdate(booking._id, {
+              'tollspot.monitorId': result.data.id || null,
+              'tollspot.monitorStarted': true,
+              'tollspot.error': null
+            });
+            console.log(`🛣️ TollSpot: Monitoring started for booking ${booking._id}`);
+          } else {
+            await Booking.findByIdAndUpdate(booking._id, {
+              'tollspot.error': result.error || 'Failed to start monitoring'
+            });
+          }
+        })
+        .catch(err => console.error('🛣️ TollSpot: Monitor error (non-blocking):', err.message));
+    }
 
     // TeqMobility Dynamic Insurance - Start on-rent coverage (fire-and-forget)
     // Runs in background after response is sent so booking isn't delayed

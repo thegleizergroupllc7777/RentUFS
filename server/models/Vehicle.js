@@ -134,6 +134,15 @@ const vehicleSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // TollSpot toll management integration
+  tollspot: {
+    vehicleId: { type: Number, default: null },      // TollSpot's vehicle ID
+    status: {
+      type: String,
+      enum: ['none', 'pre_registered', 'registered', 'unregister_scheduled', 'unregistered'],
+      default: 'none'
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now
