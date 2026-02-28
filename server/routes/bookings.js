@@ -1548,8 +1548,8 @@ router.patch('/:id/status', auth, async (req, res) => {
 
     booking.status = status;
 
-    // Mark vehicle as unavailable when booking is confirmed or active
-    if (['confirmed', 'active'].includes(status)) {
+    // Mark vehicle as unavailable only when the rental is actively in progress
+    if (status === 'active') {
       await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: false });
     }
 

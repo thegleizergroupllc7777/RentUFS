@@ -185,10 +185,8 @@ router.post('/verify-payment', auth, async (req, res) => {
         { new: true }
       ).populate('vehicle').populate('driver').populate('host');
 
-      // Mark vehicle as unavailable now that booking is confirmed
-      if (!wasAlreadyConfirmed && booking.vehicle) {
-        await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: false });
-      }
+      // Vehicle stays available until the rental actually starts (pickup inspection).
+      // The backend's date-overlap check prevents double-booking.
 
       // Only send confirmation emails if this is a new confirmation (not already paid)
       if (!wasAlreadyConfirmed && booking.driver && booking.host && booking.vehicle) {
@@ -244,10 +242,8 @@ router.post('/confirm-payment', auth, async (req, res) => {
         { new: true }
       ).populate('vehicle').populate('driver').populate('host');
 
-      // Mark vehicle as unavailable now that booking is confirmed
-      if (!wasAlreadyConfirmed && booking.vehicle) {
-        await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: false });
-      }
+      // Vehicle stays available until the rental actually starts (pickup inspection).
+      // The backend's date-overlap check prevents double-booking.
 
       // Only send confirmation emails if this is a new confirmation (not already paid)
       if (!wasAlreadyConfirmed && booking.driver && booking.host && booking.vehicle) {
@@ -852,10 +848,7 @@ router.post('/webhook', async (req, res) => {
         if (booking) {
           console.log(`✅ Booking ${bookingId} confirmed via webhook`);
 
-          // Mark vehicle as unavailable
-          if (booking.vehicle) {
-            await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, { availability: false });
-          }
+          // Vehicle stays available until pickup inspection — overlap check prevents double-booking
 
           // Send confirmation emails
           if (booking.driver && booking.host && booking.vehicle) {
@@ -908,10 +901,7 @@ router.post('/webhook', async (req, res) => {
           if (booking) {
             console.log(`✅ Booking ${bookingId} confirmed via checkout session webhook`);
 
-            // Mark vehicle as unavailable
-            if (booking.vehicle) {
-              await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, { availability: false });
-            }
+            // Vehicle stays available until pickup inspection — overlap check prevents double-booking
 
             // Send confirmation emails
             if (booking.driver && booking.host && booking.vehicle) {
