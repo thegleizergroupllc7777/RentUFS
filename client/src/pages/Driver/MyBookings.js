@@ -539,6 +539,9 @@ const MyBookings = () => {
       }
     }
 
+    // Sort upcoming so the soonest reservation appears first
+    upcoming.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
     return { current, upcoming, past };
   }, [bookings]);
 
