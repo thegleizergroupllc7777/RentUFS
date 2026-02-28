@@ -1502,7 +1502,7 @@ const HostBookings = () => {
         <div className="modal-overlay" onClick={() => setShowCompleteModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
             <h2 style={{ color: '#10b981', marginTop: 0 }}>Complete Reservation</h2>
-            <p>Are you sure you want to complete this reservation? It will be moved to past reservations.</p>
+            <p>Are you sure you want to complete this reservation?</p>
 
             <div style={{
               background: '#1a1a1a',
