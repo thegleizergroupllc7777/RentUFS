@@ -38,15 +38,17 @@ const HostDashboard = () => {
 
       setVehicles(vehiclesRes.data);
 
-      // Only count bookings as rented if the rental period hasn't fully passed
+      // Only count bookings as rented if the rental period has started and hasn't fully passed
       // Use date-string comparison to avoid UTC/timezone shift issues
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const activeBookings = bookingsRes.data.filter(b => {
         if (!['confirmed', 'active'].includes(b.status)) return false;
         // Extract YYYY-MM-DD from the ISO string to avoid timezone conversion
+        const startStr = typeof b.startDate === 'string' ? b.startDate.split('T')[0] : new Date(b.startDate).toISOString().split('T')[0];
         const endStr = typeof b.endDate === 'string' ? b.endDate.split('T')[0] : new Date(b.endDate).toISOString().split('T')[0];
-        return endStr >= todayStr;
+        // Vehicle is only rented if the rental period has started (startDate <= today) and not yet ended
+        return startStr <= todayStr && endStr >= todayStr;
       });
       const ids = new Set(activeBookings.map(b => {
         const id = typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle;
