@@ -158,6 +158,10 @@ const HostBookings = () => {
   const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
   const [tollChargesBookingId, setTollChargesBookingId] = useState(null);
 
+  // Complete reservation modal state
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completeBooking, setCompleteBooking] = useState(null);
+
   // Cancel reservation modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelBooking, setCancelBooking] = useState(null);
@@ -244,6 +248,19 @@ const HostBookings = () => {
     } finally {
       setSendingReminder(null);
     }
+  };
+
+  // Open complete reservation confirmation modal
+  const handleOpenCompleteModal = (booking) => {
+    setCompleteBooking(booking);
+    setShowCompleteModal(true);
+  };
+
+  const handleConfirmComplete = async () => {
+    if (!completeBooking) return;
+    await handleUpdateStatus(completeBooking._id, 'completed');
+    setShowCompleteModal(false);
+    setCompleteBooking(null);
   };
 
   // Open cancel reservation modal
@@ -1331,7 +1348,7 @@ const HostBookings = () => {
                         )}
                         {new Date(booking.endDate) < new Date() && (
                           <button
-                            onClick={() => handleUpdateStatus(booking._id, 'completed')}
+                            onClick={() => handleOpenCompleteModal(booking)}
                             className="btn btn-success"
                           >
                             Complete Reservation
@@ -1375,7 +1392,7 @@ const HostBookings = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => handleUpdateStatus(booking._id, 'completed')}
+                          onClick={() => handleOpenCompleteModal(booking)}
                           className="btn btn-success"
                         >
                           Complete Reservation
@@ -1478,6 +1495,52 @@ const HostBookings = () => {
           bookingId={tollChargesBookingId}
           onClose={() => setTollChargesBookingId(null)}
         />
+      )}
+
+      {/* Complete Reservation Confirmation Modal */}
+      {showCompleteModal && completeBooking && (
+        <div className="modal-overlay" onClick={() => setShowCompleteModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            <h2 style={{ color: '#10b981', marginTop: 0 }}>Complete Reservation</h2>
+            <p>Are you sure you want to complete this reservation? It will be moved to past reservations.</p>
+
+            <div style={{
+              background: '#1a1a1a',
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              marginBottom: '1rem',
+              border: '1px solid #333'
+            }}>
+              <p style={{ margin: '0.25rem 0', fontWeight: '600' }}>
+                {completeBooking.reservationId || completeBooking._id.slice(-8).toUpperCase()}
+              </p>
+              <p style={{ margin: '0.25rem 0' }}>
+                {completeBooking.vehicle?.nickname || `${completeBooking.vehicle?.year} ${completeBooking.vehicle?.make} ${completeBooking.vehicle?.model}`}
+              </p>
+              <p style={{ margin: '0.25rem 0', color: '#9ca3af' }}>
+                Renter: {completeBooking.driver?.firstName} {completeBooking.driver?.lastName}
+              </p>
+              <p style={{ margin: '0.25rem 0', color: '#10b981', fontWeight: '600' }}>
+                Total: ${Number(completeBooking.totalPrice).toFixed(2)}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                className="btn btn-secondary"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleConfirmComplete}
+                className="btn btn-success"
+              >
+                Yes, Complete Reservation
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Cancel Reservation Modal */}
