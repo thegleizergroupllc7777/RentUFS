@@ -6,6 +6,13 @@ import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Payment.css';
 
+// Parse date string to local midnight (avoids UTC timezone shift)
+const toLocalDate = (dateVal) => {
+  const str = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
+  const datePart = str.split('T')[0];
+  return new Date(datePart + 'T00:00:00');
+};
+
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('booking_id');
@@ -133,7 +140,7 @@ const PaymentSuccess = () => {
               <div className="detail-item">
                 <span className="label">Pickup Date:</span>
                 <span className="value">
-                  {new Date(booking.startDate).toLocaleDateString('en-US', {
+                  {toLocalDate(booking.startDate).toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
@@ -144,7 +151,7 @@ const PaymentSuccess = () => {
               <div className="detail-item">
                 <span className="label">Return Date:</span>
                 <span className="value">
-                  {new Date(booking.endDate).toLocaleDateString('en-US', {
+                  {toLocalDate(booking.endDate).toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
