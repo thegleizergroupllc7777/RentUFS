@@ -548,6 +548,42 @@ router.post('/geocode-all', async (req, res) => {
   }
 });
 
+// Enroll existing vehicle with TollSpot
+router.post('/:id/tollspot-enroll', auth, async (req, res) => {
+  try {
+    if (!tollspotConfigured()) {
+      return res.status(503).json({ message: 'TollSpot integration is not configured' });
+    }
+
+    const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id });
+    if (!vehicle) {
+      return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+    }
+
+    // Already enrolled
+    if (vehicle.tollspot?.status && vehicle.tollspot.status !== 'none' && vehicle.tollspot.status !== 'unregistered') {
+      return res.status(400).json({ message: `Vehicle is already ${vehicle.tollspot.status}` });
+    }
+
+    const result = await preRegisterVehicle(vehicle, req.user._id.toString());
+
+    if (result.success && result.data) {
+      const tollspotData = {
+        vehicleId: result.data.id || null,
+        status: 'pre_registered'
+      };
+      await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
+      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} enrolled (TollSpot ID: ${tollspotData.vehicleId})`);
+      return res.json({ message: 'Vehicle enrolled with TollSpot', tollspot: tollspotData });
+    }
+
+    return res.status(502).json({ message: 'TollSpot registration failed', error: result.error });
+  } catch (error) {
+    console.error('❌ TollSpot enroll error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Delete vehicle
 router.delete('/:id', auth, async (req, res) => {
   try {

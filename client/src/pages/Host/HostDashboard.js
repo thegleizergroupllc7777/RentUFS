@@ -12,6 +12,7 @@ const HostDashboard = () => {
   const [taxInfo, setTaxInfo] = useState(null);
   const [tollspotActive, setTollspotActive] = useState(null);
   const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
+  const [enrollingVehicleId, setEnrollingVehicleId] = useState(null);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('hostVehicleView') || 'grid');
   const location = useLocation();
 
@@ -119,6 +120,22 @@ const HostDashboard = () => {
     } catch (error) {
       console.error('Error fetching integrations:', error);
       setTollspotActive(false);
+    }
+  };
+
+  const enrollVehicleTollspot = async (vehicleId) => {
+    setEnrollingVehicleId(vehicleId);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/vehicles/${vehicleId}/tollspot-enroll`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDashboardData();
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to enroll vehicle with TollSpot';
+      alert(msg);
+    } finally {
+      setEnrollingVehicleId(null);
     }
   };
 
@@ -377,6 +394,16 @@ const HostDashboard = () => {
                       >
                         {vehicle.availability ? 'Mark Unavailable' : 'Mark Available'}
                       </button>
+                      {(!vehicle.tollspot?.status || vehicle.tollspot.status === 'none' || vehicle.tollspot.status === 'unregistered') && (
+                        <button
+                          onClick={() => enrollVehicleTollspot(vehicle._id)}
+                          className="btn-action"
+                          disabled={enrollingVehicleId === vehicle._id}
+                          style={{ color: '#5eead4', borderColor: '#5eead4' }}
+                        >
+                          {enrollingVehicleId === vehicle._id ? 'Enrolling...' : 'Enroll Tolls'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -453,6 +480,16 @@ const HostDashboard = () => {
                           >
                             {vehicle.availability ? 'Mark Unavailable' : 'Mark Available'}
                           </button>
+                          {(!vehicle.tollspot?.status || vehicle.tollspot.status === 'none' || vehicle.tollspot.status === 'unregistered') && (
+                            <button
+                              onClick={() => enrollVehicleTollspot(vehicle._id)}
+                              className="btn-action"
+                              disabled={enrollingVehicleId === vehicle._id}
+                              style={{ color: '#5eead4', borderColor: '#5eead4' }}
+                            >
+                              {enrollingVehicleId === vehicle._id ? 'Enrolling...' : 'Enroll Tolls'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
