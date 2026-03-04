@@ -2283,9 +2283,9 @@ const DriverProfile = () => {
   const tabs = [
     { id: 'profile', label: 'My Profile' },
     { id: 'license', label: "Driver's License" },
-    { id: 'integrations', label: 'Integrations' },
     { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
+      { id: 'integrations', label: 'Integrations' },
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
       { id: 'payouts', label: 'Payouts' },
       { id: 'reports', label: 'Reports' }
