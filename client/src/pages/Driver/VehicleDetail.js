@@ -400,7 +400,77 @@ const VehicleDetail = () => {
 
             <aside className="booking-sidebar">
               <div className="booking-card">
-                {activeBooking ? (
+                {user && vehicle.host && (user._id === vehicle.host._id || user._id === vehicle.host) ? (
+                  <>
+                    <h3>Your Vehicle</h3>
+                    <div style={{
+                      backgroundColor: '#064e3b',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      border: '1px solid #10b981'
+                    }}>
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Status:</strong>{' '}
+                        <span style={{
+                          display: 'inline-block',
+                          background: vehicle.availability ? '#10b981' : '#ef4444',
+                          color: 'white',
+                          padding: '0.15rem 0.6rem',
+                          borderRadius: '1rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '600'
+                        }}>
+                          {vehicle.availability ? 'Available' : 'Unavailable'}
+                        </span>
+                      </div>
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Daily Rate:</strong> ${vehicle.pricePerDay}
+                      </div>
+                      {vehicle.pricePerWeek && (
+                        <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                          <strong style={{ color: '#6ee7b7' }}>Weekly Rate:</strong> ${vehicle.pricePerWeek}
+                        </div>
+                      )}
+                      {vehicle.pricePerMonth && (
+                        <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                          <strong style={{ color: '#6ee7b7' }}>Monthly Rate:</strong> ${vehicle.pricePerMonth}
+                        </div>
+                      )}
+                      <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Trips:</strong> {vehicle.tripCount}
+                      </div>
+                      {vehicle.rating > 0 && (
+                        <div style={{ color: '#ffffff' }}>
+                          <strong style={{ color: '#6ee7b7' }}>Rating:</strong> ⭐ {vehicle.rating.toFixed(1)}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => navigate(`/host/edit-vehicle/${vehicle._id}`)}
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    >
+                      Edit Vehicle
+                    </button>
+                    <button
+                      onClick={() => navigate('/host/dashboard')}
+                      className="btn"
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'transparent',
+                        border: '1px solid #10b981',
+                        color: '#10b981',
+                        padding: '0.625rem 1rem',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                      }}
+                    >
+                      Back to Dashboard
+                    </button>
+                  </>
+                ) : activeBooking ? (
                   <>
                     <h3>Your Current Reservation</h3>
                     <div style={{
