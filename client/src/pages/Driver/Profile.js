@@ -1789,7 +1789,7 @@ const DriverProfile = () => {
 
       <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#111', borderRadius: '0.5rem', border: '1px solid #333' }}>
         <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-          Your cards are securely stored by Stripe and can be used for faster checkout when booking vehicles.
+          Your cards are securely stored by Stripe and can be used for faster checkout.
         </p>
       </div>
     </div>
