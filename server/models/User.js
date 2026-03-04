@@ -193,6 +193,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  integrations: {
+    tollspot: {
+      active: { type: Boolean, default: false },
+      connectedAt: { type: Date, default: null }
+    }
+  },
   paymentMethods: [{
     nickname: { type: String, trim: true },
     cardBrand: { type: String, trim: true },

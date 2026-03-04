@@ -812,6 +812,55 @@ router.delete('/account/delete', auth, async (req, res) => {
   }
 });
 
+// Get integration status
+router.get('/integrations', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.json({
+      tollspot: {
+        active: user.integrations?.tollspot?.active || false,
+        connectedAt: user.integrations?.tollspot?.connectedAt || null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Toggle TollSpot integration
+router.put('/integrations/tollspot', auth, async (req, res) => {
+  try {
+    const { active } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!['host', 'both'].includes(user.userType)) {
+      return res.status(403).json({ message: 'Only hosts can manage integrations' });
+    }
+
+    user.set('integrations.tollspot.active', !!active);
+    if (active && !user.integrations?.tollspot?.connectedAt) {
+      user.set('integrations.tollspot.connectedAt', new Date());
+    }
+    if (!active) {
+      user.set('integrations.tollspot.connectedAt', null);
+    }
+
+    await user.save();
+    console.log(`✅ TollSpot integration ${active ? 'activated' : 'deactivated'} for: ${user.email}`);
+
+    res.json({
+      active: user.integrations.tollspot.active,
+      connectedAt: user.integrations.tollspot.connectedAt
+    });
+  } catch (error) {
+    console.error('❌ Error toggling TollSpot integration:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get user profile by ID — MUST be last: /:id is a catch-all that would shadow
 // named GET routes like /host-tax-info, /driver-license, /payment-methods
 router.get('/:id', async (req, res) => {

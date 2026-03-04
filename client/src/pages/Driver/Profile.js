@@ -198,6 +198,11 @@ const DriverProfile = () => {
   const [settingsMessage, setSettingsMessage] = useState('');
   const [settingsError, setSettingsError] = useState('');
 
+  // Integrations state
+  const [tollspotActive, setTollspotActive] = useState(false);
+  const [tollspotConnectedAt, setTollspotConnectedAt] = useState(null);
+  const [tollspotLoading, setTollspotLoading] = useState(false);
+
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -234,6 +239,51 @@ const DriverProfile = () => {
       fetchReports();
     }
   }, [reportPeriod]);
+
+  // Fetch TollSpot status when integrations tab is opened
+  useEffect(() => {
+    if (activeTab === 'integrations' && isHost) {
+      const fetchIntegrations = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await axios.get(`${API_URL}/api/users/integrations`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setTollspotActive(res.data.tollspot?.active || false);
+          setTollspotConnectedAt(res.data.tollspot?.connectedAt || null);
+        } catch (err) {
+          console.error('❌ Error fetching integrations:', err);
+        }
+      };
+      fetchIntegrations();
+    }
+  }, [activeTab, isHost]);
+
+  const handleTollspotToggle = async () => {
+    const newState = !tollspotActive;
+    setTollspotLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`${API_URL}/api/users/integrations/tollspot`, {
+        active: newState
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      setTollspotActive(res.data.active);
+      setTollspotConnectedAt(res.data.connectedAt);
+
+      // On activation, open TollSpot registration in new tab
+      if (newState && user?._id) {
+        window.open(
+          `http://app3052.tollspot.app/?partnerId=public_5dee9706-bd2a-4ff8-8181-8973761bfb06&hostId=${user._id}`,
+          '_blank'
+        );
+      }
+    } catch (err) {
+      console.error('❌ Error toggling TollSpot:', err);
+    } finally {
+      setTollspotLoading(false);
+    }
+  };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -2312,19 +2362,76 @@ const DriverProfile = () => {
                 <div>
                   <h2 style={{ color: '#fff', marginBottom: '0.5rem' }}>Integrations</h2>
                   <p style={{ color: '#9ca3af', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                    Connect third-party services to enhance your experience.
+                    Connect third-party services to enhance your hosting experience.
                   </p>
+
+                  {/* TollSpot Integration Card */}
                   <div style={{
                     background: '#111',
-                    border: '1px solid #333',
+                    border: tollspotActive ? '1px solid #10b981' : '1px solid #333',
                     borderRadius: '0.75rem',
-                    padding: '2.5rem',
-                    textAlign: 'center'
+                    padding: '1.5rem',
+                    transition: 'border-color 0.2s'
                   }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>Coming Soon</div>
-                    <p style={{ color: '#6b7280', margin: 0, fontSize: '0.9rem' }}>
-                      Integrations will be available in a future update.
-                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                          <h3 style={{ color: '#fff', margin: 0, fontSize: '1.1rem' }}>TollSpot</h3>
+                          {tollspotActive && (
+                            <span style={{
+                              background: 'rgba(16,185,129,0.15)',
+                              color: '#10b981',
+                              fontSize: '0.7rem',
+                              fontWeight: '600',
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}>Connected</span>
+                          )}
+                        </div>
+                        <p style={{ color: '#9ca3af', margin: '0 0 0.75rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                          Automated toll management for your fleet. TollSpot tracks and processes toll charges for your rental vehicles so you don't have to.
+                        </p>
+                        {tollspotActive && tollspotConnectedAt && (
+                          <p style={{ color: '#6b7280', margin: 0, fontSize: '0.8rem' }}>
+                            Connected on {new Date(tollspotConnectedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Toggle Switch */}
+                      <button
+                        onClick={handleTollspotToggle}
+                        disabled={tollspotLoading}
+                        style={{
+                          position: 'relative',
+                          width: '50px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          border: 'none',
+                          background: tollspotActive ? '#10b981' : '#333',
+                          cursor: tollspotLoading ? 'wait' : 'pointer',
+                          transition: 'background 0.2s',
+                          flexShrink: 0,
+                          marginTop: '2px',
+                          opacity: tollspotLoading ? 0.6 : 1
+                        }}
+                        aria-label={tollspotActive ? 'Deactivate TollSpot' : 'Activate TollSpot'}
+                      >
+                        <span style={{
+                          position: 'absolute',
+                          top: '3px',
+                          left: tollspotActive ? '25px' : '3px',
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                        }} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
