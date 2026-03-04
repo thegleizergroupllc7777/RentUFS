@@ -6,6 +6,9 @@ const { isConfigured, getTollCharges, listVehicles } = require('../utils/tollspo
 
 const router = express.Router();
 
+// Platform fee added to every toll charge across all reservations
+const PLATFORM_TOLL_FEE = 0.25;
+
 // GET /api/tolls/charges/:bookingId - Get toll charges for a specific booking
 router.get('/charges/:bookingId', auth, async (req, res) => {
   try {
@@ -44,7 +47,35 @@ router.get('/charges/:bookingId', auth, async (req, res) => {
       return res.status(502).json({ message: 'Failed to fetch toll charges', error: result.error });
     }
 
-    res.json(result.data);
+    const charges = result.data.data || [];
+
+    // Add $0.25 platform fee to each toll charge (included in amount, not shown separately)
+    const chargesWithFee = charges.map(charge => ({
+      ...charge,
+      amount: parseFloat(((charge.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
+    }));
+
+    // Calculate toll accounting totals
+    const totalTolls = charges.length;
+    const originalTollAmount = parseFloat(charges.reduce((sum, c) => sum + (c.amount || 0), 0).toFixed(2));
+    const platformTollFees = parseFloat((totalTolls * PLATFORM_TOLL_FEE).toFixed(2));
+    const driverTollTotal = parseFloat((originalTollAmount + platformTollFees).toFixed(2));
+
+    // Sync toll accounting to booking (fire-and-forget)
+    Booking.findByIdAndUpdate(booking._id, {
+      'tollAccounting.totalTolls': totalTolls,
+      'tollAccounting.originalTollAmount': originalTollAmount,
+      'tollAccounting.platformTollFees': platformTollFees,
+      'tollAccounting.driverTollTotal': driverTollTotal,
+      'tollAccounting.lastSyncedAt': new Date()
+    }).catch(err => {
+      console.error('🛣️ TollSpot: Failed to sync toll accounting:', err.message);
+    });
+
+    res.json({
+      total: result.data.total || totalTolls,
+      data: chargesWithFee
+    });
   } catch (error) {
     console.error('🛣️ TollSpot: Error fetching booking toll charges:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -70,7 +101,18 @@ router.get('/host-charges', auth, async (req, res) => {
       return res.status(502).json({ message: 'Failed to fetch toll charges', error: result.error });
     }
 
-    res.json(result.data);
+    const charges = (result.data.data || []);
+
+    // Add $0.25 platform fee to each toll charge
+    const chargesWithFee = charges.map(charge => ({
+      ...charge,
+      amount: parseFloat(((charge.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
+    }));
+
+    res.json({
+      total: result.data.total || charges.length,
+      data: chargesWithFee
+    });
   } catch (error) {
     console.error('🛣️ TollSpot: Error fetching host toll charges:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });

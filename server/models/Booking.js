@@ -268,6 +268,14 @@ const bookingSchema = new mongoose.Schema({
     monitorStarted: { type: Boolean, default: false },
     error: { type: String, default: null }
   },
+  // Toll charge accounting - $0.25 platform fee per toll across all reservations
+  tollAccounting: {
+    totalTolls: { type: Number, default: 0 },           // Number of toll charges posted
+    originalTollAmount: { type: Number, default: 0 },    // Sum of original toll amounts (goes to host)
+    platformTollFees: { type: Number, default: 0 },      // Sum of $0.25 fees (goes to platform)
+    driverTollTotal: { type: Number, default: 0 },       // What driver pays (original + fees)
+    lastSyncedAt: { type: Date, default: null }           // Last time toll data was synced
+  },
   // Track if return reminder email has been sent
   returnReminderSent: {
     type: Boolean,
