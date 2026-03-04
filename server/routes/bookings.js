@@ -786,9 +786,9 @@ router.post('/:id/extend', auth, async (req, res) => {
     }
 
     // Include outstanding tolls in the extension total
-    const extensionPlusToolls = extensionBaseTotal + tollInfo.driverTotal;
-    const extensionProcessing = calculateProcessingFee(extensionPlusToolls);
-    const extensionCost = extensionPlusToolls + extensionProcessing.driverProcessingFee;
+    const extensionPlusTolls = extensionBaseTotal + tollInfo.driverTotal;
+    const extensionProcessing = calculateProcessingFee(extensionPlusTolls);
+    const extensionCost = extensionPlusTolls + extensionProcessing.driverProcessingFee;
 
     res.json({
       bookingId: booking._id,
@@ -1069,7 +1069,7 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     const { photos, notes } = req.body;
     const booking = await Booking.findById(req.params.id)
       .populate('vehicle')
-      .populate('host', 'firstName lastName email');
+      .populate('host', 'firstName lastName email stripeConnectAccountId stripeConnectPayoutsEnabled');
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
