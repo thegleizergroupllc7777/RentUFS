@@ -2233,6 +2233,7 @@ const DriverProfile = () => {
   const tabs = [
     { id: 'profile', label: 'My Profile' },
     { id: 'license', label: "Driver's License" },
+    { id: 'integrations', label: 'Integrations' },
     { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
@@ -2307,6 +2308,26 @@ const DriverProfile = () => {
             <div style={{ flex: 1, minWidth: 0 }}>
               {activeTab === 'profile' && renderProfileTab()}
               {activeTab === 'license' && renderLicenseTab()}
+              {activeTab === 'integrations' && (
+                <div>
+                  <h2 style={{ color: '#fff', marginBottom: '0.5rem' }}>Integrations</h2>
+                  <p style={{ color: '#9ca3af', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                    Connect third-party services to enhance your experience.
+                  </p>
+                  <div style={{
+                    background: '#111',
+                    border: '1px solid #333',
+                    borderRadius: '0.75rem',
+                    padding: '2.5rem',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>Coming Soon</div>
+                    <p style={{ color: '#6b7280', margin: 0, fontSize: '0.9rem' }}>
+                      Integrations will be available in a future update.
+                    </p>
+                  </div>
+                </div>
+              )}
               {activeTab === 'payment' && renderPaymentTab()}
               {activeTab === 'tax' && isHost && renderTaxTab()}
               {activeTab === 'payouts' && isHost && <PayoutsContent />}
