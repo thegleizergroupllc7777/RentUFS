@@ -1475,7 +1475,7 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
       bookingRows = payoutDetails.bookings.map(b => `
         <tr>
           <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-family: monospace; color: #10b981;">${b.reservationId || 'N/A'}</td>
-          <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${b.vehicle || 'N/A'}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${b.vehicle || 'N/A'}${b.note ? `<br><span style="font-size: 0.75rem; color: #6b7280;">${b.note}</span>` : ''}</td>
           <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${b.amount.toFixed(2)}</td>
         </tr>
       `).join('');

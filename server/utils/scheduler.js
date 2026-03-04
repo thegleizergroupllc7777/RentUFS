@@ -241,7 +241,17 @@ const checkAndSettlePostTripTolls = async () => {
   }
 };
 
-// Automated weekly payout: transfer all eligible host earnings to their Stripe Connect accounts
+// Calculate per-day host earnings for a booking
+const calculateDailyHostEarnings = (booking) => {
+  const totalDays = booking.totalDays || 1;
+  const correctHostFee = (booking.hostPlatformFeePerDay || 1.50) * totalDays;
+  const rentalSubtotal = (booking.pricePerDay || 0) * totalDays;
+  const hostProcessingFee = Number(booking.hostProcessingFee) || 0;
+  const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+  return totalEarnings / totalDays;
+};
+
+// Automated weekly payout: transfer host earnings for both completed and active bookings
 const processWeeklyPayouts = async () => {
   try {
     // Find all hosts with Stripe Connect accounts and payouts enabled
@@ -258,74 +268,141 @@ const processWeeklyPayouts = async () => {
 
     let hostsProcessed = 0;
     let totalTransferred = 0;
+    const now = new Date();
 
     for (const host of hosts) {
       try {
-        // Find all eligible bookings for this host
-        const eligibleBookings = await Booking.find({
+        let hostPayoutAmount = 0;
+        const payoutBookings = []; // For email breakdown
+
+        // ── 1. Completed bookings: pay remaining balance ──
+        const completedBookings = await Booking.find({
           host: host._id,
           status: 'completed',
           paymentStatus: 'paid',
-          payoutStatus: { $in: ['pending', 'eligible'] },
-          hostEarnings: { $gt: 0 }
+          payoutStatus: { $in: ['pending', 'eligible', 'partial'] }
         }).populate('vehicle', 'make model year');
 
-        if (eligibleBookings.length === 0) continue;
-
-        // Recalculate correct earnings for each booking
-        for (const b of eligibleBookings) {
+        for (const b of completedBookings) {
           const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
           const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
           const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-          const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
-          if (b.hostPlatformFee !== correctHostFee || b.hostEarnings !== correctEarnings) {
-            b.hostPlatformFee = correctHostFee;
-            b.hostEarnings = correctEarnings;
-          }
-        }
+          const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+          const alreadyPaid = b.partialPayoutTotal || 0;
+          const remaining = Math.max(0, totalEarnings - alreadyPaid);
 
-        const totalAmount = eligibleBookings.reduce((sum, b) => sum + b.hostEarnings, 0);
-        if (totalAmount <= 0) continue;
+          if (remaining <= 0) continue;
 
-        // Create Stripe transfer to host's Connect account
-        const transfer = await stripe.transfers.create({
-          amount: Math.round(totalAmount * 100),
-          currency: 'usd',
-          destination: host.stripeConnectAccountId,
-          description: `Weekly payout for ${eligibleBookings.length} booking(s)`,
-          metadata: {
-            hostId: host._id.toString(),
-            bookingCount: eligibleBookings.length.toString(),
-            bookingIds: eligibleBookings.map(b => b._id.toString()).join(',')
-          }
-        });
-
-        // Update all bookings as paid out
-        const now = new Date();
-        for (const booking of eligibleBookings) {
-          await Booking.findByIdAndUpdate(booking._id, {
-            payoutStatus: 'paid',
-            payoutId: transfer.id,
-            payoutDate: now,
-            payoutAmount: booking.hostEarnings
+          hostPayoutAmount += remaining;
+          payoutBookings.push({
+            booking: b,
+            amount: remaining,
+            type: 'completed',
+            daysPaid: b.totalDays - (b.partialPayoutDaysPaid || 0)
           });
         }
 
-        hostsProcessed++;
-        totalTransferred += totalAmount;
+        // ── 2. Active bookings: pay for days served since last partial payout ──
+        const activeBookings = await Booking.find({
+          host: host._id,
+          status: 'active',
+          paymentStatus: 'paid'
+        }).populate('vehicle', 'make model year');
 
-        console.log(`💰 Weekly payout: Transferred $${totalAmount.toFixed(2)} to host ${host.firstName} ${host.lastName} (${eligibleBookings.length} booking(s))`);
+        for (const b of activeBookings) {
+          const startDate = new Date(b.startDate);
+          const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+          const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
+          const newDaysToPayFor = Math.max(0, daysSinceStart - daysAlreadyPaid);
+
+          if (newDaysToPayFor <= 0) continue;
+
+          const dailyEarnings = calculateDailyHostEarnings(b);
+          const partialAmount = parseFloat((dailyEarnings * newDaysToPayFor).toFixed(2));
+
+          if (partialAmount <= 0) continue;
+
+          hostPayoutAmount += partialAmount;
+          payoutBookings.push({
+            booking: b,
+            amount: partialAmount,
+            type: 'active',
+            daysPaid: newDaysToPayFor
+          });
+        }
+
+        if (hostPayoutAmount <= 0 || payoutBookings.length === 0) continue;
+
+        hostPayoutAmount = parseFloat(hostPayoutAmount.toFixed(2));
+
+        // Create Stripe transfer to host's Connect account
+        const transfer = await stripe.transfers.create({
+          amount: Math.round(hostPayoutAmount * 100),
+          currency: 'usd',
+          destination: host.stripeConnectAccountId,
+          description: `Weekly payout for ${payoutBookings.length} booking(s)`,
+          metadata: {
+            hostId: host._id.toString(),
+            bookingCount: payoutBookings.length.toString(),
+            bookingIds: payoutBookings.map(p => p.booking._id.toString()).join(',')
+          }
+        });
+
+        // Update each booking's payout tracking
+        for (const p of payoutBookings) {
+          const b = p.booking;
+
+          if (p.type === 'completed') {
+            // Completed: mark fully paid
+            await Booking.findByIdAndUpdate(b._id, {
+              payoutStatus: 'paid',
+              payoutId: transfer.id,
+              payoutDate: now,
+              payoutAmount: (b.partialPayoutTotal || 0) + p.amount,
+              partialPayoutDaysPaid: b.totalDays,
+              partialPayoutTotal: (b.partialPayoutTotal || 0) + p.amount,
+              lastPartialPayoutDate: now
+            });
+          } else {
+            // Active: update partial payout tracking
+            const newDaysPaid = (b.partialPayoutDaysPaid || 0) + p.daysPaid;
+            const newPartialTotal = (b.partialPayoutTotal || 0) + p.amount;
+            await Booking.findByIdAndUpdate(b._id, {
+              payoutStatus: 'partial',
+              payoutId: transfer.id,
+              payoutDate: now,
+              payoutAmount: newPartialTotal,
+              partialPayoutDaysPaid: newDaysPaid,
+              partialPayoutTotal: newPartialTotal,
+              lastPartialPayoutDate: now
+            });
+          }
+        }
+
+        hostsProcessed++;
+        totalTransferred += hostPayoutAmount;
+
+        const completedCount = payoutBookings.filter(p => p.type === 'completed').length;
+        const activeCount = payoutBookings.filter(p => p.type === 'active').length;
+        console.log(`💰 Weekly payout: Transferred $${hostPayoutAmount.toFixed(2)} to host ${host.firstName} ${host.lastName} (${completedCount} completed, ${activeCount} active)`);
 
         // Send payout notification email
         sendPayoutNotificationEmail(host, {
-          totalAmount,
-          bookingCount: eligibleBookings.length,
+          totalAmount: hostPayoutAmount,
+          bookingCount: payoutBookings.length,
           transferId: transfer.id,
-          bookings: eligibleBookings.map(b => ({
-            reservationId: b.reservationId,
-            vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
-            amount: b.hostEarnings
-          }))
+          bookings: payoutBookings.map(p => {
+            const v = p.booking.vehicle;
+            const label = p.type === 'active'
+              ? `${p.daysPaid} day(s) served`
+              : 'Final payout';
+            return {
+              reservationId: p.booking.reservationId,
+              vehicle: v ? `${v.year} ${v.make} ${v.model}` : 'Vehicle',
+              amount: p.amount,
+              note: label
+            };
+          })
         }).catch(err => console.error(`📧 Weekly payout email failed for host ${host._id}:`, err.message));
 
       } catch (hostErr) {

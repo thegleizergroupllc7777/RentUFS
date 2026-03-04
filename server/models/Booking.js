@@ -107,7 +107,7 @@ const bookingSchema = new mongoose.Schema({
   // Payout tracking for host earnings via Stripe Connect
   payoutStatus: {
     type: String,
-    enum: ['pending', 'eligible', 'scheduled', 'paid', 'failed'],
+    enum: ['pending', 'eligible', 'scheduled', 'paid', 'failed', 'partial'],
     default: 'pending'
   },
   payoutId: {
@@ -123,6 +123,19 @@ const bookingSchema = new mongoose.Schema({
     default: 0
   },
   payoutEligibleDate: {
+    type: Date,
+    default: null
+  },
+  // Partial payout tracking for active bookings (paid weekly for days served)
+  partialPayoutDaysPaid: {
+    type: Number,
+    default: 0
+  },
+  partialPayoutTotal: {
+    type: Number,
+    default: 0
+  },
+  lastPartialPayoutDate: {
     type: Date,
     default: null
   },
