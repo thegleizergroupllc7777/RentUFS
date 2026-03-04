@@ -200,6 +200,7 @@ const DriverProfile = () => {
 
   // Integrations state
   const [tollspotActive, setTollspotActive] = useState(false);
+  const [tollspotPending, setTollspotPending] = useState(false);
   const [tollspotConnectedAt, setTollspotConnectedAt] = useState(null);
   const [tollspotLoading, setTollspotLoading] = useState(false);
 
@@ -260,26 +261,49 @@ const DriverProfile = () => {
   }, [activeTab, isHost]);
 
   const handleTollspotToggle = async () => {
-    const newState = !tollspotActive;
-    setTollspotLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.put(`${API_URL}/api/users/integrations/tollspot`, {
-        active: newState
-      }, { headers: { Authorization: `Bearer ${token}` } });
-
-      setTollspotActive(res.data.active);
-      setTollspotConnectedAt(res.data.connectedAt);
-
-      // On activation, open TollSpot registration in new tab
-      if (newState && user?._id) {
+    if (tollspotActive) {
+      // Deactivating — save to backend
+      setTollspotLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.put(`${API_URL}/api/users/integrations/tollspot`, {
+          active: false
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        setTollspotActive(res.data.active);
+        setTollspotConnectedAt(res.data.connectedAt);
+        setTollspotPending(false);
+      } catch (err) {
+        console.error('❌ Error toggling TollSpot:', err);
+      } finally {
+        setTollspotLoading(false);
+      }
+    } else if (tollspotPending) {
+      // Already pending — toggle off the pending state
+      setTollspotPending(false);
+    } else {
+      // Activating — open TollSpot but don't mark as connected yet
+      setTollspotPending(true);
+      if (user?._id) {
         window.open(
           `http://app3052.tollspot.app/?partnerId=public_5dee9706-bd2a-4ff8-8181-8973761bfb06&hostId=${user._id}`,
           '_blank'
         );
       }
+    }
+  };
+
+  const handleTollspotConfirm = async () => {
+    setTollspotLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`${API_URL}/api/users/integrations/tollspot`, {
+        active: true
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setTollspotActive(res.data.active);
+      setTollspotConnectedAt(res.data.connectedAt);
+      setTollspotPending(false);
     } catch (err) {
-      console.error('❌ Error toggling TollSpot:', err);
+      console.error('❌ Error confirming TollSpot:', err);
     } finally {
       setTollspotLoading(false);
     }
@@ -2368,7 +2392,7 @@ const DriverProfile = () => {
                   {/* TollSpot Integration Card */}
                   <div style={{
                     background: '#111',
-                    border: tollspotActive ? '1px solid #10b981' : '1px solid #333',
+                    border: tollspotActive ? '1px solid #10b981' : tollspotPending ? '1px solid #f59e0b' : '1px solid #333',
                     borderRadius: '0.75rem',
                     padding: '1.5rem',
                     transition: 'border-color 0.2s'
@@ -2389,6 +2413,18 @@ const DriverProfile = () => {
                               letterSpacing: '0.5px'
                             }}>Connected</span>
                           )}
+                          {tollspotPending && !tollspotActive && (
+                            <span style={{
+                              background: 'rgba(245,158,11,0.15)',
+                              color: '#f59e0b',
+                              fontSize: '0.7rem',
+                              fontWeight: '600',
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}>Pending Setup</span>
+                          )}
                         </div>
                         <p style={{ color: '#9ca3af', margin: '0 0 0.75rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
                           Automated toll management for your fleet. TollSpot tracks and processes toll charges for your rental vehicles so you don't have to.
@@ -2397,6 +2433,30 @@ const DriverProfile = () => {
                           <p style={{ color: '#6b7280', margin: 0, fontSize: '0.8rem' }}>
                             Connected on {new Date(tollspotConnectedAt).toLocaleDateString()}
                           </p>
+                        )}
+                        {tollspotPending && !tollspotActive && (
+                          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <button
+                              onClick={handleTollspotConfirm}
+                              disabled={tollspotLoading}
+                              style={{
+                                background: '#10b981',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '0.375rem',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                cursor: tollspotLoading ? 'wait' : 'pointer',
+                                opacity: tollspotLoading ? 0.6 : 1
+                              }}
+                            >
+                              Confirm Connection
+                            </button>
+                            <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>
+                              Complete setup on TollSpot, then confirm here
+                            </span>
+                          </div>
                         )}
                       </div>
 
@@ -2410,19 +2470,19 @@ const DriverProfile = () => {
                           height: '28px',
                           borderRadius: '14px',
                           border: 'none',
-                          background: tollspotActive ? '#10b981' : '#333',
+                          background: tollspotActive ? '#10b981' : tollspotPending ? '#f59e0b' : '#333',
                           cursor: tollspotLoading ? 'wait' : 'pointer',
                           transition: 'background 0.2s',
                           flexShrink: 0,
                           marginTop: '2px',
                           opacity: tollspotLoading ? 0.6 : 1
                         }}
-                        aria-label={tollspotActive ? 'Deactivate TollSpot' : 'Activate TollSpot'}
+                        aria-label={tollspotActive ? 'Deactivate TollSpot' : tollspotPending ? 'Cancel TollSpot setup' : 'Activate TollSpot'}
                       >
                         <span style={{
                           position: 'absolute',
                           top: '3px',
-                          left: tollspotActive ? '25px' : '3px',
+                          left: (tollspotActive || tollspotPending) ? '25px' : '3px',
                           width: '22px',
                           height: '22px',
                           borderRadius: '50%',
