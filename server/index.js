@@ -73,6 +73,9 @@ if (!process.env.TOLLSPOT_API_KEY) {
 } else {
   console.log('🛣️ TollSpot: API key configured, base URL:', process.env.TOLLSPOT_BASE_URL || 'https://api.tollspot.com');
 }
+if (!process.env.TOLLSPOT_WEBHOOK_SECRET) {
+  console.warn('⚠️  TOLLSPOT_WEBHOOK_SECRET not set — TollSpot inbound endpoints (reservations/charges) disabled');
+}
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs', {
