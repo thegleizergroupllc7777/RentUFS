@@ -1,7 +1,8 @@
 const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
-const { sendReturnReminderEmail, sendRegistrationExpirationReminder } = require('./emailService');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
+const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendPayoutNotificationEmail } = require('./emailService');
 const { sendOverdueReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
@@ -240,11 +241,192 @@ const checkAndSettlePostTripTolls = async () => {
   }
 };
 
+// Calculate per-day host earnings for a booking
+const calculateDailyHostEarnings = (booking) => {
+  const totalDays = booking.totalDays || 1;
+  const correctHostFee = (booking.hostPlatformFeePerDay || 1.50) * totalDays;
+  const rentalSubtotal = (booking.pricePerDay || 0) * totalDays;
+  const hostProcessingFee = Number(booking.hostProcessingFee) || 0;
+  const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+  return totalEarnings / totalDays;
+};
+
+// Automated weekly payout: transfer host earnings for both completed and active bookings
+const processWeeklyPayouts = async () => {
+  try {
+    // Find all hosts with Stripe Connect accounts and payouts enabled
+    const hosts = await User.find({
+      stripeConnectAccountId: { $exists: true, $ne: null },
+      stripeConnectPayoutsEnabled: true,
+      userType: { $in: ['host', 'both'] }
+    });
+
+    if (hosts.length === 0) {
+      console.log('💰 Weekly payouts: No eligible hosts found');
+      return { success: true, hostsProcessed: 0 };
+    }
+
+    let hostsProcessed = 0;
+    let totalTransferred = 0;
+    const now = new Date();
+
+    for (const host of hosts) {
+      try {
+        let hostPayoutAmount = 0;
+        const payoutBookings = []; // For email breakdown
+
+        // ── 1. Completed bookings: pay remaining balance ──
+        const completedBookings = await Booking.find({
+          host: host._id,
+          status: 'completed',
+          paymentStatus: 'paid',
+          payoutStatus: { $in: ['pending', 'eligible', 'partial'] }
+        }).populate('vehicle', 'make model year');
+
+        for (const b of completedBookings) {
+          const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+          const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
+          const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+          const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+          const alreadyPaid = b.partialPayoutTotal || 0;
+          const remaining = Math.max(0, totalEarnings - alreadyPaid);
+
+          if (remaining <= 0) continue;
+
+          hostPayoutAmount += remaining;
+          payoutBookings.push({
+            booking: b,
+            amount: remaining,
+            type: 'completed',
+            daysPaid: b.totalDays - (b.partialPayoutDaysPaid || 0)
+          });
+        }
+
+        // ── 2. Active bookings: pay for days served since last partial payout ──
+        const activeBookings = await Booking.find({
+          host: host._id,
+          status: 'active',
+          paymentStatus: 'paid'
+        }).populate('vehicle', 'make model year');
+
+        for (const b of activeBookings) {
+          const startDate = new Date(b.startDate);
+          const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+          const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
+          const newDaysToPayFor = Math.max(0, daysSinceStart - daysAlreadyPaid);
+
+          if (newDaysToPayFor <= 0) continue;
+
+          const dailyEarnings = calculateDailyHostEarnings(b);
+          const partialAmount = parseFloat((dailyEarnings * newDaysToPayFor).toFixed(2));
+
+          if (partialAmount <= 0) continue;
+
+          hostPayoutAmount += partialAmount;
+          payoutBookings.push({
+            booking: b,
+            amount: partialAmount,
+            type: 'active',
+            daysPaid: newDaysToPayFor
+          });
+        }
+
+        if (hostPayoutAmount <= 0 || payoutBookings.length === 0) continue;
+
+        hostPayoutAmount = parseFloat(hostPayoutAmount.toFixed(2));
+
+        // Create Stripe transfer to host's Connect account
+        const transfer = await stripe.transfers.create({
+          amount: Math.round(hostPayoutAmount * 100),
+          currency: 'usd',
+          destination: host.stripeConnectAccountId,
+          description: `Weekly payout for ${payoutBookings.length} booking(s)`,
+          metadata: {
+            hostId: host._id.toString(),
+            bookingCount: payoutBookings.length.toString(),
+            bookingIds: payoutBookings.map(p => p.booking._id.toString()).join(',')
+          }
+        });
+
+        // Update each booking's payout tracking
+        for (const p of payoutBookings) {
+          const b = p.booking;
+
+          if (p.type === 'completed') {
+            // Completed: mark fully paid
+            await Booking.findByIdAndUpdate(b._id, {
+              payoutStatus: 'paid',
+              payoutId: transfer.id,
+              payoutDate: now,
+              payoutAmount: (b.partialPayoutTotal || 0) + p.amount,
+              partialPayoutDaysPaid: b.totalDays,
+              partialPayoutTotal: (b.partialPayoutTotal || 0) + p.amount,
+              lastPartialPayoutDate: now
+            });
+          } else {
+            // Active: update partial payout tracking
+            const newDaysPaid = (b.partialPayoutDaysPaid || 0) + p.daysPaid;
+            const newPartialTotal = (b.partialPayoutTotal || 0) + p.amount;
+            await Booking.findByIdAndUpdate(b._id, {
+              payoutStatus: 'partial',
+              payoutId: transfer.id,
+              payoutDate: now,
+              payoutAmount: newPartialTotal,
+              partialPayoutDaysPaid: newDaysPaid,
+              partialPayoutTotal: newPartialTotal,
+              lastPartialPayoutDate: now
+            });
+          }
+        }
+
+        hostsProcessed++;
+        totalTransferred += hostPayoutAmount;
+
+        const completedCount = payoutBookings.filter(p => p.type === 'completed').length;
+        const activeCount = payoutBookings.filter(p => p.type === 'active').length;
+        console.log(`💰 Weekly payout: Transferred $${hostPayoutAmount.toFixed(2)} to host ${host.firstName} ${host.lastName} (${completedCount} completed, ${activeCount} active)`);
+
+        // Send payout notification email
+        sendPayoutNotificationEmail(host, {
+          totalAmount: hostPayoutAmount,
+          bookingCount: payoutBookings.length,
+          transferId: transfer.id,
+          bookings: payoutBookings.map(p => {
+            const v = p.booking.vehicle;
+            const label = p.type === 'active'
+              ? `${p.daysPaid} day(s) served`
+              : 'Final payout';
+            return {
+              reservationId: p.booking.reservationId,
+              vehicle: v ? `${v.year} ${v.make} ${v.model}` : 'Vehicle',
+              amount: p.amount,
+              note: label
+            };
+          })
+        }).catch(err => console.error(`📧 Weekly payout email failed for host ${host._id}:`, err.message));
+
+      } catch (hostErr) {
+        console.error(`💰 Weekly payout error for host ${host._id}:`, hostErr.message);
+      }
+    }
+
+    if (hostsProcessed > 0) {
+      console.log(`💰 Weekly payouts complete: ${hostsProcessed} host(s), $${totalTransferred.toFixed(2)} total`);
+    }
+
+    return { success: true, hostsProcessed, totalTransferred };
+  } catch (error) {
+    console.error('💰 Error in weekly payout scheduler:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Start the scheduler
 let schedulerInterval = null;
 let overdueInterval = null;
 let registrationCheckInterval = null;
 let tollSettlementInterval = null;
+let weeklyPayoutInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run email reminders immediately on startup
@@ -281,6 +463,29 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   }, 2 * 60 * 1000);
   console.log('⏱️  Post-trip toll settlement scheduler running every 6 hours');
 
+  // Weekly automated payouts: transfer eligible earnings to all hosts every Monday
+  // Calculate ms until next Monday at 6:00 AM EST
+  const scheduleWeeklyPayout = () => {
+    const now = new Date();
+    const nextMonday = new Date(now);
+    const currentDay = now.getUTCDay(); // 0=Sun, 1=Mon
+    const daysUntilMonday = currentDay === 0 ? 1 : currentDay === 1 ? 7 : 8 - currentDay;
+    nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday);
+    nextMonday.setUTCHours(11, 0, 0, 0); // 11:00 UTC = 6:00 AM EST
+
+    const msUntilMonday = nextMonday.getTime() - now.getTime();
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
+    console.log(`🚀 Weekly payout scheduler: next run ${nextMonday.toISOString()}`);
+
+    setTimeout(() => {
+      processWeeklyPayouts();
+      weeklyPayoutInterval = setInterval(processWeeklyPayouts, oneWeekMs);
+    }, msUntilMonday);
+  };
+  scheduleWeeklyPayout();
+  console.log('⏱️  Weekly payout scheduler running every Monday at 6:00 AM EST');
+
   return schedulerInterval;
 };
 
@@ -305,6 +510,11 @@ const stopReturnReminderScheduler = () => {
     tollSettlementInterval = null;
     console.log('🛑 Post-trip toll settlement scheduler stopped');
   }
+  if (weeklyPayoutInterval) {
+    clearInterval(weeklyPayoutInterval);
+    weeklyPayoutInterval = null;
+    console.log('🛑 Weekly payout scheduler stopped');
+  }
 };
 
 module.exports = {
@@ -312,6 +522,7 @@ module.exports = {
   checkAndSendOverdueSMS,
   checkRegistrationExpirations,
   checkAndSettlePostTripTolls,
+  processWeeklyPayouts,
   startReturnReminderScheduler,
   stopReturnReminderScheduler
 };

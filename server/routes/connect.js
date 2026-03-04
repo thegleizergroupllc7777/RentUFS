@@ -365,9 +365,17 @@ router.post('/transfer-earnings', auth, async (req, res) => {
       booking.hostEarnings = correctEarnings;
     }
 
+    // Account for any partial payouts already made during the active period
+    const alreadyPaid = booking.partialPayoutTotal || 0;
+    const remainingEarnings = Math.max(0, correctEarnings - alreadyPaid);
+
+    if (remainingEarnings <= 0) {
+      return res.status(400).json({ message: 'All earnings have already been paid out via weekly partial payouts' });
+    }
+
     // Create transfer to host's Connect account
     const transfer = await stripe.transfers.create({
-      amount: Math.round(correctEarnings * 100), // Convert to cents
+      amount: Math.round(remainingEarnings * 100), // Convert to cents
       currency: 'usd',
       destination: host.stripeConnectAccountId,
       description: `Payout for ${booking.reservationId} - ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}`,
@@ -383,27 +391,31 @@ router.post('/transfer-earnings', auth, async (req, res) => {
     booking.payoutId = transfer.id;
     booking.payoutDate = new Date();
     booking.payoutAmount = correctEarnings;
+    booking.partialPayoutDaysPaid = booking.totalDays;
+    booking.partialPayoutTotal = correctEarnings;
+    booking.lastPartialPayoutDate = new Date();
     await booking.save();
 
-    console.log(`Transferred $${correctEarnings} to host ${host._id} for booking ${booking.reservationId}`);
+    console.log(`Transferred $${remainingEarnings} to host ${host._id} for booking ${booking.reservationId}${alreadyPaid > 0 ? ` ($${alreadyPaid} already paid via partial payouts)` : ''}`);
 
     // Send payout notification email (fire-and-forget)
     sendPayoutNotificationEmail(host, {
-      totalAmount: correctEarnings,
+      totalAmount: remainingEarnings,
       bookingCount: 1,
       transferId: transfer.id,
       bookings: [{
         reservationId: booking.reservationId,
         vehicle: booking.vehicle ? `${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}` : 'Vehicle',
-        amount: correctEarnings
+        amount: remainingEarnings,
+        note: alreadyPaid > 0 ? `Final payout ($${alreadyPaid.toFixed(2)} paid earlier)` : 'Full payout'
       }]
     }).catch(err => console.error('📧 Payout email failed:', err.message));
 
     res.json({
       success: true,
       transferId: transfer.id,
-      amount: booking.hostEarnings,
-      message: `Successfully transferred $${booking.hostEarnings.toFixed(2)} to your account`
+      amount: remainingEarnings,
+      message: `Successfully transferred $${remainingEarnings.toFixed(2)} to your account`
     });
   } catch (error) {
     console.error('Error transferring earnings:', error);
@@ -420,81 +432,78 @@ router.post('/transfer-all-eligible', auth, async (req, res) => {
       return res.status(400).json({ message: 'Payout account not set up or not enabled' });
     }
 
-    // Find all eligible bookings (completed and paid)
+    // Find all eligible bookings (completed and paid, not fully paid out)
     const eligibleBookings = await Booking.find({
       host: user._id,
       status: 'completed',
       paymentStatus: 'paid',
-      payoutStatus: { $in: ['pending', 'eligible'] },
-      hostEarnings: { $gt: 0 }
+      payoutStatus: { $in: ['pending', 'eligible', 'partial'] }
     }).populate('vehicle', 'make model year');
 
     if (eligibleBookings.length === 0) {
       return res.json({ success: true, message: 'No eligible payouts found', transferred: 0 });
     }
 
-    // Recalculate correct earnings for each booking (fixes legacy bookings with flat $1.50 fee)
+    // Recalculate correct earnings and remaining amounts for each booking
+    const payoutItems = [];
     for (const b of eligibleBookings) {
       const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
       const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
       const hostProcessingFee = Number(b.hostProcessingFee) || 0;
       const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
-      if (b.hostPlatformFee !== correctHostFee || b.hostEarnings !== correctEarnings) {
-        console.log(`💰 Correcting host fee for ${b.reservationId}: $${b.hostPlatformFee} -> $${correctHostFee}, earnings: $${b.hostEarnings} -> $${correctEarnings}`);
-        b.hostPlatformFee = correctHostFee;
-        b.hostEarnings = correctEarnings;
+      const alreadyPaid = b.partialPayoutTotal || 0;
+      const remaining = Math.max(0, correctEarnings - alreadyPaid);
+      if (remaining > 0) {
+        payoutItems.push({ booking: b, totalEarnings: correctEarnings, alreadyPaid, remaining });
       }
     }
 
-    // Calculate total
-    const totalAmount = eligibleBookings.reduce((sum, b) => sum + b.hostEarnings, 0);
+    if (payoutItems.length === 0) {
+      return res.json({ success: true, message: 'All earnings already paid out via weekly payouts', transferred: 0 });
+    }
 
-    // Create a single transfer for all eligible earnings
+    // Calculate total remaining
+    const totalAmount = parseFloat(payoutItems.reduce((sum, p) => sum + p.remaining, 0).toFixed(2));
+
+    // Create a single transfer for all remaining earnings
     const transfer = await stripe.transfers.create({
       amount: Math.round(totalAmount * 100),
       currency: 'usd',
       destination: user.stripeConnectAccountId,
-      description: `Batch payout for ${eligibleBookings.length} bookings`,
+      description: `Batch payout for ${payoutItems.length} bookings`,
       metadata: {
         hostId: user._id.toString(),
-        bookingCount: eligibleBookings.length.toString(),
-        bookingIds: eligibleBookings.map(b => b._id.toString()).join(',')
+        bookingCount: payoutItems.length.toString(),
+        bookingIds: payoutItems.map(p => p.booking._id.toString()).join(',')
       }
     });
 
-    // Update all bookings
+    // Update each booking individually
     const now = new Date();
-    await Booking.updateMany(
-      { _id: { $in: eligibleBookings.map(b => b._id) } },
-      {
+    for (const p of payoutItems) {
+      await Booking.findByIdAndUpdate(p.booking._id, {
         payoutStatus: 'paid',
         payoutId: transfer.id,
         payoutDate: now,
-        $set: { payoutAmount: '$hostEarnings' }
-      }
-    );
-
-    // Update each booking individually for payoutAmount (can't use $set with field reference in updateMany)
-    for (const booking of eligibleBookings) {
-      await Booking.findByIdAndUpdate(booking._id, {
-        payoutStatus: 'paid',
-        payoutId: transfer.id,
-        payoutDate: now,
-        payoutAmount: booking.hostEarnings
+        payoutAmount: p.totalEarnings,
+        partialPayoutDaysPaid: p.booking.totalDays,
+        partialPayoutTotal: p.totalEarnings,
+        lastPartialPayoutDate: now
       });
     }
 
-    console.log(`Batch transferred $${totalAmount} to host ${user._id} for ${eligibleBookings.length} bookings`);
+    console.log(`Batch transferred $${totalAmount} to host ${user._id} for ${payoutItems.length} bookings`);
 
     // Send payout notification email (fire-and-forget)
     sendPayoutNotificationEmail(user, {
       totalAmount,
-      bookingCount: eligibleBookings.length,
+      bookingCount: payoutItems.length,
       transferId: transfer.id,
-      bookings: eligibleBookings.map(b => ({
-        reservationId: b.reservationId,
-        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
-        amount: b.hostEarnings
+      bookings: payoutItems.map(p => ({
+        reservationId: p.booking.reservationId,
+        vehicle: p.booking.vehicle ? `${p.booking.vehicle.year} ${p.booking.vehicle.make} ${p.booking.vehicle.model}` : 'Vehicle',
+        amount: p.remaining,
+        note: p.alreadyPaid > 0 ? `Final payout ($${p.alreadyPaid.toFixed(2)} paid earlier)` : 'Full payout'
       }))
     }).catch(err => console.error('📧 Payout email failed:', err.message));
 
@@ -502,8 +511,8 @@ router.post('/transfer-all-eligible', auth, async (req, res) => {
       success: true,
       transferId: transfer.id,
       amount: totalAmount,
-      bookingCount: eligibleBookings.length,
-      message: `Successfully transferred $${totalAmount.toFixed(2)} for ${eligibleBookings.length} booking(s)`
+      bookingCount: payoutItems.length,
+      message: `Successfully transferred $${totalAmount.toFixed(2)} for ${payoutItems.length} booking(s)`
     });
   } catch (error) {
     console.error('Error batch transferring:', error);
