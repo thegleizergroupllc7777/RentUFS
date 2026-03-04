@@ -3,6 +3,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_
 const auth = require('../middleware/auth');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
+const { sendPayoutNotificationEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -386,6 +387,18 @@ router.post('/transfer-earnings', auth, async (req, res) => {
 
     console.log(`Transferred $${correctEarnings} to host ${host._id} for booking ${booking.reservationId}`);
 
+    // Send payout notification email (fire-and-forget)
+    sendPayoutNotificationEmail(host, {
+      totalAmount: correctEarnings,
+      bookingCount: 1,
+      transferId: transfer.id,
+      bookings: [{
+        reservationId: booking.reservationId,
+        vehicle: booking.vehicle ? `${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}` : 'Vehicle',
+        amount: correctEarnings
+      }]
+    }).catch(err => console.error('📧 Payout email failed:', err.message));
+
     res.json({
       success: true,
       transferId: transfer.id,
@@ -473,6 +486,18 @@ router.post('/transfer-all-eligible', auth, async (req, res) => {
 
     console.log(`Batch transferred $${totalAmount} to host ${user._id} for ${eligibleBookings.length} bookings`);
 
+    // Send payout notification email (fire-and-forget)
+    sendPayoutNotificationEmail(user, {
+      totalAmount,
+      bookingCount: eligibleBookings.length,
+      transferId: transfer.id,
+      bookings: eligibleBookings.map(b => ({
+        reservationId: b.reservationId,
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
+        amount: b.hostEarnings
+      }))
+    }).catch(err => console.error('📧 Payout email failed:', err.message));
+
     res.json({
       success: true,
       transferId: transfer.id,
@@ -545,7 +570,21 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     }
     case 'payout.paid': {
       const payout = event.data.object;
-      console.log(`Payout ${payout.id} completed: $${payout.amount / 100}`);
+      const payoutAmount = payout.amount / 100;
+      console.log(`Payout ${payout.id} completed: $${payoutAmount}`);
+
+      // Notify host that funds are arriving in their bank
+      if (event.account) {
+        const payoutHost = await User.findOne({ stripeConnectAccountId: event.account });
+        if (payoutHost) {
+          sendPayoutNotificationEmail(payoutHost, {
+            totalAmount: payoutAmount,
+            bookingCount: 0, // Stripe-level payout, no specific booking count
+            transferId: payout.id,
+            bookings: []
+          }).catch(err => console.error('📧 Payout.paid email failed:', err.message));
+        }
+      }
       break;
     }
     case 'payout.failed': {

@@ -1,7 +1,10 @@
 const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
+const User = require('../models/User');
 const { sendReturnReminderEmail, sendRegistrationExpirationReminder } = require('./emailService');
 const { sendOverdueReminderSMS } = require('./smsService');
+const { isConfigured: tollspotConfigured } = require('./tollspot');
+const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
 const checkAndSendReturnReminders = async () => {
@@ -177,10 +180,71 @@ const checkRegistrationExpirations = async () => {
   }
 };
 
+// Check completed bookings (within 60 days) for new unsettled toll charges and auto-charge driver
+const checkAndSettlePostTripTolls = async () => {
+  try {
+    if (!tollspotConfigured()) return { success: true, settled: 0 };
+
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+
+    // Find completed bookings with toll monitoring that might have unsettled tolls
+    const completedBookings = await Booking.find({
+      status: 'completed',
+      paymentStatus: 'paid',
+      'tollspot.monitorStarted': true,
+      endDate: { $gte: sixtyDaysAgo }
+    })
+      .populate('vehicle', 'licensePlate location')
+      .populate('host', 'firstName lastName email stripeConnectAccountId stripeConnectPayoutsEnabled');
+
+    let settled = 0;
+
+    for (const booking of completedBookings) {
+      try {
+        const tollInfo = await getOutstandingTolls(booking, booking.vehicle);
+        if (tollInfo.count === 0) continue;
+
+        // Load driver with payment methods
+        const driver = await User.findById(booking.driver);
+        if (!driver) continue;
+
+        console.log(`🛣️ Post-trip: ${tollInfo.count} new toll(s) ($${tollInfo.driverTotal}) for completed booking ${booking.reservationId || booking._id}`);
+
+        const chargeResult = await chargeDriverForTolls(booking, driver, tollInfo, 'post_trip');
+        if (chargeResult.success) {
+          await recordTollSettlement(Booking, booking._id, tollInfo, 'post_trip', chargeResult.paymentIntentId, null);
+
+          // Transfer toll reimbursement to host
+          if (tollInfo.originalAmount > 0 && booking.host?.stripeConnectAccountId) {
+            await transferTollsToHost(booking, booking.host, tollInfo);
+          }
+
+          settled++;
+          console.log(`🛣️ Post-trip: Settled ${tollInfo.count} toll(s) for booking ${booking.reservationId || booking._id}`);
+        } else {
+          console.error(`🛣️ Post-trip: Failed to charge driver for booking ${booking.reservationId || booking._id}: ${chargeResult.error}`);
+        }
+      } catch (bookingErr) {
+        console.error(`🛣️ Post-trip: Error processing booking ${booking._id}:`, bookingErr.message);
+      }
+    }
+
+    if (settled > 0) {
+      console.log(`🛣️ Post-trip toll settlement: Settled tolls on ${settled} booking(s)`);
+    }
+
+    return { success: true, settled };
+  } catch (error) {
+    console.error('🛣️ Error in post-trip toll settlement scheduler:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Start the scheduler
 let schedulerInterval = null;
 let overdueInterval = null;
 let registrationCheckInterval = null;
+let tollSettlementInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run email reminders immediately on startup
@@ -207,6 +271,16 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   registrationCheckInterval = setInterval(checkRegistrationExpirations, oneDayMs);
   console.log('⏱️  Registration expiration scheduler running every 24 hours');
 
+  // Post-trip toll settlement: check every 6 hours for new delayed toll charges
+  const sixHoursMs = 6 * 60 * 60 * 1000;
+  console.log('🚀 Starting post-trip toll settlement scheduler...');
+  // Delay first run by 2 minutes to let server fully start
+  setTimeout(() => {
+    checkAndSettlePostTripTolls();
+    tollSettlementInterval = setInterval(checkAndSettlePostTripTolls, sixHoursMs);
+  }, 2 * 60 * 1000);
+  console.log('⏱️  Post-trip toll settlement scheduler running every 6 hours');
+
   return schedulerInterval;
 };
 
@@ -226,12 +300,18 @@ const stopReturnReminderScheduler = () => {
     registrationCheckInterval = null;
     console.log('🛑 Registration expiration scheduler stopped');
   }
+  if (tollSettlementInterval) {
+    clearInterval(tollSettlementInterval);
+    tollSettlementInterval = null;
+    console.log('🛑 Post-trip toll settlement scheduler stopped');
+  }
 };
 
 module.exports = {
   checkAndSendReturnReminders,
   checkAndSendOverdueSMS,
   checkRegistrationExpirations,
+  checkAndSettlePostTripTolls,
   startReturnReminderScheduler,
   stopReturnReminderScheduler
 };

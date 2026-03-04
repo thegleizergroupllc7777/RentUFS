@@ -1441,21 +1441,33 @@ const MyBookings = () => {
             ) : (
               <>
                 {stripePromise && extensionDetails && (
-                  <Elements
-                    stripe={stripePromise}
-                    options={{
-                      clientSecret: extensionClientSecret,
-                      appearance: { theme: 'stripe' }
-                    }}
-                  >
-                    <ExtensionPaymentForm
-                      bookingId={extendModal.booking._id}
-                      extensionDays={extensionDays}
-                      extensionCost={extensionDetails.extensionCost}
-                      onSuccess={handleExtensionSuccess}
-                      onCancel={closeExtendModal}
-                    />
-                  </Elements>
+                  <>
+                    {/* Show toll charges notice if tolls are included */}
+                    {extensionDetails.tollCharges > 0 && (
+                      <div style={{
+                        padding: '0.75rem 1rem', borderRadius: '0.5rem',
+                        background: '#fef3c7', border: '1px solid #fcd34d',
+                        marginBottom: '1rem', fontSize: '0.875rem', color: '#92400e'
+                      }}>
+                        <strong>Outstanding Tolls:</strong> {extensionDetails.tollCount} toll{extensionDetails.tollCount !== 1 ? 's' : ''} (${extensionDetails.tollCharges.toFixed(2)}) included in this payment.
+                      </div>
+                    )}
+                    <Elements
+                      stripe={stripePromise}
+                      options={{
+                        clientSecret: extensionClientSecret,
+                        appearance: { theme: 'stripe' }
+                      }}
+                    >
+                      <ExtensionPaymentForm
+                        bookingId={extendModal.booking._id}
+                        extensionDays={extensionDays}
+                        extensionCost={extensionDetails.extensionCost}
+                        onSuccess={handleExtensionSuccess}
+                        onCancel={closeExtendModal}
+                      />
+                    </Elements>
+                  </>
                 )}
               </>
             )}

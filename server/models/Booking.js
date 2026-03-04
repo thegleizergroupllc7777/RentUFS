@@ -274,8 +274,24 @@ const bookingSchema = new mongoose.Schema({
     originalTollAmount: { type: Number, default: 0 },    // Sum of original toll amounts (goes to host)
     platformTollFees: { type: Number, default: 0 },      // Sum of $0.25 fees (goes to platform)
     driverTollTotal: { type: Number, default: 0 },       // What driver pays (original + fees)
-    lastSyncedAt: { type: Date, default: null }           // Last time toll data was synced
+    lastSyncedAt: { type: Date, default: null },          // Last time toll data was synced
+    // Settlement tracking
+    settledTollCount: { type: Number, default: 0 },      // How many tolls have been charged to driver
+    settledAmount: { type: Number, default: 0 },          // Total charged to driver for tolls
+    settledToHost: { type: Number, default: 0 },          // Total transferred to host for tolls
+    lastSettledAt: { type: Date, default: null }
   },
+  // Individual toll settlement records
+  tollSettlements: [{
+    trigger: { type: String, enum: ['extension', 'return', 'post_trip'] },
+    tollCount: { type: Number },
+    chargeAmount: { type: Number },       // What driver was charged
+    hostAmount: { type: Number },          // What host received (original toll amounts)
+    platformFee: { type: Number },         // What platform kept ($0.25 × tollCount)
+    paymentIntentId: { type: String },
+    transferId: { type: String, default: null },
+    settledAt: { type: Date, default: Date.now }
+  }],
   // Track if return reminder email has been sent
   returnReminderSent: {
     type: Boolean,

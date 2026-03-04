@@ -10,6 +10,7 @@ const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS,
 const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = require('../utils/teqmobility');
 const { captureCardImage } = require('../utils/screenshotCard');
 const { isConfigured: tollspotConfigured, monitorCharges } = require('../utils/tollspot');
+const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('../utils/tollSettlement');
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { calculateProcessingFee } = require('../utils/stripeFee');
@@ -777,8 +778,17 @@ router.post('/:id/extend', auth, async (req, res) => {
     const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
     const extensionBaseTotal = rentalCost + extensionPlatformFee + extensionInsurance;
-    const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
-    const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
+
+    // Fetch outstanding toll charges — driver must settle before extending
+    let tollInfo = { count: 0, originalAmount: 0, platformFees: 0, driverTotal: 0 };
+    if (tollspotConfigured()) {
+      tollInfo = await getOutstandingTolls(booking, booking.vehicle);
+    }
+
+    // Include outstanding tolls in the extension total
+    const extensionPlusTolls = extensionBaseTotal + tollInfo.driverTotal;
+    const extensionProcessing = calculateProcessingFee(extensionPlusTolls);
+    const extensionCost = extensionPlusTolls + extensionProcessing.driverProcessingFee;
 
     res.json({
       bookingId: booking._id,
@@ -791,6 +801,8 @@ router.post('/:id/extend', auth, async (req, res) => {
         rental: rentalCost,
         platformFee: extensionPlatformFee,
         insurance: extensionInsurance,
+        tollCharges: tollInfo.driverTotal,
+        tollCount: tollInfo.count,
         processingFee: extensionProcessing.driverProcessingFee
       },
       vehicle: {
@@ -1057,7 +1069,7 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     const { photos, notes } = req.body;
     const booking = await Booking.findById(req.params.id)
       .populate('vehicle')
-      .populate('host', 'firstName lastName email');
+      .populate('host', 'firstName lastName email stripeConnectAccountId stripeConnectPayoutsEnabled');
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -1118,14 +1130,40 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     // Set vehicle back to available after trip completion
     await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true });
 
+    // Settle outstanding toll charges (fire-and-forget, don't block return)
+    let tollSettlement = null;
+    if (tollspotConfigured()) {
+      const driver = await User.findById(booking.driver);
+      const tollInfo = await getOutstandingTolls(booking, booking.vehicle);
+      if (tollInfo.count > 0 && driver) {
+        console.log(`🛣️ Return inspection: ${tollInfo.count} outstanding toll(s) totaling $${tollInfo.driverTotal} for booking ${booking._id}`);
+        const chargeResult = await chargeDriverForTolls(booking, driver, tollInfo, 'return');
+        if (chargeResult.success) {
+          tollSettlement = { tollCount: tollInfo.count, amount: tollInfo.driverTotal };
+          // Record settlement and transfer to host in background
+          recordTollSettlement(Booking, booking._id, tollInfo, 'return', chargeResult.paymentIntentId, null)
+            .then(() => {
+              if (tollInfo.originalAmount > 0 && booking.host?.stripeConnectAccountId) {
+                return transferTollsToHost(booking, booking.host, tollInfo);
+              }
+            })
+            .catch(err => console.error('🛣️ Return toll settlement recording failed:', err.message));
+        } else {
+          console.error(`🛣️ Return toll charge failed for booking ${booking._id}: ${chargeResult.error}`);
+          // Tolls not settled — will be picked up by post-trip scheduler
+        }
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Vehicle returned successfully! Thank you for renting with us!',
+      message: `Vehicle returned successfully!${tollSettlement ? ` ${tollSettlement.tollCount} toll(s) settled ($${tollSettlement.amount.toFixed(2)}).` : ''} Thank you for renting with us!`,
       booking: {
         _id: booking._id,
         status: booking.status,
         returnInspection: booking.returnInspection
-      }
+      },
+      tollSettlement
     });
   } catch (error) {
     console.error('Return inspection error:', error);

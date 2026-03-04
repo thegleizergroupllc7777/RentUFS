@@ -7,6 +7,8 @@ const User = require('../models/User');
 const { sendBookingConfirmationToDriver, sendBookingNotificationToHost } = require('../utils/emailService');
 const { sendNewBookingNotificationSMS, sendBookingConfirmedSMS } = require('../utils/smsService');
 const { calculateProcessingFee } = require('../utils/stripeFee');
+const { isConfigured: tollspotConfigured } = require('../utils/tollspot');
+const { getOutstandingTolls, recordTollSettlement, transferTollsToHost } = require('../utils/tollSettlement');
 
 const router = express.Router();
 
@@ -57,10 +59,12 @@ router.post('/create-payment-intent', auth, async (req, res) => {
     const customerId = await getOrCreateStripeCustomer(driver);
 
     // Build PaymentIntent params
+    // setup_future_usage saves the card for off-session charges (toll settlements, post-trip fees)
     const intentParams = {
       amount: Math.round(booking.totalPrice * 100), // Convert to cents
       currency: 'usd',
       customer: customerId,
+      setup_future_usage: 'off_session',
       metadata: {
         bookingId: bookingId.toString(),
         driverId: booking.driver._id.toString(),
@@ -306,8 +310,17 @@ router.post('/create-extension-payment', auth, async (req, res) => {
     const platformFee = extensionDays * platformFeePerDay;
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
     const extensionBaseTotal = rentalCost + platformFee + extensionInsurance;
-    const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
-    const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
+
+    // Fetch outstanding toll charges — included in extension payment
+    let tollInfo = { count: 0, originalAmount: 0, platformFees: 0, driverTotal: 0 };
+    if (tollspotConfigured()) {
+      tollInfo = await getOutstandingTolls(booking, booking.vehicle);
+    }
+
+    // Include outstanding tolls in extension total before calculating processing fee
+    const extensionPlusTolls = extensionBaseTotal + tollInfo.driverTotal;
+    const extensionProcessing = calculateProcessingFee(extensionPlusTolls);
+    const extensionCost = extensionPlusTolls + extensionProcessing.driverProcessingFee;
 
     // Calculate new end date
     const newEndDate = new Date(booking.endDate);
@@ -317,7 +330,7 @@ router.post('/create-extension-payment', auth, async (req, res) => {
     const driver = await User.findById(req.user._id);
     const customerId = await getOrCreateStripeCustomer(driver);
 
-    // Create a PaymentIntent for the extension
+    // Create a PaymentIntent for the extension (includes toll settlement)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(extensionCost * 100), // Convert to cents
       currency: 'usd',
@@ -335,8 +348,12 @@ router.post('/create-extension-payment', auth, async (req, res) => {
         platformFee: platformFee.toString(),
         driverProcessingFee: extensionProcessing.driverProcessingFee.toString(),
         hostProcessingFee: extensionProcessing.hostProcessingFee.toString(),
+        tollCharges: tollInfo.driverTotal.toString(),
+        tollCount: tollInfo.count.toString(),
+        tollOriginalAmount: tollInfo.originalAmount.toString(),
+        tollPlatformFee: tollInfo.platformFees.toString(),
       },
-      description: `Extension: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model} - ${extensionDays} additional day(s)`,
+      description: `Extension: ${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model} - ${extensionDays} additional day(s)${tollInfo.count > 0 ? ` + ${tollInfo.count} toll(s)` : ''}`,
     });
 
     res.json({
@@ -348,6 +365,8 @@ router.post('/create-extension-payment', auth, async (req, res) => {
         platformFeePerDay,
         platformFee,
         extensionInsurance,
+        tollCharges: tollInfo.driverTotal,
+        tollCount: tollInfo.count,
         driverProcessingFee: extensionProcessing.driverProcessingFee,
         extensionCost,
         pricePerDay: booking.pricePerDay,
@@ -382,12 +401,18 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
         return res.status(404).json({ message: 'Booking not found' });
       }
 
+      // Extract toll info from payment metadata (tolls were bundled into extension payment)
+      const tollCharges = parseFloat(paymentIntent.metadata.tollCharges || '0');
+      const tollCount = parseInt(paymentIntent.metadata.tollCount || '0');
+      const tollOriginalAmount = parseFloat(paymentIntent.metadata.tollOriginalAmount || '0');
+      const tollPlatformFee = parseFloat(paymentIntent.metadata.tollPlatformFee || '0');
+
       // Calculate new values with platform fee + insurance + processing fee
       const rentalCost = extensionDays * booking.pricePerDay;
       const platformFeePerDay = booking.platformFeePerDay || 1.50;
       const extensionPlatformFee = extensionDays * platformFeePerDay;
       const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
-      const extensionBaseTotal = rentalCost + extensionPlatformFee + extensionInsurance;
+      const extensionBaseTotal = rentalCost + extensionPlatformFee + extensionInsurance + tollCharges;
       const extensionProcessing = calculateProcessingFee(extensionBaseTotal);
       const extensionCost = extensionBaseTotal + extensionProcessing.driverProcessingFee;
       const newEndDate = new Date(booking.endDate);
@@ -410,8 +435,9 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       }
 
       // Update host earnings (rental minus host fee minus host processing fee goes to host)
-      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost - extensionHostFee - extensionProcessing.hostProcessingFee;
-      booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee + extensionInsurance;
+      // Toll original amount also goes to host (to reimburse their toll)
+      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost - extensionHostFee - extensionProcessing.hostProcessingFee + tollOriginalAmount;
+      booking.platformRevenue = (booking.platformRevenue || 0) + extensionPlatformFee + extensionHostFee + extensionInsurance + tollPlatformFee;
 
       // Track extension
       if (!booking.extensions) {
@@ -428,16 +454,36 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
 
       await booking.save();
 
+      // Record toll settlement if tolls were included (fire-and-forget)
+      if (tollCount > 0) {
+        const tollInfo = {
+          count: tollCount,
+          originalAmount: tollOriginalAmount,
+          platformFees: tollPlatformFee,
+          driverTotal: tollCharges,
+          allTollCount: tollCount + (booking.tollAccounting?.settledTollCount || 0)
+        };
+        recordTollSettlement(Booking, booking._id, tollInfo, 'extension', paymentIntentId, null)
+          .then(() => {
+            // Transfer toll reimbursement to host's Connect account
+            if (tollOriginalAmount > 0 && booking.host?.stripeConnectAccountId) {
+              return transferTollsToHost(booking, booking.host, tollInfo);
+            }
+          })
+          .catch(err => console.error('🛣️ Toll settlement recording failed (non-blocking):', err.message));
+      }
+
       res.json({
         success: true,
-        message: `Booking extended by ${extensionDays} day(s)!`,
+        message: `Booking extended by ${extensionDays} day(s)!${tollCount > 0 ? ` ${tollCount} toll(s) settled.` : ''}`,
         booking: {
           _id: booking._id,
           newEndDate: booking.endDate,
           totalDays: booking.totalDays,
           totalPrice: booking.totalPrice,
           extensionCost
-        }
+        },
+        tollSettlement: tollCount > 0 ? { tollCount, amount: tollCharges } : null
       });
     } else {
       res.status(400).json({

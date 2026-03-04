@@ -1458,6 +1458,131 @@ const sendPasswordResetEmail = async (user, resetToken) => {
   }
 };
 
+// Send payout notification email to host when earnings are transferred
+const sendPayoutNotificationEmail = async (host, payoutDetails) => {
+  try {
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Payout Notification Email to: ${host.email}`);
+      return { success: true, dev: true };
+    }
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const payoutDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Build booking breakdown rows for batch payouts
+    let bookingRows = '';
+    if (payoutDetails.bookings && payoutDetails.bookings.length > 0) {
+      bookingRows = payoutDetails.bookings.map(b => `
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-family: monospace; color: #10b981;">${b.reservationId || 'N/A'}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${b.vehicle || 'N/A'}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${b.amount.toFixed(2)}</td>
+        </tr>
+      `).join('');
+    }
+
+    const mailOptions = {
+      to: host.email,
+      subject: `Payout Sent - $${payoutDetails.totalAmount.toFixed(2)} on the Way!`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .payout-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .amount-display { font-size: 2rem; color: #10b981; font-weight: bold; text-align: center; padding: 15px 0; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .info-box { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Payout On The Way!</h1>
+              <p style="margin: 0; opacity: 0.9;">Your earnings have been transferred</p>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${host.firstName},</h2>
+              <p>Great news! Your earnings have been transferred to your connected payout account.</p>
+
+              <div class="payout-card">
+                <div class="amount-display">$${payoutDetails.totalAmount.toFixed(2)}</div>
+
+                <div class="detail-row">
+                  <span class="label">Date</span>
+                  <span class="value">${payoutDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Bookings</span>
+                  <span class="value">${payoutDetails.bookingCount} reservation${payoutDetails.bookingCount !== 1 ? 's' : ''}</span>
+                </div>
+                ${payoutDetails.transferId ? `
+                <div class="detail-row">
+                  <span class="label">Transfer ID</span>
+                  <span class="value" style="font-family: monospace; font-size: 0.85rem;">${payoutDetails.transferId}</span>
+                </div>
+                ` : ''}
+              </div>
+
+              ${bookingRows ? `
+              <h3 style="color: #374151; margin-bottom: 10px;">Booking Breakdown</h3>
+              <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 10px 12px; text-align: left; color: #6b7280; font-size: 0.85rem;">Reservation</th>
+                    <th style="padding: 10px 12px; text-align: left; color: #6b7280; font-size: 0.85rem;">Vehicle</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #6b7280; font-size: 0.85rem;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${bookingRows}
+                </tbody>
+              </table>
+              ` : ''}
+
+              <div class="info-box">
+                <h4 style="margin-top: 0; color: #059669;">When will I receive this?</h4>
+                <p style="margin: 5px 0;">Funds are transferred to your Stripe account immediately. From there, Stripe will deposit the funds to your bank account on your next weekly payout (every Monday). You can check your payout schedule in your Stripe dashboard.</p>
+              </div>
+
+              <center>
+                <a href="${clientUrl}/host/payouts" class="button">
+                  View Payout History
+                </a>
+              </center>
+            </div>
+
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log(`✅ Payout notification email sent to: ${host.email} ($${payoutDetails.totalAmount.toFixed(2)})`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending payout notification email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
@@ -1468,5 +1593,6 @@ module.exports = {
   sendBookingCancellationEmail,
   sendEmailVerificationCode,
   sendRegistrationExpirationReminder,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendPayoutNotificationEmail
 };
