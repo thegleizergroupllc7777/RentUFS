@@ -444,15 +444,16 @@ router.put('/driver-license', auth, async (req, res) => {
 
     // All user types can save license info (hosts need it for insurance integration)
 
+    const existing = user.driverLicense ? user.driverLicense.toObject() : {};
     user.driverLicense = {
-      ...user.driverLicense,
-      licenseNumber: licenseNumber || user.driverLicense?.licenseNumber,
-      state: state || user.driverLicense?.state,
-      expirationDate: expirationDate ? new Date(expirationDate) : user.driverLicense?.expirationDate,
-      licenseImage: licenseImage !== undefined ? licenseImage : user.driverLicense?.licenseImage,
-      verificationSelfie: verificationSelfie !== undefined ? verificationSelfie : user.driverLicense?.verificationSelfie,
-      faceMatchScore: typeof faceMatchScore === 'number' ? faceMatchScore : user.driverLicense?.faceMatchScore,
-      faceVerified: typeof faceVerified === 'boolean' ? faceVerified : user.driverLicense?.faceVerified
+      ...existing,
+      licenseNumber: licenseNumber || existing.licenseNumber,
+      state: state || existing.state,
+      expirationDate: expirationDate ? new Date(expirationDate) : existing.expirationDate,
+      licenseImage: licenseImage !== undefined ? licenseImage : existing.licenseImage,
+      verificationSelfie: verificationSelfie !== undefined ? verificationSelfie : existing.verificationSelfie,
+      faceMatchScore: typeof faceMatchScore === 'number' ? faceMatchScore : existing.faceMatchScore,
+      faceVerified: typeof faceVerified === 'boolean' ? faceVerified : existing.faceVerified
     };
 
     // Auto-verify when all required license documents and info are provided

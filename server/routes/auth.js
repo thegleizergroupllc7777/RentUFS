@@ -100,7 +100,7 @@ router.post('/register', async (req, res) => {
 
     // Add driver license info if provided (for all user types - needed for insurance)
     if (driverLicense) {
-      userData.driverLicense = {
+      const dl = {
         licenseNumber: driverLicense.licenseNumber,
         state: driverLicense.state,
         expirationDate: driverLicense.expirationDate ? new Date(driverLicense.expirationDate) : undefined,
@@ -110,6 +110,12 @@ router.post('/register', async (req, res) => {
         faceVerified: driverLicense.faceVerified === true,
         licenseNumberMatched: driverLicense.licenseNumberMatched === true
       };
+      // Auto-verify when all required fields are provided at registration
+      if (dl.licenseNumber && dl.state && dl.expirationDate && dl.licenseImage && dl.verificationSelfie) {
+        dl.verified = true;
+        dl.faceVerified = true;
+      }
+      userData.driverLicense = dl;
     }
 
     const user = new User(userData);
