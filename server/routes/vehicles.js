@@ -565,6 +565,14 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
       return res.status(400).json({ message: `Vehicle is already ${vehicle.tollspot.status}` });
     }
 
+    // Validate required fields before calling TollSpot API
+    if (!vehicle.licensePlate || !vehicle.licensePlate.trim()) {
+      return res.status(400).json({ message: 'Vehicle must have a license plate before enrolling in TollSpot. Please edit the vehicle and add a license plate.' });
+    }
+    if (!vehicle.location?.state) {
+      return res.status(400).json({ message: 'Vehicle must have a state in its location before enrolling in TollSpot. Please edit the vehicle and add a location.' });
+    }
+
     const result = await preRegisterVehicle(vehicle, req.user._id.toString());
 
     if (result.success && result.data) {
@@ -577,7 +585,8 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
       return res.json({ message: 'Vehicle enrolled with TollSpot', tollspot: tollspotData });
     }
 
-    return res.status(502).json({ message: 'TollSpot registration failed', error: result.error });
+    const errorDetail = result.error || 'Unknown error';
+    return res.status(502).json({ message: `TollSpot registration failed: ${errorDetail}` });
   } catch (error) {
     console.error('❌ TollSpot enroll error:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
