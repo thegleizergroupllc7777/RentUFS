@@ -526,6 +526,47 @@ const VehicleDetail = () => {
                       Go to My Bookings to manage this reservation
                     </p>
                   </>
+                ) : user && user.userType === 'host' ? (
+                  <>
+                    <h3>Want to rent this car?</h3>
+                    <div style={{
+                      backgroundColor: '#1a1a2e',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      border: '1px solid #3b82f6'
+                    }}>
+                      <p style={{ color: '#93c5fd', margin: '0 0 0.75rem 0', fontSize: '0.95rem' }}>
+                        You're currently signed in as a <strong>host</strong>. To book vehicles, you need a driver account.
+                      </p>
+                      <p style={{ color: '#9ca3af', margin: 0, fontSize: '0.85rem' }}>
+                        Register as a driver to start renting vehicles from other hosts.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate('/register?type=driver')}
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    >
+                      Register as Driver
+                    </button>
+                    <button
+                      onClick={() => navigate('/marketplace')}
+                      className="btn"
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'transparent',
+                        border: '1px solid #10b981',
+                        color: '#10b981',
+                        padding: '0.625rem 1rem',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                      }}
+                    >
+                      Browse Marketplace
+                    </button>
+                  </>
                 ) : (
                   <>
                     <h3>Book this car</h3>
