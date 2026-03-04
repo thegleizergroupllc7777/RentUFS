@@ -1,7 +1,8 @@
 const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
-const { sendReturnReminderEmail, sendRegistrationExpirationReminder } = require('./emailService');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
+const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendPayoutNotificationEmail } = require('./emailService');
 const { sendOverdueReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
@@ -240,11 +241,115 @@ const checkAndSettlePostTripTolls = async () => {
   }
 };
 
+// Automated weekly payout: transfer all eligible host earnings to their Stripe Connect accounts
+const processWeeklyPayouts = async () => {
+  try {
+    // Find all hosts with Stripe Connect accounts and payouts enabled
+    const hosts = await User.find({
+      stripeConnectAccountId: { $exists: true, $ne: null },
+      stripeConnectPayoutsEnabled: true,
+      userType: { $in: ['host', 'both'] }
+    });
+
+    if (hosts.length === 0) {
+      console.log('💰 Weekly payouts: No eligible hosts found');
+      return { success: true, hostsProcessed: 0 };
+    }
+
+    let hostsProcessed = 0;
+    let totalTransferred = 0;
+
+    for (const host of hosts) {
+      try {
+        // Find all eligible bookings for this host
+        const eligibleBookings = await Booking.find({
+          host: host._id,
+          status: 'completed',
+          paymentStatus: 'paid',
+          payoutStatus: { $in: ['pending', 'eligible'] },
+          hostEarnings: { $gt: 0 }
+        }).populate('vehicle', 'make model year');
+
+        if (eligibleBookings.length === 0) continue;
+
+        // Recalculate correct earnings for each booking
+        for (const b of eligibleBookings) {
+          const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+          const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
+          const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+          const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+          if (b.hostPlatformFee !== correctHostFee || b.hostEarnings !== correctEarnings) {
+            b.hostPlatformFee = correctHostFee;
+            b.hostEarnings = correctEarnings;
+          }
+        }
+
+        const totalAmount = eligibleBookings.reduce((sum, b) => sum + b.hostEarnings, 0);
+        if (totalAmount <= 0) continue;
+
+        // Create Stripe transfer to host's Connect account
+        const transfer = await stripe.transfers.create({
+          amount: Math.round(totalAmount * 100),
+          currency: 'usd',
+          destination: host.stripeConnectAccountId,
+          description: `Weekly payout for ${eligibleBookings.length} booking(s)`,
+          metadata: {
+            hostId: host._id.toString(),
+            bookingCount: eligibleBookings.length.toString(),
+            bookingIds: eligibleBookings.map(b => b._id.toString()).join(',')
+          }
+        });
+
+        // Update all bookings as paid out
+        const now = new Date();
+        for (const booking of eligibleBookings) {
+          await Booking.findByIdAndUpdate(booking._id, {
+            payoutStatus: 'paid',
+            payoutId: transfer.id,
+            payoutDate: now,
+            payoutAmount: booking.hostEarnings
+          });
+        }
+
+        hostsProcessed++;
+        totalTransferred += totalAmount;
+
+        console.log(`💰 Weekly payout: Transferred $${totalAmount.toFixed(2)} to host ${host.firstName} ${host.lastName} (${eligibleBookings.length} booking(s))`);
+
+        // Send payout notification email
+        sendPayoutNotificationEmail(host, {
+          totalAmount,
+          bookingCount: eligibleBookings.length,
+          transferId: transfer.id,
+          bookings: eligibleBookings.map(b => ({
+            reservationId: b.reservationId,
+            vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
+            amount: b.hostEarnings
+          }))
+        }).catch(err => console.error(`📧 Weekly payout email failed for host ${host._id}:`, err.message));
+
+      } catch (hostErr) {
+        console.error(`💰 Weekly payout error for host ${host._id}:`, hostErr.message);
+      }
+    }
+
+    if (hostsProcessed > 0) {
+      console.log(`💰 Weekly payouts complete: ${hostsProcessed} host(s), $${totalTransferred.toFixed(2)} total`);
+    }
+
+    return { success: true, hostsProcessed, totalTransferred };
+  } catch (error) {
+    console.error('💰 Error in weekly payout scheduler:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Start the scheduler
 let schedulerInterval = null;
 let overdueInterval = null;
 let registrationCheckInterval = null;
 let tollSettlementInterval = null;
+let weeklyPayoutInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run email reminders immediately on startup
@@ -281,6 +386,29 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   }, 2 * 60 * 1000);
   console.log('⏱️  Post-trip toll settlement scheduler running every 6 hours');
 
+  // Weekly automated payouts: transfer eligible earnings to all hosts every Monday
+  // Calculate ms until next Monday at 6:00 AM EST
+  const scheduleWeeklyPayout = () => {
+    const now = new Date();
+    const nextMonday = new Date(now);
+    const currentDay = now.getUTCDay(); // 0=Sun, 1=Mon
+    const daysUntilMonday = currentDay === 0 ? 1 : currentDay === 1 ? 7 : 8 - currentDay;
+    nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday);
+    nextMonday.setUTCHours(11, 0, 0, 0); // 11:00 UTC = 6:00 AM EST
+
+    const msUntilMonday = nextMonday.getTime() - now.getTime();
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
+    console.log(`🚀 Weekly payout scheduler: next run ${nextMonday.toISOString()}`);
+
+    setTimeout(() => {
+      processWeeklyPayouts();
+      weeklyPayoutInterval = setInterval(processWeeklyPayouts, oneWeekMs);
+    }, msUntilMonday);
+  };
+  scheduleWeeklyPayout();
+  console.log('⏱️  Weekly payout scheduler running every Monday at 6:00 AM EST');
+
   return schedulerInterval;
 };
 
@@ -305,6 +433,11 @@ const stopReturnReminderScheduler = () => {
     tollSettlementInterval = null;
     console.log('🛑 Post-trip toll settlement scheduler stopped');
   }
+  if (weeklyPayoutInterval) {
+    clearInterval(weeklyPayoutInterval);
+    weeklyPayoutInterval = null;
+    console.log('🛑 Weekly payout scheduler stopped');
+  }
 };
 
 module.exports = {
@@ -312,6 +445,7 @@ module.exports = {
   checkAndSendOverdueSMS,
   checkRegistrationExpirations,
   checkAndSettlePostTripTolls,
+  processWeeklyPayouts,
   startReturnReminderScheduler,
   stopReturnReminderScheduler
 };
