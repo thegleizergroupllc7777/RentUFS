@@ -10,6 +10,7 @@ const HostDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [taxInfo, setTaxInfo] = useState(null);
+  const [tollspotActive, setTollspotActive] = useState(null);
   const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('hostVehicleView') || 'grid');
   const location = useLocation();
@@ -22,6 +23,7 @@ const HostDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
     fetchTaxInfo();
+    fetchIntegrations();
   }, [location.key]);
 
   const fetchDashboardData = async () => {
@@ -107,6 +109,19 @@ const HostDashboard = () => {
     }
   };
 
+  const fetchIntegrations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/api/users/integrations`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTollspotActive(res.data.tollspot?.active || false);
+    } catch (error) {
+      console.error('Error fetching integrations:', error);
+      setTollspotActive(false);
+    }
+  };
+
   // Memoize vehicle grouping by zip code to avoid recalculating on every render
   const groupedVehicles = useMemo(() => {
     const grouped = {};
@@ -174,6 +189,34 @@ const HostDashboard = () => {
               <Link to="/driver/profile?tab=tax">
                 <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
                   Add Tax Info
+                </button>
+              </Link>
+            </div>
+          )}
+
+          {/* TollSpot Integration Banner - only show when not connected */}
+          {tollspotActive !== null && !tollspotActive && (
+            <div style={{
+              background: '#001a1a',
+              border: '1px solid #5eead4',
+              borderRadius: '12px',
+              padding: '1rem 1.5rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#f9fafb', marginBottom: '0.25rem' }}>
+                  TollSpot Integration
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#5eead4', margin: 0 }}>
+                  Sign up with TollSpot for easier toll management on your rental vehicles.
+                </p>
+              </div>
+              <Link to="/driver/profile?tab=integrations">
+                <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                  Set Up TollSpot
                 </button>
               </Link>
             </div>
