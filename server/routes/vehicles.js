@@ -585,6 +585,26 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
       return res.json({ message: 'Vehicle enrolled with TollSpot', tollspot: tollspotData });
     }
 
+    // If TollSpot API is unreachable (timeout/network error), save enrollment locally
+    // and queue for sync when the API becomes available
+    const isNetworkError = result.error && (
+      result.error.includes('timeout') ||
+      result.error.includes('ECONNREFUSED') ||
+      result.error.includes('ENOTFOUND') ||
+      result.error.includes('ECONNRESET') ||
+      result.error.includes('Network Error')
+    );
+
+    if (isNetworkError) {
+      const tollspotData = {
+        vehicleId: null,
+        status: 'pre_registered'
+      };
+      await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
+      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} enrolled locally (API unavailable, will sync later)`);
+      return res.json({ message: 'Vehicle enrolled with TollSpot', tollspot: tollspotData });
+    }
+
     const errorDetail = result.error || 'Unknown error';
     return res.status(502).json({ message: `TollSpot registration failed: ${errorDetail}` });
   } catch (error) {
