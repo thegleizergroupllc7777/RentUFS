@@ -13,6 +13,7 @@ const HostDashboard = () => {
   const [tollspotActive, setTollspotActive] = useState(null);
   const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
   const [enrollingVehicleId, setEnrollingVehicleId] = useState(null);
+  const [syncingTolls, setSyncingTolls] = useState(false);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('hostVehicleView') || 'grid');
   const location = useLocation();
 
@@ -138,8 +139,6 @@ const HostDashboard = () => {
       setEnrollingVehicleId(null);
     }
   };
-
-  const [syncingTolls, setSyncingTolls] = useState(false);
 
   const syncTollspotStatuses = async () => {
     setSyncingTolls(true);
