@@ -68,6 +68,7 @@ const HostRegistration = () => {
                 <div>
                   <h3>Earn Extra Income</h3>
                   <p>Set your own prices and availability. Earn money when you're not using your car.</p>
+                  <span className="host-reg-zero-commission">Zero Commission</span>
                 </div>
               </div>
               <div className="host-reg-benefit">
