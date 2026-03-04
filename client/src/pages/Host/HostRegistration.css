@@ -82,6 +82,18 @@
   line-height: 1.4;
 }
 
+.host-reg-zero-commission {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(0, 255, 102, 0.15);
+  color: #00FF66;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 255, 102, 0.3);
+}
+
 .host-reg-form {
   margin-top: 1.5rem;
 }
