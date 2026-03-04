@@ -394,7 +394,7 @@ const HostDashboard = () => {
                       >
                         {vehicle.availability ? 'Mark Unavailable' : 'Mark Available'}
                       </button>
-                      {(!vehicle.tollspot?.status || vehicle.tollspot.status === 'none' || vehicle.tollspot.status === 'unregistered') && (
+                      {tollspotActive && (!vehicle.tollspot?.status || vehicle.tollspot.status === 'none' || vehicle.tollspot.status === 'unregistered') && (
                         <button
                           onClick={() => enrollVehicleTollspot(vehicle._id)}
                           className="btn-action"
@@ -480,7 +480,7 @@ const HostDashboard = () => {
                           >
                             {vehicle.availability ? 'Mark Unavailable' : 'Mark Available'}
                           </button>
-                          {(!vehicle.tollspot?.status || vehicle.tollspot.status === 'none' || vehicle.tollspot.status === 'unregistered') && (
+                          {tollspotActive && (!vehicle.tollspot?.status || vehicle.tollspot.status === 'none' || vehicle.tollspot.status === 'unregistered') && (
                             <button
                               onClick={() => enrollVehicleTollspot(vehicle._id)}
                               className="btn-action"
