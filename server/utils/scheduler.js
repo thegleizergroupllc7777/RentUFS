@@ -256,29 +256,31 @@ const syncTollspotStatuses = async () => {
 
     let synced = 0;
 
-    for (const vehicle of pendingVehicles) {
-      try {
-        if (vehicle.tollspot?.vehicleId) {
-          // Has a vehicleId from TollSpot — registration succeeded, just update status
-          await Vehicle.findByIdAndUpdate(vehicle._id, { 'tollspot.status': 'registered' });
-          synced++;
-          console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} promoted to registered (ID: ${vehicle.tollspot.vehicleId})`);
-        } else if (vehicle.licensePlate && vehicle.location?.state && vehicle.host) {
-          // No vehicleId — retry the pre-registration API call
-          const result = await preRegisterVehicle(vehicle, vehicle.host._id.toString());
-          if (result.success && result.data) {
-            const status = result.data.id ? 'registered' : 'pre_registered';
-            await Vehicle.findByIdAndUpdate(vehicle._id, {
-              'tollspot.vehicleId': result.data.id || null,
-              'tollspot.status': status
-            });
-            if (status === 'registered') synced++;
-            console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retried → ${status} (ID: ${result.data.id || 'none'})`);
-          }
+    // Process vehicles in parallel with shorter timeout for sync retries
+    const results = await Promise.allSettled(pendingVehicles.map(async (vehicle) => {
+      if (vehicle.tollspot?.vehicleId) {
+        await Vehicle.findByIdAndUpdate(vehicle._id, { 'tollspot.status': 'registered' });
+        console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} promoted to registered (ID: ${vehicle.tollspot.vehicleId})`);
+        return 'registered';
+      } else if (vehicle.licensePlate && vehicle.location?.state && vehicle.host) {
+        const result = await preRegisterVehicle(vehicle, vehicle.host._id.toString(), { timeout: 5000 });
+        if (result.success && result.data) {
+          const status = result.data.id ? 'registered' : 'pre_registered';
+          await Vehicle.findByIdAndUpdate(vehicle._id, {
+            'tollspot.vehicleId': result.data.id || null,
+            'tollspot.status': status
+          });
+          console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retried → ${status} (ID: ${result.data.id || 'none'})`);
+          return status;
         }
-      } catch (err) {
-        console.error(`🛣️ TollSpot sync: Error processing vehicle ${vehicle._id}:`, err.message);
+        console.error(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retry failed: ${result.error}`);
+        return 'failed';
       }
+      return 'skipped';
+    }));
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value === 'registered') synced++;
     }
 
     if (synced > 0) {
