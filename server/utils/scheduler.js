@@ -4,7 +4,7 @@ const User = require('../models/User');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendPayoutNotificationEmail } = require('./emailService');
 const { sendOverdueReminderSMS } = require('./smsService');
-const { isConfigured: tollspotConfigured } = require('./tollspot');
+const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
@@ -241,6 +241,57 @@ const checkAndSettlePostTripTolls = async () => {
   }
 };
 
+// Sync TollSpot vehicle statuses: retry pre_registered vehicles without a vehicleId,
+// and promote pre_registered vehicles that have a vehicleId to registered
+const syncTollspotStatuses = async () => {
+  try {
+    if (!tollspotConfigured()) return { success: true, synced: 0 };
+
+    // Find all vehicles stuck in pre_registered
+    const pendingVehicles = await Vehicle.find({
+      'tollspot.status': 'pre_registered'
+    }).populate('host', '_id');
+
+    if (pendingVehicles.length === 0) return { success: true, synced: 0 };
+
+    let synced = 0;
+
+    for (const vehicle of pendingVehicles) {
+      try {
+        if (vehicle.tollspot?.vehicleId) {
+          // Has a vehicleId from TollSpot — registration succeeded, just update status
+          await Vehicle.findByIdAndUpdate(vehicle._id, { 'tollspot.status': 'registered' });
+          synced++;
+          console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} promoted to registered (ID: ${vehicle.tollspot.vehicleId})`);
+        } else if (vehicle.licensePlate && vehicle.location?.state && vehicle.host) {
+          // No vehicleId — retry the pre-registration API call
+          const result = await preRegisterVehicle(vehicle, vehicle.host._id.toString());
+          if (result.success && result.data) {
+            const status = result.data.id ? 'registered' : 'pre_registered';
+            await Vehicle.findByIdAndUpdate(vehicle._id, {
+              'tollspot.vehicleId': result.data.id || null,
+              'tollspot.status': status
+            });
+            if (status === 'registered') synced++;
+            console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retried → ${status} (ID: ${result.data.id || 'none'})`);
+          }
+        }
+      } catch (err) {
+        console.error(`🛣️ TollSpot sync: Error processing vehicle ${vehicle._id}:`, err.message);
+      }
+    }
+
+    if (synced > 0) {
+      console.log(`🛣️ TollSpot sync: Updated ${synced} vehicle(s) to registered`);
+    }
+
+    return { success: true, synced };
+  } catch (error) {
+    console.error('🛣️ Error in TollSpot status sync scheduler:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Calculate per-day host earnings for a booking
 const calculateDailyHostEarnings = (booking) => {
   const totalDays = booking.totalDays || 1;
@@ -426,6 +477,7 @@ let schedulerInterval = null;
 let overdueInterval = null;
 let registrationCheckInterval = null;
 let tollSettlementInterval = null;
+let tollSyncInterval = null;
 let weeklyPayoutInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
@@ -452,6 +504,15 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   const oneDayMs = 24 * 60 * 60 * 1000;
   registrationCheckInterval = setInterval(checkRegistrationExpirations, oneDayMs);
   console.log('⏱️  Registration expiration scheduler running every 24 hours');
+
+  // TollSpot status sync: check every 30 minutes for pre_registered vehicles to promote
+  const thirtyMinMs = 30 * 60 * 1000;
+  console.log('🚀 Starting TollSpot status sync scheduler...');
+  setTimeout(() => {
+    syncTollspotStatuses();
+    tollSyncInterval = setInterval(syncTollspotStatuses, thirtyMinMs);
+  }, 1 * 60 * 1000); // Delay first run by 1 minute
+  console.log('⏱️  TollSpot status sync scheduler running every 30 minutes');
 
   // Post-trip toll settlement: check every 6 hours for new delayed toll charges
   const sixHoursMs = 6 * 60 * 60 * 1000;
@@ -505,6 +566,11 @@ const stopReturnReminderScheduler = () => {
     registrationCheckInterval = null;
     console.log('🛑 Registration expiration scheduler stopped');
   }
+  if (tollSyncInterval) {
+    clearInterval(tollSyncInterval);
+    tollSyncInterval = null;
+    console.log('🛑 TollSpot status sync scheduler stopped');
+  }
   if (tollSettlementInterval) {
     clearInterval(tollSettlementInterval);
     tollSettlementInterval = null;
@@ -522,6 +588,7 @@ module.exports = {
   checkAndSendOverdueSMS,
   checkRegistrationExpirations,
   checkAndSettlePostTripTolls,
+  syncTollspotStatuses,
   processWeeklyPayouts,
   startReturnReminderScheduler,
   stopReturnReminderScheduler

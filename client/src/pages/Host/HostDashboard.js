@@ -139,6 +139,23 @@ const HostDashboard = () => {
     }
   };
 
+  const [syncingTolls, setSyncingTolls] = useState(false);
+
+  const syncTollspotStatuses = async () => {
+    setSyncingTolls(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/vehicles/tollspot-sync`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDashboardData();
+    } catch (error) {
+      console.error('TollSpot sync error:', error);
+    } finally {
+      setSyncingTolls(false);
+    }
+  };
+
   // Memoize vehicle grouping by zip code to avoid recalculating on every render
   const groupedVehicles = useMemo(() => {
     const grouped = {};
@@ -357,6 +374,14 @@ const HostDashboard = () => {
                         Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Registering' :
                                 vehicle.tollspot.status === 'registered' ? 'Active' :
                                 vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
+                        {vehicle.tollspot.status === 'pre_registered' && (
+                          <span
+                            onClick={(e) => { e.stopPropagation(); syncTollspotStatuses(); }}
+                            style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
+                          >
+                            {syncingTolls ? 'Syncing...' : 'Retry'}
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -463,6 +488,14 @@ const HostDashboard = () => {
                               Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Registering' :
                                       vehicle.tollspot.status === 'registered' ? 'Active' :
                                       vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
+                              {vehicle.tollspot.status === 'pre_registered' && (
+                                <span
+                                  onClick={(e) => { e.stopPropagation(); syncTollspotStatuses(); }}
+                                  style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
+                                >
+                                  {syncingTolls ? 'Syncing...' : 'Retry'}
+                                </span>
+                              )}
                             </span>
                           )}
                         </div>
