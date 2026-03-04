@@ -404,10 +404,10 @@ router.post('/', auth, async (req, res) => {
           if (result.success && result.data) {
             const tollspotData = {
               vehicleId: result.data.id || null,
-              status: 'pre_registered'
+              status: result.data.id ? 'registered' : 'pre_registered'
             };
             await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
-            console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} pre-registered (TollSpot ID: ${tollspotData.vehicleId})`);
+            console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} ${tollspotData.status} (TollSpot ID: ${tollspotData.vehicleId})`);
           }
         })
         .catch(err => console.error('🛣️ TollSpot: Pre-registration error (non-blocking):', err.message));
@@ -548,6 +548,50 @@ router.post('/geocode-all', async (req, res) => {
   }
 });
 
+// Sync TollSpot statuses for host's vehicles (promotes pre_registered → registered)
+router.post('/tollspot-sync', auth, async (req, res) => {
+  try {
+    if (!tollspotConfigured()) {
+      return res.status(503).json({ message: 'TollSpot integration is not configured' });
+    }
+
+    const vehicles = await Vehicle.find({
+      host: req.user._id,
+      'tollspot.status': 'pre_registered'
+    });
+
+    if (vehicles.length === 0) {
+      return res.json({ message: 'No vehicles pending sync', synced: 0 });
+    }
+
+    let synced = 0;
+
+    for (const vehicle of vehicles) {
+      if (vehicle.tollspot?.vehicleId) {
+        // Has a vehicleId — registration already succeeded, promote to registered
+        await Vehicle.findByIdAndUpdate(vehicle._id, { 'tollspot.status': 'registered' });
+        synced++;
+      } else if (vehicle.licensePlate && vehicle.location?.state) {
+        // No vehicleId — retry the pre-registration
+        const result = await preRegisterVehicle(vehicle, req.user._id.toString());
+        if (result.success && result.data) {
+          const status = result.data.id ? 'registered' : 'pre_registered';
+          await Vehicle.findByIdAndUpdate(vehicle._id, {
+            'tollspot.vehicleId': result.data.id || null,
+            'tollspot.status': status
+          });
+          if (status === 'registered') synced++;
+        }
+      }
+    }
+
+    res.json({ message: `Synced ${synced} vehicle(s)`, synced });
+  } catch (error) {
+    console.error('❌ TollSpot sync error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Enroll existing vehicle with TollSpot
 router.post('/:id/tollspot-enroll', auth, async (req, res) => {
   try {
@@ -578,10 +622,10 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
     if (result.success && result.data) {
       const tollspotData = {
         vehicleId: result.data.id || null,
-        status: 'pre_registered'
+        status: result.data.id ? 'registered' : 'pre_registered'
       };
       await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
-      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} enrolled (TollSpot ID: ${tollspotData.vehicleId})`);
+      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} enrolled (TollSpot ID: ${tollspotData.vehicleId}, status: ${tollspotData.status})`);
       return res.json({ message: 'Vehicle enrolled with TollSpot', tollspot: tollspotData });
     }
 
