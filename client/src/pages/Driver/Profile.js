@@ -223,6 +223,7 @@ const DriverProfile = () => {
       });
       if (isHost) {
         fetchTaxInfo();
+        fetchIntegrationsStatus();
       }
       fetchPaymentMethods();
       fetchLicenseData();
@@ -241,22 +242,24 @@ const DriverProfile = () => {
     }
   }, [reportPeriod]);
 
-  // Fetch TollSpot status when integrations tab is opened
+  // Fetch TollSpot status on initial load (for sidebar badge)
+  const fetchIntegrationsStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/api/users/integrations`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTollspotActive(res.data.tollspot?.active || false);
+      setTollspotConnectedAt(res.data.tollspot?.connectedAt || null);
+    } catch (err) {
+      console.error('❌ Error fetching integrations:', err);
+    }
+  };
+
+  // Refresh TollSpot status when integrations tab is opened
   useEffect(() => {
     if (activeTab === 'integrations' && isHost) {
-      const fetchIntegrations = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          const res = await axios.get(`${API_URL}/api/users/integrations`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setTollspotActive(res.data.tollspot?.active || false);
-          setTollspotConnectedAt(res.data.tollspot?.connectedAt || null);
-        } catch (err) {
-          console.error('❌ Error fetching integrations:', err);
-        }
-      };
-      fetchIntegrations();
+      fetchIntegrationsStatus();
     }
   }, [activeTab, isHost]);
 
@@ -2301,6 +2304,7 @@ const DriverProfile = () => {
   );
 
   const taxNeedsAttention = isHost && taxInfo && !taxInfo.hasSubmitted;
+  const tollspotNeedsAttention = isHost && tollspotActive === false;
 
   const isDriver = user?.userType === 'driver' || user?.userType === 'both';
 
@@ -2309,7 +2313,7 @@ const DriverProfile = () => {
     { id: 'license', label: "Driver's License" },
     { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
-      { id: 'integrations', label: 'Integrations' },
+      { id: 'integrations', label: 'Integrations', alert: tollspotNeedsAttention },
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
       { id: 'payouts', label: 'Payouts' },
       { id: 'reports', label: 'Reports' }
