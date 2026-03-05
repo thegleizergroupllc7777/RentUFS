@@ -588,7 +588,7 @@ router.post('/tollspot-sync', auth, async (req, res) => {
     let failed = 0;
     for (const r of results) {
       if (r.status === 'fulfilled' && r.value.status === 'registered') synced++;
-      else if (r.status !== 'fulfilled' || r.value.status === 'failed' || r.value.status === 'skipped') failed++;
+      else failed++;
     }
 
     const message = synced > 0

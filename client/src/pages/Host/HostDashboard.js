@@ -155,9 +155,14 @@ const HostDashboard = () => {
       }
       fetchDashboardData();
     } catch (error) {
-      const msg = error.code === 'ECONNABORTED'
-        ? 'Sync timed out. TollSpot may be temporarily unavailable.'
-        : 'Could not reach server. Please try again.';
+      let msg;
+      if (error.response?.data?.message) {
+        msg = error.response.data.message;
+      } else if (error.code === 'ECONNABORTED') {
+        msg = 'Sync timed out. TollSpot may be temporarily unavailable.';
+      } else {
+        msg = 'Could not reach server. Please try again.';
+      }
       setSyncError(msg);
       console.error('TollSpot sync error:', error);
     } finally {
@@ -289,8 +294,30 @@ const HostDashboard = () => {
             </div>
           ) : (
             <>
-              {/* View Toggle */}
-              <div className="view-toggle">
+              {/* View Toggle and Sync */}
+              <div className="view-toggle" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {tollspotActive && vehicles.some(v => v.tollspot?.status === 'pre_registered') && (
+                  <button
+                    onClick={() => { if (!syncingTolls) syncTollspotStatuses(); }}
+                    disabled={syncingTolls}
+                    className="btn-action"
+                    style={{
+                      color: '#5eead4',
+                      borderColor: '#5eead4',
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.8rem',
+                      cursor: syncingTolls ? 'wait' : 'pointer',
+                      opacity: syncingTolls ? 0.6 : 1
+                    }}
+                  >
+                    {syncingTolls ? 'Syncing...' : 'Sync Tolls'}
+                  </button>
+                )}
+                {syncError && (
+                  <span style={{ fontSize: '0.75rem', color: '#f87171', maxWidth: '250px' }}>
+                    {syncError}
+                  </span>
+                )}
                 <button
                   className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
                   onClick={() => handleViewChange('grid')}
