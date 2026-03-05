@@ -5,7 +5,7 @@ const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
 const { sendVehicleListedEmail } = require('../utils/emailService');
 const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
-const { isConfigured: tollspotConfigured, preRegisterVehicle, deregisterVehicle } = require('../utils/tollspot');
+const { isConfigured: tollspotConfigured, preRegisterVehicle, deregisterVehicle, isCircuitOpen: tollspotCircuitOpen } = require('../utils/tollspot');
 
 const router = express.Router();
 
@@ -562,6 +562,16 @@ router.post('/tollspot-sync', auth, async (req, res) => {
 
     if (vehicles.length === 0) {
       return res.json({ message: 'No vehicles pending sync', synced: 0, failed: 0 });
+    }
+
+    // If the circuit breaker is open, don't even try
+    if (tollspotCircuitOpen()) {
+      return res.json({
+        message: 'TollSpot API is temporarily unavailable. Will retry automatically in a few minutes.',
+        synced: 0,
+        failed: vehicles.length,
+        circuitOpen: true
+      });
     }
 
     // Process vehicles sequentially to avoid spamming the TollSpot API
