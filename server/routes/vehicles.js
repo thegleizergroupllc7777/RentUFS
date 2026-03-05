@@ -684,15 +684,16 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
       return res.json({ message: 'Vehicle enrolled with TollSpot', tollspot: tollspotData });
     }
 
-    // If TollSpot API is unreachable (timeout/network error), save enrollment locally
+    // If TollSpot API is unreachable (timeout/network error/circuit breaker), save enrollment locally
     // and queue for sync when the API becomes available
-    const isNetworkError = result.error && (
+    const isNetworkError = result.circuitOpen || (result.error && (
       result.error.includes('timeout') ||
+      result.error.includes('circuit breaker') ||
       result.error.includes('ECONNREFUSED') ||
       result.error.includes('ENOTFOUND') ||
       result.error.includes('ECONNRESET') ||
       result.error.includes('Network Error')
-    );
+    ));
 
     if (isNetworkError) {
       const tollspotData = {
