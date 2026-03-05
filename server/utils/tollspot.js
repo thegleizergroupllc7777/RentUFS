@@ -5,6 +5,36 @@ const TOLLSPOT_BASE_URL = process.env.TOLLSPOT_BASE_URL || 'https://api.tollspot
 const TOLLSPOT_API_KEY = process.env.TOLLSPOT_API_KEY || '';
 const TOLLSPOT_API_VERSION = '1.2.0';
 
+// Circuit breaker: stop calling TollSpot if it's been failing
+const circuitBreaker = {
+  failures: 0,
+  lastFailure: null,
+  cooldownMs: 5 * 60 * 1000, // 5 minutes before retrying after failures
+  threshold: 2, // Open circuit after 2 consecutive failures
+  isOpen() {
+    if (this.failures < this.threshold) return false;
+    if (!this.lastFailure) return false;
+    const elapsed = Date.now() - this.lastFailure;
+    if (elapsed > this.cooldownMs) {
+      // Allow a retry after cooldown
+      this.failures = 0;
+      this.lastFailure = null;
+      console.log('🛣️ TollSpot: Circuit breaker reset, allowing retry');
+      return false;
+    }
+    return true;
+  },
+  recordFailure() {
+    this.failures++;
+    this.lastFailure = Date.now();
+    console.log(`🛣️ TollSpot: Circuit breaker recorded failure (${this.failures}/${this.threshold})`);
+  },
+  recordSuccess() {
+    this.failures = 0;
+    this.lastFailure = null;
+  }
+};
+
 const tollApi = axios.create({
   baseURL: TOLLSPOT_BASE_URL,
   timeout: 10000,
@@ -103,17 +133,25 @@ const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
 
   console.log('🛣️ TollSpot: Pre-registering vehicle:', JSON.stringify(body, null, 2));
 
+  // Check circuit breaker before making the call
+  if (circuitBreaker.isOpen()) {
+    console.log('🛣️ TollSpot: Circuit breaker OPEN - skipping API call (will retry after cooldown)');
+    return { success: false, error: 'TollSpot API temporarily unavailable (circuit breaker open)', isTimeout: true, circuitOpen: true };
+  }
+
   try {
     const requestConfig = {};
     if (options.timeout) requestConfig.timeout = options.timeout;
     const response = await tollApi.post('/api/partner/vehicle/pre-register', body, requestConfig);
     console.log('🛣️ TollSpot: Vehicle pre-registered successfully:', response.data);
+    circuitBreaker.recordSuccess();
     return { success: true, data: response.data };
   } catch (err) {
     const status = err.response?.status;
     const respData = err.response?.data;
     const isTimeout = err.code === 'ECONNABORTED' || err.message?.includes('timeout');
     console.error(`🛣️ TollSpot: Pre-registration failed - ${isTimeout ? 'TIMEOUT' : `HTTP ${status}`}:`, JSON.stringify(respData, null, 2));
+    if (isTimeout) circuitBreaker.recordFailure();
     return { success: false, error: respData?.message || err.message, isTimeout };
   }
 };
@@ -142,12 +180,19 @@ const deregisterVehicle = async (tollspotVehicleId) => {
  * GET /api/partner/vehicle
  */
 const listVehicles = async (page = 0, limit = 20) => {
+  if (circuitBreaker.isOpen()) {
+    console.log('🛣️ TollSpot: Circuit breaker OPEN - skipping list vehicles');
+    return { success: false, error: 'TollSpot API temporarily unavailable', circuitOpen: true };
+  }
   try {
     const response = await tollApi.get('/api/partner/vehicle', {
       params: { page, limit }
     });
+    circuitBreaker.recordSuccess();
     return { success: true, data: response.data };
   } catch (err) {
+    const isTimeout = err.code === 'ECONNABORTED' || err.message?.includes('timeout');
+    if (isTimeout) circuitBreaker.recordFailure();
     console.error('🛣️ TollSpot: List vehicles failed:', err.response?.data || err.message);
     return { success: false, error: err.response?.data?.message || err.message };
   }
@@ -212,5 +257,6 @@ module.exports = {
   deregisterVehicle,
   listVehicles,
   monitorCharges,
-  getTollCharges
+  getTollCharges,
+  isCircuitOpen: () => circuitBreaker.isOpen()
 };

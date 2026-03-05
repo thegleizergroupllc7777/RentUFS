@@ -23,11 +23,22 @@ const HostDashboard = () => {
     localStorage.setItem('hostVehicleView', mode);
   };
 
+  const autoSyncDone = React.useRef(false);
+
   useEffect(() => {
     fetchDashboardData();
     fetchTaxInfo();
     fetchIntegrations();
+    autoSyncDone.current = false;
   }, [location.key]);
+
+  // Auto-sync toll statuses once when page loads (if vehicles are pending)
+  useEffect(() => {
+    if (!autoSyncDone.current && !loading && tollspotActive && vehicles.some(v => v.tollspot?.status === 'pre_registered')) {
+      autoSyncDone.current = true;
+      syncTollspotStatuses();
+    }
+  }, [loading, tollspotActive, vehicles]);
 
   const fetchDashboardData = async () => {
     try {
@@ -294,9 +305,48 @@ const HostDashboard = () => {
             </div>
           ) : (
             <>
+              {/* TollSpot sync banner - show when vehicles are pending and there's a sync issue */}
+              {tollspotActive && syncError && vehicles.some(v => v.tollspot?.status === 'pre_registered') && (
+                <div style={{
+                  background: '#1a1200',
+                  border: '1px solid #fbbf24',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1.25rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <p style={{ fontSize: '0.85rem', color: '#fbbf24', margin: 0 }}>
+                    TollSpot is temporarily unavailable. Vehicles with "Pending" status will auto-register when the service comes back online.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                    <button
+                      onClick={() => { if (!syncingTolls) syncTollspotStatuses(); }}
+                      disabled={syncingTolls}
+                      className="btn-action"
+                      style={{ color: '#fbbf24', borderColor: '#fbbf24', padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
+                    >
+                      {syncingTolls ? 'Retrying...' : 'Retry'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const pending = vehicles.filter(v => v.tollspot?.status === 'pre_registered');
+                        Promise.all(pending.map(v => resetTollRegistration(v._id)));
+                      }}
+                      className="btn-action"
+                      style={{ color: '#f87171', borderColor: '#f87171', padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* View Toggle and Sync */}
               <div className="view-toggle" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {tollspotActive && vehicles.some(v => v.tollspot?.status === 'pre_registered') && (
+                {tollspotActive && !syncError && vehicles.some(v => v.tollspot?.status === 'pre_registered') && (
                   <button
                     onClick={() => { if (!syncingTolls) syncTollspotStatuses(); }}
                     disabled={syncingTolls}
@@ -312,11 +362,6 @@ const HostDashboard = () => {
                   >
                     {syncingTolls ? 'Syncing...' : 'Sync Tolls'}
                   </button>
-                )}
-                {syncError && (
-                  <span style={{ fontSize: '0.75rem', color: '#f87171', maxWidth: '250px' }}>
-                    {syncError}
-                  </span>
                 )}
                 <button
                   className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
@@ -414,34 +459,19 @@ const HostDashboard = () => {
                         borderRadius: '0.375rem',
                         fontSize: '0.75rem',
                         fontWeight: '600',
-                        background: vehicle.tollspot.status === 'registered' ? '#064e3b' : '#1a1a2e',
-                        color: vehicle.tollspot.status === 'registered' ? '#34d399' : '#93c5fd',
-                        border: `1px solid ${vehicle.tollspot.status === 'registered' ? '#10b981' : '#3b82f6'}`
+                        background: vehicle.tollspot.status === 'registered' ? '#064e3b' :
+                                    vehicle.tollspot.status === 'pre_registered' ? '#1a1a00' : '#1a1a2e',
+                        color: vehicle.tollspot.status === 'registered' ? '#34d399' :
+                               vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#93c5fd',
+                        border: `1px solid ${vehicle.tollspot.status === 'registered' ? '#10b981' :
+                                 vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#3b82f6'}`
                       }}>
                         <span style={{ fontSize: '0.7rem' }}>
                           {vehicle.tollspot.status === 'registered' ? '\u2713' : '\u25CB'}
                         </span>
-                        Tolls: {vehicle.tollspot.status === 'pre_registered' ? (syncError ? 'Unreachable' : 'Registering') :
+                        Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Pending' :
                                 vehicle.tollspot.status === 'registered' ? 'Active' :
                                 vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
-                        {vehicle.tollspot.status === 'pre_registered' && (
-                          <>
-                            <span
-                              onClick={(e) => { e.stopPropagation(); if (!syncingTolls) syncTollspotStatuses(); }}
-                              style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
-                            >
-                              {syncingTolls ? 'Syncing...' : 'Retry'}
-                            </span>
-                            {syncError && (
-                              <span
-                                onClick={(e) => { e.stopPropagation(); resetTollRegistration(vehicle._id); }}
-                                style={{ cursor: 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', color: '#f87171' }}
-                              >
-                                Clear
-                              </span>
-                            )}
-                          </>
-                        )}
                       </div>
                     )}
 
@@ -542,30 +572,13 @@ const HostDashboard = () => {
                           <span>{vehicle.rating > 0 ? `${vehicle.rating.toFixed(1)} rating` : 'No ratings'}</span>
                           {vehicle.tollspot?.status && vehicle.tollspot.status !== 'none' && (
                             <span style={{
-                              color: vehicle.tollspot.status === 'registered' ? '#34d399' : '#93c5fd',
+                              color: vehicle.tollspot.status === 'registered' ? '#34d399' :
+                                     vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#93c5fd',
                               fontWeight: '600'
                             }}>
-                              Tolls: {vehicle.tollspot.status === 'pre_registered' ? (syncError ? 'Unreachable' : 'Registering') :
+                              Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Pending' :
                                       vehicle.tollspot.status === 'registered' ? 'Active' :
                                       vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
-                              {vehicle.tollspot.status === 'pre_registered' && (
-                                <>
-                                  <span
-                                    onClick={(e) => { e.stopPropagation(); if (!syncingTolls) syncTollspotStatuses(); }}
-                                    style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
-                                  >
-                                    {syncingTolls ? 'Syncing...' : 'Retry'}
-                                  </span>
-                                  {syncError && (
-                                    <span
-                                      onClick={(e) => { e.stopPropagation(); resetTollRegistration(vehicle._id); }}
-                                      style={{ cursor: 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', color: '#f87171' }}
-                                    >
-                                      Clear
-                                    </span>
-                                  )}
-                                </>
-                              )}
                             </span>
                           )}
                         </div>
