@@ -561,33 +561,64 @@ router.post('/tollspot-sync', auth, async (req, res) => {
     });
 
     if (vehicles.length === 0) {
-      return res.json({ message: 'No vehicles pending sync', synced: 0 });
+      return res.json({ message: 'No vehicles pending sync', synced: 0, failed: 0 });
     }
 
-    let synced = 0;
-
-    for (const vehicle of vehicles) {
+    // Process all vehicles in parallel with a shorter timeout for sync retries
+    const results = await Promise.allSettled(vehicles.map(async (vehicle) => {
       if (vehicle.tollspot?.vehicleId) {
-        // Has a vehicleId — registration already succeeded, promote to registered
         await Vehicle.findByIdAndUpdate(vehicle._id, { 'tollspot.status': 'registered' });
-        synced++;
+        return { vehicleId: vehicle._id, status: 'registered' };
       } else if (vehicle.licensePlate && vehicle.location?.state) {
-        // No vehicleId — retry the pre-registration
-        const result = await preRegisterVehicle(vehicle, req.user._id.toString());
+        const result = await preRegisterVehicle(vehicle, req.user._id.toString(), { timeout: 5000 });
         if (result.success && result.data) {
           const status = result.data.id ? 'registered' : 'pre_registered';
           await Vehicle.findByIdAndUpdate(vehicle._id, {
             'tollspot.vehicleId': result.data.id || null,
             'tollspot.status': status
           });
-          if (status === 'registered') synced++;
+          return { vehicleId: vehicle._id, status };
         }
+        return { vehicleId: vehicle._id, status: 'failed', error: result.error || 'API returned no data' };
       }
+      return { vehicleId: vehicle._id, status: 'skipped', error: 'Missing license plate or state' };
+    }));
+
+    let synced = 0;
+    let failed = 0;
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.status === 'registered') synced++;
+      else if (r.status !== 'fulfilled' || r.value.status === 'failed' || r.value.status === 'skipped') failed++;
     }
 
-    res.json({ message: `Synced ${synced} vehicle(s)`, synced });
+    const message = synced > 0
+      ? `Synced ${synced} vehicle(s)${failed > 0 ? `, ${failed} failed` : ''}`
+      : failed > 0
+        ? `TollSpot API unreachable. ${failed} vehicle(s) could not sync — will retry automatically.`
+        : 'No vehicles needed syncing';
+    res.json({ message, synced, failed });
   } catch (error) {
     console.error('❌ TollSpot sync error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Reset stuck toll registration so the host can re-enroll
+router.post('/:id/tollspot-reset', auth, async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id });
+    if (!vehicle) return res.status(404).json({ message: 'Vehicle not found' });
+    if (vehicle.tollspot?.status !== 'pre_registered') {
+      return res.status(400).json({ message: 'Vehicle is not stuck in registration' });
+    }
+    await Vehicle.findByIdAndUpdate(vehicle._id, {
+      'tollspot.vehicleId': null,
+      'tollspot.status': 'none'
+    });
+    console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} toll registration reset by host`);
+    res.json({ message: 'Toll registration cleared. You can re-enroll this vehicle.' });
+  } catch (error) {
+    console.error('❌ TollSpot reset error:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

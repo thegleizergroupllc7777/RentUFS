@@ -14,6 +14,7 @@ const HostDashboard = () => {
   const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
   const [enrollingVehicleId, setEnrollingVehicleId] = useState(null);
   const [syncingTolls, setSyncingTolls] = useState(false);
+  const [syncError, setSyncError] = useState(null);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('hostVehicleView') || 'grid');
   const location = useLocation();
 
@@ -142,16 +143,39 @@ const HostDashboard = () => {
 
   const syncTollspotStatuses = async () => {
     setSyncingTolls(true);
+    setSyncError(null);
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/vehicles/tollspot-sync`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.post(`${API_URL}/api/vehicles/tollspot-sync`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000
       });
+      if (res.data.failed > 0 && res.data.synced === 0) {
+        setSyncError(res.data.message);
+      }
       fetchDashboardData();
     } catch (error) {
+      const msg = error.code === 'ECONNABORTED'
+        ? 'Sync timed out. TollSpot may be temporarily unavailable.'
+        : 'Could not reach server. Please try again.';
+      setSyncError(msg);
       console.error('TollSpot sync error:', error);
     } finally {
       setSyncingTolls(false);
+    }
+  };
+
+  const resetTollRegistration = async (vehicleId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/vehicles/${vehicleId}/tollspot-reset`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000
+      });
+      setSyncError(null);
+      fetchDashboardData();
+    } catch (error) {
+      console.error('TollSpot reset error:', error);
     }
   };
 
@@ -370,16 +394,26 @@ const HostDashboard = () => {
                         <span style={{ fontSize: '0.7rem' }}>
                           {vehicle.tollspot.status === 'registered' ? '\u2713' : '\u25CB'}
                         </span>
-                        Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Registering' :
+                        Tolls: {vehicle.tollspot.status === 'pre_registered' ? (syncError ? 'Unreachable' : 'Registering') :
                                 vehicle.tollspot.status === 'registered' ? 'Active' :
                                 vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
                         {vehicle.tollspot.status === 'pre_registered' && (
-                          <span
-                            onClick={(e) => { e.stopPropagation(); syncTollspotStatuses(); }}
-                            style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
-                          >
-                            {syncingTolls ? 'Syncing...' : 'Retry'}
-                          </span>
+                          <>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); if (!syncingTolls) syncTollspotStatuses(); }}
+                              style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
+                            >
+                              {syncingTolls ? 'Syncing...' : 'Retry'}
+                            </span>
+                            {syncError && (
+                              <span
+                                onClick={(e) => { e.stopPropagation(); resetTollRegistration(vehicle._id); }}
+                                style={{ cursor: 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', color: '#f87171' }}
+                              >
+                                Clear
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -484,16 +518,26 @@ const HostDashboard = () => {
                               color: vehicle.tollspot.status === 'registered' ? '#34d399' : '#93c5fd',
                               fontWeight: '600'
                             }}>
-                              Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Registering' :
+                              Tolls: {vehicle.tollspot.status === 'pre_registered' ? (syncError ? 'Unreachable' : 'Registering') :
                                       vehicle.tollspot.status === 'registered' ? 'Active' :
                                       vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
                               {vehicle.tollspot.status === 'pre_registered' && (
-                                <span
-                                  onClick={(e) => { e.stopPropagation(); syncTollspotStatuses(); }}
-                                  style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
-                                >
-                                  {syncingTolls ? 'Syncing...' : 'Retry'}
-                                </span>
+                                <>
+                                  <span
+                                    onClick={(e) => { e.stopPropagation(); if (!syncingTolls) syncTollspotStatuses(); }}
+                                    style={{ cursor: syncingTolls ? 'wait' : 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', opacity: syncingTolls ? 0.5 : 1 }}
+                                  >
+                                    {syncingTolls ? 'Syncing...' : 'Retry'}
+                                  </span>
+                                  {syncError && (
+                                    <span
+                                      onClick={(e) => { e.stopPropagation(); resetTollRegistration(vehicle._id); }}
+                                      style={{ cursor: 'pointer', marginLeft: '0.3rem', textDecoration: 'underline', color: '#f87171' }}
+                                    >
+                                      Clear
+                                    </span>
+                                  )}
+                                </>
                               )}
                             </span>
                           )}

@@ -80,7 +80,7 @@ const isConfigured = () => {
  * Pre-register a vehicle with toll agencies
  * POST /api/partner/vehicle/pre-register
  */
-const preRegisterVehicle = async (vehicle, hostId) => {
+const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
   const body = {
     license_plate: (vehicle.licensePlate || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
     license_plate_state: toStateAbbr(vehicle.location?.state),
@@ -101,14 +101,17 @@ const preRegisterVehicle = async (vehicle, hostId) => {
   console.log('🛣️ TollSpot: Pre-registering vehicle:', JSON.stringify(body, null, 2));
 
   try {
-    const response = await tollApi.post('/api/partner/vehicle/pre-register', body);
+    const requestConfig = {};
+    if (options.timeout) requestConfig.timeout = options.timeout;
+    const response = await tollApi.post('/api/partner/vehicle/pre-register', body, requestConfig);
     console.log('🛣️ TollSpot: Vehicle pre-registered successfully:', response.data);
     return { success: true, data: response.data };
   } catch (err) {
     const status = err.response?.status;
     const respData = err.response?.data;
-    console.error(`🛣️ TollSpot: Pre-registration failed - HTTP ${status}:`, JSON.stringify(respData, null, 2));
-    return { success: false, error: respData?.message || err.message };
+    const isTimeout = err.code === 'ECONNABORTED' || err.message?.includes('timeout');
+    console.error(`🛣️ TollSpot: Pre-registration failed - ${isTimeout ? 'TIMEOUT' : `HTTP ${status}`}:`, JSON.stringify(respData, null, 2));
+    return { success: false, error: respData?.message || err.message, isTimeout };
   }
 };
 
