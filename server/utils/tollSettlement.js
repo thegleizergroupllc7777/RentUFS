@@ -147,18 +147,19 @@ const transferTollsToHost = async (booking, host, tollInfo) => {
  * Updates both tollAccounting totals and appends to tollSettlements array.
  */
 const recordTollSettlement = async (Booking, bookingId, tollInfo, trigger, paymentIntentId, transferId) => {
+  // Use $inc for all cumulative fields to avoid overwriting previous settlement data
   const update = {
     $inc: {
       'tollAccounting.settledTollCount': tollInfo.count,
       'tollAccounting.settledAmount': tollInfo.driverTotal,
-      'tollAccounting.settledToHost': tollInfo.originalAmount
+      'tollAccounting.settledToHost': tollInfo.originalAmount,
+      'tollAccounting.totalTolls': tollInfo.count,
+      'tollAccounting.originalTollAmount': tollInfo.originalAmount,
+      'tollAccounting.platformTollFees': tollInfo.platformFees,
+      'tollAccounting.driverTollTotal': tollInfo.driverTotal
     },
     $set: {
       'tollAccounting.lastSettledAt': new Date(),
-      'tollAccounting.totalTolls': tollInfo.allTollCount || tollInfo.count,
-      'tollAccounting.originalTollAmount': tollInfo.originalAmount,
-      'tollAccounting.platformTollFees': tollInfo.platformFees,
-      'tollAccounting.driverTollTotal': tollInfo.driverTotal,
       'tollAccounting.lastSyncedAt': new Date()
     },
     $push: {

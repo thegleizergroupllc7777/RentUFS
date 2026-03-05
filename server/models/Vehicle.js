@@ -136,7 +136,7 @@ const vehicleSchema = new mongoose.Schema({
   },
   // TollSpot toll management integration
   tollspot: {
-    vehicleId: { type: Number, default: null },      // TollSpot's vehicle ID
+    vehicleId: { type: mongoose.Schema.Types.Mixed, default: null },  // TollSpot's vehicle ID (number or string)
     status: {
       type: String,
       enum: ['none', 'pre_registered', 'registered', 'unregister_scheduled', 'unregistered'],
