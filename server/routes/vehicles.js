@@ -564,31 +564,45 @@ router.post('/tollspot-sync', auth, async (req, res) => {
       return res.json({ message: 'No vehicles pending sync', synced: 0, failed: 0 });
     }
 
-    // Process all vehicles in parallel with a shorter timeout for sync retries
-    const results = await Promise.allSettled(vehicles.map(async (vehicle) => {
+    // Process vehicles sequentially to avoid spamming the TollSpot API
+    let synced = 0;
+    let failed = 0;
+    let apiUnreachable = false;
+
+    for (const vehicle of vehicles) {
       if (vehicle.tollspot?.vehicleId) {
         await Vehicle.findByIdAndUpdate(vehicle._id, { 'tollspot.status': 'registered' });
-        return { vehicleId: vehicle._id, status: 'registered' };
-      } else if (vehicle.licensePlate && vehicle.location?.state) {
-        const result = await preRegisterVehicle(vehicle, req.user._id.toString(), { timeout: 5000 });
+        synced++;
+        continue;
+      }
+
+      // If the API already timed out, skip remaining vehicles
+      if (apiUnreachable) {
+        failed++;
+        continue;
+      }
+
+      if (vehicle.licensePlate && vehicle.location?.state) {
+        const result = await preRegisterVehicle(vehicle, req.user._id.toString(), { timeout: 8000 });
         if (result.success && result.data) {
           const status = result.data.id ? 'registered' : 'pre_registered';
           await Vehicle.findByIdAndUpdate(vehicle._id, {
             'tollspot.vehicleId': result.data.id || null,
             'tollspot.status': status
           });
-          return { vehicleId: vehicle._id, status };
+          if (status === 'registered') synced++;
+          else failed++;
+        } else {
+          failed++;
+          // If the first call times out, don't bother trying the rest
+          if (result.isTimeout) {
+            apiUnreachable = true;
+            console.error('🛣️ TollSpot sync: API unreachable (timeout), skipping remaining vehicles');
+          }
         }
-        return { vehicleId: vehicle._id, status: 'failed', error: result.error || 'API returned no data' };
+      } else {
+        failed++;
       }
-      return { vehicleId: vehicle._id, status: 'skipped', error: 'Missing license plate or state' };
-    }));
-
-    let synced = 0;
-    let failed = 0;
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value.status === 'registered') synced++;
-      else failed++;
     }
 
     const message = synced > 0

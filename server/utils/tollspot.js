@@ -15,9 +15,12 @@ const tollApi = axios.create({
 });
 
 // Add auth and version headers to every request
+// Send API key in multiple header formats for compatibility
 tollApi.interceptors.request.use((config) => {
   if (TOLLSPOT_API_KEY) {
     config.headers['X-API-KEY'] = TOLLSPOT_API_KEY;
+    config.headers['Authorization'] = `Bearer ${TOLLSPOT_API_KEY}`;
+    config.headers['x-api-key'] = TOLLSPOT_API_KEY;
   }
   config.headers['X-API-VERSION'] = TOLLSPOT_API_VERSION;
   console.log(`🛣️ TollSpot: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
@@ -93,9 +96,9 @@ const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
     partner_vehicle_id: vehicle._id.toString()
   };
 
-  // TollSpot only requires the first 12 VIN digits (last 5 can be omitted for privacy)
-  if (vehicle.vin && vehicle.vin.length >= 12) {
-    body.vin = vehicle.vin.substring(0, 12);
+  // Send the full VIN to TollSpot for accurate vehicle matching
+  if (vehicle.vin) {
+    body.vin = vehicle.vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
   }
 
   console.log('🛣️ TollSpot: Pre-registering vehicle:', JSON.stringify(body, null, 2));

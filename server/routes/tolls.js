@@ -41,10 +41,10 @@ router.get('/partner/reservations', tollspotAuth, async (req, res) => {
       return res.status(422).json({ error: 'VALIDATION_ERROR', message: 'vin query parameter is required' });
     }
 
-    // Find vehicle by VIN (case-insensitive, match first 12+ chars)
+    // Find vehicle by VIN (case-insensitive, full match)
     const searchVin = vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
     const vehicle = await Vehicle.findOne({
-      vin: { $regex: new RegExp(`^${searchVin.substring(0, 12)}`, 'i') }
+      vin: { $regex: new RegExp(`^${searchVin}$`, 'i') }
     });
 
     if (!vehicle) {

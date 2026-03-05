@@ -255,15 +255,22 @@ const syncTollspotStatuses = async () => {
     if (pendingVehicles.length === 0) return { success: true, synced: 0 };
 
     let synced = 0;
+    let apiUnreachable = false;
 
-    // Process vehicles in parallel with shorter timeout for sync retries
-    const results = await Promise.allSettled(pendingVehicles.map(async (vehicle) => {
+    // Process vehicles sequentially to avoid spamming the TollSpot API
+    for (const vehicle of pendingVehicles) {
       if (vehicle.tollspot?.vehicleId) {
         await Vehicle.findByIdAndUpdate(vehicle._id, { 'tollspot.status': 'registered' });
         console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} promoted to registered (ID: ${vehicle.tollspot.vehicleId})`);
-        return 'registered';
-      } else if (vehicle.licensePlate && vehicle.location?.state && vehicle.host) {
-        const result = await preRegisterVehicle(vehicle, vehicle.host._id.toString(), { timeout: 5000 });
+        synced++;
+        continue;
+      }
+
+      // If the API already timed out, skip remaining vehicles
+      if (apiUnreachable) continue;
+
+      if (vehicle.licensePlate && vehicle.location?.state && vehicle.host) {
+        const result = await preRegisterVehicle(vehicle, vehicle.host._id.toString(), { timeout: 8000 });
         if (result.success && result.data) {
           const status = result.data.id ? 'registered' : 'pre_registered';
           await Vehicle.findByIdAndUpdate(vehicle._id, {
@@ -271,16 +278,15 @@ const syncTollspotStatuses = async () => {
             'tollspot.status': status
           });
           console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retried → ${status} (ID: ${result.data.id || 'none'})`);
-          return status;
+          if (status === 'registered') synced++;
+        } else {
+          console.error(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retry failed: ${result.error}`);
+          if (result.isTimeout) {
+            apiUnreachable = true;
+            console.error('🛣️ TollSpot sync: API unreachable (timeout), skipping remaining vehicles');
+          }
         }
-        console.error(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retry failed: ${result.error}`);
-        return 'failed';
       }
-      return 'skipped';
-    }));
-
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value === 'registered') synced++;
     }
 
     if (synced > 0) {
