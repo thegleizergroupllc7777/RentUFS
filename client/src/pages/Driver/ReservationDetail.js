@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import ChatBox from '../../components/ChatBox';
 import RentalAgreement from '../../components/RentalAgreement';
+import TollCharges from '../../components/TollCharges';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
@@ -507,19 +508,24 @@ const ReservationDetail = () => {
                 )}
               </div>
 
-              {/* Tolls placeholder */}
-              <div style={{
-                background: '#1a1a1a',
-                border: '1px dashed #333',
-                borderRadius: '12px',
-                padding: '1.5rem',
-                textAlign: 'center'
-              }}>
-                <h3 style={{ color: '#6b7280', margin: '0 0 0.5rem 0', fontSize: '1rem' }}>Tolls & Charges</h3>
-                <p style={{ color: '#4b5563', fontSize: '0.8125rem', margin: 0 }}>
-                  Toll tracking coming soon
-                </p>
-              </div>
+              {/* Toll Charges */}
+              {['active', 'completed'].includes(booking.status) && (
+                <TollCharges bookingId={booking._id} embedded={true} />
+              )}
+              {!['active', 'completed'].includes(booking.status) && (
+                <div style={{
+                  background: '#1a1a1a',
+                  border: '1px dashed #333',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ color: '#6b7280', margin: '0 0 0.5rem 0', fontSize: '1rem' }}>Tolls & Charges</h3>
+                  <p style={{ color: '#4b5563', fontSize: '0.8125rem', margin: 0 }}>
+                    Toll charges will appear here once the trip is active.
+                  </p>
+                </div>
+              )}
             </aside>
           </div>
         </div>
