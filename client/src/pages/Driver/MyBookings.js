@@ -1394,11 +1394,24 @@ const MyBookings = () => {
                       ${(extensionDays * 1.50).toFixed(2)}
                     </span>
                   </div>
+                  {extendModal.booking.insurance?.costPerDay > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ color: '#1e40af' }}>
+                        {extendModal.booking.insurance.type === 'carshare' ? 'Car Share Coverage' :
+                         extendModal.booking.insurance.type === 'rideshare' ? 'Ride Share Coverage' :
+                         extendModal.booking.insurance.type.charAt(0).toUpperCase() + extendModal.booking.insurance.type.slice(1) + ' Coverage'} ({extensionDays} day{extensionDays > 1 ? 's' : ''} × ${Number(extendModal.booking.insurance.costPerDay).toFixed(2)}):
+                      </span>
+                      <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
+                        ${(extensionDays * extendModal.booking.insurance.costPerDay).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span style={{ color: '#1e40af' }}>Processing fee:</span>
                     <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
                       ${(() => {
-                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50;
+                        const insuranceCost = extensionDays * (extendModal.booking.insurance?.costPerDay || 0);
+                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50 + insuranceCost;
                         const fee = (0.029 * base + 0.30) / (1 - 0.029 / 2);
                         return (Math.ceil(fee * 100 / 2) / 100).toFixed(2);
                       })()}
@@ -1408,7 +1421,8 @@ const MyBookings = () => {
                     <span style={{ color: '#1e40af', fontWeight: '600' }}>Total:</span>
                     <span style={{ fontWeight: '600', color: '#059669', fontSize: '1.25rem' }}>
                       ${(() => {
-                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50;
+                        const insuranceCost = extensionDays * (extendModal.booking.insurance?.costPerDay || 0);
+                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50 + insuranceCost;
                         const fee = (0.029 * base + 0.30) / (1 - 0.029 / 2);
                         const driverFee = Math.ceil(fee * 100 / 2) / 100;
                         return (base + driverFee).toFixed(2);
