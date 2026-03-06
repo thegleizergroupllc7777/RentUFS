@@ -278,9 +278,15 @@ const Checkout = () => {
               </div>
 
               <div className="summary-item">
-                <span className="label">Rental subtotal (${(booking.pricePerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
+                <span className="label">Rental subtotal ({(() => {
+                  const rt = booking.rentalType || 'daily';
+                  const unit = rt === 'weekly' ? 'week' : rt === 'monthly' ? 'month' : 'day';
+                  const perUnit = booking.pricePerUnit || booking.pricePerDay || 0;
+                  const qty = booking.quantity || booking.totalDays || 0;
+                  return `$${perUnit.toFixed(2)}/${unit} x ${qty}`;
+                })()}):</span>
                 <span className="value">
-                  ${((booking.pricePerDay || 0) * (booking.totalDays || 0)).toFixed(2)}
+                  ${(booking.rentalSubtotal != null ? booking.rentalSubtotal : ((booking.pricePerDay || 0) * (booking.totalDays || 0))).toFixed(2)}
                 </span>
               </div>
 

@@ -1023,7 +1023,7 @@ const MyBookings = () => {
                           <strong>Total Price:</strong> ${Number(booking.totalPrice).toFixed(2)}
                         </div>
                         <div className="booking-detail-item">
-                          <strong>Rate:</strong> ${Number(booking.pricePerDay).toFixed(2)}/day
+                          <strong>Rate:</strong> ${Number(booking.pricePerUnit || booking.pricePerDay).toFixed(2)}/{booking.rentalType === 'weekly' ? 'week' : booking.rentalType === 'monthly' ? 'month' : 'day'}
                         </div>
                         {booking.insurance?.type && booking.insurance.type !== 'none' && (
                           <div className="booking-detail-item">

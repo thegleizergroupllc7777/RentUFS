@@ -9,7 +9,7 @@ import './Payouts.css';
 const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
   const [expanded, setExpanded] = useState(false);
   const isEligible = !isPaid && new Date(booking.payoutEligibleDate) <= new Date();
-  const rentalSubtotal = (booking.pricePerDay || 0) * (booking.totalDays || 0);
+  const rentalSubtotal = booking.rentalSubtotal || (booking.pricePerDay || 0) * (booking.totalDays || 0);
 
   return (
     <div className={`reservation-card ${expanded ? 'expanded' : ''}`}>
@@ -66,8 +66,8 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           <div className="detail-section">
             <h4>Earnings Breakdown</h4>
             <div className="detail-row">
-              <span className="detail-label">Daily Rate</span>
-              <span className="detail-value">{formatCurrency(booking.pricePerDay)}/day</span>
+              <span className="detail-label">Rate</span>
+              <span className="detail-value">{formatCurrency(booking.pricePerUnit || booking.pricePerDay)}/{booking.rentalType === 'weekly' ? 'week' : booking.rentalType === 'monthly' ? 'month' : 'day'}</span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Rental Subtotal</span>

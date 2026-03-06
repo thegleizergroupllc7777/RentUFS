@@ -204,7 +204,7 @@ router.post('/add-to-booking', auth, async (req, res) => {
     booking.hostProcessingFee = hostProcessingFee;
 
     // Update host earnings with new processing fee
-    const rentalSubtotal = booking.pricePerDay * booking.totalDays;
+    const rentalSubtotal = booking.rentalSubtotal || booking.pricePerDay * booking.totalDays;
     const hostPlatformFee = booking.hostPlatformFee || (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
     booking.hostEarnings = rentalSubtotal - hostPlatformFee - hostProcessingFee;
 
@@ -269,7 +269,7 @@ router.post('/remove-from-booking', auth, async (req, res) => {
     booking.hostProcessingFee = hostProcessingFee;
 
     // Update host earnings with new processing fee
-    const rentalSubtotal = booking.pricePerDay * booking.totalDays;
+    const rentalSubtotal = booking.rentalSubtotal || booking.pricePerDay * booking.totalDays;
     const hostPlatformFee = booking.hostPlatformFee || (booking.hostPlatformFeePerDay || 1.50) * booking.totalDays;
     booking.hostEarnings = rentalSubtotal - hostPlatformFee - hostProcessingFee;
 

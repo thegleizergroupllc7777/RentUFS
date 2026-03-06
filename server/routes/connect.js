@@ -230,7 +230,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
       pendingBookings: pendingBookings.map(b => {
         // Always compute from per-day rate to fix legacy bookings that stored a flat fee
         const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
-        const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
+        const rentalSubtotal = b.rentalSubtotal || (b.pricePerDay || 0) * (b.totalDays || 0);
         const hostProcessingFee = Number(b.hostProcessingFee) || 0;
         const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
         return {
@@ -244,6 +244,9 @@ router.get('/pending-payouts', auth, async (req, res) => {
           totalDays: b.totalDays,
           rentalType: b.rentalType,
           pricePerDay: b.pricePerDay,
+          pricePerUnit: b.pricePerUnit || b.pricePerDay,
+          quantity: b.quantity || b.totalDays,
+          rentalSubtotal,
           hostPlatformFee: correctHostFee,
           hostProcessingFee: hostProcessingFee,
           hostEarnings: correctEarnings,
@@ -297,6 +300,9 @@ router.get('/payout-history', auth, async (req, res) => {
           totalDays: b.totalDays,
           rentalType: b.rentalType,
           pricePerDay: b.pricePerDay,
+          pricePerUnit: b.pricePerUnit || b.pricePerDay,
+          quantity: b.quantity || b.totalDays,
+          rentalSubtotal: b.rentalSubtotal || (b.pricePerDay || 0) * (b.totalDays || 0),
           hostPlatformFee: correctHostFee,
           hostProcessingFee: hostProcessingFee,
           hostEarnings: b.hostEarnings,
