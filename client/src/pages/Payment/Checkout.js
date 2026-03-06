@@ -292,7 +292,7 @@ const Checkout = () => {
               )}
 
               {booking.insurance && booking.insurance.totalCost > 0 && (
-                <div className="summary-item insurance">
+                <div className="summary-item">
                   <span className="label">{booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'} (${(booking.insurance.costPerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
                   <span className="value">${booking.insurance.totalCost.toFixed(2)}</span>
                 </div>
