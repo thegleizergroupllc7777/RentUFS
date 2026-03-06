@@ -974,7 +974,7 @@ const MyBookings = () => {
                                   className="booking-status"
                                   style={{ backgroundColor: getStatusColor(booking.status), cursor: 'pointer', textDecoration: 'none', color: 'inherit' }}
                                 >
-                                  {getStatusLabel(booking.status)}
+                                  Continue to Checkout →
                                 </Link>
                               ) : (
                                 <div
@@ -999,7 +999,7 @@ const MyBookings = () => {
                                   color: '#f59e0b',
                                   fontWeight: '600'
                                 }}>
-                                  Payment Pending
+                                  {booking.status === 'awaiting_payment' ? 'Click above to pay' : 'Payment Pending'}
                                 </div>
                               )}
                             </div>
