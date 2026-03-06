@@ -62,6 +62,12 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  pricePerUnit: {
+    type: Number
+  },
+  rentalSubtotal: {
+    type: Number
+  },
   totalPrice: {
     type: Number,
     required: true

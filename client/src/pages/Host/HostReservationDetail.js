@@ -473,7 +473,7 @@ const HostReservationDetail = () => {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span style={{ color: '#9ca3af' }}>Rate</span>
-                    <span style={{ color: '#fff' }}>${booking.pricePerDay}/day</span>
+                    <span style={{ color: '#fff' }}>${booking.pricePerUnit || booking.pricePerDay}/{booking.rentalType === 'weekly' ? 'week' : booking.rentalType === 'monthly' ? 'month' : 'day'}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span style={{ color: '#9ca3af' }}>Payment</span>

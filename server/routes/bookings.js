@@ -223,17 +223,18 @@ router.post('/', auth, async (req, res) => {
     // Calculate total price based on rental type
     let totalPrice;
     let pricePerDay = vehicle.pricePerDay;
+    let pricePerUnit; // Rate per unit (day/week/month) for display
 
     if (rentalType === 'weekly') {
-      // Use weekly rate if available, otherwise calculate from daily
       const weeklyRate = vehicle.pricePerWeek || (vehicle.pricePerDay * 7);
+      pricePerUnit = weeklyRate;
       totalPrice = quantity * weeklyRate;
     } else if (rentalType === 'monthly') {
-      // Use monthly rate if available, otherwise calculate from daily
       const monthlyRate = vehicle.pricePerMonth || (vehicle.pricePerDay * 30);
+      pricePerUnit = monthlyRate;
       totalPrice = quantity * monthlyRate;
     } else {
-      // Daily rate (default)
+      pricePerUnit = vehicle.pricePerDay;
       totalPrice = totalDays * vehicle.pricePerDay;
     }
 
@@ -272,6 +273,8 @@ router.post('/', auth, async (req, res) => {
       rentalType: rentalType || 'daily',
       quantity: quantity || totalDays,
       pricePerDay: vehicle.pricePerDay, // Store original daily rate
+      pricePerUnit, // Rate per unit (day/week/month) for display
+      rentalSubtotal, // Rental amount before fees
       totalPrice,
       platformFeePerDay,
       platformFee,

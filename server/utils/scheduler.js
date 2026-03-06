@@ -304,7 +304,7 @@ const syncTollspotStatuses = async () => {
 const calculateDailyHostEarnings = (booking) => {
   const totalDays = booking.totalDays || 1;
   const correctHostFee = (booking.hostPlatformFeePerDay || 1.50) * totalDays;
-  const rentalSubtotal = (booking.pricePerDay || 0) * totalDays;
+  const rentalSubtotal = booking.rentalSubtotal || (booking.pricePerDay || 0) * totalDays;
   const hostProcessingFee = Number(booking.hostProcessingFee) || 0;
   const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
   return totalEarnings / totalDays;
