@@ -1,7 +1,7 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { isConfigured, getTollCharges } = require('./tollspot');
 
-const PLATFORM_TOLL_FEE = 0.25;
+const PLATFORM_TOLL_FEE = 0.50;
 
 /**
  * Fetch outstanding (unsettled) toll charges for a booking.

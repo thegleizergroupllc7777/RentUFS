@@ -8,7 +8,7 @@ const { isConfigured, getTollCharges, listVehicles } = require('../utils/tollspo
 const router = express.Router();
 
 // Platform fee added to every toll charge across all reservations
-const PLATFORM_TOLL_FEE = 0.25;
+const PLATFORM_TOLL_FEE = 0.50;
 
 // Middleware to authenticate inbound requests from TollSpot using a shared API key
 const tollspotAuth = (req, res, next) => {
