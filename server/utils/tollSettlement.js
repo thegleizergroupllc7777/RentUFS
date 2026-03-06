@@ -113,7 +113,7 @@ const chargeDriverForTolls = async (booking, driver, tollInfo, trigger) => {
 
 /**
  * Transfer toll reimbursement to host's Stripe Connect account.
- * Host receives the original toll amount (without the $0.25 platform fee).
+ * Host receives the original toll amount (without the $0.50 platform fee).
  */
 const transferTollsToHost = async (booking, host, tollInfo) => {
   if (tollInfo.originalAmount <= 0) {
