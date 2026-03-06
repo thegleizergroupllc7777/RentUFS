@@ -3,6 +3,7 @@ const axios = require('axios');
 // TollSpot Partner API client
 const TOLLSPOT_BASE_URL = process.env.TOLLSPOT_BASE_URL || 'https://api.tollspot.com';
 const TOLLSPOT_API_KEY = process.env.TOLLSPOT_API_KEY || '';
+const TOLLSPOT_HOST_ID = process.env.TOLLSPOT_HOST_ID || '';
 
 
 // Circuit breaker: stop calling TollSpot if it's been failing
@@ -142,7 +143,7 @@ const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
     license_plate_state: toStateAbbr(vehicle.location?.state),
     license_plate_country: 'US',
     partner_vehicle_id: vehicle._id.toString(),
-    host_id: hostId
+    host_id: TOLLSPOT_HOST_ID || hostId
   };
 
   // TollSpot prioritizes VIN for vehicle matching (first 12 chars required)
@@ -252,7 +253,7 @@ const monitorCharges = async (booking, vehicle) => {
     trip_start: new Date(booking.startDate).toISOString(),
     trip_end: new Date(booking.endDate).toISOString(),
     partner_vehicle_id: (vehicle._id || vehicle).toString(),
-    host_id: (booking.host._id || booking.host).toString(),
+    host_id: TOLLSPOT_HOST_ID || (booking.host._id || booking.host).toString(),
     license_plate: (vehicle.licensePlate || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
     license_plate_state: toStateAbbr(vehicle.location?.state),
     license_plate_country: 'US'
