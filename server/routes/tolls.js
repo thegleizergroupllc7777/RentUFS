@@ -375,7 +375,10 @@ router.get('/vehicles', auth, async (req, res) => {
 
 // GET /api/tolls/status - Check if TollSpot is configured
 router.get('/status', auth, (req, res) => {
-  res.json({ configured: isConfigured() });
+  res.json({
+    configured: isConfigured(),
+    signupUrl: process.env.TOLLSPOT_SIGNUP_URL || null
+  });
 });
 
 module.exports = router;

@@ -110,6 +110,27 @@ const isConfigured = () => {
 };
 
 /**
+ * Extract vehicle ID from TollSpot API response.
+ * TollSpot may return the ID as `id`, `vehicle_id`, `vehicleId`,
+ * or nested inside a `data` or `vehicle` wrapper.
+ */
+const extractVehicleId = (data) => {
+  if (!data) return null;
+  // Direct fields
+  if (data.id) return data.id;
+  if (data.vehicle_id) return data.vehicle_id;
+  if (data.vehicleId) return data.vehicleId;
+  // Nested under data envelope
+  if (data.data?.id) return data.data.id;
+  if (data.data?.vehicle_id) return data.data.vehicle_id;
+  if (data.data?.vehicleId) return data.data.vehicleId;
+  // Nested under vehicle key
+  if (data.vehicle?.id) return data.vehicle.id;
+  if (data.vehicle?.vehicle_id) return data.vehicle.vehicle_id;
+  return null;
+};
+
+/**
  * Pre-register a vehicle with toll agencies
  * POST /api/partner/vehicle/pre-register
  */
@@ -143,9 +164,10 @@ const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
     const requestConfig = {};
     if (options.timeout) requestConfig.timeout = options.timeout;
     const response = await tollApi.post('/api/partner/vehicle/pre-register', body, requestConfig);
-    console.log('🛣️ TollSpot: Vehicle pre-registered successfully:', response.data);
+    const vehicleId = extractVehicleId(response.data);
+    console.log('🛣️ TollSpot: Vehicle pre-registered successfully:', JSON.stringify(response.data), '→ extracted ID:', vehicleId);
     circuitBreaker.recordSuccess();
-    return { success: true, data: response.data };
+    return { success: true, data: response.data, vehicleId };
   } catch (err) {
     const status = err.response?.status;
     const respData = err.response?.data;
@@ -258,5 +280,6 @@ module.exports = {
   listVehicles,
   monitorCharges,
   getTollCharges,
+  extractVehicleId,
   isCircuitOpen: () => circuitBreaker.isOpen()
 };
