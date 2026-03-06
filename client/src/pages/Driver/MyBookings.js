@@ -968,12 +968,22 @@ const MyBookings = () => {
                               </p>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
-                              <div
-                                className="booking-status"
-                                style={{ backgroundColor: getStatusColor(booking.status) }}
-                              >
-                                {getStatusLabel(booking.status)}
-                              </div>
+                              {booking.status === 'awaiting_payment' ? (
+                                <Link
+                                  to={`/payment/checkout?booking_id=${booking._id}`}
+                                  className="booking-status"
+                                  style={{ backgroundColor: getStatusColor(booking.status), cursor: 'pointer', textDecoration: 'none', color: 'inherit' }}
+                                >
+                                  {getStatusLabel(booking.status)}
+                                </Link>
+                              ) : (
+                                <div
+                                  className="booking-status"
+                                  style={{ backgroundColor: getStatusColor(booking.status) }}
+                                >
+                                  {getStatusLabel(booking.status)}
+                                </div>
+                              )}
                               {booking.paymentStatus === 'paid' && (
                                 <div style={{
                                   fontSize: '0.7rem',
