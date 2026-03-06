@@ -183,27 +183,6 @@ const PayoutsContent = () => {
     }
   };
 
-  const handleTransferAll = async () => {
-    if (!window.confirm('Transfer all eligible earnings to your bank account?')) {
-      return;
-    }
-
-    try {
-      setProcessing(true);
-      setError('');
-
-      const res = await axiosInstance.post('/api/connect/transfer-all-eligible');
-      setSuccessMessage(res.data.message);
-
-      // Refresh data
-      await fetchData();
-    } catch (err) {
-      console.error('Error transferring:', err);
-      setError(err.response?.data?.message || 'Failed to transfer earnings');
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -360,13 +339,7 @@ const PayoutsContent = () => {
           </div>
 
           {pendingPayouts?.totalEligible > 0 && accountStatus?.payoutsEnabled && (
-            <button
-              className="btn btn-primary transfer-btn"
-              onClick={handleTransferAll}
-              disabled={processing}
-            >
-              {processing ? 'Processing...' : `Transfer ${formatCurrency(pendingPayouts.totalEligible)} Now`}
-            </button>
+            <p className="earnings-note">Payouts are processed automatically every Monday</p>
           )}
         </div>
       )}
