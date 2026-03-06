@@ -148,10 +148,11 @@ const HostDashboard = () => {
       fetchDashboardData();
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to enroll vehicle with TollSpot';
-      alert(msg);
-    } finally {
       setEnrollingVehicleId(null);
+      alert(msg);
+      return;
     }
+    setEnrollingVehicleId(null);
   };
 
   const syncTollspotStatuses = async () => {

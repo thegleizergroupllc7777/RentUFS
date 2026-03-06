@@ -174,7 +174,26 @@ const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
     const isTimeout = err.code === 'ECONNABORTED' || err.message?.includes('timeout');
     console.error(`🛣️ TollSpot: Pre-registration failed - ${isTimeout ? 'TIMEOUT' : `HTTP ${status}`}:`, JSON.stringify(respData, null, 2));
     if (isTimeout) circuitBreaker.recordFailure();
-    return { success: false, error: respData?.message || err.message, isTimeout };
+    // Extract error message from various TollSpot response formats
+    let errorMsg = err.message;
+    if (respData) {
+      if (typeof respData === 'string') {
+        errorMsg = respData;
+      } else if (respData.message) {
+        errorMsg = respData.message;
+      } else if (respData.error) {
+        errorMsg = typeof respData.error === 'string' ? respData.error : JSON.stringify(respData.error);
+      } else if (respData.errors) {
+        errorMsg = Array.isArray(respData.errors)
+          ? respData.errors.map(e => e.message || e.msg || JSON.stringify(e)).join('; ')
+          : JSON.stringify(respData.errors);
+      } else if (respData.detail) {
+        errorMsg = respData.detail;
+      } else {
+        errorMsg = `HTTP ${status}: ${JSON.stringify(respData)}`;
+      }
+    }
+    return { success: false, error: errorMsg, status, isTimeout };
   }
 };
 
