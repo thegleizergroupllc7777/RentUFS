@@ -822,6 +822,7 @@ router.get('/integrations', auth, async (req, res) => {
       tollspot: {
         active: user.integrations?.tollspot?.active || false,
         connectedAt: user.integrations?.tollspot?.connectedAt || null,
+        signedUp: user.integrations?.tollspot?.signedUp || false,
         signupUrl: process.env.TOLLSPOT_SIGNUP_URL || null
       }
     });
@@ -858,6 +859,27 @@ router.put('/integrations/tollspot', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error toggling TollSpot integration:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark TollSpot signup as completed
+router.put('/integrations/tollspot/signed-up', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!['host', 'both'].includes(user.userType)) {
+      return res.status(403).json({ message: 'Only hosts can manage integrations' });
+    }
+
+    user.set('integrations.tollspot.signedUp', true);
+    await user.save();
+    console.log(`✅ TollSpot signup confirmed for: ${user.email}`);
+
+    res.json({ signedUp: true });
+  } catch (error) {
+    console.error('❌ Error confirming TollSpot signup:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
