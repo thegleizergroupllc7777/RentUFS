@@ -691,7 +691,7 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
 
     // If TollSpot API is unreachable (timeout/network error/circuit breaker), save enrollment locally
     // and queue for sync when the API becomes available
-    const isNetworkError = result.circuitOpen || (result.error && (
+    const isNetworkError = result.isTimeout || result.circuitOpen || (result.error && (
       result.error.includes('timeout') ||
       result.error.includes('circuit breaker') ||
       result.error.includes('ECONNREFUSED') ||
@@ -711,7 +711,8 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
     }
 
     const errorDetail = result.error || 'Unknown error';
-    return res.status(502).json({ message: `TollSpot registration failed: ${errorDetail}` });
+    console.error(`🛣️ TollSpot: Enrollment rejected for vehicle ${vehicle._id} (HTTP ${result.status}): ${errorDetail}`);
+    return res.status(result.status || 502).json({ message: `TollSpot registration failed: ${errorDetail}` });
   } catch (error) {
     console.error('❌ TollSpot enroll error:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
