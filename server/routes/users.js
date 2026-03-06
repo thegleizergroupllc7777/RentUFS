@@ -821,7 +821,8 @@ router.get('/integrations', auth, async (req, res) => {
     res.json({
       tollspot: {
         active: user.integrations?.tollspot?.active || false,
-        connectedAt: user.integrations?.tollspot?.connectedAt || null
+        connectedAt: user.integrations?.tollspot?.connectedAt || null,
+        signupUrl: process.env.TOLLSPOT_SIGNUP_URL || null
       }
     });
   } catch (error) {

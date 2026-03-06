@@ -401,13 +401,15 @@ router.post('/', auth, async (req, res) => {
     if (tollspotConfigured()) {
       preRegisterVehicle(vehicle, req.user._id.toString())
         .then(async (result) => {
-          if (result.success && result.data) {
+          if (result.success) {
+            const tsId = result.vehicleId;
+            // TollSpot accepted the vehicle — mark as registered
             const tollspotData = {
-              vehicleId: result.data.id || null,
-              status: result.data.id ? 'registered' : 'pre_registered'
+              vehicleId: tsId || null,
+              status: 'registered'
             };
             await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
-            console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} ${tollspotData.status} (TollSpot ID: ${tollspotData.vehicleId})`);
+            console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} registered (TollSpot ID: ${tsId || 'none'})`);
           }
         })
         .catch(err => console.error('🛣️ TollSpot: Pre-registration error (non-blocking):', err.message));
@@ -594,14 +596,15 @@ router.post('/tollspot-sync', auth, async (req, res) => {
 
       if (vehicle.licensePlate && vehicle.location?.state) {
         const result = await preRegisterVehicle(vehicle, req.user._id.toString(), { timeout: 8000 });
-        if (result.success && result.data) {
-          const status = result.data.id ? 'registered' : 'pre_registered';
+        if (result.success) {
+          const tsId = result.vehicleId;
+          // TollSpot accepted the vehicle — mark as registered
+          // (even if no ID returned, the API confirmed receipt)
           await Vehicle.findByIdAndUpdate(vehicle._id, {
-            'tollspot.vehicleId': result.data.id || null,
-            'tollspot.status': status
+            'tollspot.vehicleId': tsId || null,
+            'tollspot.status': 'registered'
           });
-          if (status === 'registered') synced++;
-          else failed++;
+          synced++;
         } else {
           failed++;
           // If the first call times out, don't bother trying the rest
@@ -674,13 +677,15 @@ router.post('/:id/tollspot-enroll', auth, async (req, res) => {
 
     const result = await preRegisterVehicle(vehicle, req.user._id.toString());
 
-    if (result.success && result.data) {
+    if (result.success) {
+      const tsId = result.vehicleId;
+      // TollSpot accepted the vehicle — mark as registered
       const tollspotData = {
-        vehicleId: result.data.id || null,
-        status: result.data.id ? 'registered' : 'pre_registered'
+        vehicleId: tsId || null,
+        status: 'registered'
       };
       await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
-      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} enrolled (TollSpot ID: ${tollspotData.vehicleId}, status: ${tollspotData.status})`);
+      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} enrolled (TollSpot ID: ${tollspotData.vehicleId}, status: registered)`);
       return res.json({ message: 'Vehicle enrolled with TollSpot', tollspot: tollspotData });
     }
 

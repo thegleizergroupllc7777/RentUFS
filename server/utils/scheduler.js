@@ -271,14 +271,15 @@ const syncTollspotStatuses = async () => {
 
       if (vehicle.licensePlate && vehicle.location?.state && vehicle.host) {
         const result = await preRegisterVehicle(vehicle, vehicle.host._id.toString(), { timeout: 8000 });
-        if (result.success && result.data) {
-          const status = result.data.id ? 'registered' : 'pre_registered';
+        if (result.success) {
+          const tsId = result.vehicleId;
+          // TollSpot accepted the vehicle — mark as registered
           await Vehicle.findByIdAndUpdate(vehicle._id, {
-            'tollspot.vehicleId': result.data.id || null,
-            'tollspot.status': status
+            'tollspot.vehicleId': tsId || null,
+            'tollspot.status': 'registered'
           });
-          console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retried → ${status} (ID: ${result.data.id || 'none'})`);
-          if (status === 'registered') synced++;
+          console.log(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retried → registered (ID: ${tsId || 'none'})`);
+          synced++;
         } else {
           console.error(`🛣️ TollSpot sync: Vehicle ${vehicle._id} retry failed: ${result.error}`);
           if (result.isTimeout) {
