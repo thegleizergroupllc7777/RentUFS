@@ -3,7 +3,7 @@ const axios = require('axios');
 // TollSpot Partner API client
 const TOLLSPOT_BASE_URL = process.env.TOLLSPOT_BASE_URL || 'https://api.tollspot.com';
 const TOLLSPOT_API_KEY = process.env.TOLLSPOT_API_KEY || '';
-const TOLLSPOT_API_VERSION = '1.2.0';
+
 
 // Circuit breaker: stop calling TollSpot if it's been failing
 const circuitBreaker = {
@@ -44,15 +44,11 @@ const tollApi = axios.create({
   }
 });
 
-// Add auth and version headers to every request
-// Send API key in multiple header formats for compatibility
+// Add API key header per TollSpot docs (X-API-KEY only)
 tollApi.interceptors.request.use((config) => {
   if (TOLLSPOT_API_KEY) {
     config.headers['X-API-KEY'] = TOLLSPOT_API_KEY;
-    config.headers['Authorization'] = `Bearer ${TOLLSPOT_API_KEY}`;
-    config.headers['x-api-key'] = TOLLSPOT_API_KEY;
   }
-  config.headers['X-API-VERSION'] = TOLLSPOT_API_VERSION;
   console.log(`🛣️ TollSpot: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
@@ -136,12 +132,16 @@ const extractVehicleId = (data) => {
  */
 const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
   const body = {
+    // Required fields
     year: vehicle.year,
     vehicle_make: vehicle.make,
     vehicle_model: vehicle.model,
+    vehicle_type: mapVehicleType(vehicle.type),
     license_plate: (vehicle.licensePlate || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
     license_plate_state: toStateAbbr(vehicle.location?.state),
-    license_plate_country: 'US'
+    license_plate_country: 'US',
+    partner_vehicle_id: vehicle._id.toString(),
+    host_id: hostId
   };
 
   // TollSpot prioritizes VIN for vehicle matching (first 12 chars required)
@@ -149,7 +149,7 @@ const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
     body.vin = vehicle.vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
   }
 
-  // Optional fields per TollSpot API docs
+  // Optional fields
   if (vehicle.color) {
     body.vehicle_color = vehicle.color;
   }

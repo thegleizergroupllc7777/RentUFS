@@ -258,10 +258,15 @@ router.get('/charges/:bookingId', auth, async (req, res) => {
     }
 
     // Query toll charges filtered by license plate and booking date range
+    // TollSpot expects MM/DD/YYYY format for date filters
+    const formatDate = (d) => {
+      const dt = new Date(d);
+      return `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}/${dt.getFullYear()}`;
+    };
     const result = await getTollCharges({
       license_plate: vehicle.licensePlate.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-      from_date: new Date(booking.startDate).toISOString(),
-      to_date: new Date(booking.endDate).toISOString(),
+      from_date: formatDate(booking.startDate),
+      to_date: formatDate(booking.endDate),
       page: parseInt(req.query.page) || 0,
       limit: parseInt(req.query.limit) || 100
     });

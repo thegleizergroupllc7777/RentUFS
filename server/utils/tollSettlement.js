@@ -12,10 +12,15 @@ const getOutstandingTolls = async (booking, vehicle) => {
     return { tolls: [], count: 0, originalAmount: 0, platformFees: 0, driverTotal: 0, allTollCount: 0 };
   }
 
+  // TollSpot expects MM/DD/YYYY format for date filters
+  const formatDate = (d) => {
+    const dt = new Date(d);
+    return `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}/${dt.getFullYear()}`;
+  };
   const result = await getTollCharges({
     license_plate: vehicle.licensePlate.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-    from_date: new Date(booking.startDate).toISOString(),
-    to_date: new Date(booking.endDate).toISOString(),
+    from_date: formatDate(booking.startDate),
+    to_date: formatDate(booking.endDate),
     page: 0,
     limit: 200
   });
