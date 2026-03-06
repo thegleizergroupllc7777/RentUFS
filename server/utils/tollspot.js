@@ -44,11 +44,12 @@ const tollApi = axios.create({
   }
 });
 
-// Add API key header per TollSpot docs (X-API-KEY only)
+// Add auth and version headers per TollSpot docs
 tollApi.interceptors.request.use((config) => {
   if (TOLLSPOT_API_KEY) {
     config.headers['X-API-KEY'] = TOLLSPOT_API_KEY;
   }
+  config.headers['X-API-VERSION'] = '1.2.0';
   console.log(`🛣️ TollSpot: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
