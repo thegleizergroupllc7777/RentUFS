@@ -1397,9 +1397,7 @@ const MyBookings = () => {
                   {extendModal.booking.insurance?.costPerDay > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                       <span style={{ color: '#1e40af' }}>
-                        {extendModal.booking.insurance.type === 'carshare' ? 'Car Share Coverage' :
-                         extendModal.booking.insurance.type === 'rideshare' ? 'Ride Share Coverage' :
-                         extendModal.booking.insurance.type.charAt(0).toUpperCase() + extendModal.booking.insurance.type.slice(1) + ' Coverage'} ({extensionDays} day{extensionDays > 1 ? 's' : ''} × ${Number(extendModal.booking.insurance.costPerDay).toFixed(2)}):
+                        Insurance Coverage ({extensionDays} day{extensionDays > 1 ? 's' : ''} × ${Number(extendModal.booking.insurance.costPerDay).toFixed(2)}):
                       </span>
                       <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
                         ${(extensionDays * extendModal.booking.insurance.costPerDay).toFixed(2)}
