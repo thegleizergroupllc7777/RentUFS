@@ -82,10 +82,32 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs',
   serverSelectionTimeoutMS: 15000,
   socketTimeoutMS: 45000,
 })
-  .then(() => {
+  .then(async () => {
     console.log('✅ Connected to MongoDB');
     // Start the return reminder scheduler after DB connection
     startReturnReminderScheduler(10); // Check every 10 minutes
+
+    // One-time backfill: set tripCount from completed bookings
+    try {
+      const Booking = require('./models/Booking');
+      const Vehicle = require('./models/Vehicle');
+      const counts = await Booking.aggregate([
+        { $match: { status: 'completed' } },
+        { $group: { _id: '$vehicle', count: { $sum: 1 } } }
+      ]);
+      if (counts.length > 0) {
+        const bulkOps = counts.map(c => ({
+          updateOne: {
+            filter: { _id: c._id },
+            update: { $set: { tripCount: c.count } }
+          }
+        }));
+        const result = await Vehicle.bulkWrite(bulkOps);
+        console.log(`✅ Backfilled tripCount for ${result.modifiedCount} vehicles`);
+      }
+    } catch (err) {
+      console.error('⚠️ tripCount backfill error:', err.message);
+    }
   })
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
