@@ -69,7 +69,7 @@ const expireStaleBookings = async () => {
         { status: 'completed', completedAt: new Date() }
       );
       const vehicleIds = staleActive.map(b => b.vehicle?._id || b.vehicle);
-      await Vehicle.updateMany({ _id: { $in: vehicleIds } }, { availability: true });
+      await Vehicle.updateMany({ _id: { $in: vehicleIds } }, { availability: true, $inc: { tripCount: 1 } });
 
       // Stop TeqMobility coverage for auto-completed bookings
       for (const booking of staleActive) {
@@ -1127,8 +1127,8 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
 
     await booking.save();
 
-    // Set vehicle back to available after trip completion
-    await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true });
+    // Set vehicle back to available and increment trip count after trip completion
+    await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true, $inc: { tripCount: 1 } });
 
     // Settle outstanding toll charges (fire-and-forget, don't block return)
     let tollSettlement = null;
@@ -1614,7 +1614,11 @@ router.patch('/:id/status', auth, async (req, res) => {
 
     // Set vehicle back to available when booking is completed or cancelled
     if (['completed', 'cancelled'].includes(status)) {
-      await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: true });
+      const update = { availability: true };
+      if (status === 'completed') {
+        update.$inc = { tripCount: 1 };
+      }
+      await Vehicle.findByIdAndUpdate(booking.vehicle, update);
     }
 
     // Send SMS notifications for status changes (non-blocking)
