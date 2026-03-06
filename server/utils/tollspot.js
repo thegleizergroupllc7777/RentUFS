@@ -136,12 +136,16 @@ const extractVehicleId = (data) => {
  */
 const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
   const body = {
+    // Required fields
     year: vehicle.year,
     vehicle_make: vehicle.make,
     vehicle_model: vehicle.model,
+    vehicle_type: mapVehicleType(vehicle.type),
     license_plate: (vehicle.licensePlate || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
     license_plate_state: toStateAbbr(vehicle.location?.state),
-    license_plate_country: 'US'
+    license_plate_country: 'US',
+    partner_vehicle_id: vehicle._id.toString(),
+    host_id: hostId
   };
 
   // TollSpot prioritizes VIN for vehicle matching (first 12 chars required)
@@ -149,7 +153,7 @@ const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
     body.vin = vehicle.vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
   }
 
-  // Optional fields per TollSpot API docs
+  // Optional fields
   if (vehicle.color) {
     body.vehicle_color = vehicle.color;
   }
