@@ -277,7 +277,7 @@ router.get('/charges/:bookingId', auth, async (req, res) => {
 
     const charges = result.data.data || [];
 
-    // Add $0.25 platform fee to each toll charge (included in amount, not shown separately)
+    // Add $0.50 platform fee to each toll charge (included in amount, not shown separately)
     const chargesWithFee = charges.map(charge => ({
       ...charge,
       amount: parseFloat(((charge.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
@@ -331,7 +331,7 @@ router.get('/host-charges', auth, async (req, res) => {
 
     const charges = (result.data.data || []);
 
-    // Add $0.25 platform fee to each toll charge
+    // Add $0.50 platform fee to each toll charge
     const chargesWithFee = charges.map(charge => ({
       ...charge,
       amount: parseFloat(((charge.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
