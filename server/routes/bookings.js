@@ -17,13 +17,13 @@ const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
 
-// Auto-cancel stale awaiting_payment bookings (older than 30 minutes)
+// Auto-cancel stale awaiting_payment bookings (older than 1 hour)
 const cleanupStaleBookings = async () => {
   try {
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const result = await Booking.updateMany(
-      { status: 'awaiting_payment', createdAt: { $lt: thirtyMinutesAgo } },
-      { status: 'cancelled', cancellationReason: 'Payment not completed within 30 minutes', cancelledAt: new Date() }
+      { status: 'awaiting_payment', createdAt: { $lt: oneHourAgo } },
+      { status: 'cancelled', cancellationReason: 'Payment not completed within 1 hour', cancelledAt: new Date() }
     );
     if (result.modifiedCount > 0) {
       console.log(`🧹 Auto-cancelled ${result.modifiedCount} stale awaiting_payment booking(s)`);
