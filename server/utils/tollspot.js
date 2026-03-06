@@ -136,20 +136,22 @@ const extractVehicleId = (data) => {
  */
 const preRegisterVehicle = async (vehicle, hostId, options = {}) => {
   const body = {
-    license_plate: (vehicle.licensePlate || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
-    license_plate_state: toStateAbbr(vehicle.location?.state),
-    license_plate_country: 'US',
     year: vehicle.year,
     vehicle_make: vehicle.make,
     vehicle_model: vehicle.model,
-    vehicle_type: mapVehicleType(vehicle.type),
-    host_id: hostId,
-    partner_vehicle_id: vehicle._id.toString()
+    license_plate: (vehicle.licensePlate || '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
+    license_plate_state: toStateAbbr(vehicle.location?.state),
+    license_plate_country: 'US'
   };
 
-  // Send the full VIN to TollSpot for accurate vehicle matching
+  // TollSpot prioritizes VIN for vehicle matching (first 12 chars required)
   if (vehicle.vin) {
     body.vin = vehicle.vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+  }
+
+  // Optional fields per TollSpot API docs
+  if (vehicle.color) {
+    body.vehicle_color = vehicle.color;
   }
 
   console.log('🛣️ TollSpot: Pre-registering vehicle:', JSON.stringify(body, null, 2));
