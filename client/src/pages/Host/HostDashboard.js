@@ -12,6 +12,8 @@ const HostDashboard = () => {
   const [taxInfo, setTaxInfo] = useState(null);
   const [tollspotActive, setTollspotActive] = useState(null);
   const [tollspotSignupUrl, setTollspotSignupUrl] = useState(null);
+  const [tollspotSignedUp, setTollspotSignedUp] = useState(false);
+  const [confirmingSignup, setConfirmingSignup] = useState(false);
   const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
   const [enrollingVehicleId, setEnrollingVehicleId] = useState(null);
   const [syncingTolls, setSyncingTolls] = useState(false);
@@ -132,9 +134,25 @@ const HostDashboard = () => {
       });
       setTollspotActive(res.data.tollspot?.active || false);
       setTollspotSignupUrl(res.data.tollspot?.signupUrl || null);
+      setTollspotSignedUp(res.data.tollspot?.signedUp || false);
     } catch (error) {
       console.error('Error fetching integrations:', error);
       setTollspotActive(false);
+    }
+  };
+
+  const confirmTollspotSignup = async () => {
+    setConfirmingSignup(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/api/users/integrations/tollspot/signed-up`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTollspotSignedUp(true);
+    } catch (error) {
+      console.error('Error confirming TollSpot signup:', error);
+    } finally {
+      setConfirmingSignup(false);
     }
   };
 
@@ -347,8 +365,8 @@ const HostDashboard = () => {
                 </div>
               )}
 
-              {/* TollSpot signup prompt - show when vehicles are registered and signup URL is available */}
-              {tollspotActive && tollspotSignupUrl && vehicles.some(v => v.tollspot?.status === 'registered') && (
+              {/* TollSpot signup prompt - show when vehicles are registered, signup URL is available, and host hasn't confirmed signup */}
+              {tollspotActive && tollspotSignupUrl && !tollspotSignedUp && vehicles.some(v => v.tollspot?.status === 'registered') && (
                 <div style={{
                   background: '#001a1a',
                   border: '1px solid #5eead4',
@@ -363,15 +381,25 @@ const HostDashboard = () => {
                   <p style={{ fontSize: '0.85rem', color: '#5eead4', margin: 0 }}>
                     Your vehicles are pre-registered with TollSpot. Sign up on TollSpot to complete setup and import your vehicles.
                   </p>
-                  <a
-                    href={tollspotSignupUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-secondary"
-                    style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', flexShrink: 0, textDecoration: 'none' }}
-                  >
-                    Open TollSpot
-                  </a>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                    <a
+                      href={tollspotSignupUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary"
+                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none' }}
+                    >
+                      Open TollSpot
+                    </a>
+                    <button
+                      onClick={confirmTollspotSignup}
+                      disabled={confirmingSignup}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', background: '#10b981', color: '#000', border: '1px solid #10b981' }}
+                    >
+                      {confirmingSignup ? 'Confirming...' : "I've Completed Signup"}
+                    </button>
+                  </div>
                 </div>
               )}
 
