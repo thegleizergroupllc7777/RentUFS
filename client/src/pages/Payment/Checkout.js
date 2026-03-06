@@ -131,7 +131,9 @@ const Checkout = () => {
     setBooking(prev => ({
       ...prev,
       insurance: updatedBooking.insurance,
-      totalPrice: updatedBooking.totalPrice
+      totalPrice: updatedBooking.totalPrice,
+      driverProcessingFee: updatedBooking.driverProcessingFee ?? prev.driverProcessingFee,
+      platformFee: updatedBooking.platformFee ?? prev.platformFee
     }));
     setInsuranceSelected(updatedBooking.insurance?.type !== 'none');
 
@@ -278,7 +280,7 @@ const Checkout = () => {
               <div className="summary-item">
                 <span className="label">Rental subtotal (${(booking.pricePerDay || 0).toFixed(2)}/day x {booking.totalDays}):</span>
                 <span className="value">
-                  ${((booking.totalPrice - (booking.platformFee || 0) - (booking.insurance?.totalCost || 0) - (booking.driverProcessingFee || 0)) || 0).toFixed(2)}
+                  ${((booking.pricePerDay || 0) * (booking.totalDays || 0)).toFixed(2)}
                 </span>
               </div>
 
