@@ -3,7 +3,7 @@ const axios = require('axios');
 // TollSpot Partner API client
 const TOLLSPOT_BASE_URL = process.env.TOLLSPOT_BASE_URL || 'https://api.tollspot.com';
 const TOLLSPOT_API_KEY = process.env.TOLLSPOT_API_KEY || '';
-const TOLLSPOT_API_VERSION = '1.2.0';
+
 
 // Circuit breaker: stop calling TollSpot if it's been failing
 const circuitBreaker = {
@@ -44,15 +44,11 @@ const tollApi = axios.create({
   }
 });
 
-// Add auth and version headers to every request
-// Send API key in multiple header formats for compatibility
+// Add API key header per TollSpot docs (X-API-KEY only)
 tollApi.interceptors.request.use((config) => {
   if (TOLLSPOT_API_KEY) {
     config.headers['X-API-KEY'] = TOLLSPOT_API_KEY;
-    config.headers['Authorization'] = `Bearer ${TOLLSPOT_API_KEY}`;
-    config.headers['x-api-key'] = TOLLSPOT_API_KEY;
   }
-  config.headers['X-API-VERSION'] = TOLLSPOT_API_VERSION;
   console.log(`🛣️ TollSpot: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
