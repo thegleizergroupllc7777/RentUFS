@@ -303,7 +303,7 @@ router.get('/my-bookings', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({ driver: req.user._id })
       .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos -vehicleSwitchHistory -hostPlatformFeePerDay -hostPlatformFee -hostProcessingFee -hostEarnings -platformRevenue')
-      .populate('vehicle', 'nickname make model year images registrationImage pricePerDay')
+      .populate('vehicle', 'nickname make model year images registrationImage pricePerDay pricePerWeek pricePerMonth')
       .populate('host', 'firstName lastName email phone profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
       .sort({ createdAt: -1 })
       .lean();
@@ -708,7 +708,7 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
 // Request booking extension (creates extension request, needs payment)
 router.post('/:id/extend', auth, async (req, res) => {
   try {
-    const { extensionDays } = req.body;
+    const { extensionDays, rentalType } = req.body;
     const booking = await Booking.findById(req.params.id)
       .populate('vehicle')
       .populate('host', 'firstName lastName email');
@@ -733,8 +733,19 @@ router.post('/:id/extend', auth, async (req, res) => {
     }
 
     // Validate extension days
-    if (!extensionDays || extensionDays < 1 || extensionDays > 30) {
-      return res.status(400).json({ message: 'Extension must be between 1 and 30 days' });
+    if (!extensionDays || extensionDays < 1 || extensionDays > 31) {
+      return res.status(400).json({ message: 'Extension must be between 1 and 31 days' });
+    }
+
+    // Validate rentalType if provided
+    if (rentalType && !['daily', 'weekly', 'monthly'].includes(rentalType)) {
+      return res.status(400).json({ message: 'Invalid rental type' });
+    }
+    if (rentalType === 'weekly' && extensionDays !== 7) {
+      return res.status(400).json({ message: 'Weekly extension must be 7 days' });
+    }
+    if (rentalType === 'monthly' && (extensionDays < 28 || extensionDays > 31)) {
+      return res.status(400).json({ message: 'Monthly extension must be 28-31 days' });
     }
 
     // Check if vehicle is available for the extension period
@@ -776,8 +787,16 @@ router.post('/:id/extend', auth, async (req, res) => {
       });
     }
 
-    // Calculate extension cost: rental + platform fee per day + insurance per day + processing fee
-    const rentalCost = extensionDays * booking.pricePerDay;
+    // Calculate extension rental cost based on rentalType
+    const effectiveRentalType = rentalType || 'daily';
+    let rentalCost;
+    if (effectiveRentalType === 'weekly' && booking.vehicle.pricePerWeek) {
+      rentalCost = booking.vehicle.pricePerWeek;
+    } else if (effectiveRentalType === 'monthly' && booking.vehicle.pricePerMonth) {
+      rentalCost = booking.vehicle.pricePerMonth;
+    } else {
+      rentalCost = extensionDays * booking.pricePerDay;
+    }
     const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
     const extensionBaseTotal = rentalCost + extensionPlatformFee + extensionInsurance;
@@ -798,6 +817,7 @@ router.post('/:id/extend', auth, async (req, res) => {
       currentEndDate: booking.endDate,
       newEndDate,
       extensionDays,
+      rentalType: effectiveRentalType,
       pricePerDay: booking.pricePerDay,
       extensionCost,
       extensionBreakdown: {

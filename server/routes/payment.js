@@ -283,7 +283,7 @@ router.post('/confirm-payment', auth, async (req, res) => {
 // Create Payment Intent for booking extension
 router.post('/create-extension-payment', auth, async (req, res) => {
   try {
-    const { bookingId, extensionDays } = req.body;
+    const { bookingId, extensionDays, rentalType } = req.body;
 
     // Fetch the booking
     const booking = await Booking.findById(bookingId)
@@ -305,7 +305,15 @@ router.post('/create-extension-payment', auth, async (req, res) => {
     }
 
     // Calculate extension costs with platform fee + processing fee
-    const rentalCost = extensionDays * booking.pricePerDay;
+    const effectiveRentalType = rentalType || 'daily';
+    let rentalCost;
+    if (effectiveRentalType === 'weekly' && booking.vehicle.pricePerWeek) {
+      rentalCost = booking.vehicle.pricePerWeek;
+    } else if (effectiveRentalType === 'monthly' && booking.vehicle.pricePerMonth) {
+      rentalCost = booking.vehicle.pricePerMonth;
+    } else {
+      rentalCost = extensionDays * booking.pricePerDay;
+    }
     const platformFeePerDay = booking.platformFeePerDay || 1.50;
     const platformFee = extensionDays * platformFeePerDay;
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
@@ -341,6 +349,7 @@ router.post('/create-extension-payment', auth, async (req, res) => {
       metadata: {
         bookingId: bookingId.toString(),
         extensionDays: extensionDays.toString(),
+        rentalType: effectiveRentalType,
         type: 'extension',
         driverId: booking.driver._id.toString(),
         vehicleId: booking.vehicle._id.toString(),
@@ -361,6 +370,7 @@ router.post('/create-extension-payment', auth, async (req, res) => {
       extensionDetails: {
         bookingId,
         extensionDays,
+        rentalType: effectiveRentalType,
         rentalCost,
         platformFeePerDay,
         platformFee,
@@ -386,7 +396,7 @@ router.post('/create-extension-payment', auth, async (req, res) => {
 // Confirm extension payment and update booking
 router.post('/confirm-extension-payment', auth, async (req, res) => {
   try {
-    const { paymentIntentId, bookingId, extensionDays } = req.body;
+    const { paymentIntentId, bookingId, extensionDays, rentalType } = req.body;
 
     // Retrieve the payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
@@ -408,7 +418,15 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       const tollPlatformFee = parseFloat(paymentIntent.metadata.tollPlatformFee || '0');
 
       // Calculate new values with platform fee + insurance + processing fee
-      const rentalCost = extensionDays * booking.pricePerDay;
+      const effectiveRentalType = rentalType || paymentIntent.metadata.rentalType || 'daily';
+      let rentalCost;
+      if (effectiveRentalType === 'weekly' && booking.vehicle.pricePerWeek) {
+        rentalCost = booking.vehicle.pricePerWeek;
+      } else if (effectiveRentalType === 'monthly' && booking.vehicle.pricePerMonth) {
+        rentalCost = booking.vehicle.pricePerMonth;
+      } else {
+        rentalCost = extensionDays * booking.pricePerDay;
+      }
       const platformFeePerDay = booking.platformFeePerDay || 1.50;
       const extensionPlatformFee = extensionDays * platformFeePerDay;
       const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);

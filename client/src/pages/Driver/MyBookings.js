@@ -35,7 +35,7 @@ const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 // Extension Payment Form Component
-const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, onSuccess, onCancel }) => {
+const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, rentalType, onSuccess, onCancel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -68,7 +68,8 @@ const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, onSucce
           {
             paymentIntentId: paymentIntent.id,
             bookingId,
-            extensionDays
+            extensionDays,
+            rentalType
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -224,6 +225,7 @@ const MyBookings = () => {
   const [activeTab, setActiveTab] = useState('current');
   const [extendModal, setExtendModal] = useState({ open: false, booking: null });
   const [extensionDays, setExtensionDays] = useState(1);
+  const [extensionRentalType, setExtensionRentalType] = useState('daily');
   const [extensionClientSecret, setExtensionClientSecret] = useState(null);
   const [extensionLoading, setExtensionLoading] = useState(false);
   const [extensionError, setExtensionError] = useState('');
@@ -367,6 +369,7 @@ const MyBookings = () => {
   const openExtendModal = (booking) => {
     setExtendModal({ open: true, booking });
     setExtensionDays(1);
+    setExtensionRentalType('daily');
     setExtensionClientSecret(null);
     setExtensionError('');
     setExtensionDetails(null);
@@ -375,6 +378,7 @@ const MyBookings = () => {
   const closeExtendModal = () => {
     setExtendModal({ open: false, booking: null });
     setExtensionDays(1);
+    setExtensionRentalType('daily');
     setExtensionClientSecret(null);
     setExtensionError('');
     setExtensionDetails(null);
@@ -392,7 +396,7 @@ const MyBookings = () => {
       // First check availability
       await axios.post(
         `${API_URL}/api/bookings/${extendModal.booking._id}/extend`,
-        { extensionDays },
+        { extensionDays, rentalType: extensionRentalType },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -401,7 +405,8 @@ const MyBookings = () => {
         `${API_URL}/api/payment/create-extension-payment`,
         {
           bookingId: extendModal.booking._id,
-          extensionDays
+          extensionDays,
+          rentalType: extensionRentalType
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1339,18 +1344,65 @@ const MyBookings = () => {
               </p>
               <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
                 Daily rate: ${Number(extendModal.booking.pricePerDay).toFixed(2)}
+                {extendModal.booking.vehicle?.pricePerWeek ? ` · Weekly: $${Number(extendModal.booking.vehicle.pricePerWeek).toFixed(2)}` : ''}
+                {extendModal.booking.vehicle?.pricePerMonth ? ` · Monthly: $${Number(extendModal.booking.vehicle.pricePerMonth).toFixed(2)}` : ''}
               </p>
             </div>
 
             {!extensionClientSecret ? (
               <>
+                {/* Quick extend buttons for weekly/monthly rates */}
+                {(extendModal.booking.vehicle?.pricePerWeek || extendModal.booking.vehicle?.pricePerMonth) && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#1f2937' }}>
+                      Quick extend:
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {extendModal.booking.vehicle?.pricePerWeek > 0 && (
+                        <button
+                          onClick={() => { setExtensionDays(7); setExtensionRentalType('weekly'); }}
+                          className="btn"
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: extensionRentalType === 'weekly' ? '#10b981' : '#f3f4f6',
+                            color: extensionRentalType === 'weekly' ? 'white' : '#1f2937',
+                            border: extensionRentalType === 'weekly' ? '2px solid #10b981' : '2px solid #d1d5db',
+                            borderRadius: '0.5rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          1 Week — ${Number(extendModal.booking.vehicle.pricePerWeek).toFixed(2)}
+                        </button>
+                      )}
+                      {extendModal.booking.vehicle?.pricePerMonth > 0 && (
+                        <button
+                          onClick={() => { setExtensionDays(30); setExtensionRentalType('monthly'); }}
+                          className="btn"
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: extensionRentalType === 'monthly' ? '#10b981' : '#f3f4f6',
+                            color: extensionRentalType === 'monthly' ? 'white' : '#1f2937',
+                            border: extensionRentalType === 'monthly' ? '2px solid #10b981' : '2px solid #d1d5db',
+                            borderRadius: '0.5rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          1 Month — ${Number(extendModal.booking.vehicle.pricePerMonth).toFixed(2)}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#1f2937' }}>
-                    How many days would you like to extend?
+                    {extensionRentalType === 'daily' ? 'How many days would you like to extend?' : 'Or choose custom days:'}
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button
-                      onClick={() => setExtensionDays(Math.max(1, extensionDays - 1))}
+                      onClick={() => { setExtensionDays(Math.max(1, extensionDays - 1)); setExtensionRentalType('daily'); }}
                       className="btn btn-secondary"
                       style={{ padding: '0.5rem 1rem' }}
                     >
@@ -1360,7 +1412,7 @@ const MyBookings = () => {
                       {extensionDays}
                     </span>
                     <button
-                      onClick={() => setExtensionDays(Math.min(30, extensionDays + 1))}
+                      onClick={() => { setExtensionDays(Math.min(31, extensionDays + 1)); setExtensionRentalType('daily'); }}
                       className="btn btn-secondary"
                       style={{ padding: '0.5rem 1rem' }}
                     >
@@ -1383,11 +1435,34 @@ const MyBookings = () => {
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#1e40af' }}>Rental ({extensionDays} day{extensionDays > 1 ? 's' : ''} × ${extendModal.booking.pricePerDay}):</span>
+                    <span style={{ color: '#1e40af' }}>
+                      {extensionRentalType === 'weekly'
+                        ? `Rental (1 week @ $${Number(extendModal.booking.vehicle.pricePerWeek).toFixed(2)}):`
+                        : extensionRentalType === 'monthly'
+                        ? `Rental (1 month @ $${Number(extendModal.booking.vehicle.pricePerMonth).toFixed(2)}):`
+                        : `Rental (${extensionDays} day${extensionDays > 1 ? 's' : ''} × $${extendModal.booking.pricePerDay}):`}
+                    </span>
                     <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
-                      ${(extensionDays * extendModal.booking.pricePerDay).toFixed(2)}
+                      ${(() => {
+                        if (extensionRentalType === 'weekly' && extendModal.booking.vehicle?.pricePerWeek) return Number(extendModal.booking.vehicle.pricePerWeek).toFixed(2);
+                        if (extensionRentalType === 'monthly' && extendModal.booking.vehicle?.pricePerMonth) return Number(extendModal.booking.vehicle.pricePerMonth).toFixed(2);
+                        return (extensionDays * extendModal.booking.pricePerDay).toFixed(2);
+                      })()}
                     </span>
                   </div>
+                  {extensionRentalType !== 'daily' && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ color: '#059669', fontSize: '0.8rem' }}>
+                        You save ${(() => {
+                          const dailyTotal = extensionDays * extendModal.booking.pricePerDay;
+                          const rateTotal = extensionRentalType === 'weekly' ? extendModal.booking.vehicle.pricePerWeek : extendModal.booking.vehicle.pricePerMonth;
+                          const savings = dailyTotal - rateTotal;
+                          return savings > 0 ? savings.toFixed(2) : '0.00';
+                        })()} vs daily rate
+                      </span>
+                      <span></span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span style={{ color: '#1e40af' }}>Platform fee ({extensionDays} day{extensionDays > 1 ? 's' : ''} × $1.50):</span>
                     <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
@@ -1408,8 +1483,11 @@ const MyBookings = () => {
                     <span style={{ color: '#1e40af' }}>Processing fee:</span>
                     <span style={{ fontWeight: '500', color: '#1e3a8a' }}>
                       ${(() => {
+                        const rentalCost = extensionRentalType === 'weekly' && extendModal.booking.vehicle?.pricePerWeek ? extendModal.booking.vehicle.pricePerWeek
+                          : extensionRentalType === 'monthly' && extendModal.booking.vehicle?.pricePerMonth ? extendModal.booking.vehicle.pricePerMonth
+                          : extensionDays * extendModal.booking.pricePerDay;
                         const insuranceCost = extensionDays * (extendModal.booking.insurance?.costPerDay || 0);
-                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50 + insuranceCost;
+                        const base = rentalCost + extensionDays * 1.50 + insuranceCost;
                         const fee = (0.029 * base + 0.30) / (1 - 0.029 / 2);
                         return (Math.ceil(fee * 100 / 2) / 100).toFixed(2);
                       })()}
@@ -1419,8 +1497,11 @@ const MyBookings = () => {
                     <span style={{ color: '#1e40af', fontWeight: '600' }}>Total:</span>
                     <span style={{ fontWeight: '600', color: '#059669', fontSize: '1.25rem' }}>
                       ${(() => {
+                        const rentalCost = extensionRentalType === 'weekly' && extendModal.booking.vehicle?.pricePerWeek ? extendModal.booking.vehicle.pricePerWeek
+                          : extensionRentalType === 'monthly' && extendModal.booking.vehicle?.pricePerMonth ? extendModal.booking.vehicle.pricePerMonth
+                          : extensionDays * extendModal.booking.pricePerDay;
                         const insuranceCost = extensionDays * (extendModal.booking.insurance?.costPerDay || 0);
-                        const base = extensionDays * extendModal.booking.pricePerDay + extensionDays * 1.50 + insuranceCost;
+                        const base = rentalCost + extensionDays * 1.50 + insuranceCost;
                         const fee = (0.029 * base + 0.30) / (1 - 0.029 / 2);
                         const driverFee = Math.ceil(fee * 100 / 2) / 100;
                         return (base + driverFee).toFixed(2);
@@ -1485,6 +1566,7 @@ const MyBookings = () => {
                         bookingId={extendModal.booking._id}
                         extensionDays={extensionDays}
                         extensionCost={extensionDetails.extensionCost}
+                        rentalType={extensionRentalType}
                         onSuccess={handleExtensionSuccess}
                         onCancel={closeExtendModal}
                       />
