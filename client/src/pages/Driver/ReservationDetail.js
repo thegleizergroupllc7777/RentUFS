@@ -111,7 +111,7 @@ const ReservationDetail = () => {
     const platformFeePerDay = booking.platformFeePerDay || 1.50;
     const originalPlatformFee = originalDays * platformFeePerDay;
     const originalTotalPrice = booking.totalPrice - extensionCostTotal;
-    const originalRentalCost = originalTotalPrice - originalPlatformFee - (booking.insurance?.totalCost || 0);
+    const originalRentalCost = originalTotalPrice - originalPlatformFee - (booking.insurance?.totalCost || 0) - (booking.driverProcessingFee || 0);
 
     // Initial booking
     transactions.push({
