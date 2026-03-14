@@ -458,46 +458,55 @@ const ReservationDetail = () => {
                 <h3 style={{ color: '#fff', margin: '0 0 1rem 0', fontSize: '1.125rem' }}>Transaction History</h3>
 
                 {transactions.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {transactions.map((txn, index) => (
-                      <div key={index} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        paddingBottom: index < transactions.length - 1 ? '0.75rem' : 0,
-                        borderBottom: index < transactions.length - 1 ? '1px solid #262626' : 'none'
-                      }}>
-                        <div>
-                          <div style={{
-                            color: txn.type === 'Extension' ? '#3b82f6' : txn.type === 'Vehicle Swap' ? '#f59e0b' : '#fff',
-                            fontWeight: '600',
-                            fontSize: '0.875rem'
-                          }}>
-                            {txn.type}
-                          </div>
-                          <div style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{txn.description}</div>
-                          <div style={{ color: '#6b7280', fontSize: '0.6875rem', marginTop: '0.125rem' }}>
-                            {formatDate(txn.date)}
-                          </div>
-                        </div>
-                        <div style={{
-                          color: txn.amount > 0 ? '#fff' : '#6b7280',
-                          fontWeight: '600',
-                          fontSize: '0.875rem',
-                          whiteSpace: 'nowrap'
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {/* Scrollable transaction items */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      maxHeight: '400px',
+                      overflowY: 'auto'
+                    }}>
+                      {transactions.map((txn, index) => (
+                        <div key={index} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          paddingBottom: index < transactions.length - 1 ? '0.75rem' : 0,
+                          borderBottom: index < transactions.length - 1 ? '1px solid #262626' : 'none'
                         }}>
-                          {txn.amount > 0 ? `$${txn.amount.toFixed(2)}` : '-'}
+                          <div>
+                            <div style={{
+                              color: txn.type === 'Extension' ? '#3b82f6' : txn.type === 'Vehicle Swap' ? '#f59e0b' : '#fff',
+                              fontWeight: '600',
+                              fontSize: '0.875rem'
+                            }}>
+                              {txn.type}
+                            </div>
+                            <div style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{txn.description}</div>
+                            <div style={{ color: '#6b7280', fontSize: '0.6875rem', marginTop: '0.125rem' }}>
+                              {formatDate(txn.date)}
+                            </div>
+                          </div>
+                          <div style={{
+                            color: txn.amount > 0 ? '#fff' : '#6b7280',
+                            fontWeight: '600',
+                            fontSize: '0.875rem',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {txn.amount > 0 ? `$${txn.amount.toFixed(2)}` : '-'}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
 
-                    {/* Total */}
+                    {/* Total - always visible outside scroll area */}
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       borderTop: '1px solid #333',
                       paddingTop: '0.75rem',
-                      marginTop: '0.25rem'
+                      marginTop: '0.75rem'
                     }}>
                       <span style={{ color: '#fff', fontWeight: '700' }}>Total Spent</span>
                       <span style={{ color: '#10b981', fontWeight: '700', fontSize: '1rem' }}>${totalSpent.toFixed(2)}</span>
