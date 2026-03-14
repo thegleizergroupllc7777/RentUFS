@@ -460,12 +460,13 @@ const ReservationDetail = () => {
                 {transactions.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {/* Scrollable transaction items */}
-                    <div style={{
+                    <div className="transaction-scroll" style={{
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.75rem',
                       maxHeight: '400px',
-                      overflowY: 'auto'
+                      overflowY: 'auto',
+                      paddingRight: '0.75rem'
                     }}>
                       {transactions.map((txn, index) => (
                         <div key={index} style={{
