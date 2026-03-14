@@ -56,44 +56,12 @@ const expireStaleBookings = async () => {
       await Vehicle.updateMany({ _id: { $in: vehicleIds } }, { availability: true });
     }
 
-    // Active bookings well past end date — trip ended but return inspection never completed
-    const staleActive = await Booking.find({
-      status: 'active',
-      endDate: { $lt: cutoff }
-    }).select('vehicle teqMobility').populate('vehicle', 'vin').lean();
+    // Note: Active bookings are NOT auto-completed. They must be completed by
+    // the driver (return inspection), the host (complete reservation), or support.
+    // The overdue SMS/email reminders will nudge the driver to return the vehicle.
 
-    if (staleActive.length > 0) {
-      const staleActiveIds = staleActive.map(b => b._id);
-      await Booking.updateMany(
-        { _id: { $in: staleActiveIds } },
-        { status: 'completed', completedAt: new Date() }
-      );
-      const vehicleIds = staleActive.map(b => b.vehicle?._id || b.vehicle);
-      await Vehicle.updateMany({ _id: { $in: vehicleIds } }, { availability: true, $inc: { tripCount: 1 } });
-
-      // Stop TeqMobility coverage for auto-completed bookings
-      for (const booking of staleActive) {
-        const coverageId = booking.teqMobility?.coverageId;
-        const vin = booking.vehicle?.vin;
-        if (coverageId || vin) {
-          stopRentalCoverage({ coverageId, vin })
-            .then(result => {
-              if (result.success) {
-                Booking.findByIdAndUpdate(booking._id, {
-                  'teqMobility.stoppedAt': new Date(),
-                  'teqMobility.status': result.status
-                }).catch(() => {});
-                console.log(`🧹 TeqMobility: Auto-stopped coverage for expired booking ${booking._id}`);
-              }
-            })
-            .catch(err => console.error(`🧹 TeqMobility: Failed to stop coverage for expired booking ${booking._id}:`, err.message));
-        }
-      }
-    }
-
-    const total = staleConfirmed.length + staleActive.length;
-    if (total > 0) {
-      console.log(`🧹 Auto-expired ${staleConfirmed.length} stale confirmed + ${staleActive.length} stale active booking(s)`);
+    if (staleConfirmed.length > 0) {
+      console.log(`🧹 Auto-expired ${staleConfirmed.length} stale confirmed booking(s)`);
     }
   } catch (err) {
     console.error('Error expiring stale bookings:', err);
