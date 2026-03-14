@@ -535,7 +535,7 @@ const MyBookings = () => {
 
       if (booking.status === 'completed' || booking.status === 'cancelled') {
         past.push(booking);
-      } else if (booking.status === 'active' && endStr >= todayStr) {
+      } else if (booking.status === 'active') {
         current.push(booking);
       } else if (['awaiting_payment', 'pending', 'confirmed'].includes(booking.status) && endStr >= todayStr) {
         upcoming.push(booking);

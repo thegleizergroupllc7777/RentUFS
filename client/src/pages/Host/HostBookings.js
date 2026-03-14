@@ -396,7 +396,7 @@ const HostBookings = () => {
 
       if (booking.status === 'completed' || booking.status === 'cancelled') {
         past.push(booking);
-      } else if (booking.status === 'active' && endStr >= todayStr) {
+      } else if (booking.status === 'active') {
         current.push(booking);
       } else if ((booking.status === 'pending' || booking.status === 'confirmed') && endStr >= todayStr) {
         upcoming.push(booking);
