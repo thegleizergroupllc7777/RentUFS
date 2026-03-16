@@ -166,6 +166,11 @@ const bookingSchema = new mongoose.Schema({
   extensions: [{
     days: Number,
     cost: Number,
+    rental: Number,
+    platformFee: Number,
+    insurance: Number,
+    processingFee: Number,
+    newEndDate: Date,
     paymentId: String,
     extendedAt: { type: Date, default: Date.now }
   }],

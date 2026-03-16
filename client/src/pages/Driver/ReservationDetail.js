@@ -42,6 +42,7 @@ const ReservationDetail = () => {
   const [error, setError] = useState('');
   const [showAgreement, setShowAgreement] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [hoveredExtension, setHoveredExtension] = useState(null);
 
   useEffect(() => {
     fetchBookingDetails();
@@ -154,11 +155,27 @@ const ReservationDetail = () => {
     // Extensions
     if (booking.extensions?.length > 0) {
       booking.extensions.forEach((ext, i) => {
+        // For older extensions without breakdown, estimate from booking rates
+        const rental = ext.rental != null ? ext.rental : ext.days * booking.pricePerDay;
+        const platformFee = ext.platformFee != null ? ext.platformFee : ext.days * (booking.platformFeePerDay || 1.50);
+        const insurance = ext.insurance != null ? ext.insurance : ext.days * (booking.insurance?.costPerDay || 0);
+        const processingFee = ext.processingFee != null ? ext.processingFee : (ext.cost - rental - platformFee - insurance);
+
         transactions.push({
           date: ext.extendedAt,
           type: 'Extension',
           description: `Extended by ${ext.days} day(s)`,
-          amount: ext.cost
+          amount: ext.cost,
+          extensionIndex: i,
+          breakdown: {
+            days: ext.days,
+            rental,
+            platformFee,
+            insurance,
+            processingFee: processingFee > 0 ? processingFee : 0,
+            newEndDate: ext.newEndDate,
+            paymentId: ext.paymentId
+          }
         });
       });
     }
@@ -469,13 +486,20 @@ const ReservationDetail = () => {
                       paddingRight: '0.75rem'
                     }}>
                       {transactions.map((txn, index) => (
-                        <div key={index} style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          paddingBottom: index < transactions.length - 1 ? '0.75rem' : 0,
-                          borderBottom: index < transactions.length - 1 ? '1px solid #262626' : 'none'
-                        }}>
+                        <div
+                          key={index}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            paddingBottom: index < transactions.length - 1 ? '0.75rem' : 0,
+                            borderBottom: index < transactions.length - 1 ? '1px solid #262626' : 'none',
+                            position: txn.type === 'Extension' ? 'relative' : undefined,
+                            cursor: txn.type === 'Extension' ? 'pointer' : undefined
+                          }}
+                          onMouseEnter={txn.type === 'Extension' ? () => setHoveredExtension(txn.extensionIndex) : undefined}
+                          onMouseLeave={txn.type === 'Extension' ? () => setHoveredExtension(null) : undefined}
+                        >
                           <div>
                             <div style={{
                               color: txn.type === 'Extension' ? '#3b82f6' : txn.type === 'Vehicle Swap' ? '#f59e0b' : '#fff',
@@ -497,6 +521,53 @@ const ReservationDetail = () => {
                           }}>
                             {txn.amount > 0 ? `$${txn.amount.toFixed(2)}` : '-'}
                           </div>
+
+                          {/* Extension breakdown tooltip */}
+                          {txn.type === 'Extension' && hoveredExtension === txn.extensionIndex && txn.breakdown && (
+                            <div className="extension-tooltip">
+                              <div className="extension-tooltip-title">Extension Breakdown</div>
+                              <div className="extension-tooltip-row">
+                                <span>Rental</span>
+                                <span>${txn.breakdown.rental.toFixed(2)}</span>
+                              </div>
+                              <div className="extension-tooltip-detail">
+                                {txn.breakdown.days} day{txn.breakdown.days !== 1 ? 's' : ''} × ${(txn.breakdown.rental / txn.breakdown.days).toFixed(2)}/day
+                              </div>
+                              {txn.breakdown.platformFee > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Platform Fee</span>
+                                  <span>${txn.breakdown.platformFee.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {txn.breakdown.insurance > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Insurance</span>
+                                  <span>${txn.breakdown.insurance.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {txn.breakdown.processingFee > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Processing Fee</span>
+                                  <span>${txn.breakdown.processingFee.toFixed(2)}</span>
+                                </div>
+                              )}
+                              <div className="extension-tooltip-divider"></div>
+                              <div className="extension-tooltip-row extension-tooltip-total">
+                                <span>Total</span>
+                                <span>${txn.amount.toFixed(2)}</span>
+                              </div>
+                              {txn.breakdown.newEndDate && (
+                                <div className="extension-tooltip-enddate">
+                                  New End Date: {formatDate(txn.breakdown.newEndDate)}
+                                </div>
+                              )}
+                              {txn.breakdown.paymentId && (
+                                <div className="extension-tooltip-payment">
+                                  Payment: {txn.breakdown.paymentId.slice(0, 15)}...
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
