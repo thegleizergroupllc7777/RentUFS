@@ -43,6 +43,7 @@ const ReservationDetail = () => {
   const [showAgreement, setShowAgreement] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [hoveredExtension, setHoveredExtension] = useState(null);
+  const [hoveredBooking, setHoveredBooking] = useState(false);
 
   useEffect(() => {
     fetchBookingDetails();
@@ -107,19 +108,36 @@ const ReservationDetail = () => {
     const extensionDaysTotal = booking.extensions?.reduce((sum, ext) => sum + (ext.days || 0), 0) || 0;
     const extensionCostTotal = booking.extensions?.reduce((sum, ext) => sum + (ext.cost || 0), 0) || 0;
 
+    // Calculate extension insurance total (insurance.totalCost gets incremented with each extension)
+    const extensionInsuranceTotal = booking.extensions?.reduce((sum, ext) => {
+      if (ext.insurance != null) return sum + ext.insurance;
+      return sum + (ext.days || 0) * (booking.insurance?.costPerDay || 0);
+    }, 0) || 0;
+
     // Original booking values (before any extensions)
     const originalDays = booking.totalDays - extensionDaysTotal;
     const platformFeePerDay = booking.platformFeePerDay || 1.50;
     const originalPlatformFee = originalDays * platformFeePerDay;
     const originalTotalPrice = booking.totalPrice - extensionCostTotal;
-    const originalRentalCost = originalTotalPrice - originalPlatformFee - (booking.insurance?.totalCost || 0) - (booking.driverProcessingFee || 0);
+    // Use original insurance (subtract extension insurance from the inflated totalCost)
+    const originalInsuranceCost = Math.max(0, (booking.insurance?.totalCost || 0) - extensionInsuranceTotal);
+    const originalRentalCost = originalTotalPrice - originalPlatformFee - originalInsuranceCost - (booking.driverProcessingFee || 0);
 
     // Initial booking
+    const bookingRental = originalRentalCost > 0 ? originalRentalCost : originalTotalPrice;
     transactions.push({
       date: booking.createdAt,
       type: 'Booking Created',
       description: `${booking.rentalType === 'daily' ? `${originalDays} day(s)` : booking.rentalType === 'weekly' ? `${booking.quantity || 1} week(s)` : `${booking.quantity || 1} month(s)`} rental`,
-      amount: originalRentalCost > 0 ? originalRentalCost : originalTotalPrice
+      amount: bookingRental,
+      breakdown: {
+        days: originalDays,
+        rental: bookingRental,
+        platformFee: originalPlatformFee,
+        insurance: originalInsuranceCost,
+        processingFee: booking.driverProcessingFee || 0,
+        total: originalTotalPrice
+      }
     });
 
     // Platform fee (original, not including extensions)
@@ -132,13 +150,13 @@ const ReservationDetail = () => {
       });
     }
 
-    // Insurance
-    if (booking.insurance?.totalCost > 0) {
+    // Insurance (original only, not including extension insurance)
+    if (originalInsuranceCost > 0) {
       transactions.push({
         date: booking.createdAt,
         type: 'Insurance',
         description: booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage',
-        amount: booking.insurance.totalCost
+        amount: originalInsuranceCost
       });
     }
 
@@ -494,11 +512,11 @@ const ReservationDetail = () => {
                             alignItems: 'flex-start',
                             paddingBottom: index < transactions.length - 1 ? '0.75rem' : 0,
                             borderBottom: index < transactions.length - 1 ? '1px solid #262626' : 'none',
-                            position: txn.type === 'Extension' ? 'relative' : undefined,
-                            cursor: txn.type === 'Extension' ? 'pointer' : undefined
+                            position: (txn.type === 'Extension' || txn.type === 'Booking Created') ? 'relative' : undefined,
+                            cursor: (txn.type === 'Extension' || txn.type === 'Booking Created') ? 'pointer' : undefined
                           }}
-                          onMouseEnter={txn.type === 'Extension' ? () => setHoveredExtension(txn.extensionIndex) : undefined}
-                          onMouseLeave={txn.type === 'Extension' ? () => setHoveredExtension(null) : undefined}
+                          onMouseEnter={txn.type === 'Extension' ? () => setHoveredExtension(txn.extensionIndex) : txn.type === 'Booking Created' ? () => setHoveredBooking(true) : undefined}
+                          onMouseLeave={txn.type === 'Extension' ? () => setHoveredExtension(null) : txn.type === 'Booking Created' ? () => setHoveredBooking(false) : undefined}
                         >
                           <div>
                             <div style={{
@@ -521,6 +539,43 @@ const ReservationDetail = () => {
                           }}>
                             {txn.amount > 0 ? `$${txn.amount.toFixed(2)}` : '-'}
                           </div>
+
+                          {/* Booking Created breakdown tooltip */}
+                          {txn.type === 'Booking Created' && hoveredBooking && txn.breakdown && (
+                            <div className="extension-tooltip">
+                              <div className="extension-tooltip-title">Booking Breakdown</div>
+                              <div className="extension-tooltip-row">
+                                <span>Rental</span>
+                                <span>${txn.breakdown.rental.toFixed(2)}</span>
+                              </div>
+                              <div className="extension-tooltip-detail">
+                                {txn.breakdown.days} day{txn.breakdown.days !== 1 ? 's' : ''} × ${(txn.breakdown.rental / txn.breakdown.days).toFixed(2)}/day
+                              </div>
+                              {txn.breakdown.platformFee > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Platform Fee</span>
+                                  <span>${txn.breakdown.platformFee.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {txn.breakdown.insurance > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Insurance</span>
+                                  <span>${txn.breakdown.insurance.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {txn.breakdown.processingFee > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Processing Fee</span>
+                                  <span>${txn.breakdown.processingFee.toFixed(2)}</span>
+                                </div>
+                              )}
+                              <div className="extension-tooltip-divider"></div>
+                              <div className="extension-tooltip-row extension-tooltip-total">
+                                <span>Total</span>
+                                <span>${txn.breakdown.total.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Extension breakdown tooltip */}
                           {txn.type === 'Extension' && hoveredExtension === txn.extensionIndex && txn.breakdown && (
