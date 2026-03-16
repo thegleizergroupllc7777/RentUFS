@@ -41,6 +41,10 @@ router.get('/partner/reservations', tollspotAuth, async (req, res) => {
       return res.status(422).json({ error: 'VALIDATION_ERROR', message: 'vin query parameter is required' });
     }
 
+    if (!from_date || !to_date) {
+      return res.status(422).json({ error: 'VALIDATION_ERROR', message: 'from_date and to_date query parameters are required (MM/DD/YYYY format)' });
+    }
+
     // Find vehicle by VIN (case-insensitive, full match)
     const searchVin = vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
     const vehicle = await Vehicle.findOne({
@@ -76,8 +80,7 @@ router.get('/partner/reservations', tollspotAuth, async (req, res) => {
 
     const [bookings, total] = await Promise.all([
       Booking.find(query)
-        .populate('driver', 'firstName lastName email phone')
-        .populate('host', 'firstName lastName email')
+        .select('reservationId startDate endDate')
         .sort({ startDate: -1 })
         .skip(pageNum * limitNum)
         .limit(limitNum)
@@ -89,23 +92,9 @@ router.get('/partner/reservations', tollspotAuth, async (req, res) => {
       reservation_id: b.reservationId,
       trip_start: b.startDate,
       trip_end: b.endDate,
-      status: b.status,
-      partner_vehicle_id: vehicle._id.toString(),
       vin: vehicle.vin,
       license_plate: vehicle.licensePlate,
-      license_plate_state: vehicle.location?.state || '',
-      driver: {
-        id: b.driver?._id?.toString(),
-        first_name: b.driver?.firstName,
-        last_name: b.driver?.lastName,
-        email: b.driver?.email,
-        phone: b.driver?.phone
-      },
-      host: {
-        id: b.host?._id?.toString(),
-        first_name: b.host?.firstName,
-        last_name: b.host?.lastName
-      }
+      license_plate_state: vehicle.location?.state || ''
     }));
 
     console.log(`🛣️ TollSpot Inbound: Reservations query for VIN ${searchVin} — ${total} results`);
