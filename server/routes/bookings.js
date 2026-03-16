@@ -867,6 +867,11 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
     booking.extensions.push({
       days: extensionDays,
       cost: extensionCost,
+      rental: extensionRental,
+      platformFee: extensionPlatformFee,
+      insurance: extensionInsurance,
+      processingFee: extensionProcessing.driverProcessingFee,
+      newEndDate: newEndDate,
       paymentId: paymentIntentId,
       extendedAt: new Date()
     });
