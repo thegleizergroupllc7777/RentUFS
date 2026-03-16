@@ -561,11 +561,6 @@ const ReservationDetail = () => {
                                   New End Date: {formatDate(txn.breakdown.newEndDate)}
                                 </div>
                               )}
-                              {txn.breakdown.paymentId && (
-                                <div className="extension-tooltip-payment">
-                                  Payment: {txn.breakdown.paymentId.slice(0, 15)}...
-                                </div>
-                              )}
                             </div>
                           )}
                         </div>
