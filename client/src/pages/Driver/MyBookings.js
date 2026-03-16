@@ -1260,20 +1260,40 @@ const MyBookings = () => {
                           )}
                         </button>
 
-                        {booking.status === 'completed' && !reviewedBookingIds.has(String(booking._id)) && (
-                          <button
-                            onClick={() => openRatingModal(booking)}
-                            className="btn btn-secondary"
-                            style={{
-                              background: '#f59e0b',
-                              color: '#000',
-                              border: 'none',
+                        {booking.status === 'completed' && !reviewedBookingIds.has(String(booking._id)) && (() => {
+                          const daysSinceEnd = Math.floor((new Date() - new Date(booking.endDate)) / (1000 * 60 * 60 * 24));
+                          const reviewWindowDays = 7;
+                          if (daysSinceEnd <= reviewWindowDays) {
+                            return (
+                              <button
+                                onClick={() => openRatingModal(booking)}
+                                className="btn btn-secondary"
+                                style={{
+                                  background: '#f59e0b',
+                                  color: '#000',
+                                  border: 'none',
+                                  fontWeight: '600'
+                                }}
+                                title={`${reviewWindowDays - daysSinceEnd} day${reviewWindowDays - daysSinceEnd !== 1 ? 's' : ''} left to review`}
+                              >
+                                Rate
+                              </button>
+                            );
+                          }
+                          return (
+                            <span style={{
+                              padding: '0.5rem 1rem',
+                              background: 'rgba(156, 163, 175, 0.1)',
+                              border: '1px solid #4b5563',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.8rem',
+                              color: '#6b7280',
                               fontWeight: '600'
-                            }}
-                          >
-                            Rate
-                          </button>
-                        )}
+                            }}>
+                              Review expired
+                            </span>
+                          );
+                        })()}
 
                         {booking.status === 'completed' && reviewedBookingIds.has(String(booking._id)) && (
                           <span style={{

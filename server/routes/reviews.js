@@ -1,15 +1,31 @@
 const express = require('express');
 const Review = require('../models/Review');
+const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+const REVIEW_WINDOW_DAYS = 7;
+
 // Create review
 router.post('/', auth, async (req, res) => {
   try {
     const { bookingId, vehicleId, revieweeId, reviewType, rating, comment } = req.body;
+
+    // Enforce 7-day review window after booking end date
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    if (booking.status !== 'completed') {
+      return res.status(400).json({ message: 'Can only review completed bookings' });
+    }
+    const daysSinceEnd = Math.floor((new Date() - new Date(booking.endDate)) / (1000 * 60 * 60 * 24));
+    if (daysSinceEnd > REVIEW_WINDOW_DAYS) {
+      return res.status(400).json({ message: 'Review period has expired. Reviews must be submitted within 7 days of trip completion.' });
+    }
 
     const review = new Review({
       booking: bookingId,
