@@ -114,6 +114,9 @@ const ReservationDetail = () => {
       return sum + (ext.days || 0) * (booking.insurance?.costPerDay || 0);
     }, 0) || 0;
 
+    // Calculate extension processing fee total (driverProcessingFee gets incremented with each extension)
+    const extensionProcessingTotal = booking.extensions?.reduce((sum, ext) => sum + (ext.processingFee || 0), 0) || 0;
+
     // Original booking values (before any extensions)
     const originalDays = booking.totalDays - extensionDaysTotal;
     const platformFeePerDay = booking.platformFeePerDay || 1.50;
@@ -121,7 +124,9 @@ const ReservationDetail = () => {
     const originalTotalPrice = booking.totalPrice - extensionCostTotal;
     // Use original insurance (subtract extension insurance from the inflated totalCost)
     const originalInsuranceCost = Math.max(0, (booking.insurance?.totalCost || 0) - extensionInsuranceTotal);
-    const originalRentalCost = originalTotalPrice - originalPlatformFee - originalInsuranceCost - (booking.driverProcessingFee || 0);
+    // Use original processing fee (subtract extension processing fees from the inflated driverProcessingFee)
+    const originalProcessingFee = Math.max(0, (booking.driverProcessingFee || 0) - extensionProcessingTotal);
+    const originalRentalCost = originalTotalPrice - originalPlatformFee - originalInsuranceCost - originalProcessingFee;
 
     // Initial booking
     const bookingRental = originalRentalCost > 0 ? originalRentalCost : originalTotalPrice;
@@ -135,7 +140,7 @@ const ReservationDetail = () => {
         rental: bookingRental,
         platformFee: originalPlatformFee,
         insurance: originalInsuranceCost,
-        processingFee: booking.driverProcessingFee || 0,
+        processingFee: originalProcessingFee,
         total: originalTotalPrice
       }
     });
@@ -160,13 +165,13 @@ const ReservationDetail = () => {
       });
     }
 
-    // Processing fee (driver's half of Stripe fee)
-    if (booking.driverProcessingFee > 0) {
+    // Processing fee (original only, not including extension processing fees)
+    if (originalProcessingFee > 0) {
       transactions.push({
         date: booking.createdAt,
         type: 'Processing Fee',
         description: 'Card processing fee',
-        amount: booking.driverProcessingFee
+        amount: originalProcessingFee
       });
     }
 
