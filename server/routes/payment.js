@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
-const { sendBookingConfirmationToDriver, sendBookingNotificationToHost } = require('../utils/emailService');
+const { sendBookingConfirmationToDriver, sendBookingNotificationToHost, sendBookingExtensionEmail } = require('../utils/emailService');
 const { sendNewBookingNotificationSMS, sendBookingConfirmedSMS } = require('../utils/smsService');
 const { calculateProcessingFee } = require('../utils/stripeFee');
 const { isConfigured: tollspotConfigured } = require('../utils/tollspot');
@@ -474,6 +474,12 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       });
 
       await booking.save();
+
+      // Send extension confirmation emails to both driver and host (fire-and-forget)
+      if (booking.driver && booking.host && booking.vehicle) {
+        sendBookingExtensionEmail(booking.driver, booking.host, booking, booking.vehicle)
+          .catch(err => console.error('📧 Extension email failed (non-blocking):', err.message));
+      }
 
       // Record toll settlement if tolls were included (fire-and-forget)
       if (tollCount > 0) {
