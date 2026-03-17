@@ -117,7 +117,10 @@ const TollCharges = ({ bookingId, onClose, embedded = false }) => {
           </div>
 
           {/* Charge list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="transaction-scroll" style={{
+            display: 'flex', flexDirection: 'column', gap: '0.75rem',
+            maxHeight: '400px', overflowY: 'auto', paddingRight: '0.75rem'
+          }}>
             {charges.map((charge, idx) => (
               <div key={charge.id || idx} style={{
                 padding: '0.75rem 1rem', borderRadius: '0.5rem',
