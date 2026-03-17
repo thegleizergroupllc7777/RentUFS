@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -42,8 +42,8 @@ const ReservationDetail = () => {
   const [error, setError] = useState('');
   const [showAgreement, setShowAgreement] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [hoveredExtension, setHoveredExtension] = useState(null);
-  const [hoveredBooking, setHoveredBooking] = useState(false);
+  const [tooltipData, setTooltipData] = useState(null);
+  const txnWrapperRef = useRef(null);
 
   useEffect(() => {
     fetchBookingDetails();
@@ -506,7 +506,7 @@ const ReservationDetail = () => {
                 <h3 style={{ color: '#fff', margin: '0 0 1rem 0', fontSize: '1.125rem' }}>Transaction History</h3>
 
                 {transactions.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div ref={txnWrapperRef} style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
                     {/* Scrollable transaction items */}
                     <div className="transaction-scroll" style={{
                       display: 'flex',
@@ -525,11 +525,14 @@ const ReservationDetail = () => {
                             alignItems: 'flex-start',
                             paddingBottom: index < transactions.length - 1 ? '0.75rem' : 0,
                             borderBottom: index < transactions.length - 1 ? '1px solid #262626' : 'none',
-                            position: (txn.type === 'Extension' || txn.type === 'Booking Created') ? 'relative' : undefined,
                             cursor: (txn.type === 'Extension' || txn.type === 'Booking Created') ? 'pointer' : undefined
                           }}
-                          onMouseEnter={txn.type === 'Extension' ? () => setHoveredExtension(txn.extensionIndex) : txn.type === 'Booking Created' ? () => setHoveredBooking(true) : undefined}
-                          onMouseLeave={txn.type === 'Extension' ? () => setHoveredExtension(null) : txn.type === 'Booking Created' ? () => setHoveredBooking(false) : undefined}
+                          onMouseEnter={(txn.type === 'Extension' || txn.type === 'Booking Created') ? (e) => {
+                            const wrapperRect = txnWrapperRef.current.getBoundingClientRect();
+                            const itemRect = e.currentTarget.getBoundingClientRect();
+                            setTooltipData({ txn, top: itemRect.top - wrapperRect.top });
+                          } : undefined}
+                          onMouseLeave={(txn.type === 'Extension' || txn.type === 'Booking Created') ? () => setTooltipData(null) : undefined}
                         >
                           <div>
                             <div style={{
@@ -553,87 +556,59 @@ const ReservationDetail = () => {
                             {txn.amount > 0 ? `$${txn.amount.toFixed(2)}` : '-'}
                           </div>
 
-                          {/* Booking Created breakdown tooltip */}
-                          {txn.type === 'Booking Created' && hoveredBooking && txn.breakdown && (
-                            <div className="extension-tooltip">
-                              <div className="extension-tooltip-title">Booking Breakdown</div>
-                              <div className="extension-tooltip-row">
-                                <span>Rental</span>
-                                <span>${txn.breakdown.rental.toFixed(2)}</span>
-                              </div>
-                              <div className="extension-tooltip-detail">
-                                {txn.breakdown.days} day{txn.breakdown.days !== 1 ? 's' : ''} × ${(txn.breakdown.rental / txn.breakdown.days).toFixed(2)}/day
-                              </div>
-                              {txn.breakdown.platformFee > 0 && (
-                                <div className="extension-tooltip-row">
-                                  <span>Platform Fee</span>
-                                  <span>${txn.breakdown.platformFee.toFixed(2)}</span>
-                                </div>
-                              )}
-                              {txn.breakdown.insurance > 0 && (
-                                <div className="extension-tooltip-row">
-                                  <span>Insurance</span>
-                                  <span>${txn.breakdown.insurance.toFixed(2)}</span>
-                                </div>
-                              )}
-                              {txn.breakdown.processingFee > 0 && (
-                                <div className="extension-tooltip-row">
-                                  <span>Processing Fee</span>
-                                  <span>${txn.breakdown.processingFee.toFixed(2)}</span>
-                                </div>
-                              )}
-                              <div className="extension-tooltip-divider"></div>
-                              <div className="extension-tooltip-row extension-tooltip-total">
-                                <span>Total</span>
-                                <span>${txn.breakdown.total.toFixed(2)}</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Extension breakdown tooltip */}
-                          {txn.type === 'Extension' && hoveredExtension === txn.extensionIndex && txn.breakdown && (
-                            <div className="extension-tooltip">
-                              <div className="extension-tooltip-title">Extension Breakdown</div>
-                              <div className="extension-tooltip-row">
-                                <span>Rental</span>
-                                <span>${txn.breakdown.rental.toFixed(2)}</span>
-                              </div>
-                              <div className="extension-tooltip-detail">
-                                {txn.breakdown.days} day{txn.breakdown.days !== 1 ? 's' : ''} × ${(txn.breakdown.rental / txn.breakdown.days).toFixed(2)}/day
-                              </div>
-                              {txn.breakdown.platformFee > 0 && (
-                                <div className="extension-tooltip-row">
-                                  <span>Platform Fee</span>
-                                  <span>${txn.breakdown.platformFee.toFixed(2)}</span>
-                                </div>
-                              )}
-                              {txn.breakdown.insurance > 0 && (
-                                <div className="extension-tooltip-row">
-                                  <span>Insurance</span>
-                                  <span>${txn.breakdown.insurance.toFixed(2)}</span>
-                                </div>
-                              )}
-                              {txn.breakdown.processingFee > 0 && (
-                                <div className="extension-tooltip-row">
-                                  <span>Processing Fee</span>
-                                  <span>${txn.breakdown.processingFee.toFixed(2)}</span>
-                                </div>
-                              )}
-                              <div className="extension-tooltip-divider"></div>
-                              <div className="extension-tooltip-row extension-tooltip-total">
-                                <span>Total</span>
-                                <span>${txn.amount.toFixed(2)}</span>
-                              </div>
-                              {txn.breakdown.newEndDate && (
-                                <div className="extension-tooltip-enddate">
-                                  New End Date: {formatDate(txn.breakdown.newEndDate)}
-                                </div>
-                              )}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
+
+                    {/* Tooltip rendered outside scroll container so it's not clipped */}
+                    {tooltipData && tooltipData.txn.breakdown && (
+                      <div className="extension-tooltip" style={{
+                        top: tooltipData.top,
+                        transform: 'translateY(calc(-100% - 8px))',
+                        bottom: 'auto',
+                        left: 0,
+                        right: '0.75rem'
+                      }}>
+                        <div className="extension-tooltip-title">
+                          {tooltipData.txn.type === 'Booking Created' ? 'Booking Breakdown' : 'Extension Breakdown'}
+                        </div>
+                        <div className="extension-tooltip-row">
+                          <span>Rental</span>
+                          <span>${tooltipData.txn.breakdown.rental.toFixed(2)}</span>
+                        </div>
+                        <div className="extension-tooltip-detail">
+                          {tooltipData.txn.breakdown.days} day{tooltipData.txn.breakdown.days !== 1 ? 's' : ''} × ${(tooltipData.txn.breakdown.rental / tooltipData.txn.breakdown.days).toFixed(2)}/day
+                        </div>
+                        {tooltipData.txn.breakdown.platformFee > 0 && (
+                          <div className="extension-tooltip-row">
+                            <span>Platform Fee</span>
+                            <span>${tooltipData.txn.breakdown.platformFee.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {tooltipData.txn.breakdown.insurance > 0 && (
+                          <div className="extension-tooltip-row">
+                            <span>Insurance</span>
+                            <span>${tooltipData.txn.breakdown.insurance.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {tooltipData.txn.breakdown.processingFee > 0 && (
+                          <div className="extension-tooltip-row">
+                            <span>Processing Fee</span>
+                            <span>${tooltipData.txn.breakdown.processingFee.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="extension-tooltip-divider"></div>
+                        <div className="extension-tooltip-row extension-tooltip-total">
+                          <span>Total</span>
+                          <span>${tooltipData.txn.type === 'Booking Created' ? tooltipData.txn.breakdown.total.toFixed(2) : tooltipData.txn.amount.toFixed(2)}</span>
+                        </div>
+                        {tooltipData.txn.breakdown.newEndDate && (
+                          <div className="extension-tooltip-enddate">
+                            New End Date: {formatDate(tooltipData.txn.breakdown.newEndDate)}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Total - always visible outside scroll area */}
                     <div style={{

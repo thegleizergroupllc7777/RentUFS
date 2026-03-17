@@ -2174,7 +2174,6 @@
 /* Extension breakdown tooltip */
 .extension-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
   left: 0;
   right: 0;
   background: #111111;
@@ -2184,6 +2183,7 @@
   z-index: 20;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   animation: tooltipFadeIn 0.15s ease-out;
+  pointer-events: none;
 }
 
 .extension-tooltip::after {
