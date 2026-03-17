@@ -115,7 +115,15 @@ const ReservationDetail = () => {
     }, 0) || 0;
 
     // Calculate extension processing fee total (driverProcessingFee gets incremented with each extension)
-    const extensionProcessingTotal = booking.extensions?.reduce((sum, ext) => sum + (ext.processingFee || 0), 0) || 0;
+    const extensionProcessingTotal = booking.extensions?.reduce((sum, ext) => {
+      if (ext.processingFee != null) return sum + ext.processingFee;
+      // For older extensions without processingFee stored, derive it from cost minus known components
+      const extRental = ext.rental != null ? ext.rental : ext.rentalCost != null ? ext.rentalCost : (ext.days || 0) * (booking.pricePerDay || 0);
+      const extPlatformFee = ext.platformFee != null ? ext.platformFee : (ext.days || 0) * (booking.platformFeePerDay || 1.50);
+      const extInsurance = ext.insurance != null ? ext.insurance : (ext.days || 0) * (booking.insurance?.costPerDay || 0);
+      const derived = (ext.cost || 0) - extRental - extPlatformFee - extInsurance;
+      return sum + Math.max(0, derived);
+    }, 0) || 0;
 
     // Original booking values (before any extensions)
     const originalDays = booking.totalDays - extensionDaysTotal;
@@ -179,7 +187,7 @@ const ReservationDetail = () => {
     if (booking.extensions?.length > 0) {
       booking.extensions.forEach((ext, i) => {
         // For older extensions without breakdown, estimate from booking rates
-        const rental = ext.rental != null ? ext.rental : ext.days * booking.pricePerDay;
+        const rental = ext.rental != null ? ext.rental : ext.rentalCost != null ? ext.rentalCost : ext.days * booking.pricePerDay;
         const platformFee = ext.platformFee != null ? ext.platformFee : ext.days * (booking.platformFeePerDay || 1.50);
         const insurance = ext.insurance != null ? ext.insurance : ext.days * (booking.insurance?.costPerDay || 0);
         const processingFee = ext.processingFee != null ? ext.processingFee : (ext.cost - rental - platformFee - insurance);

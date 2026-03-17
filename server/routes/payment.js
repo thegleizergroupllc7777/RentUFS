@@ -464,8 +464,11 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       booking.extensions.push({
         days: extensionDays,
         cost: extensionCost,
-        rentalCost: rentalCost,
+        rental: rentalCost,
         platformFee: extensionPlatformFee,
+        insurance: extensionInsurance,
+        processingFee: extensionProcessing.driverProcessingFee,
+        newEndDate: newEndDate,
         paymentId: paymentIntentId,
         extendedAt: new Date()
       });
@@ -828,8 +831,11 @@ router.post('/webhook', async (req, res) => {
             existingBooking.extensions.push({
               days: extensionDays,
               cost: extensionCost,
-              rentalCost: rentalCost,
+              rental: rentalCost,
               platformFee: extensionPlatformFee,
+              insurance: extensionInsurance,
+              processingFee: extensionProcessing.driverProcessingFee,
+              newEndDate: newEndDate,
               paymentId: paymentIntent.id,
               extendedAt: new Date()
             });
