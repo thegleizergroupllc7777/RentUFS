@@ -134,6 +134,7 @@ const HostReservationDetail = () => {
   const [showAgreement, setShowAgreement] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [hoveredExtension, setHoveredExtension] = useState(null);
 
   useEffect(() => {
     fetchBooking();
@@ -530,26 +531,89 @@ const HostReservationDetail = () => {
                   borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem'
                 }}>
                   <h3 style={{ color: '#fff', margin: '0 0 1rem 0', fontSize: '1.125rem' }}>Extensions</h3>
-                  {booking.extensions.map((ext, i) => (
-                    <div key={i} style={{
-                      display: 'flex', justifyContent: 'space-between',
-                      paddingBottom: i < booking.extensions.length - 1 ? '0.75rem' : 0,
-                      borderBottom: i < booking.extensions.length - 1 ? '1px solid #262626' : 'none',
-                      marginBottom: i < booking.extensions.length - 1 ? '0.75rem' : 0
-                    }}>
-                      <div>
-                        <div style={{ color: '#3b82f6', fontWeight: '600', fontSize: '0.875rem' }}>
-                          +{ext.days} day(s)
+                  <div className="transaction-scroll" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    paddingRight: '0.75rem'
+                  }}>
+                    {booking.extensions.map((ext, i) => {
+                      const rental = ext.rental != null ? ext.rental : ext.rentalCost != null ? ext.rentalCost : ext.days * (booking.pricePerDay || 0);
+                      const platformFee = ext.platformFee != null ? ext.platformFee : ext.days * (booking.platformFeePerDay || 1.50);
+                      const insurance = ext.insurance != null ? ext.insurance : ext.days * (booking.insurance?.costPerDay || 0);
+                      const processingFee = ext.processingFee != null ? ext.processingFee : Math.max(0, (ext.cost || 0) - rental - platformFee - insurance);
+
+                      return (
+                        <div key={i} style={{
+                          display: 'flex', justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          paddingBottom: i < booking.extensions.length - 1 ? '0.75rem' : 0,
+                          borderBottom: i < booking.extensions.length - 1 ? '1px solid #262626' : 'none',
+                          position: 'relative',
+                          cursor: 'pointer'
+                        }}
+                          onMouseEnter={() => setHoveredExtension(i)}
+                          onMouseLeave={() => setHoveredExtension(null)}
+                        >
+                          <div>
+                            <div style={{ color: '#3b82f6', fontWeight: '600', fontSize: '0.875rem' }}>
+                              +{ext.days} day(s)
+                            </div>
+                            <div style={{ color: '#6b7280', fontSize: '0.6875rem' }}>
+                              {formatDate(ext.extendedAt)}
+                            </div>
+                          </div>
+                          <div style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem' }}>
+                            ${ext.cost?.toFixed(2)}
+                          </div>
+
+                          {/* Extension breakdown tooltip */}
+                          {hoveredExtension === i && (
+                            <div className="extension-tooltip">
+                              <div className="extension-tooltip-title">Extension Breakdown</div>
+                              <div className="extension-tooltip-row">
+                                <span>Rental</span>
+                                <span>${rental.toFixed(2)}</span>
+                              </div>
+                              <div className="extension-tooltip-detail">
+                                {ext.days} day{ext.days !== 1 ? 's' : ''} × ${(rental / ext.days).toFixed(2)}/day
+                              </div>
+                              {platformFee > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Platform Fee</span>
+                                  <span>${platformFee.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {insurance > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Insurance</span>
+                                  <span>${insurance.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {processingFee > 0 && (
+                                <div className="extension-tooltip-row">
+                                  <span>Processing Fee</span>
+                                  <span>${processingFee.toFixed(2)}</span>
+                                </div>
+                              )}
+                              <div className="extension-tooltip-divider"></div>
+                              <div className="extension-tooltip-row extension-tooltip-total">
+                                <span>Total</span>
+                                <span>${(ext.cost || 0).toFixed(2)}</span>
+                              </div>
+                              {ext.newEndDate && (
+                                <div className="extension-tooltip-enddate">
+                                  New End Date: {formatDate(ext.newEndDate)}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ color: '#6b7280', fontSize: '0.6875rem' }}>
-                          {formatDate(ext.extendedAt)}
-                        </div>
-                      </div>
-                      <div style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem' }}>
-                        ${ext.cost?.toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
