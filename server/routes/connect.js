@@ -228,9 +228,13 @@ router.get('/pending-payouts', auth, async (req, res) => {
 
     res.json({
       pendingBookings: pendingBookings.map(b => {
-        // Always recompute from per-unit rate to fix legacy bookings that stored incorrect values
+        // Always recompute to fix legacy bookings that stored incorrect values
         const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
-        const rentalSubtotal = (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0);
+        // For daily rentals (or no type), always use pricePerDay × totalDays since legacy
+        // bookings have quantity defaulting to 1 instead of totalDays
+        const rentalSubtotal = (!b.rentalType || b.rentalType === 'daily')
+          ? (b.pricePerDay || 0) * (b.totalDays || 0)
+          : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0);
         const hostProcessingFee = Number(b.hostProcessingFee) || 0;
         const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
         return {
@@ -245,7 +249,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
           rentalType: b.rentalType,
           pricePerDay: b.pricePerDay,
           pricePerUnit: b.pricePerUnit || b.pricePerDay,
-          quantity: b.quantity || b.totalDays,
+          quantity: (!b.rentalType || b.rentalType === 'daily') ? (b.totalDays || 0) : (b.quantity || b.totalDays || 0),
           rentalSubtotal,
           hostPlatformFee: correctHostFee,
           hostProcessingFee: hostProcessingFee,
@@ -301,8 +305,10 @@ router.get('/payout-history', auth, async (req, res) => {
           rentalType: b.rentalType,
           pricePerDay: b.pricePerDay,
           pricePerUnit: b.pricePerUnit || b.pricePerDay,
-          quantity: b.quantity || b.totalDays,
-          rentalSubtotal: (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0),
+          quantity: (!b.rentalType || b.rentalType === 'daily') ? (b.totalDays || 0) : (b.quantity || b.totalDays || 0),
+          rentalSubtotal: (!b.rentalType || b.rentalType === 'daily')
+            ? (b.pricePerDay || 0) * (b.totalDays || 0)
+            : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0),
           hostPlatformFee: correctHostFee,
           hostProcessingFee: hostProcessingFee,
           hostEarnings: b.hostEarnings,

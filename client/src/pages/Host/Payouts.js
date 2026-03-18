@@ -9,7 +9,12 @@ import './Payouts.css';
 const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
   const [expanded, setExpanded] = useState(false);
   const isEligible = !isPaid && new Date(booking.payoutEligibleDate) <= new Date();
-  const rentalSubtotal = booking.rentalSubtotal || (booking.pricePerUnit || booking.pricePerDay || 0) * (booking.quantity || booking.totalDays || 0);
+  // For daily rentals, use pricePerDay × totalDays (legacy bookings have quantity defaulting to 1)
+  const rentalSubtotal = booking.rentalSubtotal || (
+    (!booking.rentalType || booking.rentalType === 'daily')
+      ? (booking.pricePerDay || 0) * (booking.totalDays || 0)
+      : (booking.pricePerUnit || booking.pricePerDay || 0) * (booking.quantity || booking.totalDays || 0)
+  );
 
   return (
     <div className={`reservation-card ${expanded ? 'expanded' : ''}`}>
