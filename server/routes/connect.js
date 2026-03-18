@@ -179,6 +179,7 @@ router.get('/account-status', auth, async (req, res) => {
 
     // Check if this user's Connect account is the platform's own account
     const platId = await getPlatformAccountId();
+    console.log(`🔍 Account status check — User: ${user.email}, ConnectId: ${user.stripeConnectAccountId}, PlatformId: ${platId}, Match: ${user.stripeConnectAccountId === platId}`);
     if (platId && user.stripeConnectAccountId === platId) {
       return res.json({
         hasAccount: true,
