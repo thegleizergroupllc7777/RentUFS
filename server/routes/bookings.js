@@ -1588,6 +1588,12 @@ router.patch('/:id/status', auth, async (req, res) => {
 
     booking.status = status;
 
+    // Mark earnings as eligible for payout when booking is completed (by host or driver)
+    if (status === 'completed' && booking.payoutStatus === 'pending') {
+      booking.payoutStatus = 'eligible';
+      booking.payoutEligibleDate = new Date();
+    }
+
     // Mark vehicle as unavailable only when the rental is actively in progress
     if (status === 'active') {
       await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: false });
