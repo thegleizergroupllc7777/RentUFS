@@ -2338,7 +2338,7 @@ const DriverProfile = () => {
               border: '1px solid #333',
               overflow: 'hidden',
               position: 'sticky',
-              top: '100px'
+              top: '130px'
             }}>
               {tabs.map(tab => (
                 <button
