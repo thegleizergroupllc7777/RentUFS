@@ -8,7 +8,8 @@ import './Payouts.css';
 // Expandable reservation detail card
 const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
   const [expanded, setExpanded] = useState(false);
-  const isEligible = !isPaid && new Date(booking.payoutEligibleDate) <= new Date();
+  const isActive = booking.bookingStatus === 'active';
+  const isEligible = !isPaid && (isActive || new Date(booking.payoutEligibleDate) <= new Date());
   // For daily rentals, use pricePerDay × totalDays (legacy bookings have quantity defaulting to 1)
   const rentalSubtotal = booking.rentalSubtotal || (
     (!booking.rentalType || booking.rentalType === 'daily')
@@ -24,6 +25,7 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           <span className="reservation-vehicle">
             {booking.vehicleNickname || booking.vehicle}
           </span>
+          {isActive && <span className="status-badge active-trip">Active Trip</span>}
         </div>
         <div className="reservation-card-right">
           <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : booking.hostEarnings)}</span>
@@ -51,16 +53,34 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
               <span className="detail-value">{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Duration</span>
+              <span className="detail-label">Total Duration</span>
               <span className="detail-value">{booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}</span>
             </div>
+            {isActive && (
+              <>
+                <div className="detail-row">
+                  <span className="detail-label">Days Served</span>
+                  <span className="detail-value">{booking.daysServed} day{booking.daysServed !== 1 ? 's' : ''}</span>
+                </div>
+                {booking.daysAlreadyPaid > 0 && (
+                  <div className="detail-row">
+                    <span className="detail-label">Days Already Paid</span>
+                    <span className="detail-value">{booking.daysAlreadyPaid} day{booking.daysAlreadyPaid !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                <div className="detail-row">
+                  <span className="detail-label">Unpaid Days</span>
+                  <span className="detail-value highlight">{booking.unpaidDaysServed} day{booking.unpaidDaysServed !== 1 ? 's' : ''}</span>
+                </div>
+              </>
+            )}
             {isPaid && booking.payoutDate && (
               <div className="detail-row">
                 <span className="detail-label">Paid On</span>
                 <span className="detail-value">{formatDate(booking.payoutDate)}</span>
               </div>
             )}
-            {!isPaid && (
+            {!isPaid && !isActive && (
               <div className="detail-row">
                 <span className="detail-label">Completed</span>
                 <span className="detail-value">{formatDate(booking.payoutEligibleDate)}</span>
@@ -69,13 +89,13 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           </div>
 
           <div className="detail-section">
-            <h4>Earnings Breakdown</h4>
+            <h4>Earnings Breakdown{isActive ? ' (Unpaid Days)' : ''}</h4>
             <div className="detail-row">
               <span className="detail-label">Rate</span>
               <span className="detail-value">{formatCurrency(booking.pricePerUnit || booking.pricePerDay)}/{booking.rentalType === 'weekly' ? 'week' : booking.rentalType === 'monthly' ? 'month' : 'day'}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Rental Subtotal</span>
+              <span className="detail-label">{isActive ? `Rental (${booking.unpaidDaysServed} day${booking.unpaidDaysServed !== 1 ? 's' : ''})` : 'Rental Subtotal'}</span>
               <span className="detail-value">{formatCurrency(rentalSubtotal)}</span>
             </div>
             <div className="detail-row deduction">
@@ -95,7 +115,11 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           </div>
 
           <div className="detail-section detail-section-note">
-            <p>Your earnings are the rental subtotal minus the host service fee and processing fee.</p>
+            {isActive ? (
+              <p>This trip is in progress. Showing earnings for {booking.unpaidDaysServed} unpaid day{booking.unpaidDaysServed !== 1 ? 's' : ''} served so far. Payouts are processed weekly every Monday.</p>
+            ) : (
+              <p>Your earnings are the rental subtotal minus the host service fee and processing fee.</p>
+            )}
           </div>
         </div>
       )}
@@ -375,7 +399,7 @@ const PayoutsContent = () => {
               {pendingPayouts?.pendingBookings?.length === 0 ? (
                 <div className="empty-state">
                   <p>No pending payouts</p>
-                  <span>Completed trips will appear here</span>
+                  <span>Active and completed trips will appear here</span>
                 </div>
               ) : (
                 <div className="reservation-cards">
@@ -426,13 +450,13 @@ const PayoutsContent = () => {
         <div className="info-grid">
           <div className="info-item">
             <div className="info-icon">1</div>
-            <h4>Trip Completes</h4>
-            <p>When a rental ends and the vehicle is returned, your earnings are calculated.</p>
+            <h4>Earnings Accrue</h4>
+            <p>As each day of a rental is served, your earnings for that day become available.</p>
           </div>
           <div className="info-item">
             <div className="info-icon">2</div>
-            <h4>Earnings Ready</h4>
-            <p>Your earnings become available for payout immediately after trip completion.</p>
+            <h4>Partial Payouts</h4>
+            <p>For long rentals, you get paid weekly for days already served — no need to wait until the trip ends.</p>
           </div>
           <div className="info-item">
             <div className="info-icon">3</div>

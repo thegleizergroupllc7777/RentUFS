@@ -205,7 +205,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
     }
 
     // Get completed bookings that haven't been paid out yet
-    const pendingBookings = await Booking.find({
+    const completedBookings = await Booking.find({
       host: user._id,
       status: 'completed',
       paymentStatus: 'paid',
@@ -214,7 +214,18 @@ router.get('/pending-payouts', auth, async (req, res) => {
       .populate('driver', 'firstName lastName')
       .sort({ endDate: -1 });
 
-    // Recompute earnings for each booking to fix legacy stored values
+    // Get active bookings (long reservations with partial weekly payouts)
+    const activeBookings = await Booking.find({
+      host: user._id,
+      status: 'active',
+      paymentStatus: 'paid'
+    }).populate('vehicle', 'make model year nickname')
+      .populate('driver', 'firstName lastName')
+      .sort({ startDate: -1 });
+
+    const now = new Date();
+
+    // Recompute earnings for completed bookings (fix legacy stored values)
     const recomputeEarnings = (b) => {
       const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
       const rentalSubtotal = (!b.rentalType || b.rentalType === 'daily')
@@ -225,44 +236,124 @@ router.get('/pending-payouts', auth, async (req, res) => {
       return { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings };
     };
 
-    // Calculate totals using recomputed earnings (not stored values)
-    const totalPending = pendingBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
+    // Calculate daily host earnings for active bookings (same as scheduler logic)
+    const calculateDailyHostEarnings = (b) => {
+      const totalDays = b.totalDays || 1;
+      const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * totalDays;
+      const rentalSubtotal = (!b.rentalType || b.rentalType === 'daily')
+        ? (b.pricePerDay || 0) * totalDays
+        : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || totalDays);
+      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+      const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+      return totalEarnings / totalDays;
+    };
 
-    // Get bookings that are eligible for payout (immediately after completion)
-    // Match frontend logic: eligible if payoutStatus is 'eligible' OR payoutEligibleDate has passed
-    const now = new Date();
-    const eligibleBookings = pendingBookings.filter(b =>
+    // Build active booking entries — only for unpaid days already served
+    const activeEntries = [];
+    for (const b of activeBookings) {
+      const startDate = new Date(b.startDate);
+      const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+      const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
+      const unpaidDaysServed = Math.max(0, daysSinceStart - daysAlreadyPaid);
+
+      if (unpaidDaysServed <= 0) continue;
+
+      const dailyEarnings = calculateDailyHostEarnings(b);
+      const unpaidAmount = parseFloat((dailyEarnings * unpaidDaysServed).toFixed(2));
+
+      if (unpaidAmount <= 0) continue;
+
+      activeEntries.push({
+        booking: b,
+        unpaidDaysServed,
+        daysAlreadyPaid,
+        daysSinceStart,
+        unpaidAmount,
+        dailyEarnings
+      });
+    }
+
+    // Calculate totals — completed earnings + active unpaid served earnings
+    const totalCompletedPending = completedBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
+    const totalActivePending = activeEntries.reduce((sum, e) => sum + e.unpaidAmount, 0);
+    const totalPending = totalCompletedPending + totalActivePending;
+
+    // Eligible: completed bookings ready for payout + all active unpaid served days
+    const eligibleCompleted = completedBookings.filter(b =>
       b.payoutStatus === 'eligible' || (b.payoutEligibleDate && new Date(b.payoutEligibleDate) <= now)
     );
-    const totalEligible = eligibleBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
+    const totalEligibleCompleted = eligibleCompleted.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
+    const totalEligible = totalEligibleCompleted + totalActivePending;
+    const eligibleCount = eligibleCompleted.length + activeEntries.length;
+
+    // Map completed bookings
+    const completedEntries = completedBookings.map(b => {
+      const { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = recomputeEarnings(b);
+      return {
+        id: b._id,
+        reservationId: b.reservationId,
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
+        vehicleNickname: b.vehicle?.nickname || null,
+        driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
+        startDate: b.startDate,
+        endDate: b.endDate,
+        totalDays: b.totalDays,
+        rentalType: b.rentalType,
+        pricePerDay: b.pricePerDay,
+        pricePerUnit: b.pricePerUnit || b.pricePerDay,
+        quantity: (!b.rentalType || b.rentalType === 'daily') ? (b.totalDays || 0) : (b.quantity || b.totalDays || 0),
+        rentalSubtotal,
+        hostPlatformFee: correctHostFee,
+        hostProcessingFee: hostProcessingFee,
+        hostEarnings: correctEarnings,
+        payoutStatus: b.payoutStatus,
+        payoutEligibleDate: b.payoutEligibleDate || b.endDate,
+        bookingStatus: 'completed'
+      };
+    });
+
+    // Map active booking entries (only unpaid served portion)
+    const activeMapped = activeEntries.map(e => {
+      const b = e.booking;
+      const hostFeeForServed = (b.hostPlatformFeePerDay || 1.50) * e.unpaidDaysServed;
+      const rentalForServed = (b.pricePerDay || 0) * e.unpaidDaysServed;
+      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+      const processingFeeForServed = parseFloat(((hostProcessingFee / (b.totalDays || 1)) * e.unpaidDaysServed).toFixed(2));
+
+      return {
+        id: b._id,
+        reservationId: b.reservationId,
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
+        vehicleNickname: b.vehicle?.nickname || null,
+        driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
+        startDate: b.startDate,
+        endDate: b.endDate,
+        totalDays: b.totalDays,
+        rentalType: b.rentalType,
+        pricePerDay: b.pricePerDay,
+        pricePerUnit: b.pricePerUnit || b.pricePerDay,
+        quantity: e.unpaidDaysServed,
+        rentalSubtotal: rentalForServed,
+        hostPlatformFee: hostFeeForServed,
+        hostProcessingFee: processingFeeForServed,
+        hostEarnings: e.unpaidAmount,
+        payoutStatus: 'eligible',
+        payoutEligibleDate: now,
+        bookingStatus: 'active',
+        daysServed: e.daysSinceStart,
+        daysAlreadyPaid: e.daysAlreadyPaid,
+        unpaidDaysServed: e.unpaidDaysServed
+      };
+    });
+
+    // Combine: active first (they're eligible), then completed
+    const allPendingBookings = [...activeMapped, ...completedEntries];
 
     res.json({
-      pendingBookings: pendingBookings.map(b => {
-        const { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = recomputeEarnings(b);
-        return {
-          id: b._id,
-          reservationId: b.reservationId,
-          vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
-          vehicleNickname: b.vehicle?.nickname || null,
-          driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
-          startDate: b.startDate,
-          endDate: b.endDate,
-          totalDays: b.totalDays,
-          rentalType: b.rentalType,
-          pricePerDay: b.pricePerDay,
-          pricePerUnit: b.pricePerUnit || b.pricePerDay,
-          quantity: (!b.rentalType || b.rentalType === 'daily') ? (b.totalDays || 0) : (b.quantity || b.totalDays || 0),
-          rentalSubtotal,
-          hostPlatformFee: correctHostFee,
-          hostProcessingFee: hostProcessingFee,
-          hostEarnings: correctEarnings,
-          payoutStatus: b.payoutStatus,
-          payoutEligibleDate: b.payoutEligibleDate || b.endDate
-        };
-      }),
+      pendingBookings: allPendingBookings,
       totalPending,
       totalEligible,
-      eligibleCount: eligibleBookings.length,
+      eligibleCount,
       payoutsEnabled: user.stripeConnectPayoutsEnabled
     });
   } catch (error) {
