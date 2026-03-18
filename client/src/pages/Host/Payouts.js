@@ -439,11 +439,6 @@ const PayoutsContent = () => {
             <h4>Weekly Payout</h4>
             <p>Eligible funds are automatically transferred to your bank every Monday.</p>
           </div>
-          <div className="info-item">
-            <div className="info-icon">4</div>
-            <h4>Bank Deposit</h4>
-            <p>Funds typically arrive in your bank account within 2-3 business days.</p>
-          </div>
         </div>
       </div>
     </div>
