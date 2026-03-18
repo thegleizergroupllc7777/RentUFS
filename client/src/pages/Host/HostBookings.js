@@ -674,8 +674,8 @@ const HostBookings = () => {
                     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
                     const monthStartStr = toLocalDateStr(monthStart);
 
-                    const getBookingEndStr = (b) => {
-                      return toLocalDateStr(toLocalDate(b.endDate));
+                    const getBookingCompletedStr = (b) => {
+                      return toLocalDateStr(toLocalDate(b.updatedAt || b.endDate));
                     };
 
                     const filters = [
@@ -689,10 +689,10 @@ const HostBookings = () => {
                       const count = key === 'all'
                         ? past.length
                         : past.filter(b => {
-                            const endStr = getBookingEndStr(b);
-                            if (key === 'today') return endStr === todayStr;
-                            if (key === 'week') return endStr >= weekStartStr && endStr <= todayStr;
-                            if (key === 'month') return endStr >= monthStartStr && endStr <= todayStr;
+                            const completedStr = getBookingCompletedStr(b);
+                            if (key === 'today') return completedStr === todayStr;
+                            if (key === 'week') return completedStr >= weekStartStr && completedStr <= todayStr;
+                            if (key === 'month') return completedStr >= monthStartStr && completedStr <= todayStr;
                             return true;
                           }).length;
                       return (
@@ -725,14 +725,14 @@ const HostBookings = () => {
                   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
                   const monthStartStr = toLocalDateStr(monthStart);
 
-                  const getBookingEndStr = (b) => toLocalDateStr(toLocalDate(b.endDate));
+                  const getBookingCompletedStr = (b) => toLocalDateStr(toLocalDate(b.updatedAt || b.endDate));
 
                   const filtered = activeBookings.filter(b => {
                     if (pastTimeFilter === 'all') return true;
-                    const endStr = getBookingEndStr(b);
-                    if (pastTimeFilter === 'today') return endStr === todayStr;
-                    if (pastTimeFilter === 'week') return endStr >= weekStartStr && endStr <= todayStr;
-                    if (pastTimeFilter === 'month') return endStr >= monthStartStr && endStr <= todayStr;
+                    const completedStr = getBookingCompletedStr(b);
+                    if (pastTimeFilter === 'today') return completedStr === todayStr;
+                    if (pastTimeFilter === 'week') return completedStr >= weekStartStr && completedStr <= todayStr;
+                    if (pastTimeFilter === 'month') return completedStr >= monthStartStr && completedStr <= todayStr;
                     return true;
                   });
                   const filterLabel = pastTimeFilter === 'all' ? '' : pastTimeFilter === 'today' ? 'today\'s' : pastTimeFilter === 'week' ? 'this week\'s' : 'this month\'s';
