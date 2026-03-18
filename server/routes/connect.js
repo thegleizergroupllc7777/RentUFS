@@ -108,6 +108,7 @@ router.post('/onboarding-link', auth, async (req, res) => {
       return res.status(400).json({ message: 'As the platform owner, your payouts are already active. Please refresh the page.' });
     }
 
+
     // Verify the account still exists on Stripe before creating the link
     let account;
     try {
