@@ -351,7 +351,18 @@ const processWeeklyPayouts = async () => {
           const alreadyPaid = b.partialPayoutTotal || 0;
           const remaining = Math.max(0, totalEarnings - alreadyPaid);
 
-          if (remaining <= 0) continue;
+          if (remaining <= 0) {
+            // Zero or negative earnings — mark as paid so they move to History
+            await Booking.findByIdAndUpdate(b._id, {
+              payoutStatus: 'paid',
+              payoutAmount: 0,
+              payoutDate: now,
+              partialPayoutDaysPaid: b.totalDays,
+              partialPayoutTotal: alreadyPaid
+            });
+            console.log(`✅ Auto-completed $0 payout for booking ${b.reservationId || b._id}`);
+            continue;
+          }
 
           hostPayoutAmount += remaining;
           payoutBookings.push({
