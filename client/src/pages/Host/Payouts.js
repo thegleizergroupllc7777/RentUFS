@@ -198,7 +198,10 @@ const PayoutsContent = () => {
 
   const formatDate = (date) => {
     if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-US', {
+    // Parse to local midnight to avoid UTC-to-local timezone shift
+    const str = typeof date === 'string' ? date : new Date(date).toISOString();
+    const datePart = str.split('T')[0];
+    return new Date(datePart + 'T00:00:00').toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
