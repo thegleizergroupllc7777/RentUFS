@@ -102,6 +102,31 @@ router.post('/onboarding-link', auth, async (req, res) => {
       return res.status(400).json({ message: 'No payout account found. Please create one first.' });
     }
 
+    // Verify the account still exists on Stripe before creating the link
+    let account;
+    try {
+      account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+    } catch (retrieveErr) {
+      console.error('❌ Stripe Connect account not found:', retrieveErr.message);
+      // Account doesn't exist on Stripe — clear the stale reference so user can re-create
+      user.stripeConnectAccountId = undefined;
+      user.stripeConnectOnboardingComplete = false;
+      user.stripeConnectPayoutsEnabled = false;
+      user.stripeConnectChargesEnabled = false;
+      await user.save();
+      return res.status(400).json({ message: 'Your payout account was not found. Please set up a new one.' });
+    }
+
+    // If onboarding is already complete, they don't need an onboarding link
+    if (account.details_submitted) {
+      // Update local status
+      user.stripeConnectOnboardingComplete = true;
+      user.stripeConnectPayoutsEnabled = account.payouts_enabled;
+      user.stripeConnectChargesEnabled = account.charges_enabled;
+      await user.save();
+      return res.status(400).json({ message: 'Your account setup is already complete. Please refresh the page.' });
+    }
+
     const accountLink = await stripe.accountLinks.create({
       account: user.stripeConnectAccountId,
       refresh_url: `${getClientUrl()}/host/payouts?refresh=true`,
@@ -111,7 +136,18 @@ router.post('/onboarding-link', auth, async (req, res) => {
 
     res.json({ url: accountLink.url });
   } catch (error) {
-    console.error('Error creating onboarding link:', error);
+    console.error('❌ Error creating onboarding link:', error.message);
+
+    // If the Stripe error indicates the account type doesn't support onboarding links,
+    // provide a more helpful message
+    const stripeCode = error.code || error.raw?.code || '';
+    if (stripeCode === 'account_invalid' || error.message?.includes('cannot create')) {
+      return res.status(400).json({
+        message: 'Unable to create onboarding link. Your account may need to be recreated. Please contact support.',
+        stripeError: error.message
+      });
+    }
+
     res.status(500).json({ message: 'Failed to create onboarding link', error: error.message });
   }
 });
