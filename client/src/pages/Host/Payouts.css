@@ -365,6 +365,7 @@
   border-radius: 0.75rem;
   overflow: hidden;
   transition: border-color 0.2s;
+  flex-shrink: 0;
 }
 
 .reservation-card:hover {
