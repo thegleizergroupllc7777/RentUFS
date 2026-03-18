@@ -1552,7 +1552,7 @@ const DriverProfile = () => {
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '0.9rem', color: '#f9fafb', fontWeight: '600', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {v.vehicleName}
+                        {v.vehicleNickname || v.vehicleName}
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
                         {v.confirmedBookings} booking{v.confirmedBookings !== 1 ? 's' : ''} &middot; {v.totalDays || 0} days
