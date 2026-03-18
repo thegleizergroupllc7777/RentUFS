@@ -259,6 +259,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
       }),
       totalPending,
       totalEligible,
+      eligibleCount: eligibleBookings.length,
       payoutsEnabled: user.stripeConnectPayoutsEnabled
     });
   } catch (error) {

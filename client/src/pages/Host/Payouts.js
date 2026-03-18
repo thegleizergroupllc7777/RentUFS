@@ -337,7 +337,7 @@ const PayoutsContent = () => {
             <div className="earnings-item">
               <span className="earnings-label">Ready for Payout</span>
               <span className="earnings-amount highlight">{formatCurrency(pendingPayouts?.totalEligible)}</span>
-              <span className="earnings-note">Completed trips</span>
+              <span className="earnings-note">{pendingPayouts?.eligibleCount || 0} bookings</span>
             </div>
             <div className="earnings-item">
               <span className="earnings-label">Total Paid Out</span>
