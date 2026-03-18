@@ -102,6 +102,12 @@ router.post('/onboarding-link', auth, async (req, res) => {
       return res.status(400).json({ message: 'No payout account found. Please create one first.' });
     }
 
+    // Platform owner doesn't need onboarding — they own the Stripe account directly
+    const platId = await getPlatformAccountId();
+    if (platId && user.stripeConnectAccountId === platId) {
+      return res.status(400).json({ message: 'As the platform owner, your payouts are already active. Please refresh the page.' });
+    }
+
     // Verify the account still exists on Stripe before creating the link
     let account;
     try {
