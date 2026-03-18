@@ -209,14 +209,24 @@ router.get('/pending-payouts', auth, async (req, res) => {
       host: user._id,
       status: 'completed',
       paymentStatus: 'paid',
-      payoutStatus: { $in: ['pending', 'eligible'] },
-      hostEarnings: { $gt: 0 }
+      payoutStatus: { $in: ['pending', 'eligible'] }
     }).populate('vehicle', 'make model year nickname')
       .populate('driver', 'firstName lastName')
       .sort({ endDate: -1 });
 
-    // Calculate totals
-    const totalPending = pendingBookings.reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
+    // Recompute earnings for each booking to fix legacy stored values
+    const recomputeEarnings = (b) => {
+      const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+      const rentalSubtotal = (!b.rentalType || b.rentalType === 'daily')
+        ? (b.pricePerDay || 0) * (b.totalDays || 0)
+        : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0);
+      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+      const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+      return { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings };
+    };
+
+    // Calculate totals using recomputed earnings (not stored values)
+    const totalPending = pendingBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
 
     // Get bookings that are eligible for payout (immediately after completion)
     const now = new Date();
@@ -224,19 +234,11 @@ router.get('/pending-payouts', auth, async (req, res) => {
       const eligibleDate = b.payoutEligibleDate || new Date();
       return eligibleDate <= now;
     });
-    const totalEligible = eligibleBookings.reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
+    const totalEligible = eligibleBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
 
     res.json({
       pendingBookings: pendingBookings.map(b => {
-        // Always recompute to fix legacy bookings that stored incorrect values
-        const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
-        // For daily rentals (or no type), always use pricePerDay × totalDays since legacy
-        // bookings have quantity defaulting to 1 instead of totalDays
-        const rentalSubtotal = (!b.rentalType || b.rentalType === 'daily')
-          ? (b.pricePerDay || 0) * (b.totalDays || 0)
-          : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0);
-        const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-        const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+        const { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = recomputeEarnings(b);
         return {
           id: b._id,
           reservationId: b.reservationId,
