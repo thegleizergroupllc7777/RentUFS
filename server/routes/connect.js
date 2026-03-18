@@ -229,8 +229,11 @@ router.get('/pending-payouts', auth, async (req, res) => {
     const totalPending = pendingBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
 
     // Get bookings that are eligible for payout (immediately after completion)
+    // Match frontend logic: eligible if payoutStatus is 'eligible' OR payoutEligibleDate has passed
     const now = new Date();
-    const eligibleBookings = pendingBookings.filter(b => b.payoutStatus === 'eligible');
+    const eligibleBookings = pendingBookings.filter(b =>
+      b.payoutStatus === 'eligible' || (b.payoutEligibleDate && new Date(b.payoutEligibleDate) <= now)
+    );
     const totalEligible = eligibleBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
 
     res.json({
