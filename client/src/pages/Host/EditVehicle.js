@@ -870,14 +870,27 @@ const EditVehicle = () => {
 
                   <div className="form-group">
                     <label className="form-label">State *</label>
-                    <input
-                      type="text"
+                    <select
                       name="location.state"
                       className="form-input"
                       value={formData.location.state}
                       onChange={handleChange}
                       required
-                    />
+                    >
+                      <option value="">Select State</option>
+                      <option value="AZ">Arizona (AZ)</option>
+                      <option value="CA">California (CA)</option>
+                      <option value="CO">Colorado (CO)</option>
+                      <option value="CT">Connecticut (CT)</option>
+                      <option value="FL">Florida (FL)</option>
+                      <option value="GA">Georgia (GA)</option>
+                      <option value="IL">Illinois (IL)</option>
+                      <option value="MD">Maryland (MD)</option>
+                      <option value="NV">Nevada (NV)</option>
+                      <option value="PA">Pennsylvania (PA)</option>
+                      <option value="SC">South Carolina (SC)</option>
+                      <option value="TX">Texas (TX)</option>
+                    </select>
                   </div>
 
                   <div className="form-group">

@@ -45,7 +45,7 @@ router.get('/lookup-zip/:zip', async (req, res) => {
 
     res.json({
       city: place['place name'],
-      state: place['state']
+      state: place['state abbreviation'] || place['state']
     });
   } catch (err) {
     if (err.response?.status === 404) {

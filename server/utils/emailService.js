@@ -485,8 +485,10 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
                   <span class="value">${booking.totalDays} day(s)</span>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Location</span>
-                  <span class="value">${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}</span>
+                  <span class="label">Pickup Location</span>
+                  <span class="value">
+                    ${vehicle.location?.address ? `${vehicle.location.address}<br>` : ''}${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'} ${vehicle.location?.zipCode || ''}
+                  </span>
                 </div>
 
                 <div class="total">Total Paid: $${booking.totalPrice.toFixed(2)}</div>
@@ -544,7 +546,7 @@ Host Information:
 - Phone: ${host.phone || 'Not provided'}
 
 Pick-up Location:
-${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}
+${vehicle.location?.address ? `${vehicle.location.address}\n` : ''}${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'} ${vehicle.location?.zipCode || ''}
 
 Important Reminders:
 - Bring a valid driver's license
@@ -795,7 +797,9 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
                 </div>
                 <div class="detail-row">
                   <span class="label">Return Location</span>
-                  <span class="value">${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}</span>
+                  <span class="value">
+                    ${vehicle.location?.address ? `${vehicle.location.address}<br>` : ''}${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'} ${vehicle.location?.zipCode || ''}
+                  </span>
                 </div>
               </div>
 
@@ -857,7 +861,7 @@ Return Date: ${endDate}
 Return Time: ${dropoffTime}
 
 Return Location:
-${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'}
+${vehicle.location?.address ? `${vehicle.location.address}\n` : ''}${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'} ${vehicle.location?.zipCode || ''}
 
 Options:
 1. EXTEND YOUR RENTAL - Need more time? You can extend your booking from your dashboard.
