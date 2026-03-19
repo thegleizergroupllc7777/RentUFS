@@ -79,7 +79,7 @@ const vehicleSchema = new mongoose.Schema({
     type: String
   }],
   location: {
-    address: String,
+    address: { type: String, required: true },
     city: String,
     state: String,
     zipCode: String,
