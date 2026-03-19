@@ -301,15 +301,8 @@ const syncTollspotStatuses = async () => {
   }
 };
 
-// Calculate per-day host earnings for a booking
-const calculateDailyHostEarnings = (booking) => {
-  const totalDays = booking.totalDays || 1;
-  const correctHostFee = (booking.hostPlatformFeePerDay || 1.50) * totalDays;
-  const rentalSubtotal = booking.rentalSubtotal || (booking.pricePerDay || 0) * totalDays;
-  const hostProcessingFee = Number(booking.hostProcessingFee) || 0;
-  const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
-  return totalEarnings / totalDays;
-};
+// Segment-based earning calculations for bookings with mixed rental types
+const { getBookingSegments, getTotalSegmentEarnings, calculateEarningsForDayRange } = require('./earningSegments');
 
 // Automated weekly payout: transfer host earnings for both completed and active bookings
 const processWeeklyPayouts = async () => {
@@ -344,10 +337,7 @@ const processWeeklyPayouts = async () => {
         }).populate('vehicle', 'make model year');
 
         for (const b of completedBookings) {
-          const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
-          const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
-          const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-          const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+          const totalEarnings = getTotalSegmentEarnings(b);
           const alreadyPaid = b.partialPayoutTotal || 0;
           const remaining = Math.max(0, totalEarnings - alreadyPaid);
 
@@ -388,8 +378,9 @@ const processWeeklyPayouts = async () => {
 
           if (newDaysToPayFor <= 0) continue;
 
-          const dailyEarnings = calculateDailyHostEarnings(b);
-          const partialAmount = parseFloat((dailyEarnings * newDaysToPayFor).toFixed(2));
+          // Use segment-based calculation for accurate earnings with mixed rental types
+          const segments = getBookingSegments(b);
+          const { earnings: partialAmount } = calculateEarningsForDayRange(segments, daysAlreadyPaid + 1, daysSinceStart);
 
           if (partialAmount <= 0) continue;
 

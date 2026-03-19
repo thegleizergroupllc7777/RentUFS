@@ -364,31 +364,20 @@ router.get('/pending-payouts', auth, async (req, res) => {
       .sort({ startDate: -1 });
 
     const now = new Date();
+    const { getBookingSegments, getTotalSegmentEarnings, calculateEarningsForDayRange } = require('../utils/earningSegments');
 
-    // Recompute earnings for completed bookings (fix legacy stored values)
+    // Recompute earnings for completed bookings using segment-based math
     const recomputeEarnings = (b) => {
-      const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
-      const rentalSubtotal = (!b.rentalType || b.rentalType === 'daily')
-        ? (b.pricePerDay || 0) * (b.totalDays || 0)
-        : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0);
-      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-      const correctEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
+      const segments = getBookingSegments(b);
+      const correctEarnings = segments.reduce((sum, seg) => sum + seg.earnings, 0);
+      const correctHostFee = segments.reduce((sum, seg) => sum + seg.hostFee, 0);
+      const rentalSubtotal = segments.reduce((sum, seg) => sum + seg.rental, 0);
+      const hostProcessingFee = segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0);
       return { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings };
     };
 
-    // Calculate daily host earnings for active bookings (same as scheduler logic)
-    const calculateDailyHostEarnings = (b) => {
-      const totalDays = b.totalDays || 1;
-      const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * totalDays;
-      const rentalSubtotal = (!b.rentalType || b.rentalType === 'daily')
-        ? (b.pricePerDay || 0) * totalDays
-        : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || totalDays);
-      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-      const totalEarnings = Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee);
-      return totalEarnings / totalDays;
-    };
-
     // Build active booking entries — start date counts as day 1
+    // Uses segment-based calculation for accurate per-day earnings with mixed rental types
     const activeEntries = [];
     for (const b of activeBookings) {
       const startDate = new Date(b.startDate);
@@ -396,15 +385,23 @@ router.get('/pending-payouts', auth, async (req, res) => {
       const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
       const unpaidDaysServed = Math.max(0, daysSinceStart - daysAlreadyPaid);
 
-      const dailyEarnings = calculateDailyHostEarnings(b);
-      const unpaidAmount = parseFloat((dailyEarnings * unpaidDaysServed).toFixed(2));
+      const segments = getBookingSegments(b);
+      const totalExpectedEarnings = parseFloat(segments.reduce((sum, seg) => sum + seg.earnings, 0).toFixed(2));
 
-      // Calculate total expected earnings for the full trip
-      const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
-      const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
-      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-      const totalExpectedEarnings = parseFloat(Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee).toFixed(2));
-      const alreadyPaidAmount = parseFloat((dailyEarnings * daysAlreadyPaid).toFixed(2));
+      // Calculate earnings for unpaid days using segment-based day range
+      const unpaidResult = unpaidDaysServed > 0
+        ? calculateEarningsForDayRange(segments, daysAlreadyPaid + 1, daysSinceStart)
+        : { earnings: 0, breakdown: [] };
+      const unpaidAmount = unpaidResult.earnings;
+
+      // Calculate already paid amount using segment-based day range
+      const alreadyPaidResult = daysAlreadyPaid > 0
+        ? calculateEarningsForDayRange(segments, 1, daysAlreadyPaid)
+        : { earnings: 0 };
+      const alreadyPaidAmount = alreadyPaidResult.earnings;
+
+      // Average daily earnings for display (total / days)
+      const dailyEarnings = (b.totalDays || 1) > 0 ? totalExpectedEarnings / (b.totalDays || 1) : 0;
 
       activeEntries.push({
         booking: b,
@@ -414,7 +411,9 @@ router.get('/pending-payouts', auth, async (req, res) => {
         unpaidAmount,
         dailyEarnings,
         totalExpectedEarnings,
-        alreadyPaidAmount
+        alreadyPaidAmount,
+        segments,
+        unpaidBreakdown: unpaidResult.breakdown
       });
     }
 
@@ -426,6 +425,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
     // Map completed bookings
     const completedEntries = completedBookings.map(b => {
       const { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = recomputeEarnings(b);
+      const segments = getBookingSegments(b);
       return {
         id: b._id,
         reservationId: b.reservationId,
@@ -439,23 +439,55 @@ router.get('/pending-payouts', auth, async (req, res) => {
         pricePerDay: b.pricePerDay,
         pricePerUnit: b.pricePerUnit || b.pricePerDay,
         quantity: (!b.rentalType || b.rentalType === 'daily') ? (b.totalDays || 0) : (b.quantity || b.totalDays || 0),
-        rentalSubtotal,
-        hostPlatformFee: correctHostFee,
-        hostProcessingFee: hostProcessingFee,
-        hostEarnings: correctEarnings,
+        rentalSubtotal: parseFloat(rentalSubtotal.toFixed(2)),
+        hostPlatformFee: parseFloat(correctHostFee.toFixed(2)),
+        hostProcessingFee: parseFloat(hostProcessingFee.toFixed(2)),
+        hostEarnings: parseFloat(correctEarnings.toFixed(2)),
         payoutStatus: b.payoutStatus,
         payoutEligibleDate: b.payoutEligibleDate || b.endDate,
-        bookingStatus: 'completed'
+        bookingStatus: 'completed',
+        hasExtensions: (b.extensions || []).length > 0,
+        segments: segments.map(seg => ({
+          days: seg.days,
+          rental: seg.rental,
+          dailyEarnings: parseFloat(seg.dailyEarnings.toFixed(2))
+        }))
       };
     });
 
-    // Map active booking entries (start date = day 1, so always >= 1 day served)
+    // Map active booking entries with segment-based earnings breakdown
     const activeMapped = activeEntries.map(e => {
       const b = e.booking;
-      const hostFeeForServed = (b.hostPlatformFeePerDay || 1.50) * e.unpaidDaysServed;
-      const rentalForServed = (b.pricePerDay || 0) * e.unpaidDaysServed;
-      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-      const processingFeeForServed = parseFloat(((hostProcessingFee / (b.totalDays || 1)) * e.unpaidDaysServed).toFixed(2));
+
+      // Sum rental, host fee, and processing fee across unpaid segments
+      let rentalForServed = 0;
+      let hostFeeForServed = 0;
+      let processingFeeForServed = 0;
+      if (e.unpaidBreakdown && e.unpaidBreakdown.length > 0) {
+        // Use segment breakdown for accurate per-segment attribution
+        let dayOffset = 0;
+        for (const seg of e.segments) {
+          const segStart = dayOffset + 1;
+          const segEnd = dayOffset + seg.days;
+          const unpaidFrom = e.daysAlreadyPaid + 1;
+          const unpaidTo = e.daysSinceStart;
+          const overlapStart = Math.max(unpaidFrom, segStart);
+          const overlapEnd = Math.min(unpaidTo, segEnd);
+          if (overlapStart <= overlapEnd) {
+            const overlapDays = overlapEnd - overlapStart + 1;
+            const ratio = overlapDays / seg.days;
+            rentalForServed += seg.rental * ratio;
+            hostFeeForServed += seg.hostFee * ratio;
+            processingFeeForServed += seg.hostProcessingFee * ratio;
+          }
+          dayOffset += seg.days;
+        }
+      } else {
+        hostFeeForServed = (b.hostPlatformFeePerDay || 1.50) * e.unpaidDaysServed;
+        rentalForServed = (b.pricePerDay || 0) * e.unpaidDaysServed;
+        const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+        processingFeeForServed = parseFloat(((hostProcessingFee / (b.totalDays || 1)) * e.unpaidDaysServed).toFixed(2));
+      }
 
       return {
         id: b._id,
@@ -470,9 +502,9 @@ router.get('/pending-payouts', auth, async (req, res) => {
         pricePerDay: b.pricePerDay,
         pricePerUnit: b.pricePerUnit || b.pricePerDay,
         quantity: e.unpaidDaysServed,
-        rentalSubtotal: rentalForServed,
-        hostPlatformFee: hostFeeForServed,
-        hostProcessingFee: processingFeeForServed,
+        rentalSubtotal: parseFloat(rentalForServed.toFixed(2)),
+        hostPlatformFee: parseFloat(hostFeeForServed.toFixed(2)),
+        hostProcessingFee: parseFloat(processingFeeForServed.toFixed(2)),
         hostEarnings: e.unpaidAmount,
         payoutStatus: 'eligible',
         payoutEligibleDate: now,
@@ -482,7 +514,13 @@ router.get('/pending-payouts', auth, async (req, res) => {
         unpaidDaysServed: e.unpaidDaysServed,
         totalExpectedEarnings: e.totalExpectedEarnings,
         alreadyPaidAmount: e.alreadyPaidAmount,
-        dailyEarnings: e.dailyEarnings
+        dailyEarnings: e.dailyEarnings,
+        hasExtensions: (b.extensions || []).length > 0,
+        segments: e.segments.map(seg => ({
+          days: seg.days,
+          rental: seg.rental,
+          dailyEarnings: parseFloat(seg.dailyEarnings.toFixed(2))
+        }))
       };
     });
 
@@ -535,11 +573,15 @@ router.get('/payout-history', auth, async (req, res) => {
 
     const totalPaidOut = paidBookings.reduce((sum, b) => sum + (b.payoutAmount || 0), 0);
 
+    const { getBookingSegments } = require('../utils/earningSegments');
+
     res.json({
       payouts: paidBookings.map(b => {
-        // Always compute from per-day rate to fix legacy bookings that stored a flat fee
-        const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
-        const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+        // Use segment-based calculation for accurate earnings with mixed rental types
+        const segments = getBookingSegments(b);
+        const rentalSubtotal = segments.reduce((sum, seg) => sum + seg.rental, 0);
+        const correctHostFee = segments.reduce((sum, seg) => sum + seg.hostFee, 0);
+        const hostProcessingFee = segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0);
         return {
           id: b._id,
           reservationId: b.reservationId,
@@ -553,15 +595,19 @@ router.get('/payout-history', auth, async (req, res) => {
           pricePerDay: b.pricePerDay,
           pricePerUnit: b.pricePerUnit || b.pricePerDay,
           quantity: (!b.rentalType || b.rentalType === 'daily') ? (b.totalDays || 0) : (b.quantity || b.totalDays || 0),
-          rentalSubtotal: (!b.rentalType || b.rentalType === 'daily')
-            ? (b.pricePerDay || 0) * (b.totalDays || 0)
-            : (b.pricePerUnit || b.pricePerDay || 0) * (b.quantity || b.totalDays || 0),
-          hostPlatformFee: correctHostFee,
-          hostProcessingFee: hostProcessingFee,
+          rentalSubtotal: parseFloat(rentalSubtotal.toFixed(2)),
+          hostPlatformFee: parseFloat(correctHostFee.toFixed(2)),
+          hostProcessingFee: parseFloat(hostProcessingFee.toFixed(2)),
           hostEarnings: b.hostEarnings,
           payoutAmount: b.payoutAmount,
           payoutDate: b.payoutDate,
-          payoutId: b.payoutId
+          payoutId: b.payoutId,
+          hasExtensions: (b.extensions || []).length > 0,
+          segments: segments.map(seg => ({
+            days: seg.days,
+            rental: seg.rental,
+            dailyEarnings: parseFloat(seg.dailyEarnings.toFixed(2))
+          }))
         };
       }),
       totalPaidOut

@@ -167,6 +167,8 @@ const bookingSchema = new mongoose.Schema({
     days: Number,
     cost: Number,
     rental: Number,
+    rentalType: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'daily' },
+    hostProcessingFee: Number,
     platformFee: Number,
     insurance: Number,
     processingFee: Number,

@@ -810,7 +810,7 @@ router.post('/:id/extend', auth, async (req, res) => {
 // Confirm booking extension (after payment)
 router.post('/:id/confirm-extension', auth, async (req, res) => {
   try {
-    const { extensionDays, paymentIntentId } = req.body;
+    const { extensionDays, paymentIntentId, rentalType } = req.body;
     const booking = await Booking.findById(req.params.id)
       .populate('vehicle')
       .populate('driver', 'firstName lastName email')
@@ -830,10 +830,18 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
       return res.status(400).json({ message: 'Only active or confirmed bookings can be extended' });
     }
 
-    // Calculate new values: rental + platform fee + insurance + processing fee per extension day
+    // Calculate extension rental cost based on rentalType (weekly/monthly use discounted rate)
     const newEndDate = new Date(booking.endDate);
     newEndDate.setDate(newEndDate.getDate() + extensionDays);
-    const extensionRental = extensionDays * booking.pricePerDay;
+    const effectiveRentalType = rentalType || 'daily';
+    let extensionRental;
+    if (effectiveRentalType === 'weekly' && booking.vehicle?.pricePerWeek) {
+      extensionRental = booking.vehicle.pricePerWeek;
+    } else if (effectiveRentalType === 'monthly' && booking.vehicle?.pricePerMonth) {
+      extensionRental = booking.vehicle.pricePerMonth;
+    } else {
+      extensionRental = extensionDays * booking.pricePerDay;
+    }
     const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
     const extensionBaseTotal = extensionRental + extensionPlatformFee + extensionInsurance;
@@ -868,6 +876,8 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
       days: extensionDays,
       cost: extensionCost,
       rental: extensionRental,
+      rentalType: effectiveRentalType,
+      hostProcessingFee: extensionProcessing.hostProcessingFee,
       platformFee: extensionPlatformFee,
       insurance: extensionInsurance,
       processingFee: extensionProcessing.driverProcessingFee,
