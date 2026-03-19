@@ -801,18 +801,29 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
     }
 
-    // TollSpot: Deregister vehicle from toll agencies (fire-and-forget)
-    if (tollspotConfigured() && vehicle.tollspot?.vehicleId) {
-      deregisterVehicle(vehicle.tollspot.vehicleId)
-        .then(result => {
-          if (result.success) {
-            console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} deregistration scheduled`);
-          }
-        })
-        .catch(err => console.error('🛣️ TollSpot: Deregistration error (non-blocking):', err.message));
+    // TollSpot: Deregister vehicle from toll agencies
+    const wasTollEnrolled = vehicle.tollspot?.status && vehicle.tollspot.status !== 'none';
+    let tollMessage = '';
+
+    if (wasTollEnrolled && tollspotConfigured() && vehicle.tollspot?.vehicleId) {
+      try {
+        const result = await deregisterVehicle(vehicle.tollspot.vehicleId);
+        if (result.success) {
+          console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} deregistration scheduled`);
+          tollMessage = ' Toll registration has been removed from TollSpot.';
+        } else {
+          console.error(`🛣️ TollSpot: Deregistration failed for vehicle ${vehicle._id}: ${result.error}`);
+          tollMessage = ' Could not remove toll registration automatically — please remove the plate from TollSpot manually.';
+        }
+      } catch (err) {
+        console.error('🛣️ TollSpot: Deregistration error:', err.message);
+        tollMessage = ' Could not remove toll registration automatically — please remove the plate from TollSpot manually.';
+      }
+    } else if (wasTollEnrolled) {
+      tollMessage = ' This vehicle was enrolled in TollSpot but could not be deregistered automatically — please remove the plate from TollSpot manually.';
     }
 
-    res.json({ message: 'Vehicle deleted successfully' });
+    res.json({ message: `Vehicle deleted successfully.${tollMessage}` });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

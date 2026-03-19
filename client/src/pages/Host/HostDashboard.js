@@ -88,9 +88,10 @@ const HostDashboard = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/vehicles/${vehicleId}`, {
+      const res = await axios.delete(`${API_URL}/api/vehicles/${vehicleId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      alert(res.data.message);
       fetchDashboardData();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
