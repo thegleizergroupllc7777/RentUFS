@@ -53,16 +53,17 @@ router.get('/host', auth, async (req, res) => {
       ...dateFilter
     }).populate('vehicle').populate('driver', 'firstName lastName email');
 
-    // Helper: compute correct financial values from per-day rates (fixes legacy bookings)
+    // Helper: compute correct financial values using segment-based math (handles extensions with mixed rental types)
+    const { getBookingSegments } = require('../utils/earningSegments');
     const computeBookingFinancials = (b) => {
       const totalDays = Number(b.totalDays) || 0;
-      const pricePerDay = Number(b.pricePerDay) || 0;
-      const rentalSubtotal = pricePerDay * totalDays;
-      const hostFee = (Number(b.hostPlatformFeePerDay) || 1.50) * totalDays;
+      const segments = getBookingSegments(b);
+      const rentalSubtotal = segments.reduce((sum, seg) => sum + seg.rental, 0);
+      const hostFee = segments.reduce((sum, seg) => sum + seg.hostFee, 0);
       const driverFee = (Number(b.platformFeePerDay) || 1.50) * totalDays;
       const insuranceCost = Number(b.insurance?.totalCost) || 0;
-      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
-      const hostEarnings = Math.max(0, rentalSubtotal - hostFee - hostProcessingFee);
+      const hostProcessingFee = segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0);
+      const hostEarnings = segments.reduce((sum, seg) => sum + seg.earnings, 0);
       const platformRevenue = driverFee + hostFee + insuranceCost;
       return { rentalSubtotal, hostFee, driverFee, insuranceCost, hostProcessingFee, hostEarnings, platformRevenue };
     };

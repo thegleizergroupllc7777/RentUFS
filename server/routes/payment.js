@@ -465,6 +465,8 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
         days: extensionDays,
         cost: extensionCost,
         rental: rentalCost,
+        rentalType: effectiveRentalType,
+        hostProcessingFee: extensionProcessing.hostProcessingFee,
         platformFee: extensionPlatformFee,
         insurance: extensionInsurance,
         processingFee: extensionProcessing.driverProcessingFee,
@@ -803,8 +805,24 @@ router.post('/webhook', async (req, res) => {
         if (paymentIntent.metadata?.type === 'extension') {
           const extensionDays = parseInt(paymentIntent.metadata.extensionDays, 10);
           if (existingBooking && extensionDays) {
-            // Calculate extension costs with platform fee + insurance + processing fee
-            const rentalCost = extensionDays * existingBooking.pricePerDay;
+            // Use rental cost from payment metadata (calculated correctly at payment time)
+            // Falls back to pricePerDay × days for legacy payments without metadata
+            const effectiveRentalType = paymentIntent.metadata.rentalType || 'daily';
+            let rentalCost;
+            if (paymentIntent.metadata.rentalCost) {
+              rentalCost = parseFloat(paymentIntent.metadata.rentalCost);
+            } else if (effectiveRentalType === 'weekly' || effectiveRentalType === 'monthly') {
+              const vehicle = await Vehicle.findById(existingBooking.vehicle);
+              if (effectiveRentalType === 'weekly' && vehicle?.pricePerWeek) {
+                rentalCost = vehicle.pricePerWeek;
+              } else if (effectiveRentalType === 'monthly' && vehicle?.pricePerMonth) {
+                rentalCost = vehicle.pricePerMonth;
+              } else {
+                rentalCost = extensionDays * existingBooking.pricePerDay;
+              }
+            } else {
+              rentalCost = extensionDays * existingBooking.pricePerDay;
+            }
             const platformFeePerDay = existingBooking.platformFeePerDay || 1.50;
             const extensionPlatformFee = extensionDays * platformFeePerDay;
             const extensionInsurance = extensionDays * (existingBooking.insurance?.costPerDay || 0);
@@ -838,6 +856,8 @@ router.post('/webhook', async (req, res) => {
               days: extensionDays,
               cost: extensionCost,
               rental: rentalCost,
+              rentalType: effectiveRentalType,
+              hostProcessingFee: extensionProcessing.hostProcessingFee,
               platformFee: extensionPlatformFee,
               insurance: extensionInsurance,
               processingFee: extensionProcessing.driverProcessingFee,

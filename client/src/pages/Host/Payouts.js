@@ -91,14 +91,35 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
 
           <div className="detail-section">
             <h4>Earnings Breakdown{isActive ? ' (Unpaid Days)' : ''}</h4>
-            <div className="detail-row">
-              <span className="detail-label">Rate</span>
-              <span className="detail-value">{formatCurrency(booking.pricePerUnit || booking.pricePerDay)}/{booking.rentalType === 'weekly' ? 'week' : booking.rentalType === 'monthly' ? 'month' : 'day'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">{isActive ? `Rental (${booking.unpaidDaysServed} day${booking.unpaidDaysServed !== 1 ? 's' : ''})` : 'Rental Subtotal'}</span>
-              <span className="detail-value">{formatCurrency(rentalSubtotal)}</span>
-            </div>
+            {booking.hasExtensions && booking.segments && booking.segments.length > 1 ? (
+              <>
+                {booking.segments.map((seg, idx) => (
+                  <div key={idx} className="detail-row">
+                    <span className="detail-label">
+                      {idx === 0 ? 'Original' : `Extension ${idx}`} ({seg.days} day{seg.days !== 1 ? 's' : ''})
+                    </span>
+                    <span className="detail-value">
+                      {formatCurrency(seg.rental)} @ {formatCurrency(seg.dailyEarnings)}/day net
+                    </span>
+                  </div>
+                ))}
+                <div className="detail-row" style={{ marginTop: '0.5rem' }}>
+                  <span className="detail-label">{isActive ? `Rental (${booking.unpaidDaysServed} day${booking.unpaidDaysServed !== 1 ? 's' : ''})` : 'Rental Subtotal'}</span>
+                  <span className="detail-value">{formatCurrency(rentalSubtotal)}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="detail-row">
+                  <span className="detail-label">Rate</span>
+                  <span className="detail-value">{formatCurrency(booking.pricePerUnit || booking.pricePerDay)}/{booking.rentalType === 'weekly' ? 'week' : booking.rentalType === 'monthly' ? 'month' : 'day'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{isActive ? `Rental (${booking.unpaidDaysServed} day${booking.unpaidDaysServed !== 1 ? 's' : ''})` : 'Rental Subtotal'}</span>
+                  <span className="detail-value">{formatCurrency(rentalSubtotal)}</span>
+                </div>
+              </>
+            )}
             <div className="detail-row deduction">
               <span className="detail-label">Host Service Fee</span>
               <span className="detail-value">-{formatCurrency(booking.hostPlatformFee)}</span>
