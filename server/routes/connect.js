@@ -217,7 +217,6 @@ router.get('/account-status', auth, async (req, res) => {
         if (user.stripeConnectAccountId) {
           try {
             const userAccount = await stripe.accounts.retrieve(user.stripeConnectAccountId);
-            // Platform's own account has type 'none' when retrieved; Express/Standard accounts have their type set
             if (!userAccount.type || userAccount.type === 'none') {
               console.log(`🔍 Platform owner detected: stored account ${user.stripeConnectAccountId} is the platform account (type: ${userAccount.type})`);
               user.stripeConnectAccountId = platId;
