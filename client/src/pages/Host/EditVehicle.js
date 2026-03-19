@@ -457,19 +457,6 @@ const EditVehicle = () => {
                     </p>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">License Plate *</label>
-                    <input
-                      type="text"
-                      name="licensePlate"
-                      className="form-input"
-                      value={formData.licensePlate}
-                      onChange={handleChange}
-                      placeholder="e.g., ABC1234"
-                      style={{ textTransform: 'uppercase' }}
-                      required
-                    />
-                  </div>
                 </div>
 
                 <div className="form-row">
@@ -791,6 +778,20 @@ const EditVehicle = () => {
                   onChange={(url) => setFormData(prev => ({ ...prev, registrationImage: url }))}
                   required={true}
                 />
+
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label className="form-label">License Plate *</label>
+                  <input
+                    type="text"
+                    name="licensePlate"
+                    className="form-input"
+                    value={formData.licensePlate}
+                    onChange={handleChange}
+                    placeholder="e.g., ABC1234"
+                    style={{ textTransform: 'uppercase' }}
+                    required
+                  />
+                </div>
 
                 <div className="form-group" style={{ marginTop: '1rem' }}>
                   <label className="form-label">Registration Expiration Date *</label>

@@ -318,20 +318,6 @@ const AddVehicle = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">License Plate *</label>
-                  <input
-                    type="text"
-                    name="licensePlate"
-                    className="form-input"
-                    value={formData.licensePlate}
-                    onChange={handleChange}
-                    placeholder="e.g., ABC1234"
-                    style={{ textTransform: 'uppercase' }}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
                   <label className="form-label">Vehicle Nickname *</label>
                   <input
                     type="text"
@@ -778,6 +764,20 @@ const AddVehicle = () => {
                     ✅ Registration document uploaded successfully
                   </div>
                 )}
+
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label className="form-label">License Plate *</label>
+                  <input
+                    type="text"
+                    name="licensePlate"
+                    className="form-input"
+                    value={formData.licensePlate}
+                    onChange={handleChange}
+                    placeholder="e.g., ABC1234"
+                    style={{ textTransform: 'uppercase' }}
+                    required
+                  />
+                </div>
 
                 <div className="form-group" style={{ marginTop: '1rem' }}>
                   <label className="form-label">Registration Expiration Date *</label>
