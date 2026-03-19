@@ -804,23 +804,9 @@ const AddVehicle = () => {
                       <option value="TX">Texas (TX)</option>
                     </select>
                     <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      * Requires specific coverage
+                      * Requires specific coverage — inquire for additional details
                     </p>
                   </div>
-                </div>
-
-                <div className="form-group" style={{ marginTop: '1rem' }}>
-                  <label className="form-label">License Plate *</label>
-                  <input
-                    type="text"
-                    name="licensePlate"
-                    className="form-input"
-                    value={formData.licensePlate}
-                    onChange={handleChange}
-                    placeholder="e.g., ABC1234"
-                    style={{ textTransform: 'uppercase' }}
-                    required
-                  />
                 </div>
 
                 <div className="form-group" style={{ marginTop: '1rem' }}>
