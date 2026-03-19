@@ -388,11 +388,11 @@ router.get('/pending-payouts', auth, async (req, res) => {
       return totalEarnings / totalDays;
     };
 
-    // Build active booking entries — include all active bookings (even day 0)
+    // Build active booking entries — start date counts as day 1
     const activeEntries = [];
     for (const b of activeBookings) {
       const startDate = new Date(b.startDate);
-      const daysSinceStart = Math.max(0, Math.floor((now - startDate) / (1000 * 60 * 60 * 24)));
+      const daysSinceStart = Math.min(b.totalDays || Infinity, Math.floor((now - startDate) / (1000 * 60 * 60 * 24)) + 1);
       const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
       const unpaidDaysServed = Math.max(0, daysSinceStart - daysAlreadyPaid);
 
@@ -457,7 +457,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
       };
     });
 
-    // Map active booking entries (include all, even day 0)
+    // Map active booking entries (start date = day 1, so always >= 1 day served)
     const activeMapped = activeEntries.map(e => {
       const b = e.booking;
       const hostFeeForServed = (b.hostPlatformFeePerDay || 1.50) * e.unpaidDaysServed;
@@ -482,7 +482,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
         hostPlatformFee: hostFeeForServed,
         hostProcessingFee: processingFeeForServed,
         hostEarnings: e.unpaidAmount,
-        payoutStatus: e.unpaidDaysServed > 0 ? 'eligible' : 'pending',
+        payoutStatus: 'eligible',
         payoutEligibleDate: now,
         bookingStatus: 'active',
         daysServed: e.daysSinceStart,
