@@ -255,7 +255,6 @@ router.get('/account-status', auth, async (req, res) => {
       user.stripeConnectChargesEnabled = false;
       await user.save();
 
-      // Now check if this user is the platform owner (no Connect ID = check by re-fetching)
       return res.json({
         hasAccount: false,
         onboardingComplete: false,
