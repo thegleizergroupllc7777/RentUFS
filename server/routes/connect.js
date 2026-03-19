@@ -423,14 +423,6 @@ router.get('/pending-payouts', auth, async (req, res) => {
     const totalActivePending = activeEntries.reduce((sum, e) => sum + e.unpaidAmount, 0);
     const totalPending = totalCompletedPending + totalActivePending;
 
-    // Eligible: completed bookings ready for payout + all active unpaid served days
-    const eligibleCompleted = completedBookings.filter(b =>
-      b.payoutStatus === 'eligible' || (b.payoutEligibleDate && new Date(b.payoutEligibleDate) <= now)
-    );
-    const totalEligibleCompleted = eligibleCompleted.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
-    const totalEligible = totalEligibleCompleted + totalActivePending;
-    const eligibleCount = eligibleCompleted.length + activeEntries.length;
-
     // Map completed bookings
     const completedEntries = completedBookings.map(b => {
       const { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = recomputeEarnings(b);
@@ -501,6 +493,12 @@ router.get('/pending-payouts', auth, async (req, res) => {
       if (aEligible !== bEligible) return aEligible - bEligible;
       return new Date(a.endDate) - new Date(b.endDate);
     });
+
+    // Compute eligible count and total from the actual mapped data so it matches the displayed badges
+    const eligibleCount = allPendingBookings.filter(b => b.payoutStatus === 'eligible').length;
+    const totalEligible = allPendingBookings
+      .filter(b => b.payoutStatus === 'eligible')
+      .reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
 
     res.json({
       pendingBookings: allPendingBookings,
