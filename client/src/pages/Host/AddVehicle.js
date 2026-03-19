@@ -829,14 +829,15 @@ const AddVehicle = () => {
                 <h2 className="form-section-title">Location</h2>
 
                 <div className="form-group">
-                  <label className="form-label">Address</label>
+                  <label className="form-label">Address *</label>
                   <input
                     type="text"
                     name="location.address"
                     className="form-input"
                     value={formData.location.address}
                     onChange={handleChange}
-                    placeholder="Street address (optional)"
+                    placeholder="Street address for pickup"
+                    required
                   />
                 </div>
 
