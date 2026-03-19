@@ -208,9 +208,36 @@ router.get('/account-status', auth, async (req, res) => {
           chargesEnabled: true
         });
       }
-      // Match by email — platform owner may not have a Connect ID stored
+      // Match by email or account type — platform owner may not have a Connect ID stored
       try {
         const platformAccount = await stripe.accounts.retrieve(platId);
+        console.log(`🔍 Platform check — User: ${user.email}, PlatformEmail: ${platformAccount.email || 'none'}, ConnectId: ${user.stripeConnectAccountId || 'none'}, PlatformId: ${platId}`);
+
+        // Check if user's stored Connect account IS the platform account (retrieved as connected account returns type 'none')
+        if (user.stripeConnectAccountId) {
+          try {
+            const userAccount = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+            // Platform's own account has type 'none' when retrieved; Express/Standard accounts have their type set
+            if (!userAccount.type || userAccount.type === 'none') {
+              console.log(`🔍 Platform owner detected: stored account ${user.stripeConnectAccountId} is the platform account (type: ${userAccount.type})`);
+              user.stripeConnectAccountId = platId;
+              user.stripeConnectOnboardingComplete = true;
+              user.stripeConnectPayoutsEnabled = true;
+              user.stripeConnectChargesEnabled = true;
+              await user.save();
+              return res.json({
+                hasAccount: true,
+                isPlatformOwner: true,
+                onboardingComplete: true,
+                payoutsEnabled: true,
+                chargesEnabled: true
+              });
+            }
+          } catch (e) {
+            // Can't retrieve user's Connect account — will be handled below
+          }
+        }
+
         if (platformAccount.email && platformAccount.email.toLowerCase() === user.email.toLowerCase()) {
           console.log(`🔍 Platform owner detected by email match: ${user.email}`);
           // Store the platform ID so future checks are faster
