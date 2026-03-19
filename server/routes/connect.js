@@ -40,16 +40,42 @@ router.post('/create-account', auth, async (req, res) => {
       return res.status(400).json({ message: 'Only hosts can create payout accounts' });
     }
 
+    // Platform owner doesn't need a Connect account — revenue goes directly to platform
+    const platId = await getPlatformAccountId();
+    if (platId) {
+      if (user.stripeConnectAccountId === platId) {
+        return res.status(400).json({ message: 'As the platform owner, payments go directly to your Stripe account. No separate payout setup is needed.' });
+      }
+      // Also check by email
+      try {
+        const platformAccount = await stripe.accounts.retrieve(platId);
+        if (platformAccount.email && platformAccount.email.toLowerCase() === user.email.toLowerCase()) {
+          return res.status(400).json({ message: 'As the platform owner, payments go directly to your Stripe account. No separate payout setup is needed.' });
+        }
+      } catch (e) { /* ignore */ }
+    }
+
     // If already has a Connect account, return it
     if (user.stripeConnectAccountId) {
-      const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
-      return res.json({
-        accountId: user.stripeConnectAccountId,
-        onboardingComplete: user.stripeConnectOnboardingComplete,
-        payoutsEnabled: account.payouts_enabled,
-        chargesEnabled: account.charges_enabled,
-        detailsSubmitted: account.details_submitted
-      });
+      try {
+        const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+        return res.json({
+          accountId: user.stripeConnectAccountId,
+          onboardingComplete: user.stripeConnectOnboardingComplete,
+          payoutsEnabled: account.payouts_enabled,
+          chargesEnabled: account.charges_enabled,
+          detailsSubmitted: account.details_submitted
+        });
+      } catch (retrieveErr) {
+        // Connect account is invalid (wrong mode, deleted, etc.) — clear it so user can start fresh
+        console.log(`⚠️ Clearing stale Connect account ${user.stripeConnectAccountId} for user ${user.email}: ${retrieveErr.message}`);
+        user.stripeConnectAccountId = undefined;
+        user.stripeConnectOnboardingComplete = false;
+        user.stripeConnectPayoutsEnabled = false;
+        user.stripeConnectChargesEnabled = false;
+        await user.save();
+        // Fall through to create a new account
+      }
     }
 
     // Create a new Connect Express account
@@ -168,6 +194,44 @@ router.get('/account-status', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Check if this user is the platform owner (by matching Connect ID or email)
+    const platId = await getPlatformAccountId();
+    if (platId) {
+      // Match by stored Connect ID
+      if (user.stripeConnectAccountId === platId) {
+        console.log(`🔍 Platform owner detected by ID match: ${user.email}`);
+        return res.json({
+          hasAccount: true,
+          isPlatformOwner: true,
+          onboardingComplete: true,
+          payoutsEnabled: true,
+          chargesEnabled: true
+        });
+      }
+      // Match by email — platform owner may not have a Connect ID stored
+      try {
+        const platformAccount = await stripe.accounts.retrieve(platId);
+        if (platformAccount.email && platformAccount.email.toLowerCase() === user.email.toLowerCase()) {
+          console.log(`🔍 Platform owner detected by email match: ${user.email}`);
+          // Store the platform ID so future checks are faster
+          user.stripeConnectAccountId = platId;
+          user.stripeConnectOnboardingComplete = true;
+          user.stripeConnectPayoutsEnabled = true;
+          user.stripeConnectChargesEnabled = true;
+          await user.save();
+          return res.json({
+            hasAccount: true,
+            isPlatformOwner: true,
+            onboardingComplete: true,
+            payoutsEnabled: true,
+            chargesEnabled: true
+          });
+        }
+      } catch (e) {
+        console.error('⚠️ Error checking platform account email:', e.message);
+      }
+    }
+
     if (!user.stripeConnectAccountId) {
       return res.json({
         hasAccount: false,
@@ -177,21 +241,27 @@ router.get('/account-status', auth, async (req, res) => {
       });
     }
 
-    // Check if this user's Connect account is the platform's own account
-    const platId = await getPlatformAccountId();
-    console.log(`🔍 Account status check — User: ${user.email}, ConnectId: ${user.stripeConnectAccountId}, PlatformId: ${platId}, Match: ${user.stripeConnectAccountId === platId}`);
-    if (platId && user.stripeConnectAccountId === platId) {
+    // Get latest account status from Stripe
+    let account;
+    try {
+      account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+    } catch (retrieveErr) {
+      // Connect account can't be retrieved (wrong mode, deleted, etc.)
+      // Clear the stale reference so user sees a clean state
+      console.log(`⚠️ Clearing stale Connect account ${user.stripeConnectAccountId} for user ${user.email}: ${retrieveErr.message}`);
+      user.stripeConnectAccountId = undefined;
+      user.stripeConnectOnboardingComplete = false;
+      user.stripeConnectPayoutsEnabled = false;
+      user.stripeConnectChargesEnabled = false;
+      await user.save();
+
       return res.json({
-        hasAccount: true,
-        isPlatformOwner: true,
-        onboardingComplete: true,
-        payoutsEnabled: true,
-        chargesEnabled: true
+        hasAccount: false,
+        onboardingComplete: false,
+        payoutsEnabled: false,
+        chargesEnabled: false
       });
     }
-
-    // Get latest account status from Stripe
-    const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
 
     // Update local status if changed
     const needsUpdate =
