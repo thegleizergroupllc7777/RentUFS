@@ -494,8 +494,13 @@ router.get('/pending-payouts', auth, async (req, res) => {
       };
     });
 
-    // Combine: active first (they're eligible), then completed
-    const allPendingBookings = [...activeMapped, ...completedEntries];
+    // Combine and sort: eligible first, then pending; within each group oldest end date first
+    const allPendingBookings = [...activeMapped, ...completedEntries].sort((a, b) => {
+      const aEligible = a.payoutStatus === 'eligible' ? 0 : 1;
+      const bEligible = b.payoutStatus === 'eligible' ? 0 : 1;
+      if (aEligible !== bEligible) return aEligible - bEligible;
+      return new Date(a.endDate) - new Date(b.endDate);
+    });
 
     res.json({
       pendingBookings: allPendingBookings,
