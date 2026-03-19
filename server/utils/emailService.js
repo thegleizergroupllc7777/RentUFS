@@ -418,6 +418,8 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
   try {
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const pickupTime = booking.pickupTime || '10:00';
+    const dropoffTime = booking.dropoffTime || booking.pickupTime || '10:00';
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!isEmailConfigured()) {
@@ -474,11 +476,11 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
 
                 <div class="detail-row">
                   <span class="label">Pick-up Date</span>
-                  <span class="value">${startDate}</span>
+                  <span class="value">${startDate} at ${pickupTime}</span>
                 </div>
                 <div class="detail-row">
                   <span class="label">Return Date</span>
-                  <span class="value">${endDate}</span>
+                  <span class="value">${endDate} at ${dropoffTime}</span>
                 </div>
                 <div class="detail-row">
                   <span class="label">Duration</span>
@@ -535,8 +537,8 @@ Reservation ID: ${booking.reservationId || booking._id}
 
 Booking Details:
 - Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-- Pick-up Date: ${startDate}
-- Return Date: ${endDate}
+- Pick-up Date: ${startDate} at ${pickupTime}
+- Return Date: ${endDate} at ${dropoffTime}
 - Duration: ${booking.totalDays} day(s)
 - Total Paid: $${booking.totalPrice.toFixed(2)}
 
@@ -577,6 +579,8 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
   try {
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const pickupTime = booking.pickupTime || '10:00';
+    const dropoffTime = booking.dropoffTime || booking.pickupTime || '10:00';
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!isEmailConfigured()) {
@@ -633,15 +637,21 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
 
                 <div class="detail-row">
                   <span class="label">Pick-up Date</span>
-                  <span class="value">${startDate}</span>
+                  <span class="value">${startDate} at ${pickupTime}</span>
                 </div>
                 <div class="detail-row">
                   <span class="label">Return Date</span>
-                  <span class="value">${endDate}</span>
+                  <span class="value">${endDate} at ${dropoffTime}</span>
                 </div>
                 <div class="detail-row">
                   <span class="label">Duration</span>
                   <span class="value">${booking.totalDays} day(s)</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Pickup Location</span>
+                  <span class="value">
+                    ${vehicle.location?.address ? `${vehicle.location.address}<br>` : ''}${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'} ${vehicle.location?.zipCode || ''}
+                  </span>
                 </div>
 
                 <div class="earnings">Earnings: $${booking.totalPrice.toFixed(2)}</div>
@@ -688,9 +698,10 @@ Reservation ID: ${booking.reservationId || booking._id}
 
 Booking Details:
 - Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-- Pick-up Date: ${startDate}
-- Return Date: ${endDate}
+- Pick-up Date: ${startDate} at ${pickupTime}
+- Return Date: ${endDate} at ${dropoffTime}
 - Duration: ${booking.totalDays} day(s)
+- Pickup Location: ${vehicle.location?.address ? `${vehicle.location.address}, ` : ''}${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'} ${vehicle.location?.zipCode || ''}
 - Earnings: $${booking.totalPrice.toFixed(2)}
 
 Driver Information:
