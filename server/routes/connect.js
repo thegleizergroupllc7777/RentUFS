@@ -486,19 +486,21 @@ router.get('/pending-payouts', auth, async (req, res) => {
       };
     });
 
+    // Match frontend badge logic: eligible if active OR payoutEligibleDate <= now
+    const isEligible = (b) => b.bookingStatus === 'active' || new Date(b.payoutEligibleDate) <= now;
+
     // Combine and sort: eligible first, then pending; within each group oldest end date first
     const allPendingBookings = [...activeMapped, ...completedEntries].sort((a, b) => {
-      const aEligible = a.payoutStatus === 'eligible' ? 0 : 1;
-      const bEligible = b.payoutStatus === 'eligible' ? 0 : 1;
+      const aEligible = isEligible(a) ? 0 : 1;
+      const bEligible = isEligible(b) ? 0 : 1;
       if (aEligible !== bEligible) return aEligible - bEligible;
       return new Date(a.endDate) - new Date(b.endDate);
     });
 
-    // Compute eligible count and total from the actual mapped data so it matches the displayed badges
-    const eligibleCount = allPendingBookings.filter(b => b.payoutStatus === 'eligible').length;
-    const totalEligible = allPendingBookings
-      .filter(b => b.payoutStatus === 'eligible')
-      .reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
+    // Compute eligible count and total using same logic as frontend badge
+    const eligibleBookings = allPendingBookings.filter(isEligible);
+    const eligibleCount = eligibleBookings.length;
+    const totalEligible = eligibleBookings.reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
 
     res.json({
       pendingBookings: allPendingBookings,
