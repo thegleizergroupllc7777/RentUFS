@@ -260,6 +260,26 @@
   max-height: 500px;
   overflow-y: auto;
   padding-right: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: #10b981 transparent;
+}
+
+.reviews-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.reviews-list::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.reviews-list::-webkit-scrollbar-thumb {
+  background: #10b981;
+  border-radius: 4px;
+}
+
+.reviews-list::-webkit-scrollbar-thumb:hover {
+  background: #0ea472;
 }
 
 .review-item {
