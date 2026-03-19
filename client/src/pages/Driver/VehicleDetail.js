@@ -24,6 +24,7 @@ const VehicleDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeBooking, setActiveBooking] = useState(null);
+  const [isRented, setIsRented] = useState(false);
   const [bookingData, setBookingData] = useState({
     startDate: '',
     endDate: '',
@@ -53,6 +54,11 @@ const VehicleDetail = () => {
               headers: { Authorization: `Bearer ${token}` }
             })
           );
+          requests.push(
+            axios.get(`${API_URL}/api/bookings/host-bookings`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          );
         }
 
         const results = await Promise.allSettled(requests);
@@ -79,6 +85,21 @@ const VehicleDetail = () => {
           if (currentBooking) {
             setActiveBooking(currentBooking);
           }
+        }
+
+        // Check host bookings to determine if vehicle is currently rented
+        if (results[3]?.status === 'fulfilled') {
+          const today = new Date();
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const rented = results[3].value.data.some(b => {
+            const vehicleId = typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle;
+            if (String(vehicleId) !== id) return false;
+            if (!['confirmed', 'active'].includes(b.status)) return false;
+            const startStr = typeof b.startDate === 'string' ? b.startDate.split('T')[0] : new Date(b.startDate).toISOString().split('T')[0];
+            const endStr = typeof b.endDate === 'string' ? b.endDate.split('T')[0] : new Date(b.endDate).toISOString().split('T')[0];
+            return startStr <= todayStr && endStr >= todayStr;
+          });
+          setIsRented(rented);
         }
       } catch (error) {
         console.error('Error fetching vehicle data:', error);
@@ -412,14 +433,14 @@ const VehicleDetail = () => {
                         <strong style={{ color: '#6ee7b7' }}>Status:</strong>{' '}
                         <span style={{
                           display: 'inline-block',
-                          background: vehicle.availability ? '#10b981' : '#ef4444',
-                          color: 'white',
+                          background: isRented ? '#f59e0b' : vehicle.availability ? '#10b981' : '#ef4444',
+                          color: isRented ? '#000' : 'white',
                           padding: '0.15rem 0.6rem',
                           borderRadius: '1rem',
                           fontSize: '0.75rem',
                           fontWeight: '600'
                         }}>
-                          {vehicle.availability ? 'Available' : 'Unavailable'}
+                          {isRented ? 'Rented' : vehicle.availability ? 'Available' : 'Unavailable'}
                         </span>
                       </div>
                       <div style={{ marginBottom: '0.5rem', color: '#ffffff' }}>
