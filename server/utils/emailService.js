@@ -413,13 +413,22 @@ const sendVehicleListedEmail = async (user, vehicle) => {
   }
 };
 
+// Format 24h time string (e.g. "14:00") to 12h with AM/PM (e.g. "2:00 PM")
+const formatTime12h = (time) => {
+  if (!time) return '10:00 AM';
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const h = hours % 12 || 12;
+  return `${h}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
 // Send booking confirmation email to driver
 const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) => {
   try {
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const pickupTime = booking.pickupTime || '10:00';
-    const dropoffTime = booking.dropoffTime || booking.pickupTime || '10:00';
+    const pickupTime = formatTime12h(booking.pickupTime);
+    const dropoffTime = formatTime12h(booking.dropoffTime || booking.pickupTime);
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!isEmailConfigured()) {
@@ -579,8 +588,8 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
   try {
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const pickupTime = booking.pickupTime || '10:00';
-    const dropoffTime = booking.dropoffTime || booking.pickupTime || '10:00';
+    const pickupTime = formatTime12h(booking.pickupTime);
+    const dropoffTime = formatTime12h(booking.dropoffTime || booking.pickupTime);
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!isEmailConfigured()) {
