@@ -9,10 +9,10 @@ import './Payouts.css';
 const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
   const [expanded, setExpanded] = useState(false);
   const isActive = booking.bookingStatus === 'active';
-  const isDay0 = isActive && (booking.daysServed === 0 || booking.unpaidDaysServed === 0);
-  const isEligible = !isPaid && !isDay0 && (isActive || new Date(booking.payoutEligibleDate) <= new Date());
+  const isEligible = !isPaid && (isActive || new Date(booking.payoutEligibleDate) <= new Date());
   // For daily rentals, use pricePerDay × totalDays (legacy bookings have quantity defaulting to 1)
-  const rentalSubtotal = booking.rentalSubtotal || (
+  // Use nullish check (!=) so that 0 is preserved as a valid value
+  const rentalSubtotal = booking.rentalSubtotal != null ? booking.rentalSubtotal : (
     (!booking.rentalType || booking.rentalType === 'daily')
       ? (booking.pricePerDay || 0) * (booking.totalDays || 0)
       : (booking.pricePerUnit || booking.pricePerDay || 0) * (booking.quantity || booking.totalDays || 0)
@@ -29,7 +29,7 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           {isActive && <span className="status-badge active-trip">Active Trip</span>}
         </div>
         <div className="reservation-card-right">
-          <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : (isDay0 ? booking.totalExpectedEarnings || 0 : booking.hostEarnings))}</span>
+          <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : booking.hostEarnings)}</span>
           {isPaid ? (
             <span className="status-badge paid">Paid</span>
           ) : (
@@ -136,9 +136,7 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           )}
 
           <div className="detail-section detail-section-note">
-            {isActive && isDay0 ? (
-              <p>This trip just started today. Earnings will begin accruing tomorrow. Payouts are processed weekly every Monday.</p>
-            ) : isActive ? (
+            {isActive ? (
               <p>This trip is in progress. Showing earnings for {booking.unpaidDaysServed} unpaid day{booking.unpaidDaysServed !== 1 ? 's' : ''} served so far. Payouts are processed weekly every Monday.</p>
             ) : (
               <p>Your earnings are the rental subtotal minus the host service fee and processing fee.</p>
