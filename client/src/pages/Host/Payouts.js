@@ -9,7 +9,8 @@ import './Payouts.css';
 const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
   const [expanded, setExpanded] = useState(false);
   const isActive = booking.bookingStatus === 'active';
-  const isEligible = !isPaid && (isActive || new Date(booking.payoutEligibleDate) <= new Date());
+  const isDay0 = isActive && (booking.daysServed === 0 || booking.unpaidDaysServed === 0);
+  const isEligible = !isPaid && !isDay0 && (isActive || new Date(booking.payoutEligibleDate) <= new Date());
   // For daily rentals, use pricePerDay × totalDays (legacy bookings have quantity defaulting to 1)
   const rentalSubtotal = booking.rentalSubtotal || (
     (!booking.rentalType || booking.rentalType === 'daily')
@@ -25,10 +26,10 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           <span className="reservation-vehicle">
             {booking.vehicleNickname || booking.vehicle}
           </span>
-          {isActive && <span className="status-badge active-trip">Active Trip</span>}
+          {isActive && <span className="status-badge active-trip">{isDay0 ? 'Just Started' : 'Active Trip'}</span>}
         </div>
         <div className="reservation-card-right">
-          <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : booking.hostEarnings)}</span>
+          <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : (isDay0 ? booking.totalExpectedEarnings || 0 : booking.hostEarnings))}</span>
           {isPaid ? (
             <span className="status-badge paid">Paid</span>
           ) : (
@@ -114,8 +115,30 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
             </div>
           </div>
 
+          {isActive && booking.totalExpectedEarnings > 0 && (
+            <div className="detail-section">
+              <h4>Trip Earnings Overview</h4>
+              <div className="detail-row">
+                <span className="detail-label">Total Expected Earnings</span>
+                <span className="detail-value">{formatCurrency(booking.totalExpectedEarnings)}</span>
+              </div>
+              {booking.alreadyPaidAmount > 0 && (
+                <div className="detail-row">
+                  <span className="detail-label">Already Paid Out</span>
+                  <span className="detail-value" style={{ color: '#10b981' }}>{formatCurrency(booking.alreadyPaidAmount)}</span>
+                </div>
+              )}
+              <div className="detail-row">
+                <span className="detail-label">Estimated Daily Earnings</span>
+                <span className="detail-value">{formatCurrency(booking.dailyEarnings)}/day</span>
+              </div>
+            </div>
+          )}
+
           <div className="detail-section detail-section-note">
-            {isActive ? (
+            {isActive && isDay0 ? (
+              <p>This trip just started today. Earnings will begin accruing tomorrow. Payouts are processed weekly every Monday.</p>
+            ) : isActive ? (
               <p>This trip is in progress. Showing earnings for {booking.unpaidDaysServed} unpaid day{booking.unpaidDaysServed !== 1 ? 's' : ''} served so far. Payouts are processed weekly every Monday.</p>
             ) : (
               <p>Your earnings are the rental subtotal minus the host service fee and processing fee.</p>

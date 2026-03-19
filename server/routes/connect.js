@@ -388,20 +388,23 @@ router.get('/pending-payouts', auth, async (req, res) => {
       return totalEarnings / totalDays;
     };
 
-    // Build active booking entries — only for unpaid days already served
+    // Build active booking entries — include all active bookings (even day 0)
     const activeEntries = [];
     for (const b of activeBookings) {
       const startDate = new Date(b.startDate);
-      const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+      const daysSinceStart = Math.max(0, Math.floor((now - startDate) / (1000 * 60 * 60 * 24)));
       const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
       const unpaidDaysServed = Math.max(0, daysSinceStart - daysAlreadyPaid);
-
-      if (unpaidDaysServed <= 0) continue;
 
       const dailyEarnings = calculateDailyHostEarnings(b);
       const unpaidAmount = parseFloat((dailyEarnings * unpaidDaysServed).toFixed(2));
 
-      if (unpaidAmount <= 0) continue;
+      // Calculate total expected earnings for the full trip
+      const rentalSubtotal = (b.pricePerDay || 0) * (b.totalDays || 0);
+      const correctHostFee = (b.hostPlatformFeePerDay || 1.50) * (b.totalDays || 0);
+      const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+      const totalExpectedEarnings = parseFloat(Math.max(0, rentalSubtotal - correctHostFee - hostProcessingFee).toFixed(2));
+      const alreadyPaidAmount = parseFloat((dailyEarnings * daysAlreadyPaid).toFixed(2));
 
       activeEntries.push({
         booking: b,
@@ -409,7 +412,9 @@ router.get('/pending-payouts', auth, async (req, res) => {
         daysAlreadyPaid,
         daysSinceStart,
         unpaidAmount,
-        dailyEarnings
+        dailyEarnings,
+        totalExpectedEarnings,
+        alreadyPaidAmount
       });
     }
 
@@ -452,7 +457,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
       };
     });
 
-    // Map active booking entries (only unpaid served portion)
+    // Map active booking entries (include all, even day 0)
     const activeMapped = activeEntries.map(e => {
       const b = e.booking;
       const hostFeeForServed = (b.hostPlatformFeePerDay || 1.50) * e.unpaidDaysServed;
@@ -477,12 +482,15 @@ router.get('/pending-payouts', auth, async (req, res) => {
         hostPlatformFee: hostFeeForServed,
         hostProcessingFee: processingFeeForServed,
         hostEarnings: e.unpaidAmount,
-        payoutStatus: 'eligible',
+        payoutStatus: e.unpaidDaysServed > 0 ? 'eligible' : 'pending',
         payoutEligibleDate: now,
         bookingStatus: 'active',
         daysServed: e.daysSinceStart,
         daysAlreadyPaid: e.daysAlreadyPaid,
-        unpaidDaysServed: e.unpaidDaysServed
+        unpaidDaysServed: e.unpaidDaysServed,
+        totalExpectedEarnings: e.totalExpectedEarnings,
+        alreadyPaidAmount: e.alreadyPaidAmount,
+        dailyEarnings: e.dailyEarnings
       };
     });
 
