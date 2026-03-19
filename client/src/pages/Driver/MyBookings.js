@@ -1263,7 +1263,7 @@ const MyBookings = () => {
                         {booking.status === 'completed' && !reviewedBookingIds.has(String(booking._id)) && (() => {
                           const daysSinceEnd = Math.floor((new Date() - new Date(booking.endDate)) / (1000 * 60 * 60 * 24));
                           const reviewWindowDays = 7;
-                          if (daysSinceEnd <= reviewWindowDays) {
+                          if (daysSinceEnd < reviewWindowDays) {
                             return (
                               <button
                                 onClick={() => openRatingModal(booking)}
