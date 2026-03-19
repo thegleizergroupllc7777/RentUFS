@@ -440,7 +440,7 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
     let cardUrl = null;
     try {
       coverage = await startOnRentCoverage(vehicleResult.id, vehicle.vin, driver, vehicle, booking);
-      coverageId = coverage.id;
+      coverageId = coverage.id || coverage.coverage_id || coverage.coverageId;
       cardUrl = extractCardUrl(coverage);
     } catch (startErr) {
       const errMsg = startErr.response?.data?.message || startErr.message || '';
