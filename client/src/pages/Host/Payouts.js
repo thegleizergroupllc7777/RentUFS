@@ -26,7 +26,7 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           <span className="reservation-vehicle">
             {booking.vehicleNickname || booking.vehicle}
           </span>
-          {isActive && <span className="status-badge active-trip">{isDay0 ? 'Just Started' : 'Active Trip'}</span>}
+          {isActive && <span className="status-badge active-trip">Active Trip</span>}
         </div>
         <div className="reservation-card-right">
           <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : (isDay0 ? booking.totalExpectedEarnings || 0 : booking.hostEarnings))}</span>
