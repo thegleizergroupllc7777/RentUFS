@@ -38,13 +38,44 @@ function getBookingSegments(booking) {
 
   const segments = [];
 
-  // Original segment
+  // Derive each extension's hostProcessingFee from stored data:
+  // - New extensions: have hostProcessingFee stored directly
+  // - Legacy extensions: approximate from stored processingFee (driver half ≈ host half)
+  // Then the original segment gets: total - sum(extension fees)
+  let extensionProcessingTotal = 0;
+  const extensionSegments = [];
+
+  for (const ext of extensions) {
+    const extDays = ext.days || 0;
+    if (extDays <= 0) continue;
+
+    let extProcessingFee;
+    if (ext.hostProcessingFee != null) {
+      // New extensions store the exact value
+      extProcessingFee = ext.hostProcessingFee;
+    } else if (ext.processingFee != null) {
+      // Legacy: driver's half ≈ host's half (within $0.01)
+      // host = floor(stripeFee / 2), driver = ceil(stripeFee / 2)
+      // so host ≈ driver or driver - $0.01
+      extProcessingFee = Math.max(0, ext.processingFee - 0.01);
+    } else {
+      // No data at all — pro-rate as last resort
+      extProcessingFee = totalDays > 0 ? totalHostProcessingFee * (extDays / totalDays) : 0;
+    }
+
+    extensionProcessingTotal += extProcessingFee;
+
+    extensionSegments.push({
+      days: extDays,
+      rental: ext.rental || 0,
+      hostProcessingFee: extProcessingFee
+    });
+  }
+
+  // Original segment gets the remainder
   if (originalDays > 0) {
     const hostFee = hostFeePerDay * originalDays;
-    // Pro-rate processing fee for this segment
-    const processingFee = totalDays > 0
-      ? totalHostProcessingFee * (originalDays / totalDays)
-      : 0;
+    const processingFee = Math.max(0, totalHostProcessingFee - extensionProcessingTotal);
     const earnings = Math.max(0, originalRental - hostFee - processingFee);
 
     segments.push({
@@ -58,25 +89,17 @@ function getBookingSegments(booking) {
   }
 
   // Extension segments
-  for (const ext of extensions) {
-    const extDays = ext.days || 0;
-    if (extDays <= 0) continue;
-
-    const extRental = ext.rental || 0;
-    const extHostFee = hostFeePerDay * extDays;
-    // Use stored hostProcessingFee if available, otherwise pro-rate from total
-    const extProcessingFee = ext.hostProcessingFee != null
-      ? ext.hostProcessingFee
-      : (totalDays > 0 ? totalHostProcessingFee * (extDays / totalDays) : 0);
-    const extEarnings = Math.max(0, extRental - extHostFee - extProcessingFee);
+  for (const extSeg of extensionSegments) {
+    const extHostFee = hostFeePerDay * extSeg.days;
+    const extEarnings = Math.max(0, extSeg.rental - extHostFee - extSeg.hostProcessingFee);
 
     segments.push({
-      days: extDays,
-      rental: extRental,
+      days: extSeg.days,
+      rental: extSeg.rental,
       hostFee: extHostFee,
-      hostProcessingFee: extProcessingFee,
+      hostProcessingFee: extSeg.hostProcessingFee,
       earnings: extEarnings,
-      dailyEarnings: extEarnings / extDays
+      dailyEarnings: extEarnings / extSeg.days
     });
   }
 
