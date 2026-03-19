@@ -450,13 +450,13 @@ const PayoutsContent = () => {
         <div className="info-grid">
           <div className="info-item">
             <div className="info-icon">1</div>
-            <h4>Earnings Accrue</h4>
-            <p>As each day of a rental is served, your earnings for that day become available.</p>
+            <h4>Trip Completes</h4>
+            <p>When a rental ends and the vehicle is returned, your earnings are calculated.</p>
           </div>
           <div className="info-item">
             <div className="info-icon">2</div>
-            <h4>Partial Payouts</h4>
-            <p>For long rentals, you get paid weekly for days already served — no need to wait until the trip ends.</p>
+            <h4>Earnings Ready</h4>
+            <p>Your earnings become available for payout immediately after trip completion.</p>
           </div>
           <div className="info-item">
             <div className="info-icon">3</div>
