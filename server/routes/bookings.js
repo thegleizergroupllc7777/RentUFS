@@ -1117,7 +1117,16 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
       if (stopResult.success) {
         booking.teqMobility.status = stopResult.status;
       } else {
-        booking.teqMobility.error = stopResult.error || 'Failed to stop coverage';
+        // Retry once after 2 seconds
+        console.error(`🛡️ TeqMobility: ❌ Stop coverage failed for booking ${booking._id}, retrying...`, stopResult.error);
+        await new Promise(r => setTimeout(r, 2000));
+        const retryResult = await stopRentalCoverage({ coverageId: booking.teqMobility?.coverageId, vin: booking.vehicle?.vin });
+        if (retryResult.success) {
+          booking.teqMobility.status = retryResult.status;
+        } else {
+          console.error(`🛡️ TeqMobility: ❌ Stop coverage retry also failed for booking ${booking._id}:`, retryResult.error);
+          booking.teqMobility.error = retryResult.error || 'Failed to stop coverage';
+        }
       }
     }
 
@@ -1609,6 +1618,17 @@ router.patch('/:id/status', auth, async (req, res) => {
       booking.teqMobility.stoppedAt = new Date();
       if (stopResult.success) {
         booking.teqMobility.status = stopResult.status;
+      } else {
+        // Retry once after 2 seconds
+        console.error(`🛡️ TeqMobility: ❌ Stop coverage failed for booking ${booking._id}, retrying...`, stopResult.error);
+        await new Promise(r => setTimeout(r, 2000));
+        const retryResult = await stopRentalCoverage({ coverageId: booking.teqMobility?.coverageId, vin: booking.vehicle?.vin });
+        if (retryResult.success) {
+          booking.teqMobility.status = retryResult.status;
+        } else {
+          console.error(`🛡️ TeqMobility: ❌ Stop coverage retry also failed for booking ${booking._id}:`, retryResult.error);
+          booking.teqMobility.error = retryResult.error || 'Failed to stop coverage';
+        }
       }
     }
 
