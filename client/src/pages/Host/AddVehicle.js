@@ -32,6 +32,7 @@ const AddVehicle = () => {
     year: new Date().getFullYear(),
     vin: '',
     licensePlate: '',
+    registrationState: '',
     type: 'sedan',
     transmission: 'automatic',
     seats: 5,
@@ -764,6 +765,49 @@ const AddVehicle = () => {
                     ✅ Registration document uploaded successfully
                   </div>
                 )}
+
+                <div className="form-row" style={{ marginTop: '1rem' }}>
+                  <div className="form-group" style={{ flex: '1' }}>
+                    <label className="form-label">License Plate *</label>
+                    <input
+                      type="text"
+                      name="licensePlate"
+                      className="form-input"
+                      value={formData.licensePlate}
+                      onChange={handleChange}
+                      placeholder="e.g., ABC1234"
+                      style={{ textTransform: 'uppercase' }}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ flex: '1' }}>
+                    <label className="form-label">Registration State *</label>
+                    <select
+                      name="registrationState"
+                      className="form-input"
+                      value={formData.registrationState}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select State</option>
+                      <option value="AZ">Arizona (AZ)</option>
+                      <option value="CA">California (CA)</option>
+                      <option value="CO">Colorado (CO) *</option>
+                      <option value="CT">Connecticut (CT) *</option>
+                      <option value="FL">Florida (FL)</option>
+                      <option value="GA">Georgia (GA)</option>
+                      <option value="IL">Illinois (IL)</option>
+                      <option value="MD">Maryland (MD)</option>
+                      <option value="NV">Nevada (NV) *</option>
+                      <option value="PA">Pennsylvania (PA) *</option>
+                      <option value="SC">South Carolina (SC) *</option>
+                      <option value="TX">Texas (TX)</option>
+                    </select>
+                    <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      * Requires specific coverage
+                    </p>
+                  </div>
+                </div>
 
                 <div className="form-group" style={{ marginTop: '1rem' }}>
                   <label className="form-label">License Plate *</label>

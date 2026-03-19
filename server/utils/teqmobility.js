@@ -135,7 +135,7 @@ const upsertOwner = async (host) => {
 const upsertVehicle = async (vehicle, ownerId) => {
   const body = {
     vin: vehicle.vin,
-    state_registered: toStateAbbr(vehicle.location?.state) || 'FL',
+    state_registered: vehicle.registrationState || toStateAbbr(vehicle.location?.state) || 'FL',
     year: vehicle.year,
     make: vehicle.make,
     model: vehicle.model,

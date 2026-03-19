@@ -40,6 +40,12 @@ const vehicleSchema = new mongoose.Schema({
     trim: true,
     uppercase: true
   },
+  registrationState: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    enum: ['AZ', 'CA', 'CO', 'CT', 'FL', 'GA', 'IL', 'MD', 'NV', 'PA', 'SC', 'TX']
+  },
   type: {
     type: String,
     enum: ['sedan', 'suv', 'truck', 'van', 'convertible', 'coupe', 'wagon', 'other'],
