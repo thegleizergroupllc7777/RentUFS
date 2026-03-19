@@ -156,6 +156,22 @@ const HostDashboard = () => {
     }
   };
 
+  const reEnrollVehicleTollspot = async (vehicleId) => {
+    if (!window.confirm('Are you sure you want to re-enroll this vehicle with TollSpot?')) return;
+    setEnrollingVehicleId(vehicleId);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/vehicles/${vehicleId}/tollspot-reenroll`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDashboardData();
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to re-enroll vehicle with TollSpot';
+      alert(msg);
+    }
+    setEnrollingVehicleId(null);
+  };
+
   const enrollVehicleTollspot = async (vehicleId) => {
     setEnrollingVehicleId(vehicleId);
     try {
@@ -509,28 +525,33 @@ const HostDashboard = () => {
                     )}
 
                     {vehicle.tollspot?.status && vehicle.tollspot.status !== 'none' && (
-                      <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        marginTop: '0.35rem',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        background: vehicle.tollspot.status === 'registered' ? '#064e3b' :
-                                    vehicle.tollspot.status === 'pre_registered' ? '#1a1a00' : '#1a1a2e',
-                        color: vehicle.tollspot.status === 'registered' ? '#34d399' :
-                               vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#93c5fd',
-                        border: `1px solid ${vehicle.tollspot.status === 'registered' ? '#10b981' :
-                                 vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#3b82f6'}`
-                      }}>
+                      <div
+                        onClick={vehicle.tollspot.status === 'registered' ? () => reEnrollVehicleTollspot(vehicle._id) : undefined}
+                        title={vehicle.tollspot.status === 'registered' ? 'Click to re-enroll with TollSpot' : undefined}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          marginTop: '0.35rem',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          background: vehicle.tollspot.status === 'registered' ? '#064e3b' :
+                                      vehicle.tollspot.status === 'pre_registered' ? '#1a1a00' : '#1a1a2e',
+                          color: vehicle.tollspot.status === 'registered' ? '#34d399' :
+                                 vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#93c5fd',
+                          border: `1px solid ${vehicle.tollspot.status === 'registered' ? '#10b981' :
+                                   vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#3b82f6'}`,
+                          cursor: vehicle.tollspot.status === 'registered' ? 'pointer' : 'default'
+                        }}>
                         <span style={{ fontSize: '0.7rem' }}>
-                          {vehicle.tollspot.status === 'registered' ? '\u2713' : '\u25CB'}
+                          {vehicle.tollspot.status === 'registered' ? (enrollingVehicleId === vehicle._id ? '\u25CB' : '\u2713') : '\u25CB'}
                         </span>
-                        Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Pending' :
-                                vehicle.tollspot.status === 'registered' ? 'Active' :
-                                vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
+                        {enrollingVehicleId === vehicle._id ? 'Re-enrolling...' :
+                          `Tolls: ${vehicle.tollspot.status === 'pre_registered' ? 'Pending' :
+                                  vehicle.tollspot.status === 'registered' ? 'Active' :
+                                  vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}`}
                       </div>
                     )}
 
@@ -630,14 +651,20 @@ const HostDashboard = () => {
                           <span>{vehicle.tripCount} trip{vehicle.tripCount !== 1 ? 's' : ''}</span>
                           <span>{vehicle.rating > 0 ? `${vehicle.rating.toFixed(1)} rating` : 'No ratings'}</span>
                           {vehicle.tollspot?.status && vehicle.tollspot.status !== 'none' && (
-                            <span style={{
-                              color: vehicle.tollspot.status === 'registered' ? '#34d399' :
-                                     vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#93c5fd',
-                              fontWeight: '600'
-                            }}>
-                              Tolls: {vehicle.tollspot.status === 'pre_registered' ? 'Pending' :
-                                      vehicle.tollspot.status === 'registered' ? 'Active' :
-                                      vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}
+                            <span
+                              onClick={vehicle.tollspot.status === 'registered' ? (e) => { e.stopPropagation(); reEnrollVehicleTollspot(vehicle._id); } : undefined}
+                              title={vehicle.tollspot.status === 'registered' ? 'Click to re-enroll with TollSpot' : undefined}
+                              style={{
+                                color: vehicle.tollspot.status === 'registered' ? '#34d399' :
+                                       vehicle.tollspot.status === 'pre_registered' ? '#fbbf24' : '#93c5fd',
+                                fontWeight: '600',
+                                cursor: vehicle.tollspot.status === 'registered' ? 'pointer' : 'default'
+                              }}
+                            >
+                              {enrollingVehicleId === vehicle._id ? 'Re-enrolling...' :
+                                `Tolls: ${vehicle.tollspot.status === 'pre_registered' ? 'Pending' :
+                                        vehicle.tollspot.status === 'registered' ? 'Active' :
+                                        vehicle.tollspot.status === 'unregister_scheduled' ? 'Removing' : vehicle.tollspot.status}`}
                             </span>
                           )}
                         </div>

@@ -650,6 +650,79 @@ router.post('/:id/tollspot-reset', auth, async (req, res) => {
   }
 });
 
+// Re-enroll vehicle with TollSpot (reset + enroll in one step)
+router.post('/:id/tollspot-reenroll', auth, async (req, res) => {
+  try {
+    if (!tollspotConfigured()) {
+      return res.status(503).json({ message: 'TollSpot integration is not configured' });
+    }
+
+    const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id });
+    if (!vehicle) {
+      return res.status(404).json({ message: 'Vehicle not found or unauthorized' });
+    }
+
+    if (!vehicle.tollspot?.status || vehicle.tollspot.status === 'none') {
+      return res.status(400).json({ message: 'Vehicle is not enrolled. Use enroll instead.' });
+    }
+
+    if (!vehicle.licensePlate || !vehicle.licensePlate.trim()) {
+      return res.status(400).json({ message: 'Vehicle must have a license plate before enrolling in TollSpot.' });
+    }
+    if (!vehicle.location?.state) {
+      return res.status(400).json({ message: 'Vehicle must have a state in its location before enrolling in TollSpot.' });
+    }
+
+    // Reset status first
+    await Vehicle.findByIdAndUpdate(vehicle._id, {
+      'tollspot.vehicleId': null,
+      'tollspot.status': 'none'
+    });
+
+    // Re-enroll with TollSpot
+    const result = await preRegisterVehicle(vehicle, req.user._id.toString());
+
+    if (result.success) {
+      const tollspotData = {
+        vehicleId: result.vehicleId || null,
+        status: 'registered'
+      };
+      await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
+      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} re-enrolled (TollSpot ID: ${tollspotData.vehicleId})`);
+      return res.json({ message: 'Vehicle re-enrolled with TollSpot', tollspot: tollspotData });
+    }
+
+    const isNetworkError = result.isTimeout || result.circuitOpen || (result.error && (
+      result.error.includes('timeout') ||
+      result.error.includes('circuit breaker') ||
+      result.error.includes('ECONNREFUSED') ||
+      result.error.includes('ENOTFOUND') ||
+      result.error.includes('ECONNRESET') ||
+      result.error.includes('Network Error')
+    ));
+
+    if (isNetworkError) {
+      const tollspotData = { vehicleId: null, status: 'pre_registered' };
+      await Vehicle.findByIdAndUpdate(vehicle._id, { tollspot: tollspotData });
+      console.log(`🛣️ TollSpot: Vehicle ${vehicle._id} re-enrolled locally (API unavailable, will sync later)`);
+      return res.json({ message: 'Vehicle re-enrolled with TollSpot', tollspot: tollspotData });
+    }
+
+    // Re-enrollment failed — restore registered status so badge doesn't disappear
+    await Vehicle.findByIdAndUpdate(vehicle._id, {
+      'tollspot.vehicleId': vehicle.tollspot.vehicleId,
+      'tollspot.status': vehicle.tollspot.status
+    });
+
+    const errorDetail = result.error || 'Unknown error';
+    console.error(`🛣️ TollSpot: Re-enrollment rejected for vehicle ${vehicle._id}: ${errorDetail}`);
+    return res.status(result.status || 502).json({ message: `TollSpot re-enrollment failed: ${errorDetail}` });
+  } catch (error) {
+    console.error('❌ TollSpot re-enroll error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Enroll existing vehicle with TollSpot
 router.post('/:id/tollspot-enroll', auth, async (req, res) => {
   try {
