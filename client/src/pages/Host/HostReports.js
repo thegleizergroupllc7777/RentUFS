@@ -288,7 +288,7 @@ const HostReports = () => {
                           <div key={booking.id} className="report-booking-row">
                             <div className="report-booking-info">
                               <span className="report-booking-vehicle">{booking.vehicleName}</span>
-                              <span className="report-booking-detail">{booking.driverName} &middot; {formatDate(booking.startDate)} - {formatDate(booking.endDate)} ({booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''})</span>
+                              <span className="report-booking-detail">{booking.reservationId ? `${booking.reservationId} · ` : ''}{booking.driverName} &middot; {booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}</span>
                             </div>
                             <div className="report-booking-right">
                               <span className="report-booking-price">{formatCurrency(booking.totalPrice)}</span>
