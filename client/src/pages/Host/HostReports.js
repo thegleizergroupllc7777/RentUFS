@@ -104,8 +104,8 @@ const HostReports = () => {
           <div className="host-header">
             <h1 className="page-title">Reports & Analytics</h1>
             <div className="host-actions">
-              <Link to="/host/dashboard">
-                <button className="btn btn-secondary">Back to Dashboard</button>
+              <Link to="/driver/profile?tab=reports">
+                <button className="btn btn-secondary">Back to Profile</button>
               </Link>
             </div>
           </div>
