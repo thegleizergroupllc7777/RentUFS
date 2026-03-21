@@ -530,7 +530,7 @@ const ReservationDetail = () => {
                           onMouseEnter={(txn.type === 'Extension' || txn.type === 'Booking Created') ? (e) => {
                             const wrapperRect = txnWrapperRef.current.getBoundingClientRect();
                             const itemRect = e.currentTarget.getBoundingClientRect();
-                            setTooltipData({ txn, top: itemRect.top - wrapperRect.top });
+                            setTooltipData({ txn, top: itemRect.bottom - wrapperRect.top });
                           } : undefined}
                           onMouseLeave={(txn.type === 'Extension' || txn.type === 'Booking Created') ? () => setTooltipData(null) : undefined}
                         >
