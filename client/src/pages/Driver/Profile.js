@@ -1543,7 +1543,7 @@ const DriverProfile = () => {
           {vehicleStats.length > 0 && (
             <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #222', marginBottom: '1.5rem' }}>
               <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Earnings by Vehicle — {periodLabels[reportPeriod] || ''}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0', maxHeight: '400px', overflowY: 'auto' }}>
+              <div className="reports-scroll-container" style={{ display: 'flex', flexDirection: 'column', gap: '0', maxHeight: '400px', overflowY: 'auto', paddingRight: '0.75rem' }}>
                 {vehicleStats.map((v, i) => (
                   <div key={v.vehicleId || i} style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -1571,7 +1571,7 @@ const DriverProfile = () => {
           {recentBookings.length > 0 && (
             <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #222' }}>
               <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Recent Activity — {periodLabels[reportPeriod] || ''}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0', maxHeight: '400px', overflowY: 'auto' }}>
+              <div className="reports-scroll-container" style={{ display: 'flex', flexDirection: 'column', gap: '0', maxHeight: '400px', overflowY: 'auto', paddingRight: '0.75rem' }}>
                 {recentBookings.slice(0, 5).map((b, i) => (
                   <div key={b.id} style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
