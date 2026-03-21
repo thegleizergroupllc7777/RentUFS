@@ -526,12 +526,39 @@ const HostReservationDetail = () => {
               </div>
 
               {/* Extensions */}
-              {booking.extensions?.length > 0 && (
+              {booking.extensions?.length > 0 && (() => {
+                // Calculate original booking values (before extensions)
+                const extensionDaysTotal = booking.extensions.reduce((sum, ext) => sum + (ext.days || 0), 0);
+                const extensionCostTotal = booking.extensions.reduce((sum, ext) => sum + (ext.cost || 0), 0);
+                const extensionInsuranceTotal = booking.extensions.reduce((sum, ext) => {
+                  if (ext.insurance != null) return sum + ext.insurance;
+                  return sum + (ext.days || 0) * (booking.insurance?.costPerDay || 0);
+                }, 0);
+                const extensionProcessingTotal = booking.extensions.reduce((sum, ext) => {
+                  if (ext.processingFee != null) return sum + ext.processingFee;
+                  const extRental = ext.rental != null ? ext.rental : ext.rentalCost != null ? ext.rentalCost : (ext.days || 0) * (booking.pricePerDay || 0);
+                  const extPlatformFee = ext.platformFee != null ? ext.platformFee : (ext.days || 0) * (booking.platformFeePerDay || 1.50);
+                  const extInsurance = ext.insurance != null ? ext.insurance : (ext.days || 0) * (booking.insurance?.costPerDay || 0);
+                  const derived = (ext.cost || 0) - extRental - extPlatformFee - extInsurance;
+                  return sum + Math.max(0, derived);
+                }, 0);
+
+                const originalDays = booking.totalDays - extensionDaysTotal;
+                const platformFeePerDay = booking.platformFeePerDay || 1.50;
+                const originalPlatformFee = originalDays * platformFeePerDay;
+                const originalTotalPrice = booking.totalPrice - extensionCostTotal;
+                const originalInsuranceCost = Math.max(0, (booking.insurance?.totalCost || 0) - extensionInsuranceTotal);
+                const originalProcessingFee = Math.max(0, (booking.driverProcessingFee || 0) - extensionProcessingTotal);
+                const originalRentalCost = originalTotalPrice - originalPlatformFee - originalInsuranceCost - originalProcessingFee;
+                const bookingRental = originalRentalCost > 0 ? originalRentalCost : originalTotalPrice;
+                const bookingDescription = booking.rentalType === 'daily' ? `${originalDays} day(s)` : booking.rentalType === 'weekly' ? `${booking.quantity || 1} week(s)` : `${booking.quantity || 1} month(s)`;
+
+                return (
                 <div style={{
                   background: '#1a1a1a', border: '1px solid #333',
                   borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem'
                 }}>
-                  <h3 style={{ color: '#fff', margin: '0 0 1rem 0', fontSize: '1.125rem' }}>Extensions</h3>
+                  <h3 style={{ color: '#fff', margin: '0 0 1rem 0', fontSize: '1.125rem' }}>Transaction History</h3>
                   <div ref={extWrapperRef} style={{ position: 'relative' }}>
                     <div className="transaction-scroll" style={{
                       display: 'flex',
@@ -541,11 +568,50 @@ const HostReservationDetail = () => {
                       overflowY: 'auto',
                       paddingRight: '0.75rem'
                     }}>
+                      {/* Initial Booking */}
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        paddingBottom: '0.75rem',
+                        borderBottom: '1px solid #262626',
+                        cursor: 'pointer'
+                      }}
+                        onMouseEnter={(e) => {
+                          const wrapperRect = extWrapperRef.current.getBoundingClientRect();
+                          const itemRect = e.currentTarget.getBoundingClientRect();
+                          setTooltipData({
+                            type: 'booking',
+                            rental: bookingRental,
+                            days: originalDays,
+                            platformFee: originalPlatformFee,
+                            insurance: originalInsuranceCost,
+                            processingFee: originalProcessingFee,
+                            total: originalTotalPrice,
+                            top: itemRect.top - wrapperRect.top
+                          });
+                        }}
+                        onMouseLeave={() => setTooltipData(null)}
+                      >
+                        <div>
+                          <div style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem' }}>
+                            Booking Created
+                          </div>
+                          <div style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{bookingDescription} rental</div>
+                          <div style={{ color: '#6b7280', fontSize: '0.6875rem', marginTop: '0.125rem' }}>
+                            {formatDate(booking.createdAt)}
+                          </div>
+                        </div>
+                        <div style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem' }}>
+                          ${bookingRental.toFixed(2)}
+                        </div>
+                      </div>
+
+                      {/* Extensions */}
                       {booking.extensions.map((ext, i) => {
                         const rental = ext.rental != null ? ext.rental : ext.rentalCost != null ? ext.rentalCost : ext.days * (booking.pricePerDay || 0);
-                        const platformFee = ext.platformFee != null ? ext.platformFee : ext.days * (booking.platformFeePerDay || 1.50);
-                        const insurance = ext.insurance != null ? ext.insurance : ext.days * (booking.insurance?.costPerDay || 0);
-                        const processingFee = ext.processingFee != null ? ext.processingFee : Math.max(0, (ext.cost || 0) - rental - platformFee - insurance);
+                        const extPlatformFee = ext.platformFee != null ? ext.platformFee : ext.days * (booking.platformFeePerDay || 1.50);
+                        const extInsurance = ext.insurance != null ? ext.insurance : ext.days * (booking.insurance?.costPerDay || 0);
+                        const extProcessingFee = ext.processingFee != null ? ext.processingFee : Math.max(0, (ext.cost || 0) - rental - extPlatformFee - extInsurance);
 
                         return (
                           <div key={i} style={{
@@ -558,7 +624,7 @@ const HostReservationDetail = () => {
                             onMouseEnter={(e) => {
                               const wrapperRect = extWrapperRef.current.getBoundingClientRect();
                               const itemRect = e.currentTarget.getBoundingClientRect();
-                              setTooltipData({ ext, rental, platformFee, insurance, processingFee, top: itemRect.top - wrapperRect.top });
+                              setTooltipData({ type: 'extension', ext, rental, platformFee: extPlatformFee, insurance: extInsurance, processingFee: extProcessingFee, top: itemRect.top - wrapperRect.top });
                             }}
                             onMouseLeave={() => setTooltipData(null)}
                           >
@@ -587,13 +653,18 @@ const HostReservationDetail = () => {
                         left: 0,
                         right: '0.75rem'
                       }}>
-                        <div className="extension-tooltip-title">Extension Breakdown</div>
+                        <div className="extension-tooltip-title">
+                          {tooltipData.type === 'booking' ? 'Booking Breakdown' : 'Extension Breakdown'}
+                        </div>
                         <div className="extension-tooltip-row">
                           <span>Rental</span>
                           <span>${tooltipData.rental.toFixed(2)}</span>
                         </div>
                         <div className="extension-tooltip-detail">
-                          {tooltipData.ext.days} day{tooltipData.ext.days !== 1 ? 's' : ''} × ${(tooltipData.rental / tooltipData.ext.days).toFixed(2)}/day
+                          {tooltipData.type === 'booking'
+                            ? `${tooltipData.days} day${tooltipData.days !== 1 ? 's' : ''} × $${(tooltipData.rental / tooltipData.days).toFixed(2)}/day`
+                            : `${tooltipData.ext.days} day${tooltipData.ext.days !== 1 ? 's' : ''} × $${(tooltipData.rental / tooltipData.ext.days).toFixed(2)}/day`
+                          }
                         </div>
                         {tooltipData.platformFee > 0 && (
                           <div className="extension-tooltip-row">
@@ -616,9 +687,9 @@ const HostReservationDetail = () => {
                         <div className="extension-tooltip-divider"></div>
                         <div className="extension-tooltip-row extension-tooltip-total">
                           <span>Total</span>
-                          <span>${(tooltipData.ext.cost || 0).toFixed(2)}</span>
+                          <span>${tooltipData.type === 'booking' ? tooltipData.total.toFixed(2) : (tooltipData.ext.cost || 0).toFixed(2)}</span>
                         </div>
-                        {tooltipData.ext.newEndDate && (
+                        {tooltipData.type === 'extension' && tooltipData.ext.newEndDate && (
                           <div className="extension-tooltip-enddate">
                             New End Date: {formatDate(tooltipData.ext.newEndDate)}
                           </div>
@@ -627,7 +698,8 @@ const HostReservationDetail = () => {
                     )}
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* Toll Charges */}
               {['active', 'completed'].includes(booking.status) && (
