@@ -5,6 +5,21 @@ const Vehicle = require('../models/Vehicle');
 
 const router = express.Router();
 
+// Helper: get Monday–Sunday payout week boundaries in EST
+function getPayoutWeekRange(now) {
+  const EST_OFFSET = 5; // hours behind UTC
+  const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+  const dayOfWeekEST = nowEST.getUTCDay(); // 0=Sun, 1=Mon, ...
+  const daysSinceMonday = dayOfWeekEST === 0 ? 6 : dayOfWeekEST - 1;
+  // Monday 00:00:00 EST = 05:00:00 UTC
+  const start = new Date(now);
+  start.setTime(now.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000);
+  start.setUTCHours(EST_OFFSET, 0, 0, 0);
+  // Sunday 23:59:59.999 EST
+  const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
+}
+
 // Get host reports/analytics
 router.get('/host', auth, async (req, res) => {
   try {
@@ -24,27 +39,32 @@ router.get('/host', auth, async (req, res) => {
         }
       };
     } else if (period) {
-      let start;
       switch (period) {
-        case 'today':
-          start = new Date(now.setHours(0, 0, 0, 0));
+        case 'today': {
+          const start = new Date(now.setHours(0, 0, 0, 0));
+          dateFilter = { createdAt: { $gte: start } };
           break;
-        case 'week':
-          start = new Date(now);
-          start.setDate(start.getDate() - 7);
+        }
+        case 'week': {
+          const { start, end } = getPayoutWeekRange(new Date());
+          dateFilter = { createdAt: { $gte: start, $lte: end } };
           break;
-        case 'month':
-          start = new Date(now);
+        }
+        case 'month': {
+          const start = new Date(now);
           start.setMonth(start.getMonth() - 1);
+          dateFilter = { createdAt: { $gte: start } };
           break;
-        case 'year':
-          start = new Date(now);
+        }
+        case 'year': {
+          const start = new Date(now);
           start.setFullYear(start.getFullYear() - 1);
+          dateFilter = { createdAt: { $gte: start } };
           break;
+        }
         default:
-          start = new Date(0); // All time
+          dateFilter = { createdAt: { $gte: new Date(0) } };
       }
-      dateFilter = { createdAt: { $gte: start } };
     }
 
     // Get all bookings for this host within the date range
@@ -241,27 +261,32 @@ router.get('/vehicle/:vehicleId', auth, async (req, res) => {
         }
       };
     } else if (period) {
-      let start;
       switch (period) {
-        case 'today':
-          start = new Date(now.setHours(0, 0, 0, 0));
+        case 'today': {
+          const start = new Date(now.setHours(0, 0, 0, 0));
+          dateFilter = { createdAt: { $gte: start } };
           break;
-        case 'week':
-          start = new Date(now);
-          start.setDate(start.getDate() - 7);
+        }
+        case 'week': {
+          const { start, end } = getPayoutWeekRange(new Date());
+          dateFilter = { createdAt: { $gte: start, $lte: end } };
           break;
-        case 'month':
-          start = new Date(now);
+        }
+        case 'month': {
+          const start = new Date(now);
           start.setMonth(start.getMonth() - 1);
+          dateFilter = { createdAt: { $gte: start } };
           break;
-        case 'year':
-          start = new Date(now);
+        }
+        case 'year': {
+          const start = new Date(now);
           start.setFullYear(start.getFullYear() - 1);
+          dateFilter = { createdAt: { $gte: start } };
           break;
+        }
         default:
-          start = new Date(0);
+          dateFilter = { createdAt: { $gte: new Date(0) } };
       }
-      dateFilter = { createdAt: { $gte: start } };
     }
 
     // Get bookings for this vehicle
