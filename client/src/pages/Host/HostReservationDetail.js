@@ -596,7 +596,7 @@ const HostReservationDetail = () => {
                           </div>
                         </div>
                         <div style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem' }}>
-                          ${bookingRental.toFixed(2)}
+                          ${originalTotalPrice.toFixed(2)}
                         </div>
                       </div>
 
