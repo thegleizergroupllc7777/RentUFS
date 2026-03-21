@@ -582,7 +582,7 @@ const HostReservationDetail = () => {
                     {tooltipData && (
                       <div className="extension-tooltip" style={{
                         top: tooltipData.top,
-                        transform: 'translateY(calc(-100% - 8px))',
+                        transform: 'translateY(8px)',
                         bottom: 'auto',
                         left: 0,
                         right: '0.75rem'
