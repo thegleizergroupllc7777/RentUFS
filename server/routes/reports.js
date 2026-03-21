@@ -175,6 +175,7 @@ router.get('/host', auth, async (req, res) => {
       .sort((a, b) => b.createdAt - a.createdAt)
       .map(b => ({
         id: b._id,
+        reservationId: b.reservationId || null,
         vehicleName: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
         vehicleNickname: b.vehicle?.nickname || null,
         driverName: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
