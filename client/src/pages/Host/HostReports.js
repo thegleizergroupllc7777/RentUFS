@@ -70,11 +70,39 @@ const HostReports = () => {
   };
 
   const getPeriodLabel = () => {
+    const now = new Date();
+    const EST_OFFSET = 5;
+    const fmt = (d, includeYear) => {
+      const est = new Date(d.getTime() - EST_OFFSET * 60 * 60 * 1000);
+      return includeYear
+        ? `${est.getUTCMonth() + 1}/${est.getUTCDate()}/${est.getUTCFullYear()}`
+        : `${est.getUTCMonth() + 1}/${est.getUTCDate()}`;
+    };
     switch (period) {
       case 'today': return 'Today';
-      case 'week': return 'This Week (Mon–Sun)';
-      case 'month': return 'This Month';
-      case 'year': return 'This Year';
+      case 'week': {
+        const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+        const dow = nowEST.getUTCDay();
+        const daysSinceMon = dow === 0 ? 6 : dow - 1;
+        const start = new Date(now.getTime() - daysSinceMon * 86400000);
+        start.setUTCHours(EST_OFFSET, 0, 0, 0);
+        const end = new Date(start.getTime() + 7 * 86400000 - 1);
+        return `This Week (${fmt(start)} – ${fmt(end)})`;
+      }
+      case 'month': {
+        const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+        const y = nowEST.getUTCFullYear(), m = nowEST.getUTCMonth();
+        const start = new Date(Date.UTC(y, m, 1, EST_OFFSET));
+        const end = new Date(Date.UTC(y, m + 1, 1, EST_OFFSET) - 1);
+        return `This Month (${fmt(start)} – ${fmt(end)})`;
+      }
+      case 'year': {
+        const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+        const y = nowEST.getUTCFullYear();
+        const start = new Date(Date.UTC(y, 0, 1, EST_OFFSET));
+        const end = new Date(Date.UTC(y + 1, 0, 1, EST_OFFSET) - 1);
+        return `This Year (${fmt(start, true)} – ${fmt(end, true)})`;
+      }
       case 'custom': return 'Custom Range';
       default: return '';
     }

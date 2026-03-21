@@ -1422,11 +1422,32 @@ const DriverProfile = () => {
       pending: '#f59e0b'
     };
 
-    const periodLabels = {
-      week: 'This Week',
-      month: 'This Month',
-      year: 'This Year'
-    };
+    const periodLabels = (() => {
+      const now = new Date();
+      const EST_OFFSET = 5;
+      const fmt = (d, includeYear) => {
+        const est = new Date(d.getTime() - EST_OFFSET * 60 * 60 * 1000);
+        return includeYear
+          ? `${est.getUTCMonth() + 1}/${est.getUTCDate()}/${est.getUTCFullYear()}`
+          : `${est.getUTCMonth() + 1}/${est.getUTCDate()}`;
+      };
+      const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+      const dow = nowEST.getUTCDay();
+      const daysSinceMon = dow === 0 ? 6 : dow - 1;
+      const wStart = new Date(now.getTime() - daysSinceMon * 86400000);
+      wStart.setUTCHours(EST_OFFSET, 0, 0, 0);
+      const wEnd = new Date(wStart.getTime() + 7 * 86400000 - 1);
+      const y = nowEST.getUTCFullYear(), m = nowEST.getUTCMonth();
+      const mStart = new Date(Date.UTC(y, m, 1, EST_OFFSET));
+      const mEnd = new Date(Date.UTC(y, m + 1, 1, EST_OFFSET) - 1);
+      const yStart = new Date(Date.UTC(y, 0, 1, EST_OFFSET));
+      const yEnd = new Date(Date.UTC(y + 1, 0, 1, EST_OFFSET) - 1);
+      return {
+        week: `This Week (${fmt(wStart)} – ${fmt(wEnd)})`,
+        month: `This Month (${fmt(mStart)} – ${fmt(mEnd)})`,
+        year: `This Year (${fmt(yStart, true)} – ${fmt(yEnd, true)})`
+      };
+    })();
 
     return (
     <div style={{ background: '#000', borderRadius: '1rem', padding: '2rem', border: '1px solid #333' }}>
