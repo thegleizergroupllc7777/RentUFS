@@ -287,8 +287,8 @@ const HostReports = () => {
                         {reportData.recentBookings.map((booking) => (
                           <div key={booking.id} className="report-booking-row">
                             <div className="report-booking-info">
-                              <span className="report-booking-vehicle">{booking.vehicleName}</span>
-                              <span className="report-booking-detail">{booking.reservationId ? `${booking.reservationId} · ` : ''}{booking.driverName} &middot; {booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}</span>
+                              <span className="report-booking-vehicle">{booking.reservationId || 'No ID'}</span>
+                              <span className="report-booking-detail">{booking.vehicleName} &middot; {booking.driverName} &middot; {booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}</span>
                             </div>
                             <div className="report-booking-right">
                               <span className="report-booking-price">{formatCurrency(booking.totalPrice)}</span>
