@@ -47,6 +47,25 @@
   gap: 0.75rem;
   min-height: 200px;
   max-height: 320px;
+  scrollbar-width: thin;
+  scrollbar-color: #10b981 transparent;
+}
+
+.chatbox-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatbox-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatbox-messages::-webkit-scrollbar-thumb {
+  background: #10b981;
+  border-radius: 3px;
+}
+
+.chatbox-messages::-webkit-scrollbar-thumb:hover {
+  background: #0ea472;
 }
 
 .chatbox-loading,

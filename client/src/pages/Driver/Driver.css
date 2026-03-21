@@ -1017,15 +1017,15 @@
   background: transparent;
 }
 .transaction-scroll::-webkit-scrollbar-thumb {
-  background: #444;
+  background: #10b981;
   border-radius: 3px;
 }
 .transaction-scroll::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #0ea472;
 }
 .transaction-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #444 transparent;
+  scrollbar-color: #10b981 transparent;
 }
 
 /* Extension breakdown tooltip */

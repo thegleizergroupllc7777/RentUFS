@@ -333,7 +333,7 @@
   max-height: 75vh;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #444 transparent;
+  scrollbar-color: #10b981 transparent;
 }
 
 .reservation-cards::-webkit-scrollbar {
@@ -345,12 +345,12 @@
 }
 
 .reservation-cards::-webkit-scrollbar-thumb {
-  background: #444;
+  background: #10b981;
   border-radius: 3px;
 }
 
 .reservation-cards::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #0ea472;
 }
 
 .cards-hint {
