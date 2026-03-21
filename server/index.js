@@ -108,6 +108,27 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs',
     } catch (err) {
       console.error('⚠️ tripCount backfill error:', err.message);
     }
+
+    // One-time backfill: assign reservationId to bookings missing one
+    try {
+      const Booking = require('./models/Booking');
+      const Counter = require('./models/Booking').collection && mongoose.connection.db.collection('counters');
+      const missing = await Booking.find({ $or: [{ reservationId: null }, { reservationId: { $exists: false } }] }).sort({ createdAt: 1 });
+      if (missing.length > 0) {
+        for (const booking of missing) {
+          const counter = await mongoose.connection.db.collection('counters').findOneAndUpdate(
+            { _id: 'reservationId' },
+            { $inc: { seq: 1 } },
+            { upsert: true, returnDocument: 'after' }
+          );
+          booking.reservationId = `RUFS-${counter.seq.toString().padStart(5, '0')}`;
+          await booking.save();
+        }
+        console.log(`✅ Backfilled reservationId for ${missing.length} bookings`);
+      }
+    } catch (err) {
+      console.error('⚠️ reservationId backfill error:', err.message);
+    }
   })
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
