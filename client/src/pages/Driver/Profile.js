@@ -1425,8 +1425,7 @@ const DriverProfile = () => {
     const periodLabels = {
       week: 'This Week',
       month: 'This Month',
-      year: 'This Year',
-      all: 'All Time'
+      year: 'This Year'
     };
 
     return (
@@ -1448,8 +1447,7 @@ const DriverProfile = () => {
         {[
           { value: 'week', label: 'Week' },
           { value: 'month', label: 'Month' },
-          { value: 'year', label: 'Year' },
-          { value: 'all', label: 'All Time' }
+          { value: 'year', label: 'Year' }
         ].map(p => (
           <button key={p.value} onClick={() => setReportPeriod(p.value)}
             style={{
