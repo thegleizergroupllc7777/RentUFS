@@ -5,9 +5,10 @@ const Vehicle = require('../models/Vehicle');
 
 const router = express.Router();
 
+const EST_OFFSET = 5; // hours behind UTC
+
 // Helper: get Monday–Sunday payout week boundaries in EST
 function getPayoutWeekRange(now) {
-  const EST_OFFSET = 5; // hours behind UTC
   const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
   const dayOfWeekEST = nowEST.getUTCDay(); // 0=Sun, 1=Mon, ...
   const daysSinceMonday = dayOfWeekEST === 0 ? 6 : dayOfWeekEST - 1;
@@ -17,6 +18,25 @@ function getPayoutWeekRange(now) {
   start.setUTCHours(EST_OFFSET, 0, 0, 0);
   // Sunday 23:59:59.999 EST
   const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
+}
+
+// Helper: get 1st–last day of current month in EST
+function getCalendarMonthRange(now) {
+  const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+  const year = nowEST.getUTCFullYear();
+  const month = nowEST.getUTCMonth();
+  const start = new Date(Date.UTC(year, month, 1, EST_OFFSET, 0, 0, 0));
+  const end = new Date(Date.UTC(year, month + 1, 1, EST_OFFSET, 0, 0, 0) - 1);
+  return { start, end };
+}
+
+// Helper: get Jan 1–Dec 31 of current year in EST
+function getCalendarYearRange(now) {
+  const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+  const year = nowEST.getUTCFullYear();
+  const start = new Date(Date.UTC(year, 0, 1, EST_OFFSET, 0, 0, 0));
+  const end = new Date(Date.UTC(year + 1, 0, 1, EST_OFFSET, 0, 0, 0) - 1);
   return { start, end };
 }
 
@@ -51,15 +71,13 @@ router.get('/host', auth, async (req, res) => {
           break;
         }
         case 'month': {
-          const start = new Date(now);
-          start.setMonth(start.getMonth() - 1);
-          dateFilter = { createdAt: { $gte: start } };
+          const { start, end } = getCalendarMonthRange(new Date());
+          dateFilter = { createdAt: { $gte: start, $lte: end } };
           break;
         }
         case 'year': {
-          const start = new Date(now);
-          start.setFullYear(start.getFullYear() - 1);
-          dateFilter = { createdAt: { $gte: start } };
+          const { start, end } = getCalendarYearRange(new Date());
+          dateFilter = { createdAt: { $gte: start, $lte: end } };
           break;
         }
         default:
@@ -273,15 +291,13 @@ router.get('/vehicle/:vehicleId', auth, async (req, res) => {
           break;
         }
         case 'month': {
-          const start = new Date(now);
-          start.setMonth(start.getMonth() - 1);
-          dateFilter = { createdAt: { $gte: start } };
+          const { start, end } = getCalendarMonthRange(new Date());
+          dateFilter = { createdAt: { $gte: start, $lte: end } };
           break;
         }
         case 'year': {
-          const start = new Date(now);
-          start.setFullYear(start.getFullYear() - 1);
-          dateFilter = { createdAt: { $gte: start } };
+          const { start, end } = getCalendarYearRange(new Date());
+          dateFilter = { createdAt: { $gte: start, $lte: end } };
           break;
         }
         default:

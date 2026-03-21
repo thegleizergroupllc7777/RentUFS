@@ -73,8 +73,8 @@ const HostReports = () => {
     switch (period) {
       case 'today': return 'Today';
       case 'week': return 'This Week (Mon–Sun)';
-      case 'month': return 'Last 30 Days';
-      case 'year': return 'Last Year';
+      case 'month': return 'This Month';
+      case 'year': return 'This Year';
       case 'custom': return 'Custom Range';
       default: return '';
     }
@@ -120,7 +120,7 @@ const HostReports = () => {
                 className={`report-period-pill ${period === p ? 'active' : ''}`}
                 onClick={() => setPeriod(p)}
               >
-                {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : p === 'month' ? '30 Days' : p === 'year' ? '1 Year' : 'Custom'}
+                {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : p === 'month' ? 'This Month' : p === 'year' ? 'This Year' : 'Custom'}
               </button>
             ))}
           </div>
