@@ -177,6 +177,7 @@ router.get('/host', auth, async (req, res) => {
       .map(b => ({
         id: b._id,
         vehicleName: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
+        vehicleNickname: b.vehicle?.nickname || null,
         driverName: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
         startDate: b.startDate,
         endDate: b.endDate,
