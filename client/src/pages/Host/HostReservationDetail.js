@@ -587,7 +587,7 @@ const HostReservationDetail = () => {
                             insurance: originalInsuranceCost,
                             processingFee: originalProcessingFee,
                             total: originalTotalPrice,
-                            top: itemRect.top - wrapperRect.top
+                            top: itemRect.bottom - wrapperRect.top
                           });
                         }}
                         onMouseLeave={() => setTooltipData(null)}
@@ -624,7 +624,7 @@ const HostReservationDetail = () => {
                             onMouseEnter={(e) => {
                               const wrapperRect = extWrapperRef.current.getBoundingClientRect();
                               const itemRect = e.currentTarget.getBoundingClientRect();
-                              setTooltipData({ type: 'extension', ext, rental, platformFee: extPlatformFee, insurance: extInsurance, processingFee: extProcessingFee, top: itemRect.top - wrapperRect.top });
+                              setTooltipData({ type: 'extension', ext, rental, platformFee: extPlatformFee, insurance: extInsurance, processingFee: extProcessingFee, top: itemRect.bottom - wrapperRect.top });
                             }}
                             onMouseLeave={() => setTooltipData(null)}
                           >
