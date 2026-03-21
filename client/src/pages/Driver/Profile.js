@@ -1498,7 +1498,7 @@ const DriverProfile = () => {
               <p style={{ fontSize: '1.35rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>${avgPerBooking.toFixed(0)}</p>
             </div>
             <div style={{ background: '#111', borderRadius: '0.5rem', padding: '0.85rem 0.75rem', border: '1px solid #222' }}>
-              <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.3rem 0', fontWeight: '500' }}>Days Rented</p>
+              <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.3rem 0', fontWeight: '500' }}>Rental Days</p>
               <p style={{ fontSize: '1.35rem', fontWeight: '700', color: '#f9fafb', margin: 0 }}>{totalDaysBooked}</p>
             </div>
             {pendingRevenue > 0 && (
@@ -1542,7 +1542,7 @@ const DriverProfile = () => {
           {/* Vehicle Earnings */}
           {vehicleStats.length > 0 && (
             <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #222', marginBottom: '1.5rem' }}>
-              <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Earnings by Vehicle</p>
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Earnings by Vehicle — {periodLabels[reportPeriod] || ''}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                 {vehicleStats.map((v, i) => (
                   <div key={v.vehicleId || i} style={{
@@ -1555,7 +1555,7 @@ const DriverProfile = () => {
                         {v.vehicleNickname || v.vehicleName}
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
-                        {v.confirmedBookings} booking{v.confirmedBookings !== 1 ? 's' : ''} &middot; {v.totalDays || 0} days
+                        {v.confirmedBookings} booking{v.confirmedBookings !== 1 ? 's' : ''}
                       </p>
                     </div>
                     <span style={{ fontSize: '1rem', fontWeight: '700', color: '#10b981', flexShrink: 0, marginLeft: '1rem' }}>
@@ -1570,7 +1570,7 @@ const DriverProfile = () => {
           {/* Recent Bookings */}
           {recentBookings.length > 0 && (
             <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #222' }}>
-              <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Recent Activity</p>
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 0.75rem 0', fontWeight: '500' }}>Recent Activity — {periodLabels[reportPeriod] || ''}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                 {recentBookings.slice(0, 5).map((b, i) => (
                   <div key={b.id} style={{
