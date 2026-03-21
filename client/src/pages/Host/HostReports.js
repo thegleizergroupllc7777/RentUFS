@@ -331,10 +331,10 @@ const HostReports = () => {
                                 <div className="report-fleet-img-placeholder">No Image</div>
                               )}
                               <div className="report-fleet-info">
-                                <span className="report-fleet-name">{vehicle.vehicleName}</span>
                                 {vehicle.vehicleNickname && (
                                   <span className="report-fleet-nickname">"{vehicle.vehicleNickname}"</span>
                                 )}
+                                <span className="report-fleet-name">{vehicle.vehicleName}</span>
                                 <span className="report-fleet-bookings">{vehicle.totalBookings} booking{vehicle.totalBookings !== 1 ? 's' : ''} ({vehicle.confirmedBookings} confirmed)</span>
                               </div>
                             </div>
