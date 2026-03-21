@@ -111,18 +111,22 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs',
 
     // One-time backfill: assign reservationId to bookings missing one
     try {
-      const Booking = require('./models/Booking');
-      const Counter = require('./models/Booking').collection && mongoose.connection.db.collection('counters');
-      const missing = await Booking.find({ $or: [{ reservationId: null }, { reservationId: { $exists: false } }] }).sort({ createdAt: 1 });
+      const bookingsCol = mongoose.connection.db.collection('bookings');
+      const countersCol = mongoose.connection.db.collection('counters');
+      const missing = await bookingsCol.find({
+        $or: [{ reservationId: null }, { reservationId: { $exists: false } }, { reservationId: '' }]
+      }).sort({ createdAt: 1 }).toArray();
       if (missing.length > 0) {
         for (const booking of missing) {
-          const counter = await mongoose.connection.db.collection('counters').findOneAndUpdate(
+          const counter = await countersCol.findOneAndUpdate(
             { _id: 'reservationId' },
             { $inc: { seq: 1 } },
             { upsert: true, returnDocument: 'after' }
           );
-          booking.reservationId = `RUFS-${counter.seq.toString().padStart(5, '0')}`;
-          await booking.save();
+          await bookingsCol.updateOne(
+            { _id: booking._id },
+            { $set: { reservationId: `RUFS-${counter.seq.toString().padStart(5, '0')}` } }
+          );
         }
         console.log(`✅ Backfilled reservationId for ${missing.length} bookings`);
       }
