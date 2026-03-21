@@ -123,6 +123,7 @@ const DriverProfile = () => {
   const isHost = canBeHost && activeMode === 'host';
   const defaultTab = searchParams.get('tab') || 'profile';
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [payoutsOpened, setPayoutsOpened] = useState(defaultTab === 'payouts');
 
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -315,6 +316,7 @@ const DriverProfile = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setSearchParams({ tab });
+    if (tab === 'payouts') setPayoutsOpened(true);
   };
 
   // === Profile functions ===
@@ -2520,7 +2522,7 @@ const DriverProfile = () => {
               )}
               {activeTab === 'payment' && renderPaymentTab()}
               {activeTab === 'tax' && isHost && renderTaxTab()}
-              {activeTab === 'payouts' && isHost && <PayoutsContent />}
+              {payoutsOpened && isHost && <div style={{ display: activeTab === 'payouts' ? 'block' : 'none' }}><PayoutsContent /></div>}
               {activeTab === 'reports' && isHost && renderReportsTab()}
               {activeTab === 'settings' && renderSettingsTab()}
             </div>
