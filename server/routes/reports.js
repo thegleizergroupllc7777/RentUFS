@@ -243,7 +243,7 @@ router.get('/host', auth, async (req, res) => {
         averageBookingValue: paidBookings.length > 0 ? totalRevenue / paidBookings.length : 0,
         totalDaysBooked: paidBookings.reduce((sum, b) => sum + (Number(b.totalDays) || 0), 0)
       },
-      vehicleStats: Object.values(vehicleStats).sort((a, b) => b.totalRevenue - a.totalRevenue),
+      vehicleStats: Object.values(vehicleStats).sort((a, b) => b.hostEarnings - a.hostEarnings),
       dailyRevenue: dailyRevenueArray,
       recentBookings
     });
