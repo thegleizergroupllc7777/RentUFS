@@ -366,15 +366,18 @@ router.get('/pending-payouts', auth, async (req, res) => {
     const now = new Date();
     const { getBookingSegments, getTotalSegmentEarnings, calculateEarningsForDayRange } = require('../utils/earningSegments');
 
-    // Recompute earnings for completed bookings using segment-based math
-    const recomputeEarnings = (b) => {
+    // Pre-compute segments for each completed booking (avoids recalculating 3x per booking)
+    const completedSegmentsMap = new Map();
+    for (const b of completedBookings) {
       const segments = getBookingSegments(b);
-      const correctEarnings = segments.reduce((sum, seg) => sum + seg.earnings, 0);
-      const correctHostFee = segments.reduce((sum, seg) => sum + seg.hostFee, 0);
-      const rentalSubtotal = segments.reduce((sum, seg) => sum + seg.rental, 0);
-      const hostProcessingFee = segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0);
-      return { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings };
-    };
+      completedSegmentsMap.set(b._id.toString(), {
+        segments,
+        correctEarnings: segments.reduce((sum, seg) => sum + seg.earnings, 0),
+        correctHostFee: segments.reduce((sum, seg) => sum + seg.hostFee, 0),
+        rentalSubtotal: segments.reduce((sum, seg) => sum + seg.rental, 0),
+        hostProcessingFee: segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0)
+      });
+    }
 
     // Build active booking entries — start date counts as day 1
     // Uses segment-based calculation for accurate per-day earnings with mixed rental types
@@ -418,14 +421,13 @@ router.get('/pending-payouts', auth, async (req, res) => {
     }
 
     // Calculate totals — completed earnings + active unpaid served earnings
-    const totalCompletedPending = completedBookings.reduce((sum, b) => sum + recomputeEarnings(b).correctEarnings, 0);
+    const totalCompletedPending = completedBookings.reduce((sum, b) => sum + completedSegmentsMap.get(b._id.toString()).correctEarnings, 0);
     const totalActivePending = activeEntries.reduce((sum, e) => sum + e.unpaidAmount, 0);
     const totalPending = totalCompletedPending + totalActivePending;
 
     // Map completed bookings
     const completedEntries = completedBookings.map(b => {
-      const { correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = recomputeEarnings(b);
-      const segments = getBookingSegments(b);
+      const { segments, correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = completedSegmentsMap.get(b._id.toString());
       return {
         id: b._id,
         reservationId: b.reservationId,
