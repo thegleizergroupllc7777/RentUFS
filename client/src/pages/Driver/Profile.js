@@ -1579,7 +1579,7 @@ const DriverProfile = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '0.85rem', color: '#f9fafb', margin: 0 }}>{b.vehicleNickname}</p>
                       <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
-                        {b.driverName} &middot; {b.totalDays} day{b.totalDays !== 1 ? 's' : ''}
+                        {b.reservationId ? `${b.reservationId} · ` : ''}{b.driverName} &middot; {b.totalDays} day{b.totalDays !== 1 ? 's' : ''}
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
