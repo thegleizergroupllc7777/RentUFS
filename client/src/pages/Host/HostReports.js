@@ -75,7 +75,6 @@ const HostReports = () => {
       case 'week': return 'Last 7 Days';
       case 'month': return 'Last 30 Days';
       case 'year': return 'Last Year';
-      case 'all': return 'All Time';
       case 'custom': return 'Custom Range';
       default: return '';
     }
@@ -115,13 +114,13 @@ const HostReports = () => {
 
           {/* Period Filter */}
           <div className="report-period-bar">
-            {['today', 'week', 'month', 'year', 'all', 'custom'].map(p => (
+            {['today', 'week', 'month', 'year', 'custom'].map(p => (
               <button
                 key={p}
                 className={`report-period-pill ${period === p ? 'active' : ''}`}
                 onClick={() => setPeriod(p)}
               >
-                {p === 'today' ? 'Today' : p === 'week' ? '7 Days' : p === 'month' ? '30 Days' : p === 'year' ? '1 Year' : p === 'all' ? 'All Time' : 'Custom'}
+                {p === 'today' ? 'Today' : p === 'week' ? '7 Days' : p === 'month' ? '30 Days' : p === 'year' ? '1 Year' : 'Custom'}
               </button>
             ))}
           </div>
