@@ -173,7 +173,6 @@ router.get('/host', auth, async (req, res) => {
     // Get recent bookings
     const recentBookings = bookings
       .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 10)
       .map(b => ({
         id: b._id,
         vehicleName: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
