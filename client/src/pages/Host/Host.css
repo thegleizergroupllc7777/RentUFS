@@ -1539,7 +1539,8 @@
   gap: 0;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .report-booking-row {
@@ -1605,6 +1606,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .report-fleet-card {
