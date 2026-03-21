@@ -1550,7 +1550,7 @@ const DriverProfile = () => {
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '0.9rem', color: '#f9fafb', fontWeight: '600', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {v.vehicleNickname || v.vehicleName}
+                        {v.vehicleNickname}
                       </p>
                       <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
                         {v.confirmedBookings} booking{v.confirmedBookings !== 1 ? 's' : ''}
@@ -1577,7 +1577,7 @@ const DriverProfile = () => {
                     borderBottom: i < Math.min(recentBookings.length, 5) - 1 ? '1px solid #222' : 'none'
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '0.85rem', color: '#f9fafb', margin: 0 }}>{b.vehicleNickname || b.vehicleName}</p>
+                      <p style={{ fontSize: '0.85rem', color: '#f9fafb', margin: 0 }}>{b.vehicleNickname}</p>
                       <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
                         {b.driverName} &middot; {b.totalDays} day{b.totalDays !== 1 ? 's' : ''}
                       </p>
