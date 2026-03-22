@@ -1436,8 +1436,7 @@ const DriverProfile = () => {
       const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
       const dow = nowEST.getUTCDay();
       const daysSinceMon = dow === 0 ? 6 : dow - 1;
-      const wStart = new Date(now.getTime() - daysSinceMon * 86400000);
-      wStart.setUTCHours(EST_OFFSET, 0, 0, 0);
+      const wStart = new Date(Date.UTC(nowEST.getUTCFullYear(), nowEST.getUTCMonth(), nowEST.getUTCDate() - daysSinceMon, EST_OFFSET, 0, 0, 0));
       const wEnd = new Date(wStart.getTime() + 7 * 86400000 - 1);
       const y = nowEST.getUTCFullYear(), m = nowEST.getUTCMonth();
       const mStart = new Date(Date.UTC(y, m, 1, EST_OFFSET));

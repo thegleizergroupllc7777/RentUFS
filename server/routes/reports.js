@@ -13,9 +13,7 @@ function getPayoutWeekRange(now) {
   const dayOfWeekEST = nowEST.getUTCDay(); // 0=Sun, 1=Mon, ...
   const daysSinceMonday = dayOfWeekEST === 0 ? 6 : dayOfWeekEST - 1;
   // Monday 00:00:00 EST = 05:00:00 UTC
-  const start = new Date(now);
-  start.setTime(now.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000);
-  start.setUTCHours(EST_OFFSET, 0, 0, 0);
+  const start = new Date(Date.UTC(nowEST.getUTCFullYear(), nowEST.getUTCMonth(), nowEST.getUTCDate() - daysSinceMonday, EST_OFFSET, 0, 0, 0));
   // Sunday 23:59:59.999 EST
   const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
   return { start, end };
