@@ -84,8 +84,7 @@ const HostReports = () => {
         const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
         const dow = nowEST.getUTCDay();
         const daysSinceMon = dow === 0 ? 6 : dow - 1;
-        const start = new Date(now.getTime() - daysSinceMon * 86400000);
-        start.setUTCHours(EST_OFFSET, 0, 0, 0);
+        const start = new Date(Date.UTC(nowEST.getUTCFullYear(), nowEST.getUTCMonth(), nowEST.getUTCDate() - daysSinceMon, EST_OFFSET, 0, 0, 0));
         const end = new Date(start.getTime() + 7 * 86400000 - 1);
         return `This Week (${fmt(start)} – ${fmt(end)})`;
       }
