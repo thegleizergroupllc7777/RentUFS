@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axiosInstance from '../../config/axios';
 import Navbar from '../../components/Navbar';
@@ -180,21 +180,20 @@ const PayoutsContent = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [processing, setProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('pending');
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const historyLoadedRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [statusRes, pendingRes, historyRes, balanceRes] = await Promise.all([
-        axiosInstance.get('/api/connect/account-status'),
-        axiosInstance.get('/api/connect/pending-payouts'),
-        axiosInstance.get('/api/connect/payout-history'),
-        axiosInstance.get('/api/connect/balance')
-      ]);
+      const res = await axiosInstance.get('/api/connect/payouts-summary');
+      const { accountStatus: status, pendingPayouts: pending, payoutHistorySummary, balance: bal } = res.data;
 
-      setAccountStatus(statusRes.data);
-      setPendingPayouts(pendingRes.data);
-      setPayoutHistory(historyRes.data);
-      setBalance(balanceRes.data);
+      setAccountStatus(status);
+      setPendingPayouts(pending);
+      // Set lightweight history summary for the earnings card; full history loads on tab click
+      setPayoutHistory({ totalPaidOut: payoutHistorySummary.totalPaidOut, payouts: new Array(payoutHistorySummary.count) });
+      setBalance(bal);
     } catch (err) {
       console.error('Error fetching payout data:', err);
       setError('Failed to load payout information');
@@ -202,6 +201,27 @@ const PayoutsContent = () => {
       setLoading(false);
     }
   }, []);
+
+  const fetchFullHistory = useCallback(async () => {
+    if (historyLoadedRef.current) return;
+    try {
+      setHistoryLoading(true);
+      const res = await axiosInstance.get('/api/connect/payout-history');
+      setPayoutHistory(res.data);
+      historyLoadedRef.current = true;
+    } catch (err) {
+      console.error('Error fetching payout history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+    if (tab === 'history' && !historyLoadedRef.current) {
+      fetchFullHistory();
+    }
+  }, [fetchFullHistory]);
 
   useEffect(() => {
     fetchData();
@@ -424,13 +444,13 @@ const PayoutsContent = () => {
           <div className="payouts-tabs">
             <button
               className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-              onClick={() => setActiveTab('pending')}
+              onClick={() => handleTabChange('pending')}
             >
               Pending ({pendingPayouts?.pendingBookings?.length || 0})
             </button>
             <button
               className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('history')}
+              onClick={() => handleTabChange('history')}
             >
               History ({payoutHistory?.payouts?.length || 0})
             </button>
@@ -462,11 +482,15 @@ const PayoutsContent = () => {
 
           {activeTab === 'history' && (
             <div className="payouts-list">
-              {payoutHistory?.payouts?.length === 0 ? (
+              {historyLoading ? (
+                <div className="loading-spinner">Loading history...</div>
+              ) : payoutHistory?.payouts?.length === 0 ? (
                 <div className="empty-state">
                   <p>No payout history</p>
                   <span>Completed payouts will appear here</span>
                 </div>
+              ) : !historyLoadedRef.current ? (
+                <div className="loading-spinner">Loading history...</div>
               ) : (
                 <div className="reservation-cards">
                   <p className="cards-hint">Tap a reservation to see the full breakdown</p>

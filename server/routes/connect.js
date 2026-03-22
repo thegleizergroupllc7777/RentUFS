@@ -728,4 +728,315 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   res.json({ received: true });
 });
 
+// Combined endpoint: returns account-status + pending-payouts + payout-history summary + balance
+// in a single request to eliminate 3 extra round-trips on Payouts tab load
+router.get('/payouts-summary', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // --- Account Status (inline logic from /account-status) ---
+    let accountStatusData = null;
+    const platId = await getPlatformAccountId();
+
+    // Check platform owner by ID
+    if (platId && user.stripeConnectAccountId === platId) {
+      accountStatusData = {
+        hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
+        payoutsEnabled: true, chargesEnabled: true
+      };
+    }
+
+    // Check platform owner by email or account type
+    if (!accountStatusData && platId) {
+      try {
+        const platformAccount = await getCachedStripeAccount(platId);
+
+        if (user.stripeConnectAccountId) {
+          try {
+            const userAccount = await getCachedStripeAccount(user.stripeConnectAccountId);
+            if (!userAccount.type || userAccount.type === 'none') {
+              user.stripeConnectAccountId = platId;
+              user.stripeConnectOnboardingComplete = true;
+              user.stripeConnectPayoutsEnabled = true;
+              user.stripeConnectChargesEnabled = true;
+              await user.save();
+              accountStatusData = {
+                hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
+                payoutsEnabled: true, chargesEnabled: true
+              };
+            }
+          } catch (e) { /* stale account */ }
+        }
+
+        if (!accountStatusData && platformAccount.email && platformAccount.email.toLowerCase() === user.email.toLowerCase()) {
+          user.stripeConnectAccountId = platId;
+          user.stripeConnectOnboardingComplete = true;
+          user.stripeConnectPayoutsEnabled = true;
+          user.stripeConnectChargesEnabled = true;
+          await user.save();
+          accountStatusData = {
+            hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
+            payoutsEnabled: true, chargesEnabled: true
+          };
+        }
+      } catch (e) {
+        console.error('⚠️ Error checking platform account:', e.message);
+      }
+    }
+
+    if (!accountStatusData && !user.stripeConnectAccountId) {
+      accountStatusData = {
+        hasAccount: false, onboardingComplete: false, payoutsEnabled: false, chargesEnabled: false
+      };
+    }
+
+    if (!accountStatusData) {
+      // Retrieve the user's Connect account
+      try {
+        const account = await getCachedStripeAccount(user.stripeConnectAccountId);
+        const needsUpdate =
+          user.stripeConnectOnboardingComplete !== account.details_submitted ||
+          user.stripeConnectPayoutsEnabled !== account.payouts_enabled ||
+          user.stripeConnectChargesEnabled !== account.charges_enabled;
+        if (needsUpdate) {
+          user.stripeConnectOnboardingComplete = account.details_submitted;
+          user.stripeConnectPayoutsEnabled = account.payouts_enabled;
+          user.stripeConnectChargesEnabled = account.charges_enabled;
+          await user.save();
+        }
+        accountStatusData = {
+          hasAccount: true,
+          accountId: user.stripeConnectAccountId,
+          onboardingComplete: account.details_submitted,
+          payoutsEnabled: account.payouts_enabled,
+          chargesEnabled: account.charges_enabled,
+          requirements: account.requirements,
+          payoutSchedule: account.settings?.payouts?.schedule
+        };
+      } catch (retrieveErr) {
+        console.log(`⚠️ Clearing stale Connect account ${user.stripeConnectAccountId} for user ${user.email}: ${retrieveErr.message}`);
+        invalidateStripeCache(user.stripeConnectAccountId);
+        user.stripeConnectAccountId = undefined;
+        user.stripeConnectOnboardingComplete = false;
+        user.stripeConnectPayoutsEnabled = false;
+        user.stripeConnectChargesEnabled = false;
+        await user.save();
+        accountStatusData = {
+          hasAccount: false, onboardingComplete: false, payoutsEnabled: false, chargesEnabled: false
+        };
+      }
+    }
+
+    // If account not set up, return early — no need to query bookings or balance
+    if (!accountStatusData.hasAccount) {
+      return res.json({
+        accountStatus: accountStatusData,
+        pendingPayouts: { pendingBookings: [], totalPending: 0, totalEligible: 0, eligibleCount: 0, payoutsEnabled: false },
+        payoutHistorySummary: { totalPaidOut: 0, count: 0 },
+        balance: { available: 0, pending: 0 }
+      });
+    }
+
+    // --- Run DB queries and Stripe balance in parallel ---
+    const { getBookingSegments, calculateEarningsForDayRange } = require('../utils/earningSegments');
+
+    const [completedBookings, activeBookings, paidBookingsAgg, balanceData] = await Promise.all([
+      // Pending payouts: completed bookings
+      Booking.find({
+        host: user._id,
+        status: 'completed',
+        paymentStatus: 'paid',
+        payoutStatus: { $in: ['pending', 'eligible'] }
+      }).populate('vehicle', 'make model year nickname')
+        .populate('driver', 'firstName lastName')
+        .sort({ endDate: -1 }),
+
+      // Pending payouts: active bookings
+      Booking.find({
+        host: user._id,
+        status: 'active',
+        paymentStatus: 'paid'
+      }).populate('vehicle', 'make model year nickname')
+        .populate('driver', 'firstName lastName')
+        .sort({ startDate: -1 }),
+
+      // Payout history summary (just totals, not full documents)
+      Booking.aggregate([
+        { $match: { host: user._id, payoutStatus: 'paid' } },
+        { $group: { _id: null, totalPaidOut: { $sum: '$payoutAmount' }, count: { $sum: 1 } } }
+      ]),
+
+      // Stripe balance
+      (user.stripeConnectAccountId && !accountStatusData.isPlatformOwner)
+        ? stripe.balance.retrieve({ stripeAccount: user.stripeConnectAccountId })
+            .then(b => ({
+              available: b.available.reduce((sum, x) => sum + x.amount, 0) / 100,
+              pending: b.pending.reduce((sum, x) => sum + x.amount, 0) / 100
+            }))
+            .catch(() => ({ available: 0, pending: 0 }))
+        : Promise.resolve({ available: 0, pending: 0 })
+    ]);
+
+    // --- Build pending payouts response (same logic as /pending-payouts) ---
+    const now = new Date();
+
+    const completedSegmentsMap = new Map();
+    for (const b of completedBookings) {
+      const segments = getBookingSegments(b);
+      completedSegmentsMap.set(b._id.toString(), {
+        segments,
+        correctEarnings: segments.reduce((sum, seg) => sum + seg.earnings, 0),
+        correctHostFee: segments.reduce((sum, seg) => sum + seg.hostFee, 0),
+        rentalSubtotal: segments.reduce((sum, seg) => sum + seg.rental, 0),
+        hostProcessingFee: segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0)
+      });
+    }
+
+    const activeEntries = [];
+    for (const b of activeBookings) {
+      const startDate = new Date(b.startDate);
+      const daysSinceStart = Math.min(b.totalDays || Infinity, Math.floor((now - startDate) / (1000 * 60 * 60 * 24)) + 1);
+      const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
+      const unpaidDaysServed = Math.max(0, daysSinceStart - daysAlreadyPaid);
+
+      const segments = getBookingSegments(b);
+      const totalExpectedEarnings = parseFloat(segments.reduce((sum, seg) => sum + seg.earnings, 0).toFixed(2));
+
+      const unpaidResult = unpaidDaysServed > 0
+        ? calculateEarningsForDayRange(segments, daysAlreadyPaid + 1, daysSinceStart)
+        : { earnings: 0, breakdown: [] };
+      const unpaidAmount = unpaidResult.earnings;
+
+      const alreadyPaidResult = daysAlreadyPaid > 0
+        ? calculateEarningsForDayRange(segments, 1, daysAlreadyPaid)
+        : { earnings: 0 };
+      const alreadyPaidAmount = alreadyPaidResult.earnings;
+
+      const dailyEarnings = (b.totalDays || 1) > 0 ? totalExpectedEarnings / (b.totalDays || 1) : 0;
+
+      activeEntries.push({
+        booking: b, unpaidDaysServed, daysAlreadyPaid, daysSinceStart,
+        unpaidAmount, dailyEarnings, totalExpectedEarnings, alreadyPaidAmount,
+        segments, unpaidBreakdown: unpaidResult.breakdown
+      });
+    }
+
+    const totalCompletedPending = completedBookings.reduce((sum, b) => sum + completedSegmentsMap.get(b._id.toString()).correctEarnings, 0);
+    const totalActivePending = activeEntries.reduce((sum, e) => sum + e.unpaidAmount, 0);
+    const totalPending = totalCompletedPending + totalActivePending;
+
+    const completedEntries = completedBookings.map(b => {
+      const { segments, correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = completedSegmentsMap.get(b._id.toString());
+      return {
+        id: b._id, reservationId: b.reservationId,
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
+        vehicleNickname: b.vehicle?.nickname || null,
+        driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
+        startDate: b.startDate, endDate: b.endDate, totalDays: b.totalDays,
+        rentalType: b.rentalType, pricePerDay: b.pricePerDay,
+        pricePerUnit: b.pricePerUnit || b.pricePerDay,
+        quantity: (!b.rentalType || b.rentalType === 'daily') ? (b.totalDays || 0) : (b.quantity || b.totalDays || 0),
+        rentalSubtotal: parseFloat(rentalSubtotal.toFixed(2)),
+        hostPlatformFee: parseFloat(correctHostFee.toFixed(2)),
+        hostProcessingFee: parseFloat(hostProcessingFee.toFixed(2)),
+        hostEarnings: parseFloat(correctEarnings.toFixed(2)),
+        payoutStatus: b.payoutStatus,
+        payoutEligibleDate: b.payoutEligibleDate || b.endDate,
+        bookingStatus: 'completed',
+        hasExtensions: (b.extensions || []).length > 0,
+        segments: segments.map(seg => ({ days: seg.days, rental: seg.rental, dailyEarnings: parseFloat(seg.dailyEarnings.toFixed(2)) }))
+      };
+    });
+
+    const activeMapped = activeEntries.map(e => {
+      const b = e.booking;
+      let rentalForServed = 0, hostFeeForServed = 0, processingFeeForServed = 0;
+      if (e.unpaidBreakdown && e.unpaidBreakdown.length > 0) {
+        let dayOffset = 0;
+        for (const seg of e.segments) {
+          const segStart = dayOffset + 1;
+          const segEnd = dayOffset + seg.days;
+          const unpaidFrom = e.daysAlreadyPaid + 1;
+          const unpaidTo = e.daysSinceStart;
+          const overlapStart = Math.max(unpaidFrom, segStart);
+          const overlapEnd = Math.min(unpaidTo, segEnd);
+          if (overlapStart <= overlapEnd) {
+            const overlapDays = overlapEnd - overlapStart + 1;
+            const ratio = overlapDays / seg.days;
+            rentalForServed += seg.rental * ratio;
+            hostFeeForServed += seg.hostFee * ratio;
+            processingFeeForServed += seg.hostProcessingFee * ratio;
+          }
+          dayOffset += seg.days;
+        }
+      } else {
+        hostFeeForServed = (b.hostPlatformFeePerDay || 1.50) * e.unpaidDaysServed;
+        rentalForServed = (b.pricePerDay || 0) * e.unpaidDaysServed;
+        const hostProcessingFee = Number(b.hostProcessingFee) || 0;
+        processingFeeForServed = parseFloat(((hostProcessingFee / (b.totalDays || 1)) * e.unpaidDaysServed).toFixed(2));
+      }
+
+      return {
+        id: b._id, reservationId: b.reservationId,
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
+        vehicleNickname: b.vehicle?.nickname || null,
+        driver: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : 'Unknown',
+        startDate: b.startDate, endDate: b.endDate, totalDays: b.totalDays,
+        rentalType: b.rentalType, pricePerDay: b.pricePerDay,
+        pricePerUnit: b.pricePerUnit || b.pricePerDay,
+        quantity: e.unpaidDaysServed,
+        rentalSubtotal: parseFloat(rentalForServed.toFixed(2)),
+        hostPlatformFee: parseFloat(hostFeeForServed.toFixed(2)),
+        hostProcessingFee: parseFloat(processingFeeForServed.toFixed(2)),
+        hostEarnings: e.unpaidAmount,
+        payoutStatus: 'eligible', payoutEligibleDate: now,
+        bookingStatus: 'active', daysServed: e.daysSinceStart,
+        daysAlreadyPaid: e.daysAlreadyPaid, unpaidDaysServed: e.unpaidDaysServed,
+        totalExpectedEarnings: e.totalExpectedEarnings, alreadyPaidAmount: e.alreadyPaidAmount,
+        dailyEarnings: e.dailyEarnings,
+        hasExtensions: (b.extensions || []).length > 0,
+        segments: e.segments.map(seg => ({ days: seg.days, rental: seg.rental, dailyEarnings: parseFloat(seg.dailyEarnings.toFixed(2)) }))
+      };
+    });
+
+    const isEligible = (b) => b.bookingStatus === 'active' || new Date(b.payoutEligibleDate) <= now;
+    const allPendingBookings = [...activeMapped, ...completedEntries].sort((a, b) => {
+      const aEligible = isEligible(a) ? 0 : 1;
+      const bEligible = isEligible(b) ? 0 : 1;
+      if (aEligible !== bEligible) return aEligible - bEligible;
+      return new Date(a.endDate) - new Date(b.endDate);
+    });
+
+    const eligibleBookings = allPendingBookings.filter(isEligible);
+    const eligibleCount = eligibleBookings.length;
+    const totalEligible = eligibleBookings.reduce((sum, b) => sum + (b.hostEarnings || 0), 0);
+
+    // Payout history summary from aggregation
+    const historyAgg = paidBookingsAgg[0] || { totalPaidOut: 0, count: 0 };
+
+    res.json({
+      accountStatus: accountStatusData,
+      pendingPayouts: {
+        pendingBookings: allPendingBookings,
+        totalPending,
+        totalEligible,
+        eligibleCount,
+        payoutsEnabled: user.stripeConnectPayoutsEnabled
+      },
+      payoutHistorySummary: {
+        totalPaidOut: historyAgg.totalPaidOut || 0,
+        count: historyAgg.count || 0
+      },
+      balance: balanceData
+    });
+  } catch (error) {
+    console.error('Error getting payouts summary:', error);
+    res.status(500).json({ message: 'Failed to get payouts summary', error: error.message });
+  }
+});
+
 module.exports = router;
