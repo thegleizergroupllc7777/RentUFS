@@ -221,8 +221,8 @@ const HostReports = () => {
                       </div>
                     </div>
 
-                    {/* Revenue Chart */}
-                    {reportData.dailyRevenue && reportData.dailyRevenue.length > 0 && (
+                    {/* Revenue Chart - only show on Today tab */}
+                    {period === 'today' && reportData.dailyRevenue && reportData.dailyRevenue.length > 0 && (
                       <div className="report-chart-section">
                         <h4 className="report-subsection-title">Daily Earnings</h4>
                         <div className="revenue-chart">
