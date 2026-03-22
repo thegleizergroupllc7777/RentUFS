@@ -343,6 +343,14 @@ router.get('/:id', auth, async (req, res) => {
       const bookingObj = booking.toObject();
       // Adjust totalPrice to exclude driver commission + driver processing fee (show rental + insurance only)
       bookingObj.totalPrice = (bookingObj.totalPrice || 0) - (bookingObj.platformFee || 0) - (bookingObj.driverProcessingFee || 0);
+
+      // Recalculate host earnings using per-segment logic (same as payouts)
+      const { getBookingSegments } = require('../utils/earningSegments');
+      const segments = getBookingSegments(booking);
+      bookingObj.hostEarnings = parseFloat(segments.reduce((sum, seg) => sum + seg.earnings, 0).toFixed(2));
+      bookingObj.hostPlatformFee = parseFloat(segments.reduce((sum, seg) => sum + seg.hostFee, 0).toFixed(2));
+      bookingObj.hostProcessingFee = parseFloat(segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0).toFixed(2));
+
       delete bookingObj.platformFee;
       delete bookingObj.platformFeePerDay;
       delete bookingObj.driverProcessingFee;
