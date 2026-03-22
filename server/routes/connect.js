@@ -7,6 +7,24 @@ const { sendPayoutNotificationEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
+// Simple in-memory cache for Stripe account data (avoids repeated API calls)
+const stripeCache = new Map();
+const STRIPE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const getCachedStripeAccount = async (accountId) => {
+  const cached = stripeCache.get(accountId);
+  if (cached && Date.now() - cached.timestamp < STRIPE_CACHE_TTL) {
+    return cached.data;
+  }
+  const account = await stripe.accounts.retrieve(accountId);
+  stripeCache.set(accountId, { data: account, timestamp: Date.now() });
+  return account;
+};
+
+const invalidateStripeCache = (accountId) => {
+  stripeCache.delete(accountId);
+};
+
 // Cache the platform account ID
 let platformAccountId = null;
 const getPlatformAccountId = async () => {
@@ -48,7 +66,7 @@ router.post('/create-account', auth, async (req, res) => {
       }
       // Also check by email
       try {
-        const platformAccount = await stripe.accounts.retrieve(platId);
+        const platformAccount = await getCachedStripeAccount(platId);
         if (platformAccount.email && platformAccount.email.toLowerCase() === user.email.toLowerCase()) {
           return res.status(400).json({ message: 'As the platform owner, payments go directly to your Stripe account. No separate payout setup is needed.' });
         }
@@ -210,13 +228,13 @@ router.get('/account-status', auth, async (req, res) => {
       }
       // Match by email or account type — platform owner may not have a Connect ID stored
       try {
-        const platformAccount = await stripe.accounts.retrieve(platId);
+        const platformAccount = await getCachedStripeAccount(platId);
         console.log(`🔍 Platform check — User: ${user.email}, PlatformEmail: ${platformAccount.email || 'none'}, ConnectId: ${user.stripeConnectAccountId || 'none'}, PlatformId: ${platId}`);
 
         // Check if user's stored Connect account IS the platform account (retrieved as connected account returns type 'none')
         if (user.stripeConnectAccountId) {
           try {
-            const userAccount = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+            const userAccount = await getCachedStripeAccount(user.stripeConnectAccountId);
             if (!userAccount.type || userAccount.type === 'none') {
               console.log(`🔍 Platform owner detected: stored account ${user.stripeConnectAccountId} is the platform account (type: ${userAccount.type})`);
               user.stripeConnectAccountId = platId;
@@ -270,11 +288,12 @@ router.get('/account-status', auth, async (req, res) => {
     // Get latest account status from Stripe
     let account;
     try {
-      account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+      account = await getCachedStripeAccount(user.stripeConnectAccountId);
     } catch (retrieveErr) {
       // Connect account can't be retrieved (wrong mode, deleted, etc.)
       // Clear the stale reference so user sees a clean state
       console.log(`⚠️ Clearing stale Connect account ${user.stripeConnectAccountId} for user ${user.email}: ${retrieveErr.message}`);
+      invalidateStripeCache(user.stripeConnectAccountId);
       user.stripeConnectAccountId = undefined;
       user.stripeConnectOnboardingComplete = false;
       user.stripeConnectPayoutsEnabled = false;

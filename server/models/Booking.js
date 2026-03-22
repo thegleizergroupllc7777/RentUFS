@@ -372,6 +372,8 @@ bookingSchema.pre('save', async function(next) {
 // Performance indexes for common query patterns
 bookingSchema.index({ driver: 1, status: 1 });
 bookingSchema.index({ host: 1, status: 1 });
+bookingSchema.index({ host: 1, status: 1, paymentStatus: 1, payoutStatus: 1 });
+bookingSchema.index({ host: 1, payoutStatus: 1 });
 bookingSchema.index({ vehicle: 1, status: 1, startDate: 1, endDate: 1 });
 bookingSchema.index({ status: 1, createdAt: 1 });
 bookingSchema.index({ status: 1, endDate: 1 });
