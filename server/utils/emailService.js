@@ -745,7 +745,7 @@ The RentUFS Team
 const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
   try {
     const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const dropoffTime = booking.dropoffTime || '10:00';
+    const dropoffTime = formatTime12h(booking.dropoffTime || booking.pickupTime);
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
 
     if (!isEmailConfigured()) {
@@ -932,6 +932,8 @@ const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
   try {
     const newEndDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const pickupTime = formatTime12h(booking.pickupTime);
+    const dropoffTime = formatTime12h(booking.dropoffTime || booking.pickupTime);
     const vehicleImageUrl = getVehicleImageUrl(vehicle);
     const lastExtension = booking.extensions?.[booking.extensions.length - 1];
     const extensionDays = lastExtension?.days || 0;
@@ -981,11 +983,11 @@ const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
         </div>
         <div class="detail-row">
           <span class="label">Pick-up Time</span>
-          <span class="value">${booking.pickupTime || '10:00'}</span>
+          <span class="value">${pickupTime}</span>
         </div>
         <div class="detail-row">
           <span class="label">Drop-off Time</span>
-          <span class="value">${booking.dropoffTime || booking.pickupTime || '10:00'}</span>
+          <span class="value">${dropoffTime}</span>
         </div>
         <div class="detail-row">
           <span class="label">Total Duration</span>
@@ -1012,8 +1014,8 @@ Updated Booking Details:
 - Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
 - Pick-up Date: ${startDate}
 - New Return Date: ${newEndDate}
-- Pick-up Time: ${booking.pickupTime || '10:00'}
-- Drop-off Time: ${booking.dropoffTime || booking.pickupTime || '10:00'}
+- Pick-up Time: ${pickupTime}
+- Drop-off Time: ${dropoffTime}
 - Total Duration: ${booking.totalDays} day(s)
 - Extension: +${extensionDays} day(s)
 - Extension Cost: $${extensionCost.toFixed(2)}
@@ -1046,7 +1048,7 @@ Updated Booking Details:
               <div class="updated">
                 <h4 style="margin-top: 0; color: #059669;">Updated Information</h4>
                 <p style="margin: 5px 0;">Your new return date is <strong>${newEndDate}</strong>.</p>
-                <p style="margin: 5px 0;">Please return the vehicle by <strong>${booking.dropoffTime || booking.pickupTime || '10:00'}</strong> on the new return date.</p>
+                <p style="margin: 5px 0;">Please return the vehicle by <strong>${dropoffTime}</strong> on the new return date.</p>
               </div>
 
               <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -1105,7 +1107,7 @@ Updated Booking Details:
 
               <div class="updated">
                 <h4 style="margin-top: 0; color: #059669;">What This Means</h4>
-                <p style="margin: 5px 0;">The vehicle will now be returned on <strong>${newEndDate}</strong> by <strong>${booking.dropoffTime || booking.pickupTime || '10:00'}</strong>.</p>
+                <p style="margin: 5px 0;">The vehicle will now be returned on <strong>${newEndDate}</strong> by <strong>${dropoffTime}</strong>.</p>
                 <p style="margin: 5px 0;">Additional earnings: <strong>$${extensionCost.toFixed(2)}</strong></p>
               </div>
 
