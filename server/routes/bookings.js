@@ -5,7 +5,7 @@ const { Counter } = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
+const { sendBookingExtensionEmail, sendBookingCancellationEmail, sendBookingCompletedEarningsEmail } = require('../utils/emailService');
 const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS, sendBookingCompletedSMS, sendBookingCancelledSMS, sendDriverCancelledNotificationSMS } = require('../utils/smsService');
 const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = require('../utils/teqmobility');
 const { captureCardImage } = require('../utils/screenshotCard');
@@ -1153,6 +1153,13 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     // Set vehicle back to available and increment trip count after trip completion
     await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true, $inc: { tripCount: 1 } });
 
+    // Send host earnings email (non-blocking)
+    const hostUser = await User.findById(booking.host._id || booking.host);
+    if (hostUser) {
+      sendBookingCompletedEarningsEmail(hostUser, booking, booking.vehicle)
+        .catch(err => console.error('📧 Failed to send booking completed earnings email:', err.message));
+    }
+
     // Settle outstanding toll charges (fire-and-forget, don't block return)
     let tollSettlement = null;
     if (tollspotConfigured()) {
@@ -1678,6 +1685,13 @@ router.patch('/:id/status', auth, async (req, res) => {
         } else if (status === 'completed') {
           sendBookingCompletedSMS(populatedBooking.driver, populatedBooking, populatedBooking.vehicle)
             .catch(err => console.error('📱 Failed to send booking completed SMS:', err.message));
+          // Send host earnings email
+          const hostForEmail = await User.findById(booking.host);
+          const vehicleForEmail = await Vehicle.findById(booking.vehicle._id || booking.vehicle);
+          if (hostForEmail && vehicleForEmail) {
+            sendBookingCompletedEarningsEmail(hostForEmail, booking, vehicleForEmail)
+              .catch(err => console.error('📧 Failed to send booking completed earnings email:', err.message));
+          }
         } else if (status === 'cancelled') {
           // Notify the driver about cancellation
           sendBookingCancelledSMS(populatedBooking.driver, populatedBooking, populatedBooking.vehicle, booking.cancellationReason)
