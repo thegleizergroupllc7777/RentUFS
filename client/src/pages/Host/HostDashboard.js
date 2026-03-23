@@ -21,6 +21,21 @@ const HostDashboard = () => {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('hostVehicleView') || 'grid');
   const location = useLocation();
 
+  // Build TollSpot signup link with host's user ID so TollSpot can call our vehicles endpoint
+  const tollspotSignupLink = useMemo(() => {
+    if (!tollspotSignupUrl) return '#';
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return tollspotSignupUrl;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const hostId = payload.userId || payload._id || '';
+      const separator = tollspotSignupUrl.includes('?') ? '&' : '?';
+      return `${tollspotSignupUrl}${separator}hostId=${hostId}`;
+    } catch {
+      return tollspotSignupUrl;
+    }
+  }, [tollspotSignupUrl]);
+
   const handleViewChange = (mode) => {
     setViewMode(mode);
     localStorage.setItem('hostVehicleView', mode);
@@ -400,7 +415,7 @@ const HostDashboard = () => {
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                     <a
-                      href={tollspotSignupUrl}
+                      href={tollspotSignupLink}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-secondary"
