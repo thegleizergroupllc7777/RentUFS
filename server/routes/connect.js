@@ -896,11 +896,7 @@ router.get('/payouts-summary', auth, async (req, res) => {
       });
     }
 
-    // --- Run DB queries and Stripe balance in parallel ---
-    // Select only the fields needed for segment calculations and display
-    const bookingFields = 'reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity payoutStatus payoutEligibleDate hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
-
-    // Select only the fields needed for segment calculations and display
+    // --- Run DB queries and Stripe balance in parallel (select only needed fields) ---
     const bookingFields = 'reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity payoutStatus payoutEligibleDate hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
 
     const [completedBookings, activeBookings, paidBookingsAgg, balanceData] = await Promise.all([
