@@ -7,9 +7,15 @@ const { sendPayoutNotificationEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
+const { getBookingSegments, getTotalSegmentEarnings, calculateEarningsForDayRange } = require('../utils/earningSegments');
+
 // Simple in-memory cache for Stripe account data (avoids repeated API calls)
 const stripeCache = new Map();
 const STRIPE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Cache for per-user account status verification (avoids re-verifying on every request)
+const accountStatusVerifiedAt = new Map();
+const ACCOUNT_STATUS_VERIFY_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
 const getCachedStripeAccount = async (accountId) => {
   const cached = stripeCache.get(accountId);
@@ -383,8 +389,6 @@ router.get('/pending-payouts', auth, async (req, res) => {
       .sort({ startDate: -1 });
 
     const now = new Date();
-    const { getBookingSegments, getTotalSegmentEarnings, calculateEarningsForDayRange } = require('../utils/earningSegments');
-
     // Pre-compute segments for each completed booking (avoids recalculating 3x per booking)
     const completedSegmentsMap = new Map();
     for (const b of completedBookings) {
@@ -596,8 +600,6 @@ router.get('/payout-history', auth, async (req, res) => {
 
     const totalPaidOut = paidBookings.reduce((sum, b) => sum + (b.payoutAmount || 0), 0);
 
-    const { getBookingSegments } = require('../utils/earningSegments');
-
     res.json({
       payouts: paidBookings.map(b => {
         // Use segment-based calculation for accurate earnings with mixed rental types
@@ -740,97 +742,148 @@ router.get('/payouts-summary', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // --- Account Status (inline logic from /account-status) ---
+    // --- Account Status (fast path: trust local DB fields, verify periodically) ---
     let accountStatusData = null;
-    const platId = await getPlatformAccountId();
+    const userId = user._id.toString();
+    const lastVerified = accountStatusVerifiedAt.get(userId) || 0;
+    const needsStripeVerify = Date.now() - lastVerified > ACCOUNT_STATUS_VERIFY_INTERVAL;
 
-    // Check platform owner by ID
-    if (platId && user.stripeConnectAccountId === platId) {
+    // Fast path: if user has completed onboarding and we verified recently, skip Stripe API calls
+    if (!needsStripeVerify && user.stripeConnectAccountId && user.stripeConnectOnboardingComplete) {
       accountStatusData = {
-        hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
-        payoutsEnabled: true, chargesEnabled: true
+        hasAccount: true,
+        accountId: user.stripeConnectAccountId,
+        onboardingComplete: true,
+        payoutsEnabled: user.stripeConnectPayoutsEnabled,
+        chargesEnabled: user.stripeConnectChargesEnabled
       };
     }
 
-    // Check platform owner by email or account type
-    if (!accountStatusData && platId) {
-      try {
-        const platformAccount = await getCachedStripeAccount(platId);
-
-        if (user.stripeConnectAccountId) {
-          try {
-            const userAccount = await getCachedStripeAccount(user.stripeConnectAccountId);
-            if (!userAccount.type || userAccount.type === 'none') {
-              user.stripeConnectAccountId = platId;
-              user.stripeConnectOnboardingComplete = true;
-              user.stripeConnectPayoutsEnabled = true;
-              user.stripeConnectChargesEnabled = true;
-              await user.save();
-              accountStatusData = {
-                hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
-                payoutsEnabled: true, chargesEnabled: true
-              };
-            }
-          } catch (e) { /* stale account */ }
-        }
-
-        if (!accountStatusData && platformAccount.email && platformAccount.email.toLowerCase() === user.email.toLowerCase()) {
-          user.stripeConnectAccountId = platId;
-          user.stripeConnectOnboardingComplete = true;
-          user.stripeConnectPayoutsEnabled = true;
-          user.stripeConnectChargesEnabled = true;
-          await user.save();
-          accountStatusData = {
-            hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
-            payoutsEnabled: true, chargesEnabled: true
-          };
-        }
-      } catch (e) {
-        console.error('⚠️ Error checking platform account:', e.message);
-      }
-    }
-
+    // Fast path: no account at all
     if (!accountStatusData && !user.stripeConnectAccountId) {
       accountStatusData = {
         hasAccount: false, onboardingComplete: false, payoutsEnabled: false, chargesEnabled: false
       };
     }
 
+    // Slow path: verify against Stripe (first load, cache expired, or incomplete onboarding)
     if (!accountStatusData) {
-      // Retrieve the user's Connect account
-      try {
-        const account = await getCachedStripeAccount(user.stripeConnectAccountId);
-        const needsUpdate =
-          user.stripeConnectOnboardingComplete !== account.details_submitted ||
-          user.stripeConnectPayoutsEnabled !== account.payouts_enabled ||
-          user.stripeConnectChargesEnabled !== account.charges_enabled;
-        if (needsUpdate) {
-          user.stripeConnectOnboardingComplete = account.details_submitted;
-          user.stripeConnectPayoutsEnabled = account.payouts_enabled;
-          user.stripeConnectChargesEnabled = account.charges_enabled;
-          await user.save();
-        }
+      const platId = await getPlatformAccountId();
+
+      // Check platform owner by ID
+      if (platId && user.stripeConnectAccountId === platId) {
         accountStatusData = {
-          hasAccount: true,
-          accountId: user.stripeConnectAccountId,
-          onboardingComplete: account.details_submitted,
-          payoutsEnabled: account.payouts_enabled,
-          chargesEnabled: account.charges_enabled,
-          requirements: account.requirements,
-          payoutSchedule: account.settings?.payouts?.schedule
+          hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
+          payoutsEnabled: true, chargesEnabled: true
         };
-      } catch (retrieveErr) {
-        console.log(`⚠️ Clearing stale Connect account ${user.stripeConnectAccountId} for user ${user.email}: ${retrieveErr.message}`);
-        invalidateStripeCache(user.stripeConnectAccountId);
-        user.stripeConnectAccountId = undefined;
-        user.stripeConnectOnboardingComplete = false;
-        user.stripeConnectPayoutsEnabled = false;
-        user.stripeConnectChargesEnabled = false;
-        await user.save();
+      }
+
+      // Check platform owner by email or account type
+      if (!accountStatusData && platId) {
+        try {
+          // Fetch platform and user accounts in parallel
+          const [platformAccount, userAccount] = await Promise.all([
+            getCachedStripeAccount(platId),
+            user.stripeConnectAccountId ? getCachedStripeAccount(user.stripeConnectAccountId).catch(() => null) : Promise.resolve(null)
+          ]);
+
+          if (userAccount && (!userAccount.type || userAccount.type === 'none')) {
+            user.stripeConnectAccountId = platId;
+            user.stripeConnectOnboardingComplete = true;
+            user.stripeConnectPayoutsEnabled = true;
+            user.stripeConnectChargesEnabled = true;
+            await user.save();
+            accountStatusData = {
+              hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
+              payoutsEnabled: true, chargesEnabled: true
+            };
+          }
+
+          if (!accountStatusData && platformAccount.email && platformAccount.email.toLowerCase() === user.email.toLowerCase()) {
+            user.stripeConnectAccountId = platId;
+            user.stripeConnectOnboardingComplete = true;
+            user.stripeConnectPayoutsEnabled = true;
+            user.stripeConnectChargesEnabled = true;
+            await user.save();
+            accountStatusData = {
+              hasAccount: true, isPlatformOwner: true, onboardingComplete: true,
+              payoutsEnabled: true, chargesEnabled: true
+            };
+          }
+
+          // Use the already-fetched user account for the final check
+          if (!accountStatusData && userAccount) {
+            const needsUpdate =
+              user.stripeConnectOnboardingComplete !== userAccount.details_submitted ||
+              user.stripeConnectPayoutsEnabled !== userAccount.payouts_enabled ||
+              user.stripeConnectChargesEnabled !== userAccount.charges_enabled;
+            if (needsUpdate) {
+              user.stripeConnectOnboardingComplete = userAccount.details_submitted;
+              user.stripeConnectPayoutsEnabled = userAccount.payouts_enabled;
+              user.stripeConnectChargesEnabled = userAccount.charges_enabled;
+              await user.save();
+            }
+            accountStatusData = {
+              hasAccount: true,
+              accountId: user.stripeConnectAccountId,
+              onboardingComplete: userAccount.details_submitted,
+              payoutsEnabled: userAccount.payouts_enabled,
+              chargesEnabled: userAccount.charges_enabled,
+              requirements: userAccount.requirements,
+              payoutSchedule: userAccount.settings?.payouts?.schedule
+            };
+          }
+        } catch (e) {
+          console.error('⚠️ Error checking platform account:', e.message);
+        }
+      }
+
+      // If we still have no status and user has an account ID, try fetching it directly
+      if (!accountStatusData && user.stripeConnectAccountId) {
+        try {
+          const account = await getCachedStripeAccount(user.stripeConnectAccountId);
+          const needsUpdate =
+            user.stripeConnectOnboardingComplete !== account.details_submitted ||
+            user.stripeConnectPayoutsEnabled !== account.payouts_enabled ||
+            user.stripeConnectChargesEnabled !== account.charges_enabled;
+          if (needsUpdate) {
+            user.stripeConnectOnboardingComplete = account.details_submitted;
+            user.stripeConnectPayoutsEnabled = account.payouts_enabled;
+            user.stripeConnectChargesEnabled = account.charges_enabled;
+            await user.save();
+          }
+          accountStatusData = {
+            hasAccount: true,
+            accountId: user.stripeConnectAccountId,
+            onboardingComplete: account.details_submitted,
+            payoutsEnabled: account.payouts_enabled,
+            chargesEnabled: account.charges_enabled,
+            requirements: account.requirements,
+            payoutSchedule: account.settings?.payouts?.schedule
+          };
+        } catch (retrieveErr) {
+          console.log(`⚠️ Clearing stale Connect account ${user.stripeConnectAccountId} for user ${user.email}: ${retrieveErr.message}`);
+          invalidateStripeCache(user.stripeConnectAccountId);
+          user.stripeConnectAccountId = undefined;
+          user.stripeConnectOnboardingComplete = false;
+          user.stripeConnectPayoutsEnabled = false;
+          user.stripeConnectChargesEnabled = false;
+          await user.save();
+          accountStatusData = {
+            hasAccount: false, onboardingComplete: false, payoutsEnabled: false, chargesEnabled: false
+          };
+        }
+      }
+
+      // No account at all
+      if (!accountStatusData) {
         accountStatusData = {
           hasAccount: false, onboardingComplete: false, payoutsEnabled: false, chargesEnabled: false
         };
       }
+
+      // Mark as verified so next request uses fast path
+      accountStatusVerifiedAt.set(userId, Date.now());
     }
 
     // If account not set up, return early — no need to query bookings or balance
@@ -844,8 +897,6 @@ router.get('/payouts-summary', auth, async (req, res) => {
     }
 
     // --- Run DB queries and Stripe balance in parallel ---
-    const { getBookingSegments, calculateEarningsForDayRange } = require('../utils/earningSegments');
-
     // Select only the fields needed for segment calculations and display
     const bookingFields = 'reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity payoutStatus payoutEligibleDate hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
 
