@@ -100,7 +100,10 @@ router.get('/host', auth, async (req, res) => {
       const insuranceCost = Number(b.insurance?.totalCost) || 0;
       const hostProcessingFee = segments.reduce((sum, seg) => sum + seg.hostProcessingFee, 0);
       const hostEarnings = segments.reduce((sum, seg) => sum + seg.earnings, 0);
-      const platformRevenue = driverFee + hostFee + insuranceCost;
+      const driverProcessingFee = Number(b.driverProcessingFee) || 0;
+      // Derive platformRevenue as remainder so Total Collected = Host Earnings + Platform always adds up
+      const totalPrice = Number(b.totalPrice) || 0;
+      const platformRevenue = Math.max(0, totalPrice - hostEarnings - hostProcessingFee - driverProcessingFee);
       return { rentalSubtotal, hostFee, driverFee, insuranceCost, hostProcessingFee, hostEarnings, platformRevenue };
     };
 
