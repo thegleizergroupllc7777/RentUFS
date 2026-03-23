@@ -115,7 +115,7 @@ router.get('/partner/vehicles', tollspotAuth, async (req, res) => {
       return res.status(422).json({ error: 'VALIDATION_ERROR', message: 'host_id query parameter is required' });
     }
 
-    const vehicles = await Vehicle.find({ host: host_id, availability: true })
+    const vehicles = await Vehicle.find({ host: host_id })
       .select('vin licensePlate registrationState make model year type location host')
       .lean();
 
