@@ -587,10 +587,12 @@ router.get('/payout-history', auth, async (req, res) => {
     const paidBookings = await Booking.find({
       host: user._id,
       payoutStatus: 'paid'
-    }).populate('vehicle', 'make model year nickname')
+    }).select('reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity hostEarnings payoutAmount payoutDate payoutId hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions')
+      .populate('vehicle', 'make model year nickname')
       .populate('driver', 'firstName lastName')
       .sort({ payoutDate: -1 })
-      .limit(50);
+      .limit(50)
+      .lean();
 
     const totalPaidOut = paidBookings.reduce((sum, b) => sum + (b.payoutAmount || 0), 0);
 
@@ -844,6 +846,9 @@ router.get('/payouts-summary', auth, async (req, res) => {
     // --- Run DB queries and Stripe balance in parallel ---
     const { getBookingSegments, calculateEarningsForDayRange } = require('../utils/earningSegments');
 
+    // Select only the fields needed for segment calculations and display
+    const bookingFields = 'reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity payoutStatus payoutEligibleDate hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
+
     const [completedBookings, activeBookings, paidBookingsAgg, balanceData] = await Promise.all([
       // Pending payouts: completed bookings
       Booking.find({
@@ -851,18 +856,22 @@ router.get('/payouts-summary', auth, async (req, res) => {
         status: 'completed',
         paymentStatus: 'paid',
         payoutStatus: { $in: ['pending', 'eligible'] }
-      }).populate('vehicle', 'make model year nickname')
+      }).select(bookingFields)
+        .populate('vehicle', 'make model year nickname')
         .populate('driver', 'firstName lastName')
-        .sort({ endDate: -1 }),
+        .sort({ endDate: -1 })
+        .lean(),
 
       // Pending payouts: active bookings
       Booking.find({
         host: user._id,
         status: 'active',
         paymentStatus: 'paid'
-      }).populate('vehicle', 'make model year nickname')
+      }).select(bookingFields)
+        .populate('vehicle', 'make model year nickname')
         .populate('driver', 'firstName lastName')
-        .sort({ startDate: -1 }),
+        .sort({ startDate: -1 })
+        .lean(),
 
       // Payout history summary (just totals, not full documents)
       Booking.aggregate([
