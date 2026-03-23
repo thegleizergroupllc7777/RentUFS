@@ -1578,7 +1578,7 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
 
               <div class="info-box">
                 <h4 style="margin-top: 0; color: #059669;">When will I receive this?</h4>
-                <p style="margin: 5px 0;">Funds are transferred to your Stripe account immediately. From there, Stripe will deposit the funds to your bank account on your next weekly payout (every Monday). You can check your payout schedule in your Stripe dashboard.</p>
+                <p style="margin: 5px 0;">Funds have been transferred to your Stripe account. From there, Stripe will automatically deposit to your bank account within 2-3 business days, depending on your banking institution.</p>
               </div>
 
               <center>
