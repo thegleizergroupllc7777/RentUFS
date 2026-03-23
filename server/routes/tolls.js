@@ -115,14 +115,6 @@ router.get('/partner/vehicles', tollspotAuth, async (req, res) => {
       return res.status(422).json({ error: 'VALIDATION_ERROR', message: 'host_id query parameter is required' });
     }
 
-    // Debug: check if host_id is valid and how many vehicles exist for this host
-    const mongoose = require('mongoose');
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(host_id);
-    const allVehicleCount = await Vehicle.countDocuments();
-    const hostVehicleCount = await Vehicle.countDocuments({ host: host_id });
-    const distinctHosts = await Vehicle.distinct('host');
-    console.log(`🛣️ DEBUG partner/vehicles: host_id=${host_id}, isValidObjectId=${isValidObjectId}, totalVehicles=${allVehicleCount}, vehiclesForHost=${hostVehicleCount}, allHostIds=${distinctHosts.map(h => h.toString())}`);
-
     const vehicles = await Vehicle.find({ host: host_id })
       .select('vin licensePlate registrationState make model year type location host')
       .lean();
