@@ -105,6 +105,41 @@ router.get('/partner/reservations', tollspotAuth, async (req, res) => {
   }
 });
 
+// GET /api/tolls/partner/vehicles - TollSpot queries vehicles by host_id
+// Returns vehicles for a host so TollSpot can register them for toll management
+router.get('/partner/vehicles', tollspotAuth, async (req, res) => {
+  try {
+    const { host_id } = req.query;
+
+    if (!host_id) {
+      return res.status(422).json({ error: 'VALIDATION_ERROR', message: 'host_id query parameter is required' });
+    }
+
+    const vehicles = await Vehicle.find({ host: host_id, availability: true })
+      .select('vin licensePlate registrationState make model year type location host')
+      .lean();
+
+    const data = vehicles.map(v => ({
+      partner_vehicle_id: v._id.toString(),
+      vin: v.vin || '',
+      year: v.year,
+      vehicle_make: v.make,
+      vehicle_model: v.model,
+      vehicle_type: (v.type || '').toUpperCase(),
+      license_plate: v.licensePlate || '',
+      license_plate_state: v.registrationState || v.location?.state || '',
+      license_plate_country: 'US',
+      host_id: v.host.toString()
+    }));
+
+    console.log(`🛣️ TollSpot Inbound: Vehicles query for host ${host_id} — ${data.length} results`);
+    res.json({ total: data.length, data });
+  } catch (error) {
+    console.error('🛣️ TollSpot Inbound: Error fetching vehicles:', error.message);
+    res.status(500).json({ error: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' });
+  }
+});
+
 // POST /api/tolls/partner/charges - TollSpot pushes toll charges to RentUFS
 // Payload matches TollSpot's TollCharge schema from their List Toll Charges API
 router.post('/partner/charges', tollspotAuth, async (req, res) => {
