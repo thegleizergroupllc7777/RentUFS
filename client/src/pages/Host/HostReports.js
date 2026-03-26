@@ -311,7 +311,10 @@ const HostReports = () => {
                       <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem 0' }}>No recent activity for this period</p>
                     ) : (
                       <div className="report-bookings-list">
-                        {reportData.recentBookings.map((booking) => (
+                        {[...reportData.recentBookings].sort((a, b) => {
+                          const statusOrder = { active: 0, completed: 1, cancelled: 2 };
+                          return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+                        }).map((booking) => (
                           <div key={booking.id} className="report-booking-row">
                             <div className="report-booking-info">
                               <span className="report-booking-vehicle">{booking.reservationId || 'No ID'}</span>
