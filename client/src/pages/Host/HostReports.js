@@ -312,8 +312,8 @@ const HostReports = () => {
                     ) : (
                       <div className="report-bookings-list">
                         {[...reportData.recentBookings].sort((a, b) => {
-                          const statusOrder = { active: 0, completed: 1, cancelled: 2 };
-                          const statusDiff = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+                          const statusOrder = { active: 0, confirmed: 1, completed: 2, cancelled: 3 };
+                          const statusDiff = (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4);
                           if (statusDiff !== 0) return statusDiff;
                           return (b.reservationId || '').localeCompare(a.reservationId || '');
                         }).map((booking) => (
