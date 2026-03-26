@@ -312,15 +312,15 @@ const HostReports = () => {
                     ) : (
                       <div className="report-bookings-list">
                         {[...reportData.recentBookings].sort((a, b) => {
-                          const statusOrder = { active: 0, completed: 1, cancelled: 2 };
-                          const statusDiff = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+                          const statusOrder = { active: 0, confirmed: 1, completed: 2, cancelled: 3 };
+                          const statusDiff = (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4);
                           if (statusDiff !== 0) return statusDiff;
                           return (b.reservationId || '').localeCompare(a.reservationId || '');
                         }).map((booking) => (
                           <div key={booking.id} className="report-booking-row">
                             <div className="report-booking-info">
-                              <span className="report-booking-vehicle">{booking.reservationId || 'No ID'}</span>
-                              <span className="report-booking-detail">{booking.vehicleName} &middot; {booking.driverName} &middot; {booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}</span>
+                              <span className="report-booking-vehicle">{booking.vehicleName}</span>
+                              <span className="report-booking-detail">{booking.driverName} &middot; {formatDate(booking.startDate)} - {formatDate(booking.endDate)} ({booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''})</span>
                             </div>
                             <div className="report-booking-right">
                               <span className="report-booking-price">{formatCurrency(booking.totalPrice)}</span>
