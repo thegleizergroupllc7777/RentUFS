@@ -3,7 +3,7 @@ const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const TollCharge = require('../models/TollCharge');
-const { isConfigured, getTollCharges, listVehicles } = require('../utils/tollspot');
+const { isConfigured, listVehicles } = require('../utils/tollspot');
 
 const router = express.Router();
 
@@ -273,15 +273,33 @@ router.post('/partner/charges', tollspotAuth, async (req, res) => {
 // OUTBOUND ENDPOINTS - Called by RentUFS frontend (JWT auth)
 // ============================================================
 
+// Map local TollCharge document to snake_case format expected by frontend
+const formatTollCharge = (doc) => ({
+  id: doc.tollspotId,
+  posted_time: doc.postedTime,
+  entry_time: doc.entryTime,
+  entry_location: doc.entryLocation,
+  exit_time: doc.exitTime,
+  exit_location: doc.exitLocation,
+  amount: doc.amount,
+  transaction_type: doc.transactionType,
+  license_plate: doc.licensePlate,
+  license_plate_state: doc.licensePlateState,
+  license_plate_country: doc.licensePlateCountry,
+  transponder_number: doc.transponderNumber,
+  agency: doc.agency,
+  detection_type: doc.detectionType,
+  toll_account_id: doc.tollAccountId,
+  vin: doc.vin,
+  host_id: doc.hostId,
+  partner_vehicle_id: doc.partnerVehicleId,
+  vehicle_id: doc.tollspotVehicleId
+});
+
 // GET /api/tolls/charges/:bookingId - Get toll charges for a specific booking
 router.get('/charges/:bookingId', auth, async (req, res) => {
   try {
-    if (!isConfigured()) {
-      return res.status(503).json({ message: 'Toll management is not configured' });
-    }
-
-    const booking = await Booking.findById(req.params.bookingId)
-      .populate('vehicle', 'licensePlate location');
+    const booking = await Booking.findById(req.params.bookingId);
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -293,35 +311,15 @@ router.get('/charges/:bookingId', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    const vehicle = booking.vehicle;
-    if (!vehicle?.licensePlate) {
-      return res.json({ total: 0, data: [] });
-    }
-
-    // Query toll charges filtered by license plate and booking date range
-    // TollSpot expects MM/DD/YYYY format for date filters
-    const formatDate = (d) => {
-      const dt = new Date(d);
-      return `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}/${dt.getFullYear()}`;
-    };
-    const result = await getTollCharges({
-      license_plate: vehicle.licensePlate.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-      from_date: formatDate(booking.startDate),
-      to_date: formatDate(booking.endDate),
-      page: parseInt(req.query.page) || 0,
-      limit: parseInt(req.query.limit) || 100
-    });
-
-    if (!result.success) {
-      return res.status(502).json({ message: 'Failed to fetch toll charges', error: result.error });
-    }
-
-    const charges = result.data.data || [];
+    // Query local TollCharge collection
+    const charges = await TollCharge.find({ booking: booking._id })
+      .sort({ exitTime: -1 })
+      .lean();
 
     // Add $0.50 platform fee to each toll charge (included in amount, not shown separately)
-    const chargesWithFee = charges.map(charge => ({
-      ...charge,
-      amount: parseFloat(((charge.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
+    const chargesWithFee = charges.map(doc => ({
+      ...formatTollCharge(doc),
+      amount: parseFloat(((doc.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
     }));
 
     // Calculate toll accounting totals
@@ -342,7 +340,7 @@ router.get('/charges/:bookingId', auth, async (req, res) => {
     });
 
     res.json({
-      total: result.data.total || totalTolls,
+      total: totalTolls,
       data: chargesWithFee
     });
   } catch (error) {
@@ -354,32 +352,36 @@ router.get('/charges/:bookingId', auth, async (req, res) => {
 // GET /api/tolls/host-charges - Get all toll charges for a host's vehicles
 router.get('/host-charges', auth, async (req, res) => {
   try {
-    if (!isConfigured()) {
-      return res.status(503).json({ message: 'Toll management is not configured' });
+    const query = { host: req.user._id };
+
+    // Optional date filters
+    if (req.query.from_date) {
+      query.exitTime = { ...query.exitTime, $gte: new Date(req.query.from_date) };
+    }
+    if (req.query.to_date) {
+      query.exitTime = { ...query.exitTime, $lte: new Date(req.query.to_date) };
     }
 
-    const result = await getTollCharges({
-      host_id: req.user._id.toString(),
-      from_date: req.query.from_date,
-      to_date: req.query.to_date,
-      page: parseInt(req.query.page) || 0,
-      limit: parseInt(req.query.limit) || 50
-    });
+    const page = parseInt(req.query.page) || 0;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
 
-    if (!result.success) {
-      return res.status(502).json({ message: 'Failed to fetch toll charges', error: result.error });
-    }
-
-    const charges = (result.data.data || []);
+    const [charges, total] = await Promise.all([
+      TollCharge.find(query)
+        .sort({ exitTime: -1 })
+        .skip(page * limit)
+        .limit(limit)
+        .lean(),
+      TollCharge.countDocuments(query)
+    ]);
 
     // Add $0.50 platform fee to each toll charge
-    const chargesWithFee = charges.map(charge => ({
-      ...charge,
-      amount: parseFloat(((charge.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
+    const chargesWithFee = charges.map(doc => ({
+      ...formatTollCharge(doc),
+      amount: parseFloat(((doc.amount || 0) + PLATFORM_TOLL_FEE).toFixed(2))
     }));
 
     res.json({
-      total: result.data.total || charges.length,
+      total,
       data: chargesWithFee
     });
   } catch (error) {
