@@ -252,6 +252,7 @@ router.post('/partner/charges', tollspotAuth, async (req, res) => {
         } else {
           console.error('🛣️ TollSpot Inbound: Error saving charge:', err.message);
           results.errors++;
+          errorDetails.push({ charge_id: charge.id, error: err.message });
         }
       }
     }

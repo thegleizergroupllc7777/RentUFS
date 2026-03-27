@@ -11,7 +11,7 @@ const tollChargeSchema = new mongoose.Schema({
   amount: { type: Number, required: true, min: 0 },
   transactionType: {
     type: String,
-    enum: ['PARKING', 'TOLLS', 'VIOLATION', null],
+    enum: ['PARKING', 'TOLL', 'TOLLS', 'VIOLATION', null],
     default: null
   },
   licensePlate: { type: String, default: null },
