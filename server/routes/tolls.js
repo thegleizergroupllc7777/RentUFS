@@ -152,10 +152,22 @@ router.post('/partner/charges', tollspotAuth, async (req, res) => {
 
     const results = { received: charges.length, created: 0, duplicates: 0, errors: 0 };
 
+    const errorDetails = [];
+
     for (const charge of charges) {
       // Validate required fields
-      if (!charge.id || !charge.posted_time || !charge.exit_time || !charge.exit_location || charge.amount === undefined || !charge.agency) {
+      const missingFields = [];
+      if (!charge.id) missingFields.push('id');
+      if (!charge.posted_time) missingFields.push('posted_time');
+      if (!charge.exit_time) missingFields.push('exit_time');
+      if (!charge.exit_location) missingFields.push('exit_location');
+      if (charge.amount === undefined) missingFields.push('amount');
+      if (!charge.agency) missingFields.push('agency');
+
+      if (missingFields.length > 0) {
         results.errors++;
+        errorDetails.push({ charge_id: charge.id || null, missing_fields: missingFields });
+        console.error(`🛣️ TollSpot Inbound: Charge rejected — missing fields: ${missingFields.join(', ')}`);
         continue;
       }
 
@@ -245,7 +257,11 @@ router.post('/partner/charges', tollspotAuth, async (req, res) => {
     }
 
     console.log(`🛣️ TollSpot Inbound: Processed ${results.received} charges — ${results.created} created, ${results.duplicates} duplicates, ${results.errors} errors`);
-    res.json({ message: 'Toll charges processed', ...results });
+    const response = { message: 'Toll charges processed', ...results };
+    if (errorDetails.length > 0) {
+      response.error_details = errorDetails;
+    }
+    res.json(response);
   } catch (error) {
     console.error('🛣️ TollSpot Inbound: Error processing toll charges:', error.message);
     res.status(500).json({ error: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' });
