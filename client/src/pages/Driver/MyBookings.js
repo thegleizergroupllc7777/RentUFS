@@ -1178,15 +1178,13 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {['active', 'completed'].includes(booking.status) && (
-                          <button
-                            onClick={() => setTollChargesBookingId(booking._id)}
-                            className="btn btn-secondary"
-                            style={{ background: '#6366f1', color: 'white', border: 'none' }}
-                          >
-                            View Tolls
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setTollChargesBookingId(booking._id)}
+                          className="btn btn-secondary"
+                          style={{ background: '#6366f1', color: 'white', border: 'none' }}
+                        >
+                          View Tolls
+                        </button>
 
                         {canExtend(booking) && (
                           <button

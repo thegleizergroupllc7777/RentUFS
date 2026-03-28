@@ -1038,18 +1038,16 @@ const HostBookings = () => {
                                 View Reservation
                               </button>
                             </Link>
-                            {booking.status === 'completed' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setTollChargesBookingId(booking._id);
-                                }}
-                                className="btn btn-secondary"
-                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: '#6366f1', color: 'white', border: 'none' }}
-                              >
-                                View Tolls
-                              </button>
-                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTollChargesBookingId(booking._id);
+                              }}
+                              className="btn btn-secondary"
+                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: '#6366f1', color: 'white', border: 'none' }}
+                            >
+                              View Tolls
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1363,6 +1361,14 @@ const HostBookings = () => {
                       </>
                     )}
 
+                    <button
+                      onClick={() => setTollChargesBookingId(booking._id)}
+                      className="btn btn-secondary"
+                      style={{ background: '#6366f1', color: 'white', border: 'none' }}
+                    >
+                      View Tolls
+                    </button>
+
                     {booking.status === 'active' && (
                       <>
                         {booking.insurance?.type && booking.insurance.type !== 'none' && (
@@ -1374,13 +1380,6 @@ const HostBookings = () => {
                             View Insurance Card
                           </button>
                         )}
-                        <button
-                          onClick={() => setTollChargesBookingId(booking._id)}
-                          className="btn btn-secondary"
-                          style={{ background: '#6366f1', color: 'white', border: 'none' }}
-                        >
-                          View Tolls
-                        </button>
                         {isOverdue(booking) && (
                           <button
                             onClick={() => handleSendReminder(booking._id)}
