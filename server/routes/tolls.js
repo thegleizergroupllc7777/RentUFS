@@ -2,8 +2,10 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
+const User = require('../models/User');
 const TollCharge = require('../models/TollCharge');
 const { isConfigured, listVehicles } = require('../utils/tollspot');
+const { sendTollChargeToDriver, sendTollNotificationToHost } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -238,13 +240,46 @@ router.post('/partner/charges', tollspotAuth, async (req, res) => {
           ]);
           const originalAmount = tollSum[0]?.total || 0;
 
+          const driverTollTotal = parseFloat((originalAmount + tollCount * PLATFORM_TOLL_FEE).toFixed(2));
+
           await Booking.findByIdAndUpdate(booking._id, {
             'tollAccounting.totalTolls': tollCount,
             'tollAccounting.originalTollAmount': parseFloat(originalAmount.toFixed(2)),
             'tollAccounting.platformTollFees': parseFloat((tollCount * PLATFORM_TOLL_FEE).toFixed(2)),
-            'tollAccounting.driverTollTotal': parseFloat((originalAmount + tollCount * PLATFORM_TOLL_FEE).toFixed(2)),
+            'tollAccounting.driverTollTotal': driverTollTotal,
             'tollAccounting.lastSyncedAt': new Date()
           });
+
+          // Send toll notification emails to driver and host
+          const tollSummary = {
+            totalTolls: tollCount,
+            driverTollTotal,
+            latestAgency: charge.agency
+          };
+
+          const [driverUser, hostUser] = await Promise.all([
+            User.findById(booking.driver).lean(),
+            User.findById(booking.host || vehicle.host).lean()
+          ]);
+
+          const tollChargeData = {
+            amount: charge.amount,
+            agency: charge.agency,
+            exitLocation: charge.exit_location,
+            exitTime: charge.exit_time
+          };
+
+          const fullBooking = { reservationId: booking.reservationId, _id: booking._id };
+          const fullVehicle = { year: vehicle.year, make: vehicle.make, model: vehicle.model };
+
+          if (driverUser) {
+            sendTollChargeToDriver(driverUser, fullBooking, fullVehicle, tollChargeData, tollSummary)
+              .catch(err => console.error('🛣️ Failed to send toll email to driver:', err.message));
+          }
+          if (hostUser) {
+            sendTollNotificationToHost(hostUser, fullBooking, fullVehicle, driverUser || {}, tollSummary)
+              .catch(err => console.error('🛣️ Failed to send toll email to host:', err.message));
+          }
         }
       } catch (err) {
         if (err.code === 11000) {

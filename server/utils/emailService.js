@@ -1609,6 +1609,294 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
   }
 };
 
+// Send toll charge notification to driver (detailed)
+const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, tollSummary) => {
+  try {
+    const tollDate = new Date(tollCharge.exitTime).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const tollTime = new Date(tollCharge.exitTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    // Driver sees toll amount with platform fee baked in
+    const driverAmount = (tollCharge.amount + 0.50).toFixed(2);
+    const runningTotal = tollSummary.driverTollTotal.toFixed(2);
+
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Toll Charge Email to Driver: ${driver.email} — $${driverAmount} at ${tollCharge.exitLocation}`);
+      return { success: true, dev: true };
+    }
+
+    const mailOptions = {
+      to: driver.email,
+      subject: `Toll Charge Alert - ${booking.reservationId} | ${tollCharge.agency} - $${driverAmount}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .toll-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .summary-box { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+            .info-box { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Toll Charge Detected</h1>
+              <p style="margin: 5px 0 0 0; opacity: 0.9;">A new toll has been added to your reservation</p>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${driver.firstName},</h2>
+              <p>A toll charge has been recorded on your current reservation. This toll will be added to your final trip charges.</p>
+
+              <div class="toll-card">
+                <div style="background: #f0fdf4; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                  <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId}</span>
+                </div>
+
+                <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+
+                <div class="detail-row">
+                  <span class="label">Toll Agency</span>
+                  <span class="value">${tollCharge.agency}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Location</span>
+                  <span class="value">${tollCharge.exitLocation}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Date & Time</span>
+                  <span class="value">${tollDate} at ${tollTime}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Toll Amount</span>
+                  <span class="value" style="color: #10b981; font-size: 1.1rem;">$${driverAmount}</span>
+                </div>
+              </div>
+
+              <div class="summary-box">
+                <h4 style="margin-top: 0; color: #1e40af;">Trip Toll Summary</h4>
+                <div class="detail-row" style="border-bottom: none;">
+                  <span class="label">Total Tolls This Trip</span>
+                  <span class="value">${tollSummary.totalTolls}</span>
+                </div>
+                <div class="detail-row" style="border-bottom: none;">
+                  <span class="label">Running Toll Total</span>
+                  <span class="value" style="color: #1e40af; font-size: 1.1rem;">$${runningTotal}</span>
+                </div>
+              </div>
+
+              <div class="info-box">
+                <h4 style="margin-top: 0; color: #b45309;">How Toll Charges Work</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>Tolls are detected automatically during your trip</li>
+                  <li>Tolls are settled at vehicle return or trip extension</li>
+                  <li>You can view all toll details in your bookings page</li>
+                </ul>
+              </div>
+
+              <center>
+                <a href="${clientUrl}/my-bookings" class="button">
+                  View My Bookings
+                </a>
+              </center>
+            </div>
+
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${driver.firstName},
+
+A toll charge has been recorded on your current reservation.
+
+Reservation ID: ${booking.reservationId}
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+
+Toll Details:
+- Agency: ${tollCharge.agency}
+- Location: ${tollCharge.exitLocation}
+- Date & Time: ${tollDate} at ${tollTime}
+- Toll Amount: $${driverAmount}
+
+Trip Toll Summary:
+- Total Tolls This Trip: ${tollSummary.totalTolls}
+- Running Toll Total: $${runningTotal}
+
+How Toll Charges Work:
+- Tolls are detected automatically during your trip
+- Tolls are settled at vehicle return or trip extension
+- You can view all toll details in your bookings page
+
+View your bookings: ${clientUrl}/my-bookings
+
+Thank you for choosing RentUFS!
+
+Best regards,
+The RentUFS Team
+      `
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log(`✅ Toll charge email sent to driver: ${driver.email} — $${driverAmount}`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending toll charge email to driver:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send toll notification to host (general, no amounts)
+const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSummary) => {
+  try {
+    const tollDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const driverName = `${driver.firstName} ${driver.lastName ? driver.lastName.charAt(0) + '.' : ''}`;
+
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Toll Notification Email to Host: ${host.email} — ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
+      return { success: true, dev: true };
+    }
+
+    const mailOptions = {
+      to: host.email,
+      subject: `New Toll Recorded - ${vehicle.year} ${vehicle.make} ${vehicle.model} | ${booking.reservationId}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .toll-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .info-box { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">New Toll Recorded</h1>
+              <p style="margin: 5px 0 0 0; opacity: 0.9;">A toll has been recorded on one of your vehicles</p>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${host.firstName},</h2>
+              <p>A toll charge has been recorded on your vehicle during an active reservation.</p>
+
+              <div class="toll-card">
+                <div style="background: #f0fdf4; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                  <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId}</span>
+                </div>
+
+                <div class="detail-row">
+                  <span class="label">Vehicle</span>
+                  <span class="value">${vehicle.year} ${vehicle.make} ${vehicle.model}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Driver</span>
+                  <span class="value">${driverName}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Toll Agency</span>
+                  <span class="value">${tollSummary.latestAgency}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Date</span>
+                  <span class="value">${tollDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Total Tolls This Trip</span>
+                  <span class="value">${tollSummary.totalTolls}</span>
+                </div>
+              </div>
+
+              <div class="info-box">
+                <h4 style="margin-top: 0; color: #1e40af;">How It Works</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>Toll charges are the driver's responsibility</li>
+                  <li>Tolls are settled automatically at return or extension</li>
+                  <li>The original toll amount is transferred to you after settlement</li>
+                  <li>You can view toll details on your dashboard</li>
+                </ul>
+              </div>
+
+              <center>
+                <a href="${clientUrl}/host/bookings" class="button">
+                  View Host Dashboard
+                </a>
+              </center>
+            </div>
+
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${host.firstName},
+
+A toll charge has been recorded on your vehicle during an active reservation.
+
+Reservation ID: ${booking.reservationId}
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+Driver: ${driverName}
+Toll Agency: ${tollSummary.latestAgency}
+Date: ${tollDate}
+Total Tolls This Trip: ${tollSummary.totalTolls}
+
+How It Works:
+- Toll charges are the driver's responsibility
+- Tolls are settled automatically at return or extension
+- The original toll amount is transferred to you after settlement
+- You can view toll details on your dashboard
+
+View your dashboard: ${clientUrl}/host/bookings
+
+Best regards,
+The RentUFS Team
+      `
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log(`✅ Toll notification email sent to host: ${host.email} — ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending toll notification email to host:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
@@ -1620,5 +1908,7 @@ module.exports = {
   sendEmailVerificationCode,
   sendRegistrationExpirationReminder,
   sendPasswordResetEmail,
-  sendPayoutNotificationEmail
+  sendPayoutNotificationEmail,
+  sendTollChargeToDriver,
+  sendTollNotificationToHost
 };
