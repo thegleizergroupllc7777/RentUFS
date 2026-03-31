@@ -7,6 +7,10 @@ const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailServ
 
 const router = express.Router();
 
+// Rate limit tracker for password reset requests (email -> timestamp)
+const passwordResetRateLimit = new Map();
+const PASSWORD_RESET_COOLDOWN = 2 * 60 * 1000; // 2 minutes between reset emails
+
 // Helper: resolve relative profile image path to full URL
 function resolveProfileImageUrl(profileImage, req) {
   if (profileImage && profileImage.startsWith('/uploads/')) {
@@ -229,6 +233,13 @@ router.post('/forgot-password', async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const successMessage = 'If an account with that email exists, a password reset link has been sent.';
 
+    // Rate limit: prevent rapid-fire reset emails (causes Yahoo/other providers to defer)
+    const lastRequest = passwordResetRateLimit.get(normalizedEmail);
+    if (lastRequest && Date.now() - lastRequest < PASSWORD_RESET_COOLDOWN) {
+      console.log(`⏳ Password reset rate limited for: ${normalizedEmail} (cooldown active)`);
+      return res.json({ message: successMessage });
+    }
+
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       // Return success even if user not found (security best practice)
@@ -258,6 +269,9 @@ router.post('/forgot-password', async (req, res) => {
         message: 'Failed to send password reset email. Please try again later.'
       });
     }
+
+    // Record successful send for rate limiting
+    passwordResetRateLimit.set(normalizedEmail, Date.now());
 
     res.json({ message: successMessage });
   } catch (error) {
