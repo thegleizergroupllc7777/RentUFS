@@ -5,55 +5,14 @@ const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
 
-// Insurance plans — 2 TeqMobility coverage categories + decline
+// Insurance plans — Full Coverage only (Car Share + Ride Share)
 // Pricing is placeholder — update to match carrier agreement
 const INSURANCE_PLANS = {
-  none: {
-    id: 'none',
-    name: 'Decline Coverage',
-    description: 'I have my own insurance and choose not to add coverage through RentUFS',
-    pricePerDay: 0,
-    category: 'decline',
-    usage: null,
-    coverage: {
-      liability: false,
-      collision: false,
-      comprehensive: false,
-      personalInjury: false,
-      roadsideAssistance: false
-    },
-    details: [
-      'You are responsible for providing your own coverage',
-      'Your personal auto policy may or may not cover rental vehicles',
-      'Check with your insurer before declining'
-    ]
-  },
-  carshare: {
-    id: 'carshare',
-    name: 'Liability Coverage',
-    description: 'Car Share — Liability protection for your rental trip',
-    pricePerDay: 15,
-    category: 'carshare',
-    usage: 'PERSONAL',
-    coverage: {
-      liability: true,
-      collision: false,
-      comprehensive: false,
-      personalInjury: false,
-      roadsideAssistance: true
-    },
-    details: [
-      'Liability coverage up to $300,000',
-      'Third-party bodily injury and property damage',
-      '24/7 roadside assistance',
-      'Coverage in your name from pickup to return'
-    ]
-  },
   rideshare: {
     id: 'rideshare',
     name: 'Full Coverage',
-    description: 'Ride Share — Full collision and liability protection',
-    pricePerDay: 29,
+    description: 'Car Share & Ride Share — Full collision and liability protection',
+    pricePerDay: 28,
     category: 'rideshare',
     usage: 'RIDESHARE',
     coverage: {
@@ -64,6 +23,7 @@ const INSURANCE_PLANS = {
       roadsideAssistance: true
     },
     details: [
+      'Car Share & Ride Share coverage',
       'Liability coverage up to $300,000',
       'Collision damage waiver (CDW)',
       'Comprehensive coverage (theft, vandalism, weather)',
@@ -170,11 +130,11 @@ router.post('/add-to-booking', auth, async (req, res) => {
     const LEGACY_MAP = { basic: 'carshare', standard: 'rideshare', premium: 'rideshare', protection: 'rideshare' };
     const resolvedPlanId = LEGACY_MAP[planId] || planId;
     const plan = INSURANCE_PLANS[resolvedPlanId];
-    if (!plan && resolvedPlanId !== 'none') {
+    if (!plan) {
       return res.status(400).json({ message: 'Invalid insurance plan' });
     }
 
-    const selectedPlan = plan || INSURANCE_PLANS.none;
+    const selectedPlan = plan;
     const insuranceCost = selectedPlan.pricePerDay * booking.totalDays;
 
     // Calculate the difference in insurance cost
