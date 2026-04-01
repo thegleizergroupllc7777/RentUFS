@@ -354,16 +354,10 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             <span className="field-label">Daily Rental Price:</span>
             <span className="field-value">${booking.pricePerDay?.toFixed(2)}</span>
           </div>
-          <div className="agreement-field">
-            <span className="field-label">Platform Fee:</span>
-            <span className="field-value">${(booking.platformFee ?? 1.50).toFixed(2)}</span>
-          </div>
           {booking.insurance && booking.insurance.type !== 'none' && (
             <div className="agreement-field">
-              <span className="field-label">Insurance:</span>
-              <span className="field-value">
-                {booking.insurance.type === 'carshare' ? 'Liability Coverage' : 'Full Coverage'} (${booking.insurance.costPerDay?.toFixed(2)}/day)
-              </span>
+              <span className="field-label">Daily Coverage Fee:</span>
+              <span className="field-value">${booking.insurance.costPerDay?.toFixed(2)}</span>
             </div>
           )}
           <div className="agreement-field">
