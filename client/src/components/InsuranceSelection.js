@@ -101,8 +101,6 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
       recommended: true,
       badges: [
         { label: 'Liability', included: true },
-        { label: 'Comprehensive', included: true },
-        { label: 'Personal Injury', included: true },
       ]
     });
   }
