@@ -213,7 +213,7 @@ const Checkout = () => {
               <div className="summary-item">
                 <span className="label">Reservation ID:</span>
                 <span className="value" style={{ fontFamily: 'monospace', fontWeight: '600', fontSize: '1.15rem' }}>
-                  {booking.reservationId || `#${booking._id?.slice(-8).toUpperCase()}`}
+                  {booking.reservationId || 'Assigned upon confirmation'}
                 </span>
               </div>
 
