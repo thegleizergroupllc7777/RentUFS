@@ -458,7 +458,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             <li>
               <strong>Owner Cancellation.</strong> The Owner at their discretion may cancel the
               rental after owner approval and prior to pickup. If this occurs a full refund of all
-              rental fees shall be given to the renter. RentUFS.com may withhold the 5% platform fee
+              rental fees shall be given to the renter. RentUFS.com may withhold the platform fee
               from the owner during future rental payouts.
             </li>
             <li>

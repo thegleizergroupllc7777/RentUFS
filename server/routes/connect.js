@@ -570,7 +570,8 @@ router.get('/pending-payouts', auth, async (req, res) => {
       totalPending,
       totalEligible,
       eligibleCount,
-      payoutsEnabled: user.stripeConnectPayoutsEnabled
+      payoutsEnabled: user.stripeConnectPayoutsEnabled,
+      cancellationPenaltyBalance: user.cancellationPenaltyBalance || 0
     });
   } catch (error) {
     console.error('Error getting pending payouts:', error);
