@@ -178,6 +178,11 @@ router.post('/verify-payment', auth, async (req, res) => {
       const existingBooking = await Booking.findById(bookingId);
       const wasAlreadyConfirmed = existingBooking && existingBooking.paymentStatus === 'paid';
 
+      // Assign sequential reservation ID now that payment is confirmed
+      if (!existingBooking.reservationId) {
+        await Booking.assignReservationId(bookingId);
+      }
+
       // Update booking status to confirmed
       const booking = await Booking.findByIdAndUpdate(
         bookingId,
@@ -234,6 +239,11 @@ router.post('/confirm-payment', auth, async (req, res) => {
       // First check if booking is already confirmed to prevent duplicate emails
       const existingBooking = await Booking.findById(bookingId);
       const wasAlreadyConfirmed = existingBooking && existingBooking.paymentStatus === 'paid';
+
+      // Assign sequential reservation ID now that payment is confirmed
+      if (!existingBooking.reservationId) {
+        await Booking.assignReservationId(bookingId);
+      }
 
       // Update booking status to confirmed
       const booking = await Booking.findByIdAndUpdate(
@@ -930,6 +940,12 @@ router.post('/webhook', async (req, res) => {
           break;
         }
 
+        // Assign sequential reservation ID now that payment is confirmed
+        const preBooking = await Booking.findById(bookingId);
+        if (preBooking && !preBooking.reservationId) {
+          await Booking.assignReservationId(bookingId);
+        }
+
         // Update booking status for regular payments
         const booking = await Booking.findByIdAndUpdate(
           bookingId,
@@ -984,6 +1000,11 @@ router.post('/webhook', async (req, res) => {
         }
 
         if (session.payment_status === 'paid') {
+          // Assign sequential reservation ID now that payment is confirmed
+          if (existingBooking && !existingBooking.reservationId) {
+            await Booking.assignReservationId(bookingId);
+          }
+
           const booking = await Booking.findByIdAndUpdate(
             bookingId,
             {
@@ -1069,6 +1090,11 @@ router.post('/reconcile/:bookingId', auth, async (req, res) => {
     );
 
     if (successfulPayment) {
+      // Assign sequential reservation ID now that payment is confirmed
+      if (!booking.reservationId) {
+        await Booking.assignReservationId(bookingId);
+      }
+
       // Update booking status
       booking.status = 'confirmed';
       booking.paymentStatus = 'paid';
@@ -1114,6 +1140,11 @@ router.post('/reconcile/:bookingId', auth, async (req, res) => {
     );
 
     if (successfulSession) {
+      // Assign sequential reservation ID now that payment is confirmed
+      if (!booking.reservationId) {
+        await Booking.assignReservationId(bookingId);
+      }
+
       // Update booking status
       booking.status = 'confirmed';
       booking.paymentStatus = 'paid';
