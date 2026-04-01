@@ -23,11 +23,12 @@ const INSURANCE_PLANS = {
       roadsideAssistance: true
     },
     details: [
-      'Liability Coverage Up To $300,000',
+      '1M In Liability Coverage',
       'Coverage In Your Name From Pickup To Return',
       'Policy Covers State Minimum Required For Physical & Property',
       '$2,500 Deductible For Vehicle Loss Or Damage',
-      'Accidental Injury/Death Or Theft'
+      'Accidental Injury/Death Or Theft',
+      'Documentation Will Be Provided Upon Check-Out (Registration)'
     ]
   }
 };
