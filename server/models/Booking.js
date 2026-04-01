@@ -347,27 +347,23 @@ const bookingSchema = new mongoose.Schema({
   }
 });
 
-// Generate reservation ID before saving new booking
+// Update timestamp on every save
 bookingSchema.pre('save', async function(next) {
   this.updatedAt = Date.now();
-
-  // Only generate reservationId for new documents
-  if (this.isNew && !this.reservationId) {
-    try {
-      const counter = await Counter.findByIdAndUpdate(
-        'reservationId',
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-      );
-      // Format: RUFS-00001, RUFS-00002, etc.
-      this.reservationId = `RUFS-${counter.seq.toString().padStart(5, '0')}`;
-    } catch (error) {
-      console.error('Error generating reservation ID:', error);
-    }
-  }
-
   next();
 });
+
+// Assign a sequential reservation ID to a booking (call only after payment is confirmed)
+bookingSchema.statics.assignReservationId = async function(bookingId) {
+  const counter = await Counter.findByIdAndUpdate(
+    'reservationId',
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  const reservationId = `RUFS-${counter.seq.toString().padStart(5, '0')}`;
+  await this.findByIdAndUpdate(bookingId, { reservationId });
+  return reservationId;
+};
 
 // Performance indexes for common query patterns
 bookingSchema.index({ driver: 1, status: 1 });
