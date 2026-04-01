@@ -482,7 +482,7 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
               Term End Date & Time, the Term of this Agreement will automatically extend to match the
               new end date or until the Vehicle is returned to the Owner. The Renter will be charged
               any additional costs associated with the Rental Term Extension at the time accepted by
-              the Owner.
+              both parties.
             </li>
             <li>
               <strong>Automatic Late Extension.</strong> If the rental Vehicle is not returned within
