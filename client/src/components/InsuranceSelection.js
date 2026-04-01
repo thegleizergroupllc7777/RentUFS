@@ -31,10 +31,23 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
 
       setPlans(response.data.plans);
 
-      // Auto-select Full Coverage if no valid plan is selected
+      // Auto-select Full Coverage if no valid plan is selected, and persist to booking
       const currentSelection = mapLegacyPlan(initialSelection) || 'rideshare';
       if (currentSelection === 'none' || currentSelection === 'carshare') {
         setSelectedPlan('rideshare');
+        // Persist auto-selection to the booking so it shows in the summary
+        try {
+          const addResponse = await axios.post(
+            `${API_URL}/api/insurance/add-to-booking`,
+            { bookingId, planId: 'rideshare' },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (onInsuranceChange) {
+            onInsuranceChange(addResponse.data.booking);
+          }
+        } catch (addErr) {
+          console.error('Error auto-adding insurance to booking:', addErr);
+        }
       }
     } catch (err) {
       setError('Failed to load insurance options');
