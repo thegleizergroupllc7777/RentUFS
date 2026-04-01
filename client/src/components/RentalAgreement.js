@@ -570,8 +570,52 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             </li>
             <li>
               <strong>Vehicle Repairs or Damage.</strong> At no time shall the Renter repair or
-              provide service to the Vehicle unless prior consent is given by the Owner. Driver must
-              notify the Owner of any damage that occurs immediately.
+              provide service to the Vehicle unless written consent is given by the Owner. Driver must
+              notify the Owner of any damage that occurs to the vehicle immediately.
+            </li>
+            <li>
+              <strong>Vehicle Condition.</strong> Both Driver and Owner confirm that the Vehicle is in good
+              condition. If any existing damage is present, it shall be disclosed in the Existing Damage
+              section of the Rental Agreement. Coverage will not be valid if the Owner fails to provide
+              pictures of the Vehicle condition at the Start Date & Time of the Rental Agreement. It is
+              highly encouraged for the Driver to take pictures as well in order to avoid any potential
+              dispute at a later date.
+            </li>
+            <li>
+              <strong>Driver Verification.</strong> The Owner is responsible to verify that the Renter's
+              Driver's License is valid and that the picture on the Driver's License matches the person
+              picking up the vehicle.
+            </li>
+            <li>
+              <strong>Motor Vehicle Report (MVR) Disclosure and Consent.</strong> As part of your
+              eligibility to rent a vehicle from Owner, RentUFS may obtain one or more motor vehicle
+              reports (MVRs) about you from a consumer reporting agency. This may include your driving
+              history, license status, and any infractions or violations as permitted by law.
+              <br /><br />
+              This information will be used solely to determine your eligibility to rent a vehicle. It
+              will not be shared with third parties except as required by law or to fulfill your rental
+              request.
+              <br /><br />
+              <strong>State-Specific Notices:</strong>
+              <ol type="a" style={{marginTop: '5px', marginBottom: '5px'}}>
+                <li>
+                  <strong>Pennsylvania:</strong> This authorization applies specifically to records
+                  maintained by the Pennsylvania Department of Transportation.
+                </li>
+                <li>
+                  <strong>Utah:</strong> This consent includes release of records maintained by the Utah
+                  Department of Public Safety.
+                </li>
+                <li>
+                  <strong>Washington:</strong> This report may include information covered under RCW
+                  46.52.130, and you are entitled to a copy upon request.
+                </li>
+              </ol>
+            </li>
+            <li>
+              <strong>GPS and Telematics.</strong> Vehicles may be equipped with GPS, telematic technology
+              or vehicle disabling technology ("Starter Interrupts"). Renter shall not tamper with,
+              disable, or interfere with any such technology installed in the Vehicle.
             </li>
           </ol>
         </div>
