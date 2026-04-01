@@ -27,7 +27,10 @@ const INSURANCE_PLANS = {
       'Liability coverage up to $300,000',
       'Comprehensive coverage (theft, vandalism, weather)',
       'Personal injury protection',
-      'Coverage in your name from pickup to return'
+      'Coverage in your name from pickup to return',
+      'Policy covers state minimum required for physical & property',
+      '$2,500 deductible for vehicle loss or damage',
+      'Accidental injury/death or theft'
     ]
   }
 };
