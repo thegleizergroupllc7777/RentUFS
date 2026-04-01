@@ -614,10 +614,8 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             </li>
             <li>
               <strong>GPS and Telematics.</strong> Vehicles may be equipped with GPS, telematic technology
-              or vehicle disabling technology ("Starter Interrupts"). Renter shall not tamper or remove
-              any such device if installed in the Vehicle. Renter will be responsible for any damages or
-              losses due to tampering with any GPS or telematics device. Data collected by GPS or
-              Telematics Devices may be shared with third-party for insurance purposes.
+              or vehicle disabling technology ("Starter Interrupts"). Renter shall not tamper with,
+              disable, or interfere with any such technology installed in the Vehicle.
             </li>
             <li>
               <strong>Termination.</strong> The Rental Agreement shall be terminated at the end of the
