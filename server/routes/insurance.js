@@ -23,12 +23,10 @@ const INSURANCE_PLANS = {
       roadsideAssistance: true
     },
     details: [
-      'Car Share & Ride Share coverage',
+      'Car Share & Ride Share Coverage',
       'Liability coverage up to $300,000',
-      'Collision damage waiver (CDW)',
       'Comprehensive coverage (theft, vandalism, weather)',
       'Personal injury protection',
-      '24/7 roadside assistance',
       'Coverage in your name from pickup to return'
     ]
   }
