@@ -655,6 +655,9 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
                   {new Date(agreementData.signedAt).toLocaleString('en-US')}
                 </span>
               </div>
+              <p className="agreement-electronic-disclaimer">
+                Agreeing to the terms and conditions electronically is the same effect as signing this agreement in person.
+              </p>
             </div>
           </div>
         ) : !readOnly && (

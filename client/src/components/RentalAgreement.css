@@ -178,6 +178,14 @@
   color: #10b981 !important;
 }
 
+.agreement-electronic-disclaimer {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-style: italic;
+  line-height: 1.4;
+}
+
 /* Sign section (unsigned) */
 .agreement-sign-section {
   margin-top: 2rem;
