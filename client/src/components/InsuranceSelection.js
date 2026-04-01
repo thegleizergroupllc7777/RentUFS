@@ -9,9 +9,9 @@ const mapLegacyPlan = (planId) => {
   return legacy[planId] || planId;
 };
 
-const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSelection = 'none' }) => {
+const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSelection = 'rideshare' }) => {
   const [plans, setPlans] = useState([]);
-  const [selectedPlan, setSelectedPlan] = useState(mapLegacyPlan(initialSelection));
+  const [selectedPlan, setSelectedPlan] = useState(mapLegacyPlan(initialSelection) || 'rideshare');
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
@@ -30,6 +30,12 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
       });
 
       setPlans(response.data.plans);
+
+      // Auto-select Full Coverage if no valid plan is selected
+      const currentSelection = mapLegacyPlan(initialSelection) || 'rideshare';
+      if (currentSelection === 'none' || currentSelection === 'carshare') {
+        setSelectedPlan('rideshare');
+      }
     } catch (err) {
       setError('Failed to load insurance options');
       console.error('Error fetching insurance plans:', err);
@@ -83,29 +89,15 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
     );
   }
 
-  const carsharePlan = plans.find(p => p.id === 'carshare');
   const ridesharePlan = plans.find(p => p.id === 'rideshare');
 
-  // Build display list: coverage plans + decline option
+  // Build display list: Full Coverage only (Car Share + Ride Share)
   const displayPlans = [];
-  if (carsharePlan) {
-    displayPlans.push({
-      ...carsharePlan,
-      displayName: 'Liability Coverage',
-      displayDescription: 'Car Share — Liability protection',
-      badges: [
-        { label: 'Liability', included: true },
-        { label: 'Roadside', included: true },
-        { label: 'Collision', included: false },
-        { label: 'Comprehensive', included: false },
-      ]
-    });
-  }
   if (ridesharePlan) {
     displayPlans.push({
       ...ridesharePlan,
       displayName: 'Full Coverage',
-      displayDescription: 'Ride Share — Collision + Liability',
+      displayDescription: 'Car Share & Ride Share — Collision + Liability',
       recommended: true,
       badges: [
         { label: 'Liability', included: true },
@@ -186,39 +178,6 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
           </div>
         ))}
 
-        {/* Decline Coverage option */}
-        <div
-          className={`insurance-plan decline-plan ${selectedPlan === 'none' ? 'selected decline-selected' : ''}`}
-          onClick={() => !updating && handleSelectPlan('none')}
-        >
-          <div className="plan-header">
-            <div className="plan-radio">
-              <input
-                type="radio"
-                name="insurance"
-                checked={selectedPlan === 'none'}
-                onChange={() => handleSelectPlan('none')}
-                disabled={updating}
-              />
-            </div>
-            <div className="plan-title-section">
-              <h3 className="plan-name">Decline Coverage</h3>
-              <p className="plan-description">I have my own insurance</p>
-            </div>
-            <div className="plan-price">
-              <span className="price-free">$0</span>
-            </div>
-          </div>
-
-          {selectedPlan === 'none' && (
-            <div className="decline-warning-section">
-              <div className="decline-warning">
-                <span className="warning-icon">&#9888;</span>
-                <span>You are responsible for providing your own coverage. Verify with your insurer that rental vehicles are covered under your policy.</span>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       {updating && (
