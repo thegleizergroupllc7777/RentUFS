@@ -563,11 +563,10 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             </li>
             <li>
               <strong>Vehicle Maintenance.</strong> Owner represents that the vehicle is in sound and
-              safe condition and shall not knowingly allow the Vehicle to be operated with any known
-              faults or defects that would affect its safe operation under normal use. Owner is
-              required to perform vehicle maintenance in accordance with the manufacturer's
-              maintenance schedule. Records of maintenance performed to the Vehicle should be kept on
-              file.
+              safe condition and free of any known faults or defects that would affect its safe
+              operation under normal use. Owner is required to perform regular vehicle maintenance in
+              accordance with the manufacturer's maintenance schedule. Records of any service
+              performed to the Vehicle should be kept on file.
             </li>
             <li>
               <strong>Vehicle Repairs or Damage.</strong> At no time shall the Renter repair or
