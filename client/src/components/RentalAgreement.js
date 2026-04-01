@@ -510,11 +510,11 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             </li>
             <li>
               <strong>RentUFS.com Insurance Coverage.</strong> Coverage is provided by RentUFS.com
-              strictly while the Vehicle is operating under Period Zero as defined below:
+              strictly while the Vehicle is operating under Period Zero™ as defined below:
               <ol type="a">
-                <li>Off Rent - Vehicle is not rented and is in the Owner's possession.</li>
+                <li>Off Rent™ - Vehicle is not rented and is in the Owner's possession.</li>
                 <li>
-                  Period Zero - Active Rental Agreement is in place and Vehicle is in Renter's
+                  Period Zero™ - Active Rental Agreement is in place and Vehicle is in Renter's
                   possession. Any third-party TNC or DNC mobile application is turned off.
                 </li>
                 <li>
