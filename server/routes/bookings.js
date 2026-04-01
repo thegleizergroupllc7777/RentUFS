@@ -1472,6 +1472,13 @@ router.post('/:id/host-cancel', auth, async (req, res) => {
 
     await booking.save();
 
+    // Withhold platform fee from host: $1.50 per booked day added to penalty balance
+    const penaltyAmount = 1.50 * (booking.totalDays || 1);
+    await User.findByIdAndUpdate(booking.host._id, {
+      $inc: { cancellationPenaltyBalance: penaltyAmount }
+    });
+    console.log(`💰 Host cancellation penalty: $${penaltyAmount.toFixed(2)} added to host ${booking.host.firstName} ${booking.host.lastName}'s penalty balance`);
+
     // Set vehicle back to available after host cancellation
     await Vehicle.findByIdAndUpdate(booking.vehicle._id, { availability: true });
 

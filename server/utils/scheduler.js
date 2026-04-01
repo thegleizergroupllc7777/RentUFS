@@ -397,6 +397,47 @@ const processWeeklyPayouts = async () => {
 
         hostPayoutAmount = parseFloat(hostPayoutAmount.toFixed(2));
 
+        // Deduct any outstanding host cancellation penalty from payout
+        let penaltyDeducted = 0;
+        if (host.cancellationPenaltyBalance > 0) {
+          penaltyDeducted = Math.min(host.cancellationPenaltyBalance, hostPayoutAmount);
+          hostPayoutAmount = parseFloat((hostPayoutAmount - penaltyDeducted).toFixed(2));
+          await User.findByIdAndUpdate(host._id, {
+            $inc: { cancellationPenaltyBalance: -penaltyDeducted }
+          });
+          console.log(`💰 Deducted $${penaltyDeducted.toFixed(2)} cancellation penalty from host ${host.firstName} ${host.lastName}'s payout`);
+        }
+
+        if (hostPayoutAmount <= 0) {
+          // Entire payout consumed by penalty — mark bookings as paid with $0 transfer
+          for (const p of payoutBookings) {
+            const b = p.booking;
+            if (p.type === 'completed') {
+              await Booking.findByIdAndUpdate(b._id, {
+                payoutStatus: 'paid',
+                payoutDate: now,
+                payoutAmount: 0,
+                partialPayoutDaysPaid: b.totalDays,
+                partialPayoutTotal: (b.partialPayoutTotal || 0),
+                lastPartialPayoutDate: now
+              });
+            } else {
+              const newDaysPaid = (b.partialPayoutDaysPaid || 0) + p.daysPaid;
+              await Booking.findByIdAndUpdate(b._id, {
+                payoutStatus: 'partial',
+                payoutDate: now,
+                payoutAmount: (b.partialPayoutTotal || 0),
+                partialPayoutDaysPaid: newDaysPaid,
+                partialPayoutTotal: (b.partialPayoutTotal || 0),
+                lastPartialPayoutDate: now
+              });
+            }
+          }
+          console.log(`⚠️ Host ${host.firstName} ${host.lastName}'s entire payout was consumed by cancellation penalty`);
+          hostsProcessed++;
+          continue;
+        }
+
         // Create Stripe transfer to host's Connect account
         const transfer = await stripe.transfers.create({
           amount: Math.round(hostPayoutAmount * 100),

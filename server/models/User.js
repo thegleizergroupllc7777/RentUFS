@@ -193,6 +193,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Tracks platform fee penalty owed by host for host-initiated cancellations ($1.50/day)
+  cancellationPenaltyBalance: {
+    type: Number,
+    default: 0
+  },
   integrations: {
     tollspot: {
       active: { type: Boolean, default: false },
