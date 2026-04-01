@@ -18,19 +18,16 @@ const INSURANCE_PLANS = {
     coverage: {
       liability: true,
       collision: true,
-      comprehensive: true,
-      personalInjury: true,
+      comprehensive: false,
+      personalInjury: false,
       roadsideAssistance: true
     },
     details: [
-      'Car Share & Ride Share Coverage',
-      'Liability coverage up to $300,000',
-      'Comprehensive coverage (theft, vandalism, weather)',
-      'Personal injury protection',
-      'Coverage in your name from pickup to return',
-      'Policy covers state minimum required for physical & property',
-      '$2,500 deductible for vehicle loss or damage',
-      'Accidental injury/death or theft'
+      'Liability Coverage Up To $300,000',
+      'Coverage In Your Name From Pickup To Return',
+      'Policy Covers State Minimum Required For Physical & Property',
+      '$2,500 Deductible For Vehicle Loss Or Damage',
+      'Accidental Injury/Death Or Theft'
     ]
   }
 };
