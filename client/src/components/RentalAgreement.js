@@ -203,6 +203,13 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
   const currentTotalDays = booking.totalDays;
   const currentTotalPrice = booking.totalPrice;
 
+  // Calculate days late (only for active bookings past end date)
+  const now = new Date();
+  const endDate = new Date(currentEndDate);
+  const daysLate = booking.status === 'active' && now > endDate
+    ? Math.round(((now - endDate) / (1000 * 60 * 60 * 24)) * 10) / 10
+    : 0;
+
   return (
     <div className="rental-agreement">
       <div className="agreement-document">
@@ -329,6 +336,12 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
             <span className="field-label">Days Rented:</span>
             <span className="field-value">{currentTotalDays}</span>
           </div>
+          {daysLate > 0 && (
+            <div className="agreement-field">
+              <span className="field-label">Days Late:</span>
+              <span className="field-value">{daysLate}</span>
+            </div>
+          )}
           <div className="agreement-field">
             <span className="field-label">Daily Mileage Max:</span>
             <span className="field-value">Unlimited</span>
@@ -353,10 +366,6 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
               </span>
             </div>
           )}
-          <div className="agreement-field">
-            <span className="field-label">Total Price:</span>
-            <span className="field-value">${currentTotalPrice?.toFixed(2)}</span>
-          </div>
           <div className="agreement-field">
             <span className="field-label">Rental Status:</span>
             <span className="field-value" style={{ textTransform: 'capitalize' }}>
