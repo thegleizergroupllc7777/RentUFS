@@ -1352,13 +1352,13 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
         </div>
         <div style="padding: 30px;">
           <h2 style="color: #f59e0b; margin-top: 0;">⚠️ Registration Expiring Soon</h2>
-          <p style="color: #d1d5db; line-height: 1.6;">
+          <p style="color: #ffffff; line-height: 1.6;">
             Hi ${host.firstName},
           </p>
-          <p style="color: #d1d5db; line-height: 1.6;">
+          <p style="color: #ffffff; line-height: 1.6;">
             The vehicle registration for your <strong style="color: #fff;">${vehicleName}</strong> is expiring on <strong style="color: #f59e0b;">${expirationDate}</strong>.
           </p>
-          <p style="color: #d1d5db; line-height: 1.6;">
+          <p style="color: #ffffff; line-height: 1.6;">
             Please renew your registration and upload the updated document to keep your vehicle listing active on RentUFS.
           </p>
           <div style="text-align: center; margin: 30px 0;">
@@ -1368,16 +1368,16 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
           </div>
           <div style="background: #1a1a2e; border-radius: 8px; padding: 20px; margin: 20px 0;">
             <h3 style="color: #10b981; margin-top: 0; font-size: 14px; text-transform: uppercase;">Vehicle Details</h3>
-            <p style="color: #d1d5db; margin: 5px 0;"><strong>Vehicle:</strong> ${vehicleName}</p>
-            <p style="color: #d1d5db; margin: 5px 0;"><strong>VIN:</strong> ${vehicle.vin || 'N/A'}</p>
-            <p style="color: #d1d5db; margin: 5px 0;"><strong>Registration Expires:</strong> <span style="color: #f59e0b;">${expirationDate}</span></p>
+            <p style="color: #ffffff; margin: 5px 0;"><strong>Vehicle:</strong> ${vehicleName}</p>
+            <p style="color: #ffffff; margin: 5px 0;"><strong>VIN:</strong> ${vehicle.vin || 'N/A'}</p>
+            <p style="color: #ffffff; margin: 5px 0;"><strong>Registration Expires:</strong> <span style="color: #f59e0b;">${expirationDate}</span></p>
           </div>
-          <p style="color: #9ca3af; font-size: 13px; line-height: 1.5;">
+          <p style="color: #cccccc; font-size: 13px; line-height: 1.5;">
             Vehicles with expired registrations may be temporarily delisted from the marketplace. Please update your registration as soon as possible.
           </p>
         </div>
         <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #222;">
-          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
             &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.
           </p>
         </div>
