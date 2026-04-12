@@ -387,7 +387,7 @@ const sendVehicleListedEmail = async (user, vehicle) => {
               </center>
 
               <p style="margin-top: 30px; font-size: 0.9rem; color: #6b7280;">
-                <strong>Pro Tip:</strong> Vehicles with complete profiles and good photos get 3x more bookings!
+                <strong>Pro Tip:</strong> Vehicles with complete profiles and clear photos get 3x more bookings!
               </p>
             </div>
 
