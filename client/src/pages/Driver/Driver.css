@@ -428,13 +428,13 @@
 
 .booking-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
   align-items: center;
 }
 
 .booking-actions .btn {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   padding: 0.6rem 1.2rem;
   font-size: 0.925rem;
   white-space: nowrap;
