@@ -345,7 +345,7 @@ const sendVehicleListedEmail = async (user, vehicle) => {
           <div class="container">
             <div class="header">
               <div class="logo">RentUFS</div>
-              <h1 style="margin-top: 20px; color: white;">Vehicle Listed Successfully!</h1>
+              <h1 style="margin-top: 20px; color: #00FF66;">Vehicle Listed Successfully!</h1>
             </div>
 
             <div class="content">
