@@ -1639,8 +1639,8 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
             .toll-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
             .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
             .detail-row:last-child { border-bottom: none; }
-            .label { color: #6b7280; }
-            .value { font-weight: bold; color: #111827; }
+            .label { color: #6b7280; white-space: nowrap; }
+            .value { font-weight: bold; color: #111827; text-align: right; }
             .summary-box { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
             .info-box { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
@@ -1790,8 +1790,8 @@ const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSu
             .toll-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
             .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
             .detail-row:last-child { border-bottom: none; }
-            .label { color: #6b7280; }
-            .value { font-weight: bold; color: #111827; }
+            .label { color: #6b7280; white-space: nowrap; }
+            .value { font-weight: bold; color: #111827; text-align: right; }
             .info-box { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
             .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
             .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
