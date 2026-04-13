@@ -124,16 +124,23 @@ const AddVehicle = () => {
       const response = await axios.get(`${API_URL}/api/vehicles/decode-vin/${vin}`);
       const decoded = response.data;
 
+      const matchedMake = matchBrand(decoded.make);
       setFormData(prev => ({
         ...prev,
         vin: vin,
-        make: matchBrand(decoded.make) || prev.make,
+        make: matchedMake || prev.make,
         model: decoded.model || prev.model,
         year: decoded.year || prev.year,
         type: decoded.type || prev.type,
         transmission: decoded.transmission || prev.transmission
       }));
       setVinDecoded(true);
+
+      // Warn if make couldn't be matched to our dropdown options
+      if (decoded.make && !matchedMake) {
+        setError(`VIN decoded but the make "${decoded.make}" was not found in our list. Please select it manually.`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to decode VIN. Please enter vehicle details manually.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -313,7 +320,7 @@ const AddVehicle = () => {
                       border: '1px solid #10b981',
                       fontSize: '0.9rem'
                     }}>
-                      VIN decoded successfully: {formData.year} {formData.make} {formData.model}. Please verify details below.
+                      VIN decoded successfully{formData.make || formData.model ? `: ${formData.year} ${formData.make} ${formData.model}`.trim() : ''}. Please verify details below.
                     </div>
                   )}
                   {vinDuplicate && (
