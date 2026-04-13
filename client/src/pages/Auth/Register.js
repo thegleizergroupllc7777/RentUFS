@@ -467,7 +467,7 @@ const Register = () => {
                         value={formData.address.street}
                         onChange={handleChange}
                         placeholder="123 Main St"
-                        maxLength="100"
+                        maxLength="60"
                         required={formData.userType === 'driver'}
                       />
                     </div>
@@ -493,7 +493,7 @@ const Register = () => {
                           value={formData.address.city}
                           onChange={handleChange}
                           placeholder="New York"
-                          maxLength="50"
+                          maxLength="35"
                           required={formData.userType === 'driver'}
                         />
                       </div>

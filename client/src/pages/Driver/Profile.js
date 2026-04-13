@@ -1027,7 +1027,7 @@ const DriverProfile = () => {
               <label className="form-label">Street Address</label>
               <input type="text" className="form-input" value={profileData.address.street}
                 onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))}
-                placeholder="123 Main St" maxLength="100" />
+                placeholder="123 Main St" maxLength="60" />
             </div>
             <div className="form-group">
               <label className="form-label">Apt / Suite / Unit</label>
@@ -1040,7 +1040,7 @@ const DriverProfile = () => {
                 <label className="form-label">City</label>
                 <input type="text" className="form-input" value={profileData.address.city}
                   onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, city: e.target.value.replace(/[^a-zA-Z\s\-'.]/g, '') } }))}
-                  placeholder="New York" maxLength="50" />
+                  placeholder="New York" maxLength="35" />
               </div>
               <div className="form-group">
                 <label className="form-label">State</label>
@@ -1291,13 +1291,13 @@ const DriverProfile = () => {
                   <div className="form-group">
                     <input type="text" className="form-input" value={taxFormData.businessAddress.street}
                       onChange={(e) => setTaxFormData(prev => ({ ...prev, businessAddress: { ...prev.businessAddress, street: e.target.value } }))}
-                      placeholder="Street address" maxLength={100} required />
+                      placeholder="Street address" maxLength={60} required />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                     <div className="form-group">
                       <input type="text" className="form-input" value={taxFormData.businessAddress.city}
                         onChange={(e) => setTaxFormData(prev => ({ ...prev, businessAddress: { ...prev.businessAddress, city: e.target.value.replace(/[^a-zA-Z\s\-'.]/g, '') } }))}
-                        placeholder="City" maxLength={50} required />
+                        placeholder="City" maxLength={35} required />
                     </div>
                     <div className="form-group">
                       <input type="text" className="form-input" value={taxFormData.businessAddress.state}
@@ -1336,12 +1336,12 @@ const DriverProfile = () => {
                   <div className="form-group">
                     <input type="text" className="form-input" value={taxFormData.legalAddress.street}
                       onChange={(e) => setTaxFormData(prev => ({ ...prev, legalAddress: { ...prev.legalAddress, street: e.target.value } }))}
-                      placeholder="Street address" maxLength={100} required />
+                      placeholder="Street address" maxLength={60} required />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <input type="text" className="form-input" value={taxFormData.legalAddress.city}
                       onChange={(e) => setTaxFormData(prev => ({ ...prev, legalAddress: { ...prev.legalAddress, city: e.target.value.replace(/[^a-zA-Z\s\-'.]/g, '') } }))}
-                      placeholder="City" maxLength={50} required />
+                      placeholder="City" maxLength={35} required />
                     <input type="text" className="form-input" value={taxFormData.legalAddress.state}
                       onChange={(e) => setTaxFormData(prev => ({ ...prev, legalAddress: { ...prev.legalAddress, state: e.target.value.toUpperCase() } }))}
                       placeholder="State" maxLength={2} required />

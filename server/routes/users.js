@@ -55,14 +55,14 @@ router.put('/profile', auth, async (req, res) => {
       }
     }
     if (address) {
-      if (address.street && address.street.length > 100) {
-        return res.status(400).json({ message: 'Street address must be 100 characters or less' });
+      if (address.street && address.street.length > 60) {
+        return res.status(400).json({ message: 'Street address must be 60 characters or less' });
       }
       if (address.apt && address.apt.length > 10) {
         return res.status(400).json({ message: 'Apt/Suite/Unit must be 10 characters or less' });
       }
-      if (address.city && address.city.length > 50) {
-        return res.status(400).json({ message: 'City must be 50 characters or less' });
+      if (address.city && address.city.length > 35) {
+        return res.status(400).json({ message: 'City must be 35 characters or less' });
       }
       if (address.state && address.state.length > 2) {
         return res.status(400).json({ message: 'State must be 2 characters or less' });
