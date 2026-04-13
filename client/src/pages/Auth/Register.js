@@ -658,7 +658,7 @@ const Register = () => {
 
                   {/* Address */}
                   <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#1f2937' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#10b981' }}>
                       Home Address {formData.userType === 'driver' && '*'}
                     </h3>
                     <div className="form-group">
@@ -762,7 +762,7 @@ const Register = () => {
                   {formData.userType === 'driver' && (
                     <>
                       <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#1f2937' }}>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#10b981' }}>
                           Driver's License Information
                         </h3>
 
@@ -808,7 +808,7 @@ const Register = () => {
                           </div>
                         </div>
 
-                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#1f2937' }}>
+                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#10b981' }}>
                           License Photo *
                         </h4>
                         <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
@@ -830,7 +830,7 @@ const Register = () => {
                           onOcrResult={handleOcrResult}
                         />
 
-                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#1f2937' }}>
+                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#10b981' }}>
                           Verification Selfie *
                         </h4>
                         <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
