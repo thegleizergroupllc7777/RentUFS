@@ -1288,29 +1288,23 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
         <head>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .logo { font-size: 2.5rem; font-weight: bold; letter-spacing: 0.15em; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-            .code-box { background: #000000; color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.5em; text-align: center; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <div style="font-size: 2.5rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Email Verification</h1>
             </div>
-            <div class="content">
+            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
               <h2>Hi ${firstName},</h2>
               <p>You requested to change your email address to <strong>${toEmail}</strong>.</p>
               <p>Enter this verification code to confirm your new email:</p>
-              <div class="code-box">${code}</div>
+              <div style="background: #000000; color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.5em; text-align: center; padding: 20px; border-radius: 8px; margin: 20px 0;">${code}</div>
               <p style="color: #6b7280; font-size: 0.9rem;">This code expires in <strong>15 minutes</strong>.</p>
               <p style="color: #6b7280; font-size: 0.9rem;">If you didn't request this change, please ignore this email. Your current email will remain unchanged.</p>
             </div>
-            <div class="footer">
+            <div style="background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem;">
               <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
               <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
@@ -1341,28 +1335,22 @@ const sendRegistrationOtp = async (toEmail, code) => {
         <head>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .logo { font-size: 2.5rem; font-weight: bold; letter-spacing: 0.15em; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-            .code-box { background: #000000; color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.5em; text-align: center; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <div style="font-size: 2.5rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Verify Your Email</h1>
             </div>
-            <div class="content">
+            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
               <h2>Welcome to RentUFS!</h2>
               <p>Enter this verification code to confirm your email address and complete your registration:</p>
-              <div class="code-box">${code}</div>
+              <div style="background: #000000; color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.5em; text-align: center; padding: 20px; border-radius: 8px; margin: 20px 0;">${code}</div>
               <p style="color: #6b7280; font-size: 0.9rem;">This code expires in <strong>10 minutes</strong>.</p>
               <p style="color: #6b7280; font-size: 0.9rem;">If you didn't request this, please ignore this email.</p>
             </div>
-            <div class="footer">
+            <div style="background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem;">
               <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
               <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
