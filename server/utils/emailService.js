@@ -1499,7 +1499,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
               <p>Click the button below to set a new password:</p>
 
               <center>
-                <a href="${resetUrl}" class="button">
+                <a href="${resetUrl}" class="button" style="background: #00FF66; color: #000000; padding: 14px 35px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; font-size: 1.1rem;">
                   Reset My Password
                 </a>
               </center>
