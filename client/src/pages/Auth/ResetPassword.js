@@ -46,6 +46,25 @@ const ResetPassword = () => {
     });
   };
 
+  const getPasswordStrength = (password) => {
+    if (!password) return { level: 0, label: '', color: '' };
+    const checks = [
+      password.length >= 8,
+      /[A-Z]/.test(password),
+      /[a-z]/.test(password),
+      /[0-9]/.test(password),
+      /[^A-Za-z0-9]/.test(password)
+    ];
+    const passed = checks.filter(Boolean).length;
+    if (password.length < 8) return { level: 1, label: 'Weak', color: '#ef4444', checks };
+    if (passed <= 2) return { level: 1, label: 'Weak', color: '#ef4444', checks };
+    if (passed === 3) return { level: 2, label: 'Fair', color: '#f59e0b', checks };
+    if (passed === 4) return { level: 3, label: 'Good', color: '#84cc16', checks };
+    return { level: 4, label: 'Strong', color: '#10b981', checks };
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -56,8 +75,8 @@ const ResetPassword = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (passwordStrength.level < 2) {
+      setError('Password is too weak. It must be at least 8 characters and include a mix of uppercase, lowercase, and numbers.');
       return;
     }
 
@@ -154,7 +173,8 @@ const ResetPassword = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Enter new password"
-                    minLength="6"
+                    minLength="8"
+                    maxLength="40"
                     required
                   />
                   <button
@@ -166,6 +186,27 @@ const ResetPassword = () => {
                     {showPassword ? '🙈' : '👁'}
                   </button>
                 </div>
+                {formData.password && (
+                  <div className="password-strength">
+                    <div className="password-strength-bar">
+                      {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="password-strength-segment" style={{
+                          backgroundColor: i <= passwordStrength.level ? passwordStrength.color : '#333'
+                        }} />
+                      ))}
+                    </div>
+                    <span className="password-strength-label" style={{ color: passwordStrength.color }}>
+                      {passwordStrength.label}
+                    </span>
+                    <div className="password-strength-checks">
+                      <span style={{ color: formData.password.length >= 8 ? '#10b981' : '#6b7280' }}>8+ chars</span>
+                      <span style={{ color: /[A-Z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>A-Z</span>
+                      <span style={{ color: /[a-z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>a-z</span>
+                      <span style={{ color: /[0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>0-9</span>
+                      <span style={{ color: /[^A-Za-z0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>!@#</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -178,7 +219,8 @@ const ResetPassword = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm new password"
-                    minLength="6"
+                    minLength="8"
+                    maxLength="40"
                     required
                   />
                   <button

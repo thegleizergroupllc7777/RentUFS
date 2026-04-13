@@ -26,6 +26,33 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage, hostInfo, address } = req.body;
 
+    // Validate name fields
+    if (firstName && firstName.length > 30) {
+      return res.status(400).json({ message: 'First name must be 30 characters or less' });
+    }
+    if (lastName && lastName.length > 30) {
+      return res.status(400).json({ message: 'Last name must be 30 characters or less' });
+    }
+    if (firstName && /[^a-zA-Z\s\-'.]/.test(firstName)) {
+      return res.status(400).json({ message: 'First name can only contain letters, spaces, hyphens, and apostrophes' });
+    }
+    if (lastName && /[^a-zA-Z\s\-'.]/.test(lastName)) {
+      return res.status(400).json({ message: 'Last name can only contain letters, spaces, hyphens, and apostrophes' });
+    }
+
+    // Validate email length
+    if (email && email.length > 100) {
+      return res.status(400).json({ message: 'Email must be 100 characters or less' });
+    }
+
+    // Validate password
+    if (!password || password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    if (password.length > 40) {
+      return res.status(400).json({ message: 'Password must be 40 characters or less' });
+    }
+
     if (!phone || !phone.trim()) {
       return res.status(400).json({ message: 'Phone number is required' });
     }
@@ -338,8 +365,11 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ message: 'Token and password are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    if (password.length > 40) {
+      return res.status(400).json({ message: 'Password must be 40 characters or less' });
     }
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
