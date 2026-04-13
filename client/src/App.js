@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { GoogleMapsProvider } from './context/GoogleMapsContext';
 import PrivateRoute from './components/PrivateRoute';
 import HostRoute from './components/HostRoute';
 
@@ -40,6 +41,7 @@ import './App.css';
 
 function App() {
   return (
+    <GoogleMapsProvider>
     <AuthProvider>
       <Router>
         <div className="App">
@@ -190,6 +192,7 @@ function App() {
         </div>
       </Router>
     </AuthProvider>
+    </GoogleMapsProvider>
   );
 }
 

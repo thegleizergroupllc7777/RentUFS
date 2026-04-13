@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 import FaceVerification from '../../components/FaceVerification';
 import LicenseOCR from '../../components/LicenseOCR';
 import { vehicleModels } from '../../data/vehicleModels';
@@ -180,6 +181,19 @@ const Register = () => {
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
+
+  const handleAddressSelect = useCallback((addressData) => {
+    setFormData(prev => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        street: addressData.street,
+        city: addressData.city,
+        state: addressData.state,
+        zipCode: addressData.zipCode
+      }
+    }));
+  }, []);
 
   const handleVehicleChange = (e) => {
     const { name, value } = e.target;
@@ -518,13 +532,12 @@ const Register = () => {
                     </h3>
                     <div className="form-group">
                       <label className="form-label">Street Address</label>
-                      <input
-                        type="text"
-                        name="address.street"
-                        className="form-input"
+                      <AddressAutocomplete
                         value={formData.address.street}
-                        onChange={handleChange}
-                        placeholder="123 Main St"
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))}
+                        onPlaceSelect={handleAddressSelect}
+                        placeholder="Start typing an address..."
+                        className="form-input"
                         maxLength="60"
                         required={formData.userType === 'driver'}
                       />

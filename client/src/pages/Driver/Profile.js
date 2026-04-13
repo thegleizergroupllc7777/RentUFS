@@ -7,6 +7,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import { PayoutsContent } from '../Host/Payouts';
@@ -502,6 +503,19 @@ const DriverProfile = () => {
     setPhoneSession(null);
     setPhoneQrUrl('');
   };
+
+  const handleAddressSelect = useCallback((addressData) => {
+    setProfileData(prev => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        street: addressData.street,
+        city: addressData.city,
+        state: addressData.state,
+        zipCode: addressData.zipCode
+      }
+    }));
+  }, []);
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
@@ -1025,9 +1039,14 @@ const DriverProfile = () => {
             <h4 style={{ marginBottom: '1rem', color: '#e5e7eb', fontSize: '1rem' }}>Home Address</h4>
             <div className="form-group">
               <label className="form-label">Street Address</label>
-              <input type="text" className="form-input" value={profileData.address.street}
+              <AddressAutocomplete
+                value={profileData.address.street}
                 onChange={(e) => setProfileData(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))}
-                placeholder="123 Main St" maxLength="60" />
+                onPlaceSelect={handleAddressSelect}
+                placeholder="Start typing an address..."
+                className="form-input"
+                maxLength="60"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Apt / Suite / Unit</label>

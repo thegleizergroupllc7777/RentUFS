@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
+import { useGoogleMaps } from '../context/GoogleMapsContext';
 import { Link } from 'react-router-dom';
 import getImageUrl from '../config/imageUrl';
 
@@ -56,11 +57,8 @@ const MapView = ({
   const [map, setMap] = useState(null);
   const [mapCenter, setMapCenter] = useState(center || defaultCenter);
 
-  // Load Google Maps
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
-    libraries: ['places']
-  });
+  // Use shared Google Maps loader
+  const { isLoaded, loadError } = useGoogleMaps();
 
   // Update center when search location changes
   useEffect(() => {

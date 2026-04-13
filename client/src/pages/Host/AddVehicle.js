@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload, { resolveImageUrl } from '../../components/ImageUpload';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import API_URL from '../../config/api';
@@ -167,6 +168,19 @@ const AddVehicle = () => {
       });
     }
   };
+
+  const handleLocationSelect = useCallback((addressData) => {
+    setFormData(prev => ({
+      ...prev,
+      location: {
+        ...prev.location,
+        address: addressData.street,
+        city: addressData.city,
+        state: addressData.state,
+        zipCode: addressData.zipCode
+      }
+    }));
+  }, []);
 
   const handleFeatureToggle = (featureLabel) => {
     setFormData(prev => {
@@ -830,13 +844,13 @@ const AddVehicle = () => {
 
                 <div className="form-group">
                   <label className="form-label">Address *</label>
-                  <input
-                    type="text"
-                    name="location.address"
-                    className="form-input"
+                  <AddressAutocomplete
                     value={formData.location.address}
-                    onChange={handleChange}
-                    placeholder="Street address for pickup"
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, address: e.target.value } }))}
+                    onPlaceSelect={handleLocationSelect}
+                    placeholder="Start typing an address..."
+                    className="form-input"
+                    maxLength="60"
                     required
                   />
                 </div>
