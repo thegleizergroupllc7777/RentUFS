@@ -299,7 +299,7 @@ router.get('/', async (req, res) => {
 
       // Find all bookings that overlap with the requested dates
       const overlappingBookings = await Booking.find({
-        status: { $in: ['confirmed', 'pending'] },
+        status: { $in: ['confirmed', 'pending', 'active'] },
         $or: [
           // Booking starts during requested period
           { startDate: { $gte: start, $lte: end } },
