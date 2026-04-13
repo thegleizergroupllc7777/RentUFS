@@ -128,6 +128,110 @@
   font-size: 0.75rem;
 }
 
+/* Email OTP Verification */
+.email-otp-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.email-otp-row .form-input {
+  flex: 1;
+}
+
+.otp-send-btn {
+  padding: 0.65rem 1rem;
+  background: #10b981;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.otp-send-btn:hover:not(:disabled) {
+  background: #00FF66;
+}
+
+.otp-send-btn:disabled {
+  background: #333;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.otp-verify-section {
+  margin-top: 0.75rem;
+}
+
+.otp-instruction {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-bottom: 0.5rem;
+}
+
+.otp-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.otp-code-input {
+  flex: 1;
+  max-width: 180px;
+  text-align: center;
+  letter-spacing: 0.5em;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.otp-verify-btn {
+  padding: 0.65rem 1.25rem;
+  background: #10b981;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.otp-verify-btn:hover:not(:disabled) {
+  background: #00FF66;
+}
+
+.otp-verify-btn:disabled {
+  background: #333;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.otp-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.otp-verified-icon {
+  font-size: 1rem;
+}
+
+.otp-error {
+  color: #ef4444;
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+}
+
 @media (max-width: 768px) {
   .auth-card {
     padding: 2rem;
@@ -135,5 +239,19 @@
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .email-otp-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .otp-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .otp-code-input {
+    max-width: 100%;
   }
 }

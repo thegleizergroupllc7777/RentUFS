@@ -2,14 +2,19 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const Otp = require('../models/Otp');
 const auth = require('../middleware/auth');
-const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
+const { sendWelcomeEmail, sendPasswordResetEmail, sendRegistrationOtp } = require('../utils/emailService');
 
 const router = express.Router();
 
 // Rate limit tracker for password reset requests (email -> timestamp)
 const passwordResetRateLimit = new Map();
 const PASSWORD_RESET_COOLDOWN = 2 * 60 * 1000; // 2 minutes between reset emails
+
+// Rate limit tracker for OTP requests (email -> timestamp)
+const otpRateLimit = new Map();
+const OTP_COOLDOWN = 60 * 1000; // 60 seconds between OTP sends
 
 // Helper: resolve relative profile image path to full URL
 function resolveProfileImageUrl(profileImage, req) {
@@ -21,10 +26,111 @@ function resolveProfileImageUrl(profileImage, req) {
   return profileImage;
 }
 
+// Send OTP for registration email verification
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Rate limit: prevent rapid-fire OTP sends
+    const lastSend = otpRateLimit.get(normalizedEmail);
+    if (lastSend && Date.now() - lastSend < OTP_COOLDOWN) {
+      const secondsLeft = Math.ceil((OTP_COOLDOWN - (Date.now() - lastSend)) / 1000);
+      return res.status(429).json({ message: `Please wait ${secondsLeft} seconds before requesting a new code.` });
+    }
+
+    // Check if email is already registered
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: 'An account with this email already exists.' });
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Delete any existing OTPs for this email
+    await Otp.deleteMany({ email: normalizedEmail });
+
+    // Save new OTP (expires in 10 minutes)
+    await Otp.create({
+      email: normalizedEmail,
+      code,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    });
+
+    // Send the OTP email
+    const emailResult = await sendRegistrationOtp(normalizedEmail, code);
+
+    if (emailResult.dev) {
+      console.log(`📧 [DEV] Registration OTP for ${normalizedEmail}: ${code}`);
+      return res.json({ message: 'Verification code sent to your email.', dev: true, code });
+    } else if (!emailResult.success) {
+      return res.status(500).json({ message: 'Failed to send verification email. Please try again.' });
+    }
+
+    // Record for rate limiting
+    otpRateLimit.set(normalizedEmail, Date.now());
+
+    console.log(`📧 Registration OTP sent to: ${normalizedEmail}`);
+    res.json({ message: 'Verification code sent to your email.' });
+  } catch (error) {
+    console.error('❌ Send OTP error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Verify OTP for registration email verification
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email and verification code are required.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const otp = await Otp.findOne({
+      email: normalizedEmail,
+      code: code.trim(),
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!otp) {
+      return res.status(400).json({ message: 'Invalid or expired verification code.' });
+    }
+
+    // Mark as verified
+    otp.verified = true;
+    await otp.save();
+
+    console.log(`✅ Email verified via OTP: ${normalizedEmail}`);
+    res.json({ message: 'Email verified successfully.', verified: true });
+  } catch (error) {
+    console.error('❌ Verify OTP error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Register
 router.post('/register', async (req, res) => {
   try {
     const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage, hostInfo, address } = req.body;
+
+    // Verify that email was confirmed via OTP
+    const verifiedOtp = await Otp.findOne({
+      email: email.toLowerCase().trim(),
+      verified: true,
+      expiresAt: { $gt: new Date() }
+    });
+    if (!verifiedOtp) {
+      return res.status(400).json({ message: 'Please verify your email address before registering.' });
+    }
 
     // Validate name fields
     if (firstName && firstName.length > 30) {
@@ -178,6 +284,9 @@ router.post('/register', async (req, res) => {
     const user = new User(userData);
 
     await user.save();
+
+    // Clean up used OTP
+    await Otp.deleteMany({ email: email.toLowerCase().trim() });
 
     const token = jwt.sign(
       { userId: user._id },
