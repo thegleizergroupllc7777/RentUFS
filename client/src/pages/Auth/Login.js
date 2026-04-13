@@ -114,6 +114,7 @@ const Login = () => {
                     className="form-input"
                     value={formData.email}
                     onChange={handleChange}
+                    maxLength="100"
                     required
                   />
                 </div>
@@ -127,6 +128,7 @@ const Login = () => {
                       className="form-input"
                       value={formData.password}
                       onChange={handleChange}
+                      maxLength="40"
                       required
                     />
                     <button
