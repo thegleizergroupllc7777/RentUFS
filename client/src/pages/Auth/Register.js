@@ -61,6 +61,8 @@ const Register = () => {
     image4: '',
     registrationImage: ''
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -302,6 +304,14 @@ const Register = () => {
     // Validate password strength (must be at least Fair)
     if (passwordStrength.level < 2) {
       setError('Password is too weak. It must be at least 8 characters and include a mix of uppercase, lowercase, and numbers.');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Validate passwords match
+    if (formData.password !== confirmPassword) {
+      setError('Passwords do not match. Please re-enter your password.');
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -622,6 +632,34 @@ const Register = () => {
                           <span style={{ color: /[0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>1 number</span>
                           <span style={{ color: /[^A-Za-z0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>1 special character</span>
                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Confirm Password</label>
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        className="form-input"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        minLength="8"
+                        maxLength="40"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? '🙈' : '👁'}
+                      </button>
+                    </div>
+                    {confirmPassword && (
+                      <div className={`password-match ${formData.password === confirmPassword ? 'match' : 'no-match'}`}>
+                        {formData.password === confirmPassword ? 'Passwords match' : 'Passwords do not match'}
                       </div>
                     )}
                   </div>

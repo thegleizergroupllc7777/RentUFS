@@ -128,6 +128,21 @@
   font-size: 0.75rem;
 }
 
+/* Confirm Password Match */
+.password-match {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.password-match.match {
+  color: #10b981;
+}
+
+.password-match.no-match {
+  color: #ef4444;
+}
+
 /* Email OTP Verification */
 .email-otp-row {
   display: flex;
