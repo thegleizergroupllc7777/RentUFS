@@ -69,36 +69,43 @@ const DatePicker = ({ label, name, value, onChange, min, required = false }) => 
     days.push({ day: i, type: 'next' });
   }
 
+  // Get the actual Date object for any day in the grid (prev, current, or next month)
+  const getDateForDay = (day) => {
+    if (day.type === 'prev') return new Date(year, month - 1, day.day);
+    if (day.type === 'next') return new Date(year, month + 1, day.day);
+    return new Date(year, month, day.day);
+  };
+
   const isDisabled = (day) => {
-    if (day.type !== 'current') return true;
-    const date = new Date(year, month, day.day);
+    const date = getDateForDay(day);
     date.setHours(0, 0, 0, 0);
     return date < minDate;
   };
 
   const isSelected = (day) => {
-    if (day.type !== 'current' || !value) return false;
+    if (!value) return false;
     const selected = new Date(value + 'T00:00:00');
+    const date = getDateForDay(day);
     return (
-      selected.getFullYear() === year &&
-      selected.getMonth() === month &&
-      selected.getDate() === day.day
+      selected.getFullYear() === date.getFullYear() &&
+      selected.getMonth() === date.getMonth() &&
+      selected.getDate() === date.getDate()
     );
   };
 
   const isToday = (day) => {
-    if (day.type !== 'current') return false;
     const now = new Date();
+    const date = getDateForDay(day);
     return (
-      now.getFullYear() === year &&
-      now.getMonth() === month &&
-      now.getDate() === day.day
+      now.getFullYear() === date.getFullYear() &&
+      now.getMonth() === date.getMonth() &&
+      now.getDate() === date.getDate()
     );
   };
 
   const handleSelect = (day) => {
     if (isDisabled(day)) return;
-    const selected = new Date(year, month, day.day);
+    const selected = getDateForDay(day);
     const dateStr = toLocalDateStr(selected);
 
     // Simulate an input change event
