@@ -1330,6 +1330,58 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
   }
 };
 
+const sendRegistrationOtp = async (toEmail, code) => {
+  try {
+    const mailOptions = {
+      to: toEmail,
+      subject: 'Your RentUFS Verification Code',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2.5rem; font-weight: bold; letter-spacing: 0.15em; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .code-box { background: #000000; color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.5em; text-align: center; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">RentUFS</div>
+              <h1 style="margin-top: 20px; color: white;">Verify Your Email</h1>
+            </div>
+            <div class="content">
+              <h2>Welcome to RentUFS!</h2>
+              <p>Enter this verification code to confirm your email address and complete your registration:</p>
+              <div class="code-box">${code}</div>
+              <p style="color: #6b7280; font-size: 0.9rem;">This code expires in <strong>10 minutes</strong>.</p>
+              <p style="color: #6b7280; font-size: 0.9rem;">If you didn't request this, please ignore this email.</p>
+            </div>
+            <div class="footer">
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Welcome to RentUFS!\n\nYour verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, please ignore this email.`
+    };
+
+    const result = await sendEmail(mailOptions);
+    console.log('📧 Registration OTP sent to:', toEmail);
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending registration OTP email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 const sendRegistrationExpirationReminder = async (host, vehicle) => {
   try {
     const expirationDate = new Date(vehicle.registrationExpiration).toLocaleDateString('en-US', {
@@ -1906,6 +1958,7 @@ module.exports = {
   sendBookingExtensionEmail,
   sendBookingCancellationEmail,
   sendEmailVerificationCode,
+  sendRegistrationOtp,
   sendRegistrationExpirationReminder,
   sendPasswordResetEmail,
   sendPayoutNotificationEmail,

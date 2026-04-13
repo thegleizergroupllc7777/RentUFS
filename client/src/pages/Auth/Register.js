@@ -68,6 +68,15 @@ const Register = () => {
   const [vinDecoded, setVinDecoded] = useState(false);
   const [faceVerification, setFaceVerification] = useState(null);
   const [licenseOcrResult, setLicenseOcrResult] = useState(null);
+  const [emailOtp, setEmailOtp] = useState({
+    sent: false,
+    verified: false,
+    code: '',
+    sending: false,
+    verifying: false,
+    error: '',
+    cooldown: 0
+  });
 
   const handleFaceVerificationResult = useCallback((result) => {
     setFaceVerification(result);
@@ -76,6 +85,63 @@ const Register = () => {
   const handleOcrResult = useCallback((result) => {
     setLicenseOcrResult(result);
   }, []);
+
+  // Email OTP handlers
+  const handleSendOtp = async () => {
+    const email = formData.email.trim();
+    if (!email) {
+      setEmailOtp(prev => ({ ...prev, error: 'Please enter your email first.' }));
+      return;
+    }
+    // Basic email format check
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailOtp(prev => ({ ...prev, error: 'Please enter a valid email address.' }));
+      return;
+    }
+
+    setEmailOtp(prev => ({ ...prev, sending: true, error: '' }));
+    try {
+      await axios.post(`${API_URL}/api/auth/send-otp`, { email });
+      setEmailOtp(prev => ({ ...prev, sent: true, sending: false, cooldown: 60 }));
+
+      // Start cooldown timer
+      const interval = setInterval(() => {
+        setEmailOtp(prev => {
+          if (prev.cooldown <= 1) {
+            clearInterval(interval);
+            return { ...prev, cooldown: 0 };
+          }
+          return { ...prev, cooldown: prev.cooldown - 1 };
+        });
+      }, 1000);
+    } catch (err) {
+      setEmailOtp(prev => ({
+        ...prev,
+        sending: false,
+        error: err.response?.data?.message || 'Failed to send verification code.'
+      }));
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const code = emailOtp.code.trim();
+    if (!code || code.length !== 6) {
+      setEmailOtp(prev => ({ ...prev, error: 'Please enter the 6-digit code.' }));
+      return;
+    }
+
+    setEmailOtp(prev => ({ ...prev, verifying: true, error: '' }));
+    try {
+      await axios.post(`${API_URL}/api/auth/verify-otp`, { email: formData.email.trim(), code });
+      setEmailOtp(prev => ({ ...prev, verified: true, verifying: false }));
+    } catch (err) {
+      setEmailOtp(prev => ({
+        ...prev,
+        verifying: false,
+        error: err.response?.data?.message || 'Invalid verification code.'
+      }));
+    }
+  };
 
   const handleDecodeVin = async () => {
     const vin = vehicleData.vin.trim().toUpperCase();
@@ -149,6 +215,13 @@ const Register = () => {
         ...formData,
         phone: formatted
       });
+    } else if (name === 'email') {
+      setFormData({ ...formData, email: value });
+      // Reset OTP state when email changes
+      if (emailOtp.sent || emailOtp.verified) {
+        setEmailOtp({ sent: false, verified: false, code: '', sending: false, verifying: false, error: '', cooldown: 0 });
+      }
+      return;
     } else if (name === 'firstName' || name === 'lastName') {
       const sanitized = value.replace(/[^a-zA-Z\s\-'.]/g, '');
       setFormData({
@@ -217,6 +290,14 @@ const Register = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // Validate email is verified via OTP
+    if (!emailOtp.verified) {
+      setError('Please verify your email address before registering.');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     // Validate password strength (must be at least Fair)
     if (passwordStrength.level < 2) {
@@ -439,15 +520,65 @@ const Register = () => {
 
                   <div className="form-group">
                     <label className="form-label">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-input"
-                      value={formData.email}
-                      onChange={handleChange}
-                      maxLength="100"
-                      required
-                    />
+                    <div className="email-otp-row">
+                      <input
+                        type="email"
+                        name="email"
+                        className="form-input"
+                        value={formData.email}
+                        onChange={handleChange}
+                        maxLength="100"
+                        required
+                        disabled={emailOtp.verified}
+                      />
+                      {!emailOtp.verified && (
+                        <button
+                          type="button"
+                          className="otp-send-btn"
+                          onClick={handleSendOtp}
+                          disabled={emailOtp.sending || emailOtp.cooldown > 0 || !formData.email.trim()}
+                        >
+                          {emailOtp.sending ? 'Sending...' : emailOtp.cooldown > 0 ? `Resend (${emailOtp.cooldown}s)` : emailOtp.sent ? 'Resend Code' : 'Send Code'}
+                        </button>
+                      )}
+                    </div>
+
+                    {emailOtp.sent && !emailOtp.verified && (
+                      <div className="otp-verify-section">
+                        <p className="otp-instruction">Enter the 6-digit code sent to {formData.email}</p>
+                        <div className="otp-input-row">
+                          <input
+                            type="text"
+                            className="form-input otp-code-input"
+                            value={emailOtp.code}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                              setEmailOtp(prev => ({ ...prev, code: val, error: '' }));
+                            }}
+                            placeholder="000000"
+                            maxLength="6"
+                          />
+                          <button
+                            type="button"
+                            className="otp-verify-btn"
+                            onClick={handleVerifyOtp}
+                            disabled={emailOtp.verifying || emailOtp.code.length !== 6}
+                          >
+                            {emailOtp.verifying ? 'Verifying...' : 'Verify'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {emailOtp.verified && (
+                      <div className="otp-verified-badge">
+                        <span className="otp-verified-icon">&#10003;</span> Email Verified
+                      </div>
+                    )}
+
+                    {emailOtp.error && (
+                      <p className="otp-error">{emailOtp.error}</p>
+                    )}
                   </div>
 
                   <div className="form-group">
