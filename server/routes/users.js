@@ -47,6 +47,20 @@ router.put('/profile', auth, async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
+    // Validate name fields
+    if (firstName && firstName.length > 30) {
+      return res.status(400).json({ message: 'First name must be 30 characters or less' });
+    }
+    if (lastName && lastName.length > 30) {
+      return res.status(400).json({ message: 'Last name must be 30 characters or less' });
+    }
+    if (firstName && /[^a-zA-Z\s\-'.]/.test(firstName)) {
+      return res.status(400).json({ message: 'First name can only contain letters, spaces, hyphens, and apostrophes' });
+    }
+    if (lastName && /[^a-zA-Z\s\-'.]/.test(lastName)) {
+      return res.status(400).json({ message: 'Last name can only contain letters, spaces, hyphens, and apostrophes' });
+    }
+
     // Validate fields being updated
     if (phone) {
       const phoneDigits = phone.replace(/\D/g, '');
@@ -127,6 +141,9 @@ router.post('/request-email-change', auth, async (req, res) => {
 
     if (!newEmail || !newEmail.trim()) {
       return res.status(400).json({ message: 'New email address is required' });
+    }
+    if (newEmail.length > 100) {
+      return res.status(400).json({ message: 'Email must be 100 characters or less' });
     }
 
     const cleanEmail = newEmail.toLowerCase().trim();

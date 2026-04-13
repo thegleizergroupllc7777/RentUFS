@@ -933,12 +933,12 @@ const DriverProfile = () => {
           <div className="form-group">
             <label className="form-label">First Name</label>
             <input type="text" className="form-input" value={profileData.firstName}
-              onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))} required />
+              onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value.replace(/[^a-zA-Z\s\-'.]/g, '') }))} maxLength="30" required />
           </div>
           <div className="form-group">
             <label className="form-label">Last Name</label>
             <input type="text" className="form-input" value={profileData.lastName}
-              onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))} required />
+              onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value.replace(/[^a-zA-Z\s\-'.]/g, '') }))} maxLength="30" required />
           </div>
           <div className="form-group">
             <label className="form-label">Email</label>
@@ -958,7 +958,7 @@ const DriverProfile = () => {
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <input type="email" className="form-input" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="Enter new email address" style={{ flex: 1 }} />
+                    placeholder="Enter new email address" maxLength="100" style={{ flex: 1 }} />
                   <button type="button" onClick={handleRequestEmailChange} disabled={emailLoading}
                     style={{ background: '#10b981', border: 'none', color: '#000', padding: '0.5rem 1rem', borderRadius: '6px', cursor: emailLoading ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: '600', whiteSpace: 'nowrap', opacity: emailLoading ? 0.7 : 1 }}>
                     {emailLoading ? 'Sending...' : 'Send Code'}

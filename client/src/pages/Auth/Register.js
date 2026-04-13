@@ -148,6 +148,12 @@ const Register = () => {
         ...formData,
         phone: formatted
       });
+    } else if (name === 'firstName' || name === 'lastName') {
+      const sanitized = value.replace(/[^a-zA-Z\s\-'.]/g, '');
+      setFormData({
+        ...formData,
+        [name]: sanitized
+      });
     } else {
       setFormData({
         ...formData,
@@ -155,6 +161,25 @@ const Register = () => {
       });
     }
   };
+
+  const getPasswordStrength = (password) => {
+    if (!password) return { level: 0, label: '', color: '' };
+    const checks = [
+      password.length >= 8,
+      /[A-Z]/.test(password),
+      /[a-z]/.test(password),
+      /[0-9]/.test(password),
+      /[^A-Za-z0-9]/.test(password)
+    ];
+    const passed = checks.filter(Boolean).length;
+    if (password.length < 8) return { level: 1, label: 'Weak', color: '#ef4444', checks };
+    if (passed <= 2) return { level: 1, label: 'Weak', color: '#ef4444', checks };
+    if (passed === 3) return { level: 2, label: 'Fair', color: '#f59e0b', checks };
+    if (passed === 4) return { level: 3, label: 'Good', color: '#84cc16', checks };
+    return { level: 4, label: 'Strong', color: '#10b981', checks };
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
 
   const handleVehicleChange = (e) => {
     const { name, value } = e.target;
@@ -178,6 +203,14 @@ const Register = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // Validate password strength (must be at least Fair)
+    if (passwordStrength.level < 2) {
+      setError('Password is too weak. It must be at least 8 characters and include a mix of uppercase, lowercase, and numbers.');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     // Validate age for drivers (must be at least 21)
     if (formData.userType === 'driver' && formData.dateOfBirth) {
@@ -371,6 +404,7 @@ const Register = () => {
                         className="form-input"
                         value={formData.firstName}
                         onChange={handleChange}
+                        maxLength="30"
                         required
                       />
                     </div>
@@ -383,6 +417,7 @@ const Register = () => {
                         className="form-input"
                         value={formData.lastName}
                         onChange={handleChange}
+                        maxLength="30"
                         required
                       />
                     </div>
@@ -396,6 +431,7 @@ const Register = () => {
                       className="form-input"
                       value={formData.email}
                       onChange={handleChange}
+                      maxLength="100"
                       required
                     />
                   </div>
@@ -410,7 +446,8 @@ const Register = () => {
                         value={formData.password}
                         onChange={handleChange}
                         required
-                        minLength="6"
+                        minLength="8"
+                        maxLength="40"
                       />
                       <button
                         type="button"
@@ -421,6 +458,27 @@ const Register = () => {
                         {showPassword ? '🙈' : '👁'}
                       </button>
                     </div>
+                    {formData.password && (
+                      <div className="password-strength">
+                        <div className="password-strength-bar">
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="password-strength-segment" style={{
+                              backgroundColor: i <= passwordStrength.level ? passwordStrength.color : '#333'
+                            }} />
+                          ))}
+                        </div>
+                        <span className="password-strength-label" style={{ color: passwordStrength.color }}>
+                          {passwordStrength.label}
+                        </span>
+                        <div className="password-strength-checks">
+                          <span style={{ color: formData.password.length >= 8 ? '#10b981' : '#6b7280' }}>8+ chars</span>
+                          <span style={{ color: /[A-Z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>A-Z</span>
+                          <span style={{ color: /[a-z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>a-z</span>
+                          <span style={{ color: /[0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>0-9</span>
+                          <span style={{ color: /[^A-Za-z0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>!@#</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-group">

@@ -98,6 +98,36 @@
   color: #00FF66;
 }
 
+.password-strength {
+  margin-top: 0.5rem;
+}
+
+.password-strength-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 0.35rem;
+}
+
+.password-strength-segment {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #333;
+  transition: background-color 0.3s ease;
+}
+
+.password-strength-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.password-strength-checks {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .auth-card {
     padding: 2rem;
