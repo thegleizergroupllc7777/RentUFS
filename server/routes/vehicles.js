@@ -96,16 +96,24 @@ router.get('/decode-vin/:vin', async (req, res) => {
       return item?.Value && item.Value.trim() !== '' ? item.Value.trim() : null;
     };
 
-    // Check for decode errors
+    // Check for decode errors - NHTSA returns error codes per field
+    // ErrorCode "0" = no error, any other value indicates issues
     const errorCode = getValue(143); // Error Code
-    if (errorCode && !errorCode.includes('0')) {
-      const errorText = getValue(144); // Error Text
-      console.log('⚠️ VIN decode warnings:', errorText);
+    const errorText = getValue(144); // Error Text
+    if (errorCode) {
+      console.log('⚠️ VIN decode error codes:', errorCode, errorText);
     }
 
     const make = getValue(26);       // Make
     const model = getValue(28);      // Model
     const year = getValue(29);       // Model Year
+
+    // If make AND model are both missing, the VIN is likely invalid/fake
+    if (!make && !model) {
+      return res.status(400).json({
+        message: 'Could not decode this VIN. The VIN may be invalid or not recognized. Please check and try again, or enter vehicle details manually.'
+      });
+    }
     const bodyClass = getValue(5);   // Body Class
     const doors = getValue(14);      // Number of Doors
     const transmission = getValue(37); // Transmission Style
