@@ -47,6 +47,34 @@ router.put('/profile', auth, async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
+    // Validate fields being updated
+    if (phone) {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length !== 10) {
+        return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
+      }
+    }
+    if (address) {
+      if (address.street && address.street.length > 100) {
+        return res.status(400).json({ message: 'Street address must be 100 characters or less' });
+      }
+      if (address.apt && address.apt.length > 10) {
+        return res.status(400).json({ message: 'Apt/Suite/Unit must be 10 characters or less' });
+      }
+      if (address.city && address.city.length > 50) {
+        return res.status(400).json({ message: 'City must be 50 characters or less' });
+      }
+      if (address.state && address.state.length > 2) {
+        return res.status(400).json({ message: 'State must be 2 characters or less' });
+      }
+      if (address.zipCode) {
+        const zipDigits = address.zipCode.replace(/\D/g, '');
+        if (zipDigits.length !== 5) {
+          return res.status(400).json({ message: 'Zip code must be exactly 5 digits' });
+        }
+      }
+    }
+
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (phone) user.phone = phone;
