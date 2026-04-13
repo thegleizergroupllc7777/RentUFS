@@ -485,11 +485,11 @@ const Register = () => {
                           {passwordStrength.label}
                         </span>
                         <div className="password-strength-checks">
-                          <span style={{ color: formData.password.length >= 8 ? '#10b981' : '#6b7280' }}>8+ chars</span>
-                          <span style={{ color: /[A-Z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>A-Z</span>
-                          <span style={{ color: /[a-z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>a-z</span>
-                          <span style={{ color: /[0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>0-9</span>
-                          <span style={{ color: /[^A-Za-z0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>!@#</span>
+                          <span style={{ color: formData.password.length >= 8 ? '#10b981' : '#6b7280' }}>8+ characters</span>
+                          <span style={{ color: /[A-Z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Uppercase</span>
+                          <span style={{ color: /[a-z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Lowercase</span>
+                          <span style={{ color: /[0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Number</span>
+                          <span style={{ color: /[^A-Za-z0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Special character</span>
                         </div>
                       </div>
                     )}
