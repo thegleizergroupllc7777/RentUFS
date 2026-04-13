@@ -116,7 +116,7 @@ const StripeCardForm = ({ clientSecret, onSuccess, onCancel }) => {
 };
 
 const DriverProfile = () => {
-  const { user, setUser, logout } = useAuth();
+  const { user, setUser, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const canBeHost = user?.userType === 'host' || user?.userType === 'both';
@@ -689,6 +689,8 @@ const DriverProfile = () => {
       });
       setDisplayPreference(pref);
       setTaxMessage('Display preference updated successfully');
+      // Refresh user so Navbar picks up the new display preference
+      await refreshUser();
     } catch (error) {
       setTaxMessage(error.response?.data?.message || 'Failed to update display preference');
     } finally {
