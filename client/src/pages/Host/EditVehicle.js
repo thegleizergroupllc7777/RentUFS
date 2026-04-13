@@ -507,11 +507,11 @@ const EditVehicle = () => {
                       value={formData.odometer}
                       onChange={handleChange}
                       min="0"
-                      max="500000"
+                      max="200000"
                       placeholder="Enter mileage"
                       required
                     />
-                    <span className="form-hint">Max: 500,000</span>
+                    <span className="form-hint">Max: 200,000</span>
                   </div>
 
                   <div className="form-group">

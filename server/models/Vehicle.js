@@ -64,7 +64,7 @@ const vehicleSchema = new mongoose.Schema({
   odometer: {
     type: Number,
     min: 0,
-    max: 500000
+    max: 200000
   },
   vehicleValue: {
     type: Number,
