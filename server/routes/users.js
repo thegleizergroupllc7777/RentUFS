@@ -46,6 +46,9 @@ router.put('/profile', auth, async (req, res) => {
     const { firstName, lastName, phone, userType, profileImage, address, dateOfBirth } = req.body;
 
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     // Validate name fields
     if (firstName && firstName.length > 30) {

@@ -534,7 +534,7 @@ const DriverProfile = () => {
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
     } catch (error) {
       console.error('Error updating profile:', error);
-      setMessage({ type: 'error', text: 'Failed to update profile' });
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to update profile' });
     } finally {
       setLoading(false);
     }
