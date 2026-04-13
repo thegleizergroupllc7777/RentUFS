@@ -199,11 +199,11 @@ const ResetPassword = () => {
                       {passwordStrength.label}
                     </span>
                     <div className="password-strength-checks">
-                      <span style={{ color: formData.password.length >= 8 ? '#10b981' : '#6b7280' }}>8+ characters</span>
-                      <span style={{ color: /[A-Z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Uppercase</span>
-                      <span style={{ color: /[a-z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Lowercase</span>
-                      <span style={{ color: /[0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Number</span>
-                      <span style={{ color: /[^A-Za-z0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>Special character</span>
+                      <span style={{ color: formData.password.length >= 8 ? '#10b981' : '#6b7280' }}>8 character min</span>
+                      <span style={{ color: /[A-Z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>1 uppercase</span>
+                      <span style={{ color: /[a-z]/.test(formData.password) ? '#10b981' : '#6b7280' }}>1 lowercase</span>
+                      <span style={{ color: /[0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>1 number</span>
+                      <span style={{ color: /[^A-Za-z0-9]/.test(formData.password) ? '#10b981' : '#6b7280' }}>1 special character</span>
                     </div>
                   </div>
                 )}
