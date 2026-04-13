@@ -119,6 +119,15 @@ const Navbar = () => {
   const isDriverMode = !user || activeMode === 'driver';
   const canSwitch = user && user.userType === 'both';
 
+  // Display name: respect host's displayPreference when in host mode
+  const displayName = (() => {
+    if (!user) return '';
+    if (isHostMode && user.hostInfo?.displayPreference === 'business' && user.hostInfo?.businessName) {
+      return user.hostInfo.businessName;
+    }
+    return user.firstName;
+  })();
+
   return (
     <nav className="navbar">
       <div className="container navbar-content">
@@ -259,7 +268,7 @@ const Navbar = () => {
                     </div>
                   )}
                 </div>
-                <span style={{ whiteSpace: 'nowrap' }}>{user.firstName}</span>
+                <span style={{ whiteSpace: 'nowrap' }}>{displayName}</span>
               </Link>
 
               <button onClick={handleLogout} className="btn btn-secondary">

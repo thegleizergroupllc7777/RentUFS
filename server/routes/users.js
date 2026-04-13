@@ -366,6 +366,13 @@ router.put('/host-tax-info', auth, async (req, res) => {
 
     const ssnIsLocked = !!(user.hostInfo?.taxIdLocked);
 
+    // Enforce account type lock - once tax info is submitted, account type cannot change
+    if (ssnIsLocked && user.hostInfo?.accountType && accountType !== user.hostInfo.accountType) {
+      return res.status(400).json({
+        message: 'Account type is locked after submission. Contact support to change between Individual and Business.'
+      });
+    }
+
     // --- Handle SSN/EIN ---
     let finalTaxIdDigits;
     if (ssnIsLocked) {
