@@ -1488,7 +1488,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
           <div class="container">
             <div class="header">
               <div class="logo">RentUFS</div>
-              <h1 style="margin-top: 20px; color: white;">Password Reset</h1>
+              <h1 style="margin-top: 20px; color: #00FF66;">Password Reset</h1>
             </div>
 
             <div class="content">
