@@ -123,12 +123,30 @@ const Register = () => {
       });
     } else if (name.startsWith('address.')) {
       const addressField = name.split('.')[1];
+      let sanitized = value;
+      if (addressField === 'zipCode') {
+        sanitized = value.replace(/\D/g, '');
+      } else if (addressField === 'city') {
+        sanitized = value.replace(/[^a-zA-Z\s\-'.]/g, '');
+      }
       setFormData({
         ...formData,
         address: {
           ...formData.address,
-          [addressField]: value
+          [addressField]: sanitized
         }
+      });
+    } else if (name === 'phone') {
+      const digits = value.replace(/\D/g, '').slice(0, 10);
+      let formatted = '';
+      if (digits.length > 0) formatted = '(' + digits.slice(0, 3);
+      if (digits.length >= 3) formatted += ') ';
+      if (digits.length > 3) formatted += digits.slice(3, 6);
+      if (digits.length >= 6) formatted += '-';
+      if (digits.length > 6) formatted += digits.slice(6, 10);
+      setFormData({
+        ...formData,
+        phone: formatted
       });
     } else {
       setFormData({
@@ -414,6 +432,7 @@ const Register = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="(555) 555-5555"
+                      maxLength="14"
                       required
                     />
                   </div>
@@ -448,6 +467,7 @@ const Register = () => {
                         value={formData.address.street}
                         onChange={handleChange}
                         placeholder="123 Main St"
+                        maxLength="100"
                         required={formData.userType === 'driver'}
                       />
                     </div>
@@ -460,6 +480,7 @@ const Register = () => {
                         value={formData.address.apt}
                         onChange={handleChange}
                         placeholder="Apt 4B, Suite 200, etc."
+                        maxLength="10"
                       />
                     </div>
                     <div className="form-row">
@@ -472,6 +493,7 @@ const Register = () => {
                           value={formData.address.city}
                           onChange={handleChange}
                           placeholder="New York"
+                          maxLength="50"
                           required={formData.userType === 'driver'}
                         />
                       </div>
@@ -498,7 +520,7 @@ const Register = () => {
                         value={formData.address.zipCode}
                         onChange={handleChange}
                         placeholder="10001"
-                        maxLength="10"
+                        maxLength="5"
                         required={formData.userType === 'driver'}
                       />
                     </div>
