@@ -63,6 +63,8 @@ const AddVehicle = () => {
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [vinDuplicate, setVinDuplicate] = useState(null);
+  const [vinDecodedData, setVinDecodedData] = useState(null); // Stores original VIN-decoded values for mismatch detection
+  const [vinMismatch, setVinMismatch] = useState(null); // Mismatch warning message
 
   const checkVinDuplicate = async (vin) => {
     if (vin.length !== 17) {
@@ -135,6 +137,12 @@ const AddVehicle = () => {
         transmission: decoded.transmission || prev.transmission
       }));
       setVinDecoded(true);
+      setVinDecodedData({
+        make: matchedMake || decoded.make || '',
+        model: decoded.model || '',
+        year: decoded.year || null
+      });
+      setVinMismatch(null);
 
       // Warn if make couldn't be matched to our dropdown options
       if (decoded.make && !matchedMake) {
@@ -213,6 +221,33 @@ const AddVehicle = () => {
       return;
     }
 
+    // Block submission if VIN-decoded data doesn't match entered data
+    if (vinDecodedData) {
+      const mismatches = [];
+      if (vinDecodedData.make && formData.make && vinDecodedData.make.toLowerCase() !== formData.make.toLowerCase()) {
+        mismatches.push(`Make: VIN says "${vinDecodedData.make}" but you selected "${formData.make}"`);
+      }
+      if (vinDecodedData.year && formData.year && String(vinDecodedData.year) !== String(formData.year)) {
+        mismatches.push(`Year: VIN says "${vinDecodedData.year}" but you entered "${formData.year}"`);
+      }
+      if (mismatches.length > 0) {
+        setError(`Vehicle details don't match VIN. ${mismatches.join('. ')}. Please correct the fields or re-enter the VIN.`);
+        setVinMismatch(mismatches);
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Soft warning for model mismatch (NHTSA model names can differ slightly)
+      if (vinDecodedData.model && formData.model) {
+        const decodedModel = vinDecodedData.model.toLowerCase().trim();
+        const enteredModel = formData.model.toLowerCase().trim();
+        if (decodedModel !== enteredModel && !decodedModel.includes(enteredModel) && !enteredModel.includes(decodedModel)) {
+          setVinMismatch([`Model: VIN says "${vinDecodedData.model}" but you entered "${formData.model}"`]);
+        }
+      }
+    }
+
     // Validate that at least 4 photos are uploaded
     if (!formData.images || formData.images.length < 4) {
       setError(`Please upload at least 4 photos (${formData.images?.length || 0} uploaded)`);
@@ -287,6 +322,8 @@ const AddVehicle = () => {
                       onChange={(e) => {
                         handleChange(e);
                         setVinDecoded(false);
+                        setVinDecodedData(null);
+                        setVinMismatch(null);
                         checkVinDuplicate(e.target.value.trim());
                       }}
                       placeholder="Enter 17-character VIN"
@@ -320,7 +357,20 @@ const AddVehicle = () => {
                       border: '1px solid #10b981',
                       fontSize: '0.9rem'
                     }}>
-                      VIN decoded successfully{formData.make || formData.model ? `: ${formData.year} ${formData.make} ${formData.model}`.trim() : ''}. Please verify details below.
+                      VIN decoded successfully{formData.make || formData.model ? `: ${formData.year} ${formData.make} ${formData.model}`.trim() : ''}. Make, model, and year are locked to match your VIN. To change them, clear the VIN field above.
+                    </div>
+                  )}
+                  {vinMismatch && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem',
+                      backgroundColor: '#fffbeb',
+                      color: '#92400e',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #f59e0b',
+                      fontSize: '0.9rem'
+                    }}>
+                      {vinMismatch.map((msg, i) => <div key={i}>{msg}</div>)}
                     </div>
                   )}
                   {vinDuplicate && (
@@ -358,13 +408,15 @@ const AddVehicle = () => {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Make *</label>
+                    <label className="form-label">Make * {vinDecodedData?.make && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-verified</span>}</label>
                     <select
                       name="make"
                       className="form-select"
                       value={formData.make}
                       onChange={handleChange}
                       required
+                      disabled={!!(vinDecoded && vinDecodedData?.make)}
+                      style={vinDecoded && vinDecodedData?.make ? { backgroundColor: '#f0fdf4', borderColor: '#10b981' } : {}}
                     >
                       <option value="">Select a brand</option>
                       {BRANDS.map(brand => (
@@ -375,14 +427,15 @@ const AddVehicle = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Model *</label>
+                    <label className="form-label">Model * {vinDecodedData?.model && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-verified</span>}</label>
                     {vinDecoded && formData.model ? (
                       <input
                         type="text"
                         name="model"
                         className="form-input"
                         value={formData.model}
-                        onChange={handleChange}
+                        readOnly={!!(vinDecoded && vinDecodedData?.model)}
+                        style={vinDecoded && vinDecodedData?.model ? { backgroundColor: '#f0fdf4', borderColor: '#10b981' } : {}}
                         required
                       />
                     ) : (
@@ -412,7 +465,7 @@ const AddVehicle = () => {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Year *</label>
+                    <label className="form-label">Year * {vinDecodedData?.year && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-verified</span>}</label>
                     <input
                       type="number"
                       name="year"
@@ -422,6 +475,8 @@ const AddVehicle = () => {
                       min="1900"
                       max={new Date().getFullYear() + 1}
                       required
+                      readOnly={!!(vinDecoded && vinDecodedData?.year)}
+                      style={vinDecoded && vinDecodedData?.year ? { backgroundColor: '#f0fdf4', borderColor: '#10b981' } : {}}
                     />
                   </div>
 
@@ -456,11 +511,11 @@ const AddVehicle = () => {
                       value={formData.odometer}
                       onChange={handleChange}
                       min="0"
-                      max="500000"
+                      max="200000"
                       placeholder="Enter mileage"
                       required
                     />
-                    <span className="form-hint">Max: 500,000</span>
+                    <span className="form-hint">Max: 200,000</span>
                   </div>
 
                   <div className="form-group">
