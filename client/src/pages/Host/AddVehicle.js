@@ -357,7 +357,7 @@ const AddVehicle = () => {
                       border: '1px solid #10b981',
                       fontSize: '0.9rem'
                     }}>
-                      VIN decoded successfully{formData.make || formData.model ? `: ${formData.year} ${formData.make} ${formData.model}`.trim() : ''}. Make, model, and year are locked to match your VIN. To change them, clear the VIN field above.
+                      VIN decoded successfully{formData.make || formData.model ? `: ${formData.year} ${formData.make} ${formData.model}`.trim() : ''}. Make and year are locked to match your VIN. Model is editable — verify it matches your vehicle. To change make or year, clear the VIN field above.
                     </div>
                   )}
                   {vinMismatch && (
@@ -427,14 +427,14 @@ const AddVehicle = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Model * {vinDecodedData?.model && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-verified</span>}</label>
+                    <label className="form-label">Model * {vinDecodedData?.model && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-decoded</span>}</label>
                     {vinDecoded && formData.model ? (
                       <input
                         type="text"
                         name="model"
                         className="form-input"
                         value={formData.model}
-                        readOnly={!!(vinDecoded && vinDecodedData?.model)}
+                        onChange={handleChange}
                         style={vinDecoded && vinDecodedData?.model ? { backgroundColor: '#f0fdf4', borderColor: '#10b981' } : {}}
                         required
                       />
@@ -458,6 +458,11 @@ const AddVehicle = () => {
                     {!formData.make && !vinDecoded && (
                       <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                         Please select a brand first
+                      </p>
+                    )}
+                    {vinDecoded && vinDecodedData?.model && (
+                      <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        Verify this matches your vehicle. You can edit if needed.
                       </p>
                     )}
                   </div>
