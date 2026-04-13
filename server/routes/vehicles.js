@@ -388,6 +388,40 @@ router.post('/', auth, async (req, res) => {
     const vehicleData = cleanVehicleData({ ...req.body });
     vehicleData.host = req.user._id;
 
+    // Server-side VIN validation: re-decode and compare make/year
+    if (vehicleData.vin && vehicleData.vin.length === 17) {
+      try {
+        const vinResponse = await axios.get(
+          `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vehicleData.vin}?format=json`
+        );
+        const vinResults = vinResponse.data.Results;
+        const getVinValue = (variableId) => {
+          const item = vinResults.find(r => r.VariableId === variableId);
+          return item?.Value && item.Value.trim() !== '' ? item.Value.trim() : null;
+        };
+        const vinMake = getVinValue(26);
+        const vinYear = getVinValue(29);
+
+        if (vinMake && vehicleData.make) {
+          if (vinMake.toLowerCase() !== vehicleData.make.toLowerCase()) {
+            return res.status(400).json({
+              message: `VIN mismatch: VIN indicates make "${vinMake}" but "${vehicleData.make}" was submitted. Please correct the vehicle details.`
+            });
+          }
+        }
+        if (vinYear && vehicleData.year) {
+          if (String(vinYear) !== String(vehicleData.year)) {
+            return res.status(400).json({
+              message: `VIN mismatch: VIN indicates year "${vinYear}" but "${vehicleData.year}" was submitted. Please correct the vehicle details.`
+            });
+          }
+        }
+      } catch (vinErr) {
+        // NHTSA API unavailable - don't block vehicle creation
+        console.log('⚠️ VIN validation skipped (NHTSA unavailable):', vinErr.message);
+      }
+    }
+
     // Geocode the vehicle location to get coordinates
     if (vehicleData.location) {
       const addressString = buildAddressString(vehicleData.location);

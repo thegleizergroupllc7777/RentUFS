@@ -68,6 +68,8 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [vinLoading, setVinLoading] = useState(false);
   const [vinDecoded, setVinDecoded] = useState(false);
+  const [vinDecodedData, setVinDecodedData] = useState(null);
+  const [vinMismatch, setVinMismatch] = useState(null);
   const [faceVerification, setFaceVerification] = useState(null);
   const [licenseOcrResult, setLicenseOcrResult] = useState(null);
   const [emailOtp, setEmailOtp] = useState({
@@ -167,6 +169,12 @@ const Register = () => {
         transmission: decoded.transmission || prev.transmission
       }));
       setVinDecoded(true);
+      setVinDecodedData({
+        make: decoded.make || '',
+        model: decoded.model || '',
+        year: decoded.year || null
+      });
+      setVinMismatch(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to decode VIN. Please enter vehicle details manually.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -417,6 +425,24 @@ const Register = () => {
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
+    }
+
+    // Block submission if VIN-decoded data doesn't match entered data
+    if (vinDecodedData) {
+      const mismatches = [];
+      if (vinDecodedData.make && vehicleData.make && vinDecodedData.make.toLowerCase() !== vehicleData.make.toLowerCase()) {
+        mismatches.push(`Make: VIN says "${vinDecodedData.make}" but you selected "${vehicleData.make}"`);
+      }
+      if (vinDecodedData.year && vehicleData.year && String(vinDecodedData.year) !== String(vehicleData.year)) {
+        mismatches.push(`Year: VIN says "${vinDecodedData.year}" but you entered "${vehicleData.year}"`);
+      }
+      if (mismatches.length > 0) {
+        setError(`Vehicle details don't match VIN. ${mismatches.join('. ')}. Please correct the fields or re-enter the VIN.`);
+        setVinMismatch(mismatches);
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
     }
 
     // Validate that at least Photo 1 is uploaded
@@ -984,6 +1010,8 @@ const Register = () => {
                         onChange={(e) => {
                           handleVehicleChange(e);
                           setVinDecoded(false);
+                          setVinDecodedData(null);
+                          setVinMismatch(null);
                         }}
                         placeholder="Enter 17-character VIN"
                         maxLength="17"
@@ -1016,20 +1044,35 @@ const Register = () => {
                         border: '1px solid #10b981',
                         fontSize: '0.9rem'
                       }}>
-                        VIN decoded: {vehicleData.year} {vehicleData.make} {vehicleData.model}. Verify details below.
+                        VIN decoded: {vehicleData.year} {vehicleData.make} {vehicleData.model}. Make, model, and year are locked to match your VIN. To change them, clear the VIN field above.
+                      </div>
+                    )}
+                    {vinMismatch && (
+                      <div style={{
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        backgroundColor: '#fffbeb',
+                        color: '#92400e',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #f59e0b',
+                        fontSize: '0.9rem'
+                      }}>
+                        {vinMismatch.map((msg, i) => <div key={i}>{msg}</div>)}
                       </div>
                     )}
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Make</label>
+                      <label className="form-label">Make {vinDecodedData?.make && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-verified</span>}</label>
                       <select
                         name="make"
                         className="form-select"
                         value={vehicleData.make}
                         onChange={handleVehicleChange}
                         required
+                        disabled={!!(vinDecoded && vinDecodedData?.make)}
+                        style={vinDecoded && vinDecodedData?.make ? { backgroundColor: '#f0fdf4', borderColor: '#10b981' } : {}}
                       >
                         <option value="">Select a brand</option>
                         <option value="Acura">Acura</option>
@@ -1077,14 +1120,15 @@ const Register = () => {
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">Model</label>
+                      <label className="form-label">Model {vinDecodedData?.model && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-verified</span>}</label>
                       {vinDecoded && vehicleData.model ? (
                         <input
                           type="text"
                           name="model"
                           className="form-input"
                           value={vehicleData.model}
-                          onChange={handleVehicleChange}
+                          readOnly={!!(vinDecoded && vinDecodedData?.model)}
+                          style={vinDecoded && vinDecodedData?.model ? { backgroundColor: '#f0fdf4', borderColor: '#10b981' } : {}}
                           required
                         />
                       ) : (
@@ -1114,7 +1158,7 @@ const Register = () => {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Year</label>
+                      <label className="form-label">Year {vinDecodedData?.year && vinDecoded && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'normal' }}>VIN-verified</span>}</label>
                       <input
                         type="number"
                         name="year"
@@ -1125,6 +1169,8 @@ const Register = () => {
                         value={vehicleData.year}
                         onChange={handleVehicleChange}
                         required
+                        readOnly={!!(vinDecoded && vinDecodedData?.year)}
+                        style={vinDecoded && vinDecodedData?.year ? { backgroundColor: '#f0fdf4', borderColor: '#10b981' } : {}}
                       />
                     </div>
 
