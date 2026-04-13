@@ -43,7 +43,7 @@ const getOrCreateStripeCustomer = async (user) => {
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { firstName, lastName, phone, userType, profileImage, address, dateOfBirth } = req.body;
+    const { firstName, lastName, phone, userType, profileImage, address, dateOfBirth, businessName } = req.body;
 
     const user = await User.findById(req.user._id);
     if (!user) {
@@ -106,6 +106,15 @@ router.put('/profile', auth, async (req, res) => {
         state: address.state?.trim() || '',
         zipCode: address.zipCode?.trim() || ''
       };
+    }
+
+    if (businessName !== undefined && ['host', 'both'].includes(user.userType)) {
+      const trimmed = businessName.trim();
+      if (trimmed && trimmed.length > 50) {
+        return res.status(400).json({ message: 'Business name must be 50 characters or less' });
+      }
+      user.set('hostInfo.businessName', trimmed);
+      user.set('hostInfo.displayPreference', trimmed ? 'business' : 'personal');
     }
 
     await user.save();

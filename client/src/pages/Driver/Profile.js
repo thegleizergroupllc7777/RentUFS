@@ -134,6 +134,7 @@ const DriverProfile = () => {
     email: '',
     profileImage: '',
     dateOfBirth: '',
+    businessName: '',
     address: {
       street: '',
       apt: '',
@@ -215,6 +216,7 @@ const DriverProfile = () => {
         email: user.email || '',
         profileImage: user.profileImage || '',
         dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : '',
+        businessName: user.hostInfo?.businessName || '',
         address: {
           street: user.address?.street || '',
           apt: user.address?.apt || '',
@@ -528,7 +530,8 @@ const DriverProfile = () => {
         lastName: profileData.lastName,
         phone: profileData.phone,
         dateOfBirth: profileData.dateOfBirth || undefined,
-        address: profileData.address
+        address: profileData.address,
+        ...(isHost ? { businessName: profileData.businessName } : {})
       }, { headers: { Authorization: `Bearer ${token}` } });
       setUser(response.data);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -954,6 +957,17 @@ const DriverProfile = () => {
             <input type="text" className="form-input" value={profileData.lastName}
               onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value.replace(/[^a-zA-Z\s\-'.]/g, '') }))} maxLength="30" required />
           </div>
+          {isHost && (
+            <div className="form-group">
+              <label className="form-label">Business Name</label>
+              <input type="text" className="form-input" value={profileData.businessName}
+                onChange={(e) => setProfileData(prev => ({ ...prev, businessName: e.target.value }))}
+                placeholder="e.g. United Fleet Services" maxLength="50" />
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                {profileData.businessName ? 'Shown to drivers on your listings' : 'Optional — drivers will see your first name if not set'}
+              </p>
+            </div>
+          )}
           <div className="form-group">
             <label className="form-label">Email</label>
             {!emailEditing ? (
