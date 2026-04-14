@@ -71,7 +71,7 @@ class MapErrorBoundary extends Component {
 const Marketplace = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('map');
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
