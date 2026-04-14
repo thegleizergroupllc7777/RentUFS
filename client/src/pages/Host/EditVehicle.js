@@ -236,6 +236,33 @@ const EditVehicle = () => {
     setError('');
     setSaving(true);
 
+    // Validate pricing
+    const dailyPrice = parseFloat(formData.pricePerDay);
+    if (!dailyPrice || dailyPrice < 1 || dailyPrice > 2500) {
+      setError('Price per day must be between $1 and $2,500');
+      setSaving(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (formData.pricePerWeek !== '' && formData.pricePerWeek != null) {
+      const weeklyPrice = parseFloat(formData.pricePerWeek);
+      if (weeklyPrice < 1 || weeklyPrice > 10000) {
+        setError('Price per week must be between $1 and $10,000');
+        setSaving(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+    if (formData.pricePerMonth !== '' && formData.pricePerMonth != null) {
+      const monthlyPrice = parseFloat(formData.pricePerMonth);
+      if (monthlyPrice < 1 || monthlyPrice > 25000) {
+        setError('Price per month must be between $1 and $25,000');
+        setSaving(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
     try {
       // Convert any remaining base64 images to server files before saving
       let processedImages = formData.images;
@@ -947,10 +974,14 @@ const EditVehicle = () => {
                     value={formData.pricePerDay}
                     onChange={handleChange}
                     min="1"
+                    max="2500"
                     step="0.01"
                     placeholder="e.g., 50"
                     required
                   />
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    $1 - $2,500 per day
+                  </p>
                 </div>
 
                 <div className="form-group">
@@ -962,11 +993,12 @@ const EditVehicle = () => {
                     value={formData.pricePerWeek}
                     onChange={handleChange}
                     min="1"
+                    max="10000"
                     step="0.01"
                     placeholder="e.g., 300 (optional - usually discounted)"
                   />
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    Leave blank if you don't offer weekly rentals
+                    Leave blank if you don't offer weekly rentals (max $10,000)
                   </p>
                 </div>
 
@@ -979,11 +1011,12 @@ const EditVehicle = () => {
                     value={formData.pricePerMonth}
                     onChange={handleChange}
                     min="1"
+                    max="25000"
                     step="0.01"
                     placeholder="e.g., 1000 (optional - usually discounted)"
                   />
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    Leave blank if you don't offer monthly rentals
+                    Leave blank if you don't offer monthly rentals (max $25,000)
                   </p>
                 </div>
               </div>

@@ -366,6 +366,29 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Helper: validate pricing fields, returns error message or null
+function validatePricing(data) {
+  if (data.pricePerDay != null) {
+    const daily = parseFloat(data.pricePerDay);
+    if (isNaN(daily) || daily < 1 || daily > 2500) {
+      return 'Price per day must be between $1 and $2,500';
+    }
+  }
+  if (data.pricePerWeek != null && data.pricePerWeek !== '' && data.pricePerWeek !== undefined) {
+    const weekly = parseFloat(data.pricePerWeek);
+    if (isNaN(weekly) || weekly < 1 || weekly > 10000) {
+      return 'Price per week must be between $1 and $10,000';
+    }
+  }
+  if (data.pricePerMonth != null && data.pricePerMonth !== '' && data.pricePerMonth !== undefined) {
+    const monthly = parseFloat(data.pricePerMonth);
+    if (isNaN(monthly) || monthly < 1 || monthly > 25000) {
+      return 'Price per month must be between $1 and $25,000';
+    }
+  }
+  return null;
+}
+
 // Helper: clean vehicle data before saving
 function cleanVehicleData(data) {
   // Remove empty strings from optional numeric fields to prevent Mongoose cast errors
@@ -385,6 +408,11 @@ function cleanVehicleData(data) {
 // Create vehicle (host only)
 router.post('/', auth, async (req, res) => {
   try {
+    const priceError = validatePricing(req.body);
+    if (priceError) {
+      return res.status(400).json({ message: priceError });
+    }
+
     const vehicleData = cleanVehicleData({ ...req.body });
     vehicleData.host = req.user._id;
 
@@ -488,6 +516,11 @@ router.post('/', auth, async (req, res) => {
 // Update vehicle
 router.put('/:id', auth, async (req, res) => {
   try {
+    const priceError = validatePricing(req.body);
+    if (priceError) {
+      return res.status(400).json({ message: priceError });
+    }
+
     const updateData = cleanVehicleData({ ...req.body });
 
     // Nickname cannot be changed after creation
