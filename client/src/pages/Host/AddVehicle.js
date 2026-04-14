@@ -6,7 +6,6 @@ import ImageUpload, { resolveImageUrl } from '../../components/ImageUpload';
 import AddressAutocomplete from '../../components/AddressAutocomplete';
 import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
-import RegistrationOCR from '../../components/RegistrationOCR';
 import API_URL from '../../config/api';
 import './Host.css';
 
@@ -177,6 +176,22 @@ const AddVehicle = () => {
         make: value,
         model: ''
       });
+    } else if (name === 'pricePerDay' || name === 'pricePerWeek' || name === 'pricePerMonth') {
+      const maxLimits = { pricePerDay: 500, pricePerWeek: 2500, pricePerMonth: 5000 };
+      let priceValue = value;
+      if (value !== '') {
+        const num = parseFloat(value);
+        if (!isNaN(num) && num > maxLimits[name]) {
+          priceValue = String(maxLimits[name]);
+        }
+        if (!isNaN(num) && num < 0) {
+          priceValue = '';
+        }
+      }
+      setFormData({
+        ...formData,
+        [name]: priceValue
+      });
     } else {
       setFormData({
         ...formData,
@@ -251,16 +266,16 @@ const AddVehicle = () => {
 
     // Validate pricing
     const dailyPrice = parseFloat(formData.pricePerDay);
-    if (!dailyPrice || dailyPrice < 1 || dailyPrice > 2500) {
-      setError('Price per day must be between $1 and $2,500');
+    if (!dailyPrice || dailyPrice < 1 || dailyPrice > 500) {
+      setError('Price per day must be between $1 and $500');
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (formData.pricePerWeek !== '' && formData.pricePerWeek != null) {
       const weeklyPrice = parseFloat(formData.pricePerWeek);
-      if (weeklyPrice < 1 || weeklyPrice > 10000) {
-        setError('Price per week must be between $1 and $10,000');
+      if (weeklyPrice < 1 || weeklyPrice > 2500) {
+        setError('Price per week must be between $1 and $2,500');
         setLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -268,8 +283,8 @@ const AddVehicle = () => {
     }
     if (formData.pricePerMonth !== '' && formData.pricePerMonth != null) {
       const monthlyPrice = parseFloat(formData.pricePerMonth);
-      if (monthlyPrice < 1 || monthlyPrice > 25000) {
-        setError('Price per month must be between $1 and $25,000');
+      if (monthlyPrice < 1 || monthlyPrice > 5000) {
+        setError('Price per month must be between $1 and $5,000');
         setLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -875,20 +890,6 @@ const AddVehicle = () => {
                   </div>
                 )}
 
-                {/* OCR validation of registration document */}
-                <RegistrationOCR
-                  registrationImage={formData.registrationImage}
-                  enteredPlate={formData.licensePlate}
-                  enteredState={formData.registrationState}
-                  enteredExpiration={formData.registrationExpiration}
-                  enteredMake={formData.make}
-                  enteredModel={formData.model}
-                  enteredYear={formData.year}
-                  onOcrResult={(result) => {
-                    console.log('📋 Registration OCR result:', result);
-                  }}
-                />
-
                 <div className="form-row" style={{ marginTop: '1rem' }}>
                   <div className="form-group" style={{ flex: '1' }}>
                     <label className="form-label">License Plate *</label>
@@ -1041,13 +1042,13 @@ const AddVehicle = () => {
                     value={formData.pricePerDay}
                     onChange={handleChange}
                     min="1"
-                    max="2500"
+                    max="500"
                     step="0.01"
                     placeholder="e.g., 50"
                     required
                   />
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    $1 - $2,500 per day
+                    $1 - $500 per day
                   </p>
                 </div>
 
@@ -1060,12 +1061,12 @@ const AddVehicle = () => {
                     value={formData.pricePerWeek}
                     onChange={handleChange}
                     min="1"
-                    max="10000"
+                    max="2500"
                     step="0.01"
                     placeholder="e.g., 300 (optional - usually discounted)"
                   />
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    Leave blank if you don't offer weekly rentals (max $10,000)
+                    Leave blank if you don't offer weekly rentals (max $2,500)
                   </p>
                 </div>
 
@@ -1078,12 +1079,12 @@ const AddVehicle = () => {
                     value={formData.pricePerMonth}
                     onChange={handleChange}
                     min="1"
-                    max="25000"
+                    max="5000"
                     step="0.01"
                     placeholder="e.g., 1000 (optional - usually discounted)"
                   />
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    Leave blank if you don't offer monthly rentals (max $25,000)
+                    Leave blank if you don't offer monthly rentals (max $5,000)
                   </p>
                 </div>
               </div>
