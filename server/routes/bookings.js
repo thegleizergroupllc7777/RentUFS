@@ -154,6 +154,15 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid date format' });
     }
 
+    // Reject bookings with a pick-up date+time in the past
+    const now = new Date();
+    const pickupHour = parseInt((pickupTime || '10:00').split(':')[0], 10);
+    const pickupDateTime = new Date(start);
+    pickupDateTime.setHours(pickupHour, 0, 0, 0);
+    if (pickupDateTime <= now) {
+      return res.status(400).json({ message: 'Pick-up time has already passed. Please select a later time or a future date.' });
+    }
+
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
     if (totalDays < 1) {
