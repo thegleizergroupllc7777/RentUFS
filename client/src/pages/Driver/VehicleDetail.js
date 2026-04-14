@@ -36,6 +36,15 @@ const VehicleDetail = () => {
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentHour, setCurrentHour] = useState(new Date().getHours());
+
+  // Refresh current hour every minute so time options stay accurate
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentHour(new Date().getHours());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -216,6 +225,35 @@ const VehicleDetail = () => {
     }
   };
 
+  // Check if the selected start date is today
+  const isStartDateToday = bookingData.startDate === toLocalDateStr(new Date());
+
+  // Build the list of available pickup time options
+  const availableTimeOptions = (() => {
+    const allHours = Array.from({ length: 24 }, (_, i) => {
+      const val = String(i).padStart(2, '0') + ':00';
+      const h12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
+      const ampm = i >= 12 ? 'PM' : 'AM';
+      return { value: val, label: `${h12}:00 ${ampm}` };
+    });
+    if (!isStartDateToday) return allHours;
+    // Only show hours that are still in the future (at least next hour)
+    return allHours.filter(opt => parseInt(opt.value) > currentHour);
+  })();
+
+  // Auto-advance pickupTime when the currently selected time is no longer available
+  useEffect(() => {
+    if (availableTimeOptions.length > 0) {
+      const currentStillAvailable = availableTimeOptions.some(
+        opt => opt.value === bookingData.pickupTime
+      );
+      if (!currentStillAvailable) {
+        const next = availableTimeOptions[0].value;
+        setBookingData(prev => ({ ...prev, pickupTime: next, dropoffTime: next }));
+      }
+    }
+  }, [isStartDateToday, currentHour, bookingData.startDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleBooking = async (e) => {
     e.preventDefault();
 
@@ -239,6 +277,15 @@ const VehicleDetail = () => {
     if (!bookingData.startDate) {
       setError('Please select a pick-up date');
       return;
+    }
+
+    // Prevent booking with a past pick-up time on today's date
+    if (bookingData.startDate === toLocalDateStr(new Date())) {
+      const selectedHour = parseInt(bookingData.pickupTime.split(':')[0], 10);
+      if (selectedHour <= new Date().getHours()) {
+        setError('Pick-up time has already passed. Please select a later time or a future date.');
+        return;
+      }
     }
 
     if (!bookingData.endDate) {
@@ -681,44 +728,37 @@ const VehicleDetail = () => {
                       name="startDate"
                       value={bookingData.startDate}
                       onChange={handleBookingChange}
-                      min={toLocalDateStr(new Date())}
+                      min={(() => {
+                        // If no hours left today (11 PM or later), set min to tomorrow
+                        if (currentHour >= 23) {
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          return toLocalDateStr(tomorrow);
+                        }
+                        return toLocalDateStr(new Date());
+                      })()}
                       required
                     />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Pick-up Time</label>
-                    <select
-                      name="pickupTime"
-                      className="form-select"
-                      value={bookingData.pickupTime}
-                      onChange={handleBookingChange}
-                    >
-                      <option value="00:00">12:00 AM</option>
-                      <option value="01:00">1:00 AM</option>
-                      <option value="02:00">2:00 AM</option>
-                      <option value="03:00">3:00 AM</option>
-                      <option value="04:00">4:00 AM</option>
-                      <option value="05:00">5:00 AM</option>
-                      <option value="06:00">6:00 AM</option>
-                      <option value="07:00">7:00 AM</option>
-                      <option value="08:00">8:00 AM</option>
-                      <option value="09:00">9:00 AM</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="13:00">1:00 PM</option>
-                      <option value="14:00">2:00 PM</option>
-                      <option value="15:00">3:00 PM</option>
-                      <option value="16:00">4:00 PM</option>
-                      <option value="17:00">5:00 PM</option>
-                      <option value="18:00">6:00 PM</option>
-                      <option value="19:00">7:00 PM</option>
-                      <option value="20:00">8:00 PM</option>
-                      <option value="21:00">9:00 PM</option>
-                      <option value="22:00">10:00 PM</option>
-                      <option value="23:00">11:00 PM</option>
-                    </select>
+                    {isStartDateToday && availableTimeOptions.length === 0 ? (
+                      <div className="form-input" style={{ backgroundColor: '#f3f4f6', color: '#ef4444', cursor: 'default' }}>
+                        No times available today — please pick a future date
+                      </div>
+                    ) : (
+                      <select
+                        name="pickupTime"
+                        className="form-select"
+                        value={bookingData.pickupTime}
+                        onChange={handleBookingChange}
+                      >
+                        {availableTimeOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div className="form-group">
