@@ -370,20 +370,20 @@ router.get('/:id', async (req, res) => {
 function validatePricing(data) {
   if (data.pricePerDay != null) {
     const daily = parseFloat(data.pricePerDay);
-    if (isNaN(daily) || daily < 1 || daily > 2500) {
-      return 'Price per day must be between $1 and $2,500';
+    if (isNaN(daily) || daily < 1 || daily > 500) {
+      return 'Price per day must be between $1 and $500';
     }
   }
   if (data.pricePerWeek != null && data.pricePerWeek !== '' && data.pricePerWeek !== undefined) {
     const weekly = parseFloat(data.pricePerWeek);
-    if (isNaN(weekly) || weekly < 1 || weekly > 10000) {
-      return 'Price per week must be between $1 and $10,000';
+    if (isNaN(weekly) || weekly < 1 || weekly > 2500) {
+      return 'Price per week must be between $1 and $2,500';
     }
   }
   if (data.pricePerMonth != null && data.pricePerMonth !== '' && data.pricePerMonth !== undefined) {
     const monthly = parseFloat(data.pricePerMonth);
-    if (isNaN(monthly) || monthly < 1 || monthly > 25000) {
-      return 'Price per month must be between $1 and $25,000';
+    if (isNaN(monthly) || monthly < 1 || monthly > 5000) {
+      return 'Price per month must be between $1 and $5,000';
     }
   }
   return null;

@@ -100,15 +100,18 @@ const vehicleSchema = new mongoose.Schema({
   pricePerDay: {
     type: Number,
     required: true,
-    min: 0
+    min: 1,
+    max: 500
   },
   pricePerWeek: {
     type: Number,
-    min: 0
+    min: 1,
+    max: 2500
   },
   pricePerMonth: {
     type: Number,
-    min: 0
+    min: 1,
+    max: 5000
   },
   images: [{
     type: String
