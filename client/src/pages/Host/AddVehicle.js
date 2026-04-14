@@ -6,7 +6,6 @@ import ImageUpload, { resolveImageUrl } from '../../components/ImageUpload';
 import AddressAutocomplete from '../../components/AddressAutocomplete';
 import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
-import RegistrationOCR from '../../components/RegistrationOCR';
 import API_URL from '../../config/api';
 import './Host.css';
 
@@ -874,20 +873,6 @@ const AddVehicle = () => {
                     ✅ Registration document uploaded successfully
                   </div>
                 )}
-
-                {/* OCR validation of registration document */}
-                <RegistrationOCR
-                  registrationImage={formData.registrationImage}
-                  enteredPlate={formData.licensePlate}
-                  enteredState={formData.registrationState}
-                  enteredExpiration={formData.registrationExpiration}
-                  enteredMake={formData.make}
-                  enteredModel={formData.model}
-                  enteredYear={formData.year}
-                  onOcrResult={(result) => {
-                    console.log('📋 Registration OCR result:', result);
-                  }}
-                />
 
                 <div className="form-row" style={{ marginTop: '1rem' }}>
                   <div className="form-group" style={{ flex: '1' }}>
