@@ -1,0 +1,234 @@
+.reg-ocr-container {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 2px solid #374151;
+  background: #1a1a2e;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.reg-ocr-match {
+  border-color: #10b981;
+  background: #062e1f;
+}
+
+.reg-ocr-warning {
+  border-color: #ef4444;
+  background: #2e0606;
+}
+
+.reg-ocr-partial {
+  border-color: #f59e0b;
+  background: #2e2306;
+}
+
+.reg-ocr-error {
+  border-color: #f59e0b;
+  background: #2e2306;
+}
+
+.reg-ocr-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.reg-ocr-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  flex-shrink: 0;
+  background: #374151;
+  color: #9ca3af;
+}
+
+.reg-ocr-match .reg-ocr-icon {
+  background: #10b981;
+  color: #fff;
+}
+
+.reg-ocr-warning .reg-ocr-icon {
+  background: #ef4444;
+  color: #fff;
+}
+
+.reg-ocr-partial .reg-ocr-icon,
+.reg-ocr-error .reg-ocr-icon {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.reg-ocr-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.reg-ocr-match .reg-ocr-title {
+  color: #6ee7b7;
+}
+
+.reg-ocr-warning .reg-ocr-title {
+  color: #fca5a5;
+}
+
+.reg-ocr-partial .reg-ocr-title,
+.reg-ocr-error .reg-ocr-title {
+  color: #fcd34d;
+}
+
+.reg-ocr-progress {
+  margin-top: 0.75rem;
+  height: 4px;
+  background: #374151;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.reg-ocr-progress-bar {
+  height: 100%;
+  background: #10b981;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.reg-ocr-results {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #374151;
+}
+
+/* Individual check items */
+.reg-ocr-check-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  font-size: 0.88rem;
+}
+
+.reg-ocr-check-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.reg-ocr-check-pass .reg-ocr-check-icon {
+  background: #10b981;
+  color: #fff;
+}
+
+.reg-ocr-check-fail .reg-ocr-check-icon {
+  background: #ef4444;
+  color: #fff;
+}
+
+.reg-ocr-check-skip .reg-ocr-check-icon {
+  background: #4b5563;
+  color: #9ca3af;
+}
+
+.reg-ocr-check-label {
+  font-weight: 600;
+  color: #d1d5db;
+}
+
+.reg-ocr-check-msg {
+  color: #9ca3af;
+}
+
+.reg-ocr-check-pass .reg-ocr-check-msg {
+  color: #6ee7b7;
+}
+
+.reg-ocr-check-fail .reg-ocr-check-msg {
+  color: #fca5a5;
+}
+
+/* Vehicle info tags */
+.reg-ocr-vehicle-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  margin-top: 0.25rem;
+}
+
+.reg-ocr-vehicle-label {
+  font-weight: 600;
+  color: #d1d5db;
+  font-size: 0.88rem;
+}
+
+.reg-ocr-vehicle-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.reg-ocr-vehicle-found {
+  background: #062e1f;
+  color: #6ee7b7;
+  border: 1px solid #10b981;
+}
+
+.reg-ocr-vehicle-missing {
+  background: #2e0606;
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+/* Messages */
+.reg-ocr-warning-msg {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #fca5a5;
+  line-height: 1.4;
+}
+
+.reg-ocr-success-msg {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #6ee7b7;
+  line-height: 1.4;
+}
+
+.reg-ocr-error-msg {
+  font-size: 0.85rem;
+  color: #fcd34d;
+  line-height: 1.4;
+}
+
+/* Retry button */
+.reg-ocr-retry {
+  margin-top: 0.75rem;
+  background: none;
+  border: 1px solid #4b5563;
+  color: #d1d5db;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.reg-ocr-retry:hover {
+  background: #374151;
+  border-color: #6b7280;
+}
