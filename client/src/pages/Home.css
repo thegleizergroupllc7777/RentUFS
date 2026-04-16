@@ -154,9 +154,20 @@
 .ufs-hero-bg {
   position: absolute;
   inset: 0;
-  background:
+  background-color: #0a0a0a;
+  /*
+   * Layered background: if /images/hero.jpg exists it will render beneath
+   * a dark overlay for text legibility. If the image is missing the CSS
+   * gradient fallback below remains visible — nothing breaks.
+   */
+  background-image:
+    linear-gradient(135deg, rgba(10, 10, 10, 0.78) 0%, rgba(10, 10, 10, 0.55) 50%, rgba(31, 41, 55, 0.72) 100%),
+    url('/images/hero.jpg'),
     radial-gradient(ellipse at 70% 40%, rgba(0, 255, 102, 0.12), transparent 60%),
     linear-gradient(135deg, #0a0a0a 0%, #151515 50%, #1f2937 100%);
+  background-size: cover, cover, auto, auto;
+  background-position: center;
+  background-repeat: no-repeat;
   z-index: 0;
 }
 
@@ -323,9 +334,17 @@
 .ufs-showcase-bg {
   position: absolute;
   inset: 0;
-  background:
+  background-color: #0a0a0a;
+  /* Layered: /images/showcase.jpg renders if present, otherwise the
+     gradient fallback shows through. */
+  background-image:
+    linear-gradient(90deg, rgba(10, 10, 10, 0.82) 0%, rgba(26, 26, 26, 0.55) 50%, rgba(10, 10, 10, 0.82) 100%),
+    url('/images/showcase.jpg'),
     radial-gradient(ellipse at 20% 50%, rgba(0, 255, 102, 0.1), transparent 50%),
     linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+  background-size: cover, cover, auto, auto;
+  background-position: center;
+  background-repeat: no-repeat;
   z-index: 0;
 }
 
@@ -459,7 +478,14 @@
   min-height: 400px;
   border-radius: 16px;
   overflow: hidden;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%);
+  background-color: #0a0a0a;
+  background-image:
+    linear-gradient(135deg, rgba(10, 10, 10, 0.55) 0%, rgba(31, 41, 55, 0.4) 100%),
+    url('/images/showroom.jpg'),
+    linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%);
+  background-size: cover, cover, auto;
+  background-position: center;
+  background-repeat: no-repeat;
   position: relative;
   display: flex;
   align-items: center;
@@ -524,83 +550,6 @@
   font-weight: 700;
   font-size: 0.85rem;
   margin-top: 0.1rem;
-}
-
-/* ==========================================================================
-   3 EASY STEPS
-   ========================================================================== */
-.ufs-steps {
-  padding: 6rem 0;
-  background: #ffffff;
-}
-
-.ufs-steps-header {
-  text-align: center;
-  max-width: 720px;
-  margin: 0 auto 3.5rem;
-}
-
-.ufs-steps-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  position: relative;
-}
-
-.ufs-steps-grid::before {
-  content: '';
-  position: absolute;
-  top: 36px;
-  left: 16%;
-  right: 16%;
-  height: 2px;
-  background: repeating-linear-gradient(90deg, #d1d5db 0 8px, transparent 8px 16px);
-  z-index: 0;
-}
-
-.ufs-step-card {
-  text-align: center;
-  padding: 1.5rem;
-  position: relative;
-  z-index: 1;
-  background: #ffffff;
-}
-
-.ufs-step-number {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: #00FF66;
-  color: #000000;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
-  font-weight: 800;
-  margin-bottom: 1.25rem;
-  box-shadow: 0 10px 24px rgba(0, 255, 102, 0.3);
-}
-
-.ufs-step-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0a0a0a;
-  margin: 0 0 0.6rem;
-}
-
-.ufs-step-desc {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: #6b7280;
-  margin: 0;
-  max-width: 320px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.ufs-steps-cta {
-  text-align: center;
-  margin-top: 3rem;
 }
 
 /* ==========================================================================
@@ -715,12 +664,26 @@
 }
 
 .ufs-audience-visual--dark {
-  background: linear-gradient(135deg, #151515 0%, #1f2937 100%);
+  background-color: #151515;
+  background-image:
+    linear-gradient(135deg, rgba(21, 21, 21, 0.45) 0%, rgba(31, 41, 55, 0.3) 100%),
+    url('/images/drive.jpg'),
+    linear-gradient(135deg, #151515 0%, #1f2937 100%);
+  background-size: cover, cover, auto;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 1px solid rgba(0, 255, 102, 0.2);
 }
 
 .ufs-audience-visual--light {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%);
+  background-color: #0a0a0a;
+  background-image:
+    linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(31, 41, 55, 0.3) 100%),
+    url('/images/host.jpg'),
+    linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%);
+  background-size: cover, cover, auto;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .ufs-audience-visual::before {
@@ -791,7 +754,13 @@
 
 .ufs-blog-image {
   height: 180px;
+  background-color: #0a0a0a;
+  /* Inline style on each card provides background-image url. This
+     linear-gradient fallback shows when the image is missing. */
   background: linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -1032,10 +1001,6 @@
   .ufs-blog-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-
-  .ufs-steps-grid::before {
-    display: none;
-  }
 }
 
 @media (max-width: 768px) {
@@ -1060,7 +1025,6 @@
   .ufs-features,
   .ufs-who,
   .ufs-search-stops,
-  .ufs-steps,
   .ufs-audience,
   .ufs-blog,
   .ufs-faq,
@@ -1072,7 +1036,6 @@
     min-height: 240px;
   }
 
-  .ufs-steps-grid,
   .ufs-blog-grid {
     grid-template-columns: 1fr;
   }
