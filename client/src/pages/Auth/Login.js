@@ -34,8 +34,15 @@ const Login = () => {
     try {
       const userData = await login(formData.email, formData.password);
 
-      if (userData.userType === 'host' || userData.userType === 'both') {
+      if (userData.userType === 'host') {
         navigate('/host/dashboard');
+      } else if (userData.userType === 'both') {
+        // Respect the user's saved mode preference so the Navbar
+        // (which also reads activeMode) and the landing page agree.
+        // Navbar defaults 'both' users to driver when no preference
+        // is saved, so we mirror that here.
+        const savedMode = localStorage.getItem('activeMode');
+        navigate(savedMode === 'host' ? '/host/dashboard' : '/marketplace');
       } else {
         navigate('/marketplace');
       }
