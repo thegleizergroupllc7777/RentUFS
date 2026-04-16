@@ -5,10 +5,108 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import './Home.css';
 
+const featureCards = [
+  {
+    title: 'Wide Selection',
+    description: 'Choose from sedans, SUVs, trucks, luxury, sports and electric vehicles all in one marketplace.',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+        <circle cx="6.5" cy="16.5" r="2.5"/>
+        <circle cx="16.5" cy="16.5" r="2.5"/>
+      </svg>
+    )
+  },
+  {
+    title: 'Affordable Prices',
+    description: 'Transparent daily, weekly and monthly rates with zero hidden fees. Drivers save, hosts earn more.',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    )
+  },
+  {
+    title: 'Easy Booking',
+    description: 'Reserve a vehicle in minutes. Verify, pick your dates, pay securely and hit the road.',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+        <polyline points="9 16 11 18 15 14"/>
+      </svg>
+    )
+  },
+  {
+    title: '24/7 Support',
+    description: 'Our team is available around the clock to help drivers and hosts with every step of the journey.',
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+        <line x1="6" y1="1" x2="6" y2="4"/>
+        <line x1="10" y1="1" x2="10" y2="4"/>
+        <line x1="14" y1="1" x2="14" y2="4"/>
+      </svg>
+    )
+  }
+];
+
+const stats = [
+  { value: '24/7', label: 'Support', description: 'Around-the-clock help whenever you need it.' },
+  { value: '5,000+', label: 'Happy Customers', description: 'Drivers and hosts trust UFS every month.' },
+  { value: '99%', label: 'Satisfaction', description: 'Top-rated experience from rental to return.' }
+];
+
+const steps = [
+  {
+    number: '1',
+    title: 'Choose Your Car',
+    description: 'Browse our marketplace and pick the perfect vehicle for your trip. Filter by type, price and location.'
+  },
+  {
+    number: '2',
+    title: 'Book Online',
+    description: 'Select your dates, add insurance coverage and complete secure checkout in just a few clicks.'
+  },
+  {
+    number: '3',
+    title: 'Pick Up & Drive',
+    description: 'Meet the host, complete the pickup inspection, and enjoy the road. Return and review when done.'
+  }
+];
+
+const blogPosts = [
+  {
+    id: 1,
+    category: 'Driver Tips',
+    date: 'April 10, 2026',
+    title: 'The Ultimate Guide to Renting on UFS',
+    excerpt: 'Everything you need to know about finding and booking the perfect vehicle for your next journey.'
+  },
+  {
+    id: 2,
+    category: 'Host Tips',
+    date: 'April 8, 2026',
+    title: 'How to Maximize Your Earnings as a Host',
+    excerpt: 'Proven strategies to optimize your listing, set competitive pricing and attract more bookings.'
+  },
+  {
+    id: 3,
+    category: 'Safety',
+    date: 'April 5, 2026',
+    title: 'Understanding Insurance Coverage on UFS',
+    excerpt: 'A detailed breakdown of coverage options so you can rent and host with total confidence.'
+  }
+];
+
 const faqData = [
   {
     question: 'How does booking a car on UFS work?',
-    answer: 'Browse our marketplace, pick a vehicle that fits your needs, choose your dates, and book instantly. Once the host confirms, you\'ll receive pickup details and you\'re ready to go.'
+    answer: "Browse our marketplace, pick a vehicle that fits your needs, choose your dates, and book instantly. Once the host confirms, you'll receive pickup details and you're ready to go."
   },
   {
     question: 'What insurance coverage is included?',
@@ -19,7 +117,7 @@ const faqData = [
     answer: 'Hosts receive payouts directly to their bank account after each completed trip. We charge a flat low fee with ZERO commission — you keep more of what you earn.'
   },
   {
-    question: 'What happens if there\'s damage to the vehicle?',
+    question: "What happens if there's damage to the vehicle?",
     answer: 'Our insurance coverage protects both drivers and hosts. In the event of damage, our support team guides you through the claims process to ensure a fair resolution.'
   },
   {
@@ -46,300 +144,359 @@ const Home = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="hero">
-        <div className="hero-overlay"></div>
-        <div className="container">
-          <div className="hero-content">
-            <h1 className="hero-title">
-              Rent the Perfect Car for Every Journey
-            </h1>
-            <p className="hero-subtitle">
-              Join thousands of drivers and hosts on <span className="brand-highlight">UFS</span>, the trusted peer-to-peer car rental marketplace.
-            </p>
-            <div className="hero-buttons">
-              <Link to={isHost ? "/host/dashboard" : "/marketplace"}>
-                <button className="btn btn-primary btn-lg">
-                  {isHost ? 'My Dashboard' : 'Browse Cars'}
-                </button>
-              </Link>
-              <Link to={isHost ? "/host/add-vehicle" : (isAuthenticated ? "/host/add-vehicle" : "/register?type=host")}>
-                <button className="btn btn-outline btn-lg">
-                  List Your Car
-                </button>
-              </Link>
-            </div>
+      <section className="ufs-hero">
+        <div className="ufs-hero-bg"></div>
+        <div className="ufs-hero-overlay"></div>
+        <div className="container ufs-hero-container">
+          <div className="ufs-hero-location">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span>Jersey City, NJ</span>
           </div>
-        </div>
-        <div className="hero-scroll-indicator">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </div>
-      </section>
-
-      {/* Drive with UFS Section */}
-      <section className="info-section info-section--dark">
-        <div className="container">
-          <div className="info-grid">
-            <div className="info-text">
-              <h2 className="info-title">
-                <span className="brand-highlight">Drive</span> with UFS
-              </h2>
-              <p className="info-subtitle">Seamless renting at your fingertips.</p>
-              <ul className="info-list">
-                <li>
-                  <strong>Find Your Ideal Vehicle:</strong> Choose from a wide range of vehicles for personal use, road trips, or everyday driving.
-                </li>
-                <li>
-                  <strong>Simple Booking:</strong> Verify your account and book a vehicle with just a few clicks. No haggling, no hassle.
-                </li>
-                <li>
-                  <strong>Flexible Usage:</strong> Choose how long you want to rent — daily, weekly, or monthly — and extend your trip at any time.
-                </li>
-                <li>
-                  <strong>Insurance Included:</strong> Every rental comes with insurance coverage so you can drive with peace of mind.
-                </li>
-              </ul>
-              <div className="info-buttons">
-                <Link to="/driver-guide" className="btn btn-outline">Learn More</Link>
-                <Link to="/marketplace" className="btn btn-primary">Find a Car</Link>
-              </div>
-            </div>
-            <div className="info-image">
-              <div className="info-image-placeholder">
-                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5">
-                  <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
-                  <polygon points="16 8 20 12 16 16 16 8"></polygon>
-                  <line x1="23" y1="5" x2="23" y2="19"></line>
-                  <path d="M5 21a7 7 0 0 1 0-14"></path>
-                </svg>
-                <p>Driver Experience</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Host with UFS Section */}
-      <section className="info-section info-section--light">
-        <div className="container">
-          <div className="info-grid info-grid--reversed">
-            <div className="info-text">
-              <h2 className="info-title">
-                <span className="brand-highlight">Host</span> with UFS
-              </h2>
-              <p className="info-subtitle">Rent out your vehicle and earn every month.</p>
-              <ul className="info-list">
-                <li>
-                  <strong>Zero Commission:</strong> Unlike other platforms, we charge a flat low fee. You keep more of what you earn.
-                </li>
-                <li>
-                  <strong>Insurance Protection:</strong> Keep your cars protected and rest easy with our insurance policies. We've got you covered.
-                </li>
-                <li>
-                  <strong>Expand Your Reach:</strong> Showcase your vehicles to a larger audience of vetted, verified drivers.
-                </li>
-                <li>
-                  <strong>Dedicated Support:</strong> From vehicle listing to booking management, our team is here to help you succeed.
-                </li>
-              </ul>
-              <div className="info-buttons">
-                <Link to="/host-guide" className="btn btn-outline-dark">Learn More</Link>
-                <Link to={isAuthenticated ? "/host/add-vehicle" : "/register?type=host"} className="btn btn-primary">List a Car</Link>
-              </div>
-            </div>
-            <div className="info-image">
-              <div className="info-image-placeholder info-image-placeholder--light">
-                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5">
-                  <line x1="12" y1="1" x2="12" y2="23"></line>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-                <p>Start Earning</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose UFS Section */}
-      <section className="why-section">
-        <div className="why-grid">
-          <div className="why-text">
-            <span className="why-label">Why Choose UFS?</span>
-            <h2 className="why-title">
-              Personal use or business, we've got you covered.
-            </h2>
-            <p className="why-description">
-              Whether you're looking for a weekend getaway car, a reliable daily driver, or want to earn money from your vehicle, our platform caters to all your rental needs under one roof.
-            </p>
-            <div className="why-tags">
-              <span className="why-tag">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                Versatile Solutions
-              </span>
-              <span className="why-tag">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-                Streamlined
-              </span>
-            </div>
-            <Link to={isAuthenticated ? "/marketplace" : "/register"} className="btn btn-primary" style={{ marginTop: '1.5rem' }}>
-              Get Started
-            </Link>
-          </div>
-          <div className="why-features">
-            <div className="why-feature-item why-feature-item--active">
-              <h3>All-in-One Platform</h3>
-              <p>Search, book, pay, and manage everything from one place. No jumping between apps or websites.</p>
-            </div>
-            <div className="why-feature-item">
-              <h3>Verified Community</h3>
-              <p>Every driver and host is verified. Our review system and community ratings ensure trust and accountability.</p>
-            </div>
-            <div className="why-feature-item">
-              <h3>Simplicity First</h3>
-              <p>No hidden fees, no complex pricing. Transparent rates and a booking process that takes minutes, not hours.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Guide Cards Section */}
-      <section className="guides-section">
-        <div className="container">
-          <h2 className="section-title">Transform Your Rental Experience</h2>
-          <p className="section-subtitle">
-            Whether you're a vehicle owner looking to maximize earnings or a driver in need of the perfect vehicle, UFS offers unparalleled flexibility, ease, and support.
+          <h1 className="ufs-hero-title">
+            Rent the perfect car<br />for your next <span className="ufs-hero-accent">adventure</span>
+          </h1>
+          <p className="ufs-hero-subtitle">
+            A peer-to-peer marketplace connecting drivers and hosts. Book in minutes, drive in confidence — every trip backed by insurance and 24/7 support.
           </p>
-          <p className="section-subtitle" style={{ marginTop: '0.5rem' }}>
-            Join us today and redefine your rental experience.
-          </p>
-          <div className="guide-cards">
-            <Link to="/driver-guide" className="guide-card">
-              <div className="guide-card-icon">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                  <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                  <line x1="15" y1="9" x2="15.01" y2="9"></line>
-                </svg>
-              </div>
-              <div className="guide-card-content">
-                <h3>Driver Guide</h3>
-                <p>Verification, car selection, and driving</p>
-              </div>
-              <span className="guide-card-cta">Get Started</span>
+          <div className="ufs-hero-actions">
+            <Link to={isHost ? '/host/dashboard' : '/marketplace'}>
+              <button className="ufs-btn ufs-btn-primary">
+                {isHost ? 'My Dashboard' : 'Browse Cars'}
+              </button>
             </Link>
-            <Link to="/host-guide" className="guide-card">
-              <div className="guide-card-icon">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-              </div>
-              <div className="guide-card-content">
-                <h3>Owner Guide</h3>
-                <p>Listing, earning, and managing</p>
-              </div>
-              <span className="guide-card-cta">Get Started</span>
+            <Link to={isHost ? '/host/add-vehicle' : (isAuthenticated ? '/host/add-vehicle' : '/register?type=host')}>
+              <button className="ufs-btn ufs-btn-outline-light">
+                List Your Car
+              </button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="testimonials-section">
+      {/* Feature Cards Section */}
+      <section className="ufs-features">
         <div className="container">
-          <h2 className="section-title" style={{ color: '#ffffff' }}>See Why Our Customers Love UFS</h2>
-          <div className="testimonials-grid">
-            <div className="testimonial-card">
-              <div className="testimonial-stars">
-                {'★'.repeat(5)}
-              </div>
-              <p className="testimonial-text">
-                "As someone who rents out cars, UFS has honestly made my life a lot easier. Managing bookings, staying organized, and connecting with the right renters is way smoother now. I'm really happy I chose UFS."
-              </p>
-              <div className="testimonial-author">
-                <strong>Marcus T.</strong>
-                <span>Vehicle Host</span>
-              </div>
-            </div>
-            <div className="testimonial-card">
-              <div className="testimonial-stars">
-                {'★'.repeat(5)}
-              </div>
-              <p className="testimonial-text">
-                "I've been using UFS for a while now, and I can confidently say it's one of the best rental services out there! The cars are clean, comfortable, and well-maintained, making every ride a smooth experience."
-              </p>
-              <div className="testimonial-author">
-                <strong>Sarah K.</strong>
-                <span>Driver</span>
-              </div>
-            </div>
-            <div className="testimonial-card">
-              <div className="testimonial-stars">
-                {'★'.repeat(5)}
-              </div>
-              <p className="testimonial-text">
-                "UFS has allowed us to maximize utilization of our fleet through consistent rental demand. The user interface is mobile and desktop friendly, making fleet management easier for our staff."
-              </p>
-              <div className="testimonial-author">
-                <strong>James R.</strong>
-                <span>Fleet Owner</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="faq-section">
-        <div className="container">
-          <h2 className="faq-title">Frequently Asked Questions</h2>
-          <div className="faq-list">
-            {faqData.map((item, index) => (
-              <div
-                key={index}
-                className={`faq-item ${openFaq === index ? 'faq-item--open' : ''}`}
-              >
-                <button
-                  className="faq-question"
-                  onClick={() => toggleFaq(index)}
-                >
-                  <span>{item.question}</span>
-                  <svg
-                    className="faq-chevron"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-                <div className="faq-answer">
-                  <p>{item.answer}</p>
-                </div>
+          <div className="ufs-features-grid">
+            {featureCards.map((card, idx) => (
+              <div key={idx} className="ufs-feature-card">
+                <div className="ufs-feature-icon">{card.icon}</div>
+                <h3 className="ufs-feature-title">{card.title}</h3>
+                <p className="ufs-feature-desc">{card.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA Section */}
-      <section className="final-cta">
-        <div className="container text-center">
-          <h2 className="final-cta-title">
-            Not sure if UFS is right for you?
-          </h2>
-          <p className="final-cta-subtitle">
-            Try a daily rental option and experience the flexibility you deserve.
+      {/* Visual Break / Showcase */}
+      <section className="ufs-showcase">
+        <div className="ufs-showcase-bg"></div>
+        <div className="container ufs-showcase-content">
+          <span className="ufs-showcase-eyebrow">Premium Fleet Access</span>
+          <h2 className="ufs-showcase-title">From daily drivers to dream machines.</h2>
+          <p className="ufs-showcase-desc">
+            Whether you need a reliable sedan for your commute or a sports car for the weekend, UFS gives you the keys.
           </p>
-          <Link to={isAuthenticated ? (isHost ? "/host/dashboard" : "/marketplace") : "/register"}>
-            <button className="btn btn-white btn-lg">
-              {isAuthenticated ? (isHost ? 'Go to Dashboard' : 'Browse Cars') : 'Get Started'}
-            </button>
+          <Link to="/marketplace">
+            <button className="ufs-btn ufs-btn-primary">Explore the Marketplace</button>
           </Link>
+        </div>
+      </section>
+
+      {/* Who We Are Section */}
+      <section className="ufs-who">
+        <div className="container">
+          <div className="ufs-who-grid">
+            <div className="ufs-who-text">
+              <span className="ufs-section-eyebrow">Who We Are</span>
+              <h2 className="ufs-section-title">Driving excellence in peer-to-peer car rentals.</h2>
+              <p className="ufs-section-desc">
+                UFS was built by car people for car people. We connect drivers who need a vehicle with hosts who have one to share — all under one trusted, insurance-backed platform.
+              </p>
+              <p className="ufs-section-desc">
+                From daily commuters to weekend adventurers, thousands of members trust UFS to deliver a rental experience that is simple, fair and always reliable.
+              </p>
+              <Link to="/about" className="ufs-text-link">Learn more about us →</Link>
+            </div>
+            <div className="ufs-who-stats">
+              {stats.map((stat, idx) => (
+                <div key={idx} className="ufs-stat-card">
+                  <div className="ufs-stat-value">{stat.value}</div>
+                  <div className="ufs-stat-label">{stat.label}</div>
+                  <p className="ufs-stat-desc">{stat.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Your Search Stops Here Section */}
+      <section className="ufs-search-stops">
+        <div className="container">
+          <div className="ufs-search-grid">
+            <div className="ufs-search-image">
+              <div className="ufs-search-image-inner">
+                <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+                  <circle cx="6.5" cy="16.5" r="2.5"/>
+                  <circle cx="16.5" cy="16.5" r="2.5"/>
+                </svg>
+                <span>Curated Vehicle Showroom</span>
+              </div>
+            </div>
+            <div className="ufs-search-text">
+              <h2 className="ufs-section-title">
+                Your search for rentals <span className="ufs-hero-accent">STOPS</span> here!
+              </h2>
+              <ul className="ufs-check-list">
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Verified community:</strong> Every driver and host is ID-verified.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Zero commission for hosts:</strong> Keep more of every booking.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Insurance on every trip:</strong> Flexible coverage tiers at checkout.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Flexible rentals:</strong> Daily, weekly, monthly — extend anytime.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Transparent pricing:</strong> No hidden fees, no surprises.</span>
+                </li>
+              </ul>
+              <Link to="/marketplace">
+                <button className="ufs-btn ufs-btn-primary">Find Your Car</button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3 Easy Steps Section */}
+      <section className="ufs-steps">
+        <div className="container">
+          <div className="ufs-steps-header">
+            <span className="ufs-section-eyebrow">How It Works</span>
+            <h2 className="ufs-section-title">Rent your car in 3 easy steps</h2>
+            <p className="ufs-section-desc">
+              We made renting and listing as simple as possible. Here's how to get started today.
+            </p>
+          </div>
+          <div className="ufs-steps-grid">
+            {steps.map((step, idx) => (
+              <div key={idx} className="ufs-step-card">
+                <div className="ufs-step-number">{step.number}</div>
+                <h3 className="ufs-step-title">{step.title}</h3>
+                <p className="ufs-step-desc">{step.description}</p>
+              </div>
+            ))}
+          </div>
+          <div className="ufs-steps-cta">
+            <Link to={isAuthenticated ? '/marketplace' : '/register'}>
+              <button className="ufs-btn ufs-btn-primary">Get Started</button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Drive with UFS Section */}
+      <section className="ufs-audience ufs-audience--dark">
+        <div className="container">
+          <div className="ufs-audience-grid">
+            <div className="ufs-audience-text">
+              <span className="ufs-section-eyebrow">For Drivers</span>
+              <h2 className="ufs-section-title ufs-section-title--light">
+                <span className="ufs-hero-accent">Drive</span> with UFS
+              </h2>
+              <p className="ufs-section-desc ufs-section-desc--light">
+                Seamless renting at your fingertips.
+              </p>
+              <ul className="ufs-audience-list">
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Find Your Ideal Vehicle:</strong> A wide range of cars for road trips, commutes or weekend fun.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Simple Booking:</strong> Verify your account and reserve a car in just a few clicks.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Flexible Usage:</strong> Rent daily, weekly or monthly — extend anytime.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Insurance Included:</strong> Every rental comes with coverage options.</span>
+                </li>
+              </ul>
+              <div className="ufs-audience-actions">
+                <Link to="/driver-guide" className="ufs-btn ufs-btn-outline-light">Learn More</Link>
+                <Link to="/marketplace" className="ufs-btn ufs-btn-primary">Find a Car</Link>
+              </div>
+            </div>
+            <div className="ufs-audience-visual ufs-audience-visual--dark">
+              <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="2" ry="2"/>
+                <polygon points="16 8 20 12 16 16 16 8"/>
+                <line x1="23" y1="5" x2="23" y2="19"/>
+                <path d="M5 21a7 7 0 0 1 0-14"/>
+              </svg>
+              <span className="ufs-audience-visual-label">Driver Experience</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Host with UFS Section */}
+      <section className="ufs-audience ufs-audience--light">
+        <div className="container">
+          <div className="ufs-audience-grid ufs-audience-grid--reversed">
+            <div className="ufs-audience-text">
+              <span className="ufs-section-eyebrow">For Hosts</span>
+              <h2 className="ufs-section-title">
+                <span className="ufs-hero-accent">Host</span> with UFS
+              </h2>
+              <p className="ufs-section-desc">
+                Rent out your vehicle and earn every month.
+              </p>
+              <ul className="ufs-audience-list ufs-audience-list--dark">
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Zero Commission:</strong> We charge a flat low fee — you keep more of what you earn.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Insurance Protection:</strong> Keep your cars protected with our coverage policies.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Expand Your Reach:</strong> Showcase vehicles to vetted, verified drivers.</span>
+                </li>
+                <li>
+                  <span className="ufs-check-icon">✓</span>
+                  <span><strong>Dedicated Support:</strong> From listing to booking management, we're here to help.</span>
+                </li>
+              </ul>
+              <div className="ufs-audience-actions">
+                <Link to="/host-guide" className="ufs-btn ufs-btn-outline-dark">Learn More</Link>
+                <Link to={isAuthenticated ? '/host/add-vehicle' : '/register?type=host'} className="ufs-btn ufs-btn-primary">List a Car</Link>
+              </div>
+            </div>
+            <div className="ufs-audience-visual ufs-audience-visual--light">
+              <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              <span className="ufs-audience-visual-label">Start Earning</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Blog Preview Section */}
+      <section className="ufs-blog">
+        <div className="container">
+          <div className="ufs-blog-header">
+            <div>
+              <span className="ufs-section-eyebrow">Blog &amp; News</span>
+              <h2 className="ufs-section-title">Tips, guides and updates</h2>
+            </div>
+            <Link to="/blog" className="ufs-text-link">View all articles →</Link>
+          </div>
+          <div className="ufs-blog-grid">
+            {blogPosts.map(post => (
+              <Link to="/blog" key={post.id} className="ufs-blog-card">
+                <div className="ufs-blog-image">
+                  <span className="ufs-blog-category">{post.category}</span>
+                </div>
+                <div className="ufs-blog-body">
+                  <span className="ufs-blog-date">{post.date}</span>
+                  <h3 className="ufs-blog-title">{post.title}</h3>
+                  <p className="ufs-blog-excerpt">{post.excerpt}</p>
+                  <span className="ufs-blog-link">Read More →</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="ufs-faq">
+        <div className="container">
+          <div className="ufs-faq-grid">
+            <div className="ufs-faq-intro">
+              <span className="ufs-section-eyebrow ufs-section-eyebrow--light">FAQ</span>
+              <h2 className="ufs-section-title ufs-section-title--light">
+                Frequently asked questions
+              </h2>
+              <p className="ufs-section-desc ufs-section-desc--light">
+                Everything you need to know about renting or hosting on UFS. Can't find what you're looking for?
+              </p>
+              <Link to="/faq" className="ufs-text-link ufs-text-link--light">Visit the full FAQ →</Link>
+            </div>
+            <div className="ufs-faq-list">
+              {faqData.map((item, index) => (
+                <div
+                  key={index}
+                  className={`ufs-faq-item ${openFaq === index ? 'is-open' : ''}`}
+                >
+                  <button
+                    className="ufs-faq-question"
+                    onClick={() => toggleFaq(index)}
+                  >
+                    <span>{item.question}</span>
+                    <svg
+                      className="ufs-faq-chevron"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <div className="ufs-faq-answer">
+                    <p>{item.answer}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="ufs-final-cta">
+        <div className="container">
+          <h2 className="ufs-final-cta-title">
+            Ready to hit the <span className="ufs-hero-accent">road</span>?
+          </h2>
+          <p className="ufs-final-cta-subtitle">
+            Join thousands of drivers and hosts already on UFS.
+          </p>
+          <div className="ufs-final-cta-actions">
+            <Link to={isAuthenticated ? (isHost ? '/host/dashboard' : '/marketplace') : '/register'}>
+              <button className="ufs-btn ufs-btn-primary ufs-btn-lg">
+                {isAuthenticated ? (isHost ? 'Go to Dashboard' : 'Browse Cars') : 'Get Started'}
+              </button>
+            </Link>
+            <Link to="/faq">
+              <button className="ufs-btn ufs-btn-outline-light ufs-btn-lg">Got Questions?</button>
+            </Link>
+          </div>
         </div>
       </section>
 
