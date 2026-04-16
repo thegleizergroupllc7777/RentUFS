@@ -61,45 +61,30 @@ const stats = [
   { value: '99%', label: 'Satisfaction', description: 'Top-rated experience from rental to return.' }
 ];
 
-const steps = [
-  {
-    number: '1',
-    title: 'Choose Your Car',
-    description: 'Browse our marketplace and pick the perfect vehicle for your trip. Filter by type, price and location.'
-  },
-  {
-    number: '2',
-    title: 'Book Online',
-    description: 'Select your dates, add insurance coverage and complete secure checkout in just a few clicks.'
-  },
-  {
-    number: '3',
-    title: 'Pick Up & Drive',
-    description: 'Meet the host, complete the pickup inspection, and enjoy the road. Return and review when done.'
-  }
-];
-
 const blogPosts = [
   {
     id: 1,
     category: 'Driver Tips',
     date: 'April 10, 2026',
     title: 'The Ultimate Guide to Renting on UFS',
-    excerpt: 'Everything you need to know about finding and booking the perfect vehicle for your next journey.'
+    excerpt: 'Everything you need to know about finding and booking the perfect vehicle for your next journey.',
+    image: '/images/blog-1.jpg'
   },
   {
     id: 2,
     category: 'Host Tips',
     date: 'April 8, 2026',
     title: 'How to Maximize Your Earnings as a Host',
-    excerpt: 'Proven strategies to optimize your listing, set competitive pricing and attract more bookings.'
+    excerpt: 'Proven strategies to optimize your listing, set competitive pricing and attract more bookings.',
+    image: '/images/blog-2.jpg'
   },
   {
     id: 3,
     category: 'Safety',
     date: 'April 5, 2026',
     title: 'Understanding Insurance Coverage on UFS',
-    excerpt: 'A detailed breakdown of coverage options so you can rent and host with total confidence.'
+    excerpt: 'A detailed breakdown of coverage options so you can rent and host with total confidence.',
+    image: '/images/blog-3.jpg'
   }
 ];
 
@@ -282,33 +267,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* 3 Easy Steps Section */}
-      <section className="ufs-steps">
-        <div className="container">
-          <div className="ufs-steps-header">
-            <span className="ufs-section-eyebrow">How It Works</span>
-            <h2 className="ufs-section-title">Rent your car in 3 easy steps</h2>
-            <p className="ufs-section-desc">
-              We made renting and listing as simple as possible. Here's how to get started today.
-            </p>
-          </div>
-          <div className="ufs-steps-grid">
-            {steps.map((step, idx) => (
-              <div key={idx} className="ufs-step-card">
-                <div className="ufs-step-number">{step.number}</div>
-                <h3 className="ufs-step-title">{step.title}</h3>
-                <p className="ufs-step-desc">{step.description}</p>
-              </div>
-            ))}
-          </div>
-          <div className="ufs-steps-cta">
-            <Link to={isAuthenticated ? '/marketplace' : '/register'}>
-              <button className="ufs-btn ufs-btn-primary">Get Started</button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Drive with UFS Section */}
       <section className="ufs-audience ufs-audience--dark">
         <div className="container">
@@ -416,7 +374,12 @@ const Home = () => {
           <div className="ufs-blog-grid">
             {blogPosts.map(post => (
               <Link to="/blog" key={post.id} className="ufs-blog-card">
-                <div className="ufs-blog-image">
+                <div
+                  className="ufs-blog-image"
+                  style={{
+                    backgroundImage: `linear-gradient(135deg, rgba(10, 10, 10, 0.55) 0%, rgba(31, 41, 55, 0.4) 100%), url('${post.image}'), linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%)`
+                  }}
+                >
                   <span className="ufs-blog-category">{post.category}</span>
                 </div>
                 <div className="ufs-blog-body">
