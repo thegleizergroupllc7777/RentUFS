@@ -115,6 +115,64 @@ const faqData = [
   }
 ];
 
+/*
+ * Image backgrounds are applied via inline styles so that webpack (CRA)
+ * does not try to resolve these public-folder URLs at build time. If a
+ * file is missing from /public/images/, the browser simply skips that
+ * url() layer and the gradient fallbacks below it still render.
+ */
+const heroBgStyle = {
+  backgroundImage:
+    "linear-gradient(135deg, rgba(10, 10, 10, 0.78) 0%, rgba(10, 10, 10, 0.55) 50%, rgba(31, 41, 55, 0.72) 100%), " +
+    "url('/images/hero.jpg'), " +
+    "radial-gradient(ellipse at 70% 40%, rgba(0, 255, 102, 0.12), transparent 60%), " +
+    "linear-gradient(135deg, #0a0a0a 0%, #151515 50%, #1f2937 100%)",
+  backgroundSize: 'cover, cover, auto, auto',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat'
+};
+
+const showcaseBgStyle = {
+  backgroundImage:
+    "linear-gradient(90deg, rgba(10, 10, 10, 0.82) 0%, rgba(26, 26, 26, 0.55) 50%, rgba(10, 10, 10, 0.82) 100%), " +
+    "url('/images/showcase.jpg'), " +
+    "radial-gradient(ellipse at 20% 50%, rgba(0, 255, 102, 0.1), transparent 50%), " +
+    "linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)",
+  backgroundSize: 'cover, cover, auto, auto',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat'
+};
+
+const searchImageStyle = {
+  backgroundImage:
+    "linear-gradient(135deg, rgba(10, 10, 10, 0.55) 0%, rgba(31, 41, 55, 0.4) 100%), " +
+    "url('/images/showroom.jpg'), " +
+    "linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%)",
+  backgroundSize: 'cover, cover, auto',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat'
+};
+
+const audienceVisualDarkStyle = {
+  backgroundImage:
+    "linear-gradient(135deg, rgba(21, 21, 21, 0.45) 0%, rgba(31, 41, 55, 0.3) 100%), " +
+    "url('/images/drive.jpg'), " +
+    "linear-gradient(135deg, #151515 0%, #1f2937 100%)",
+  backgroundSize: 'cover, cover, auto',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat'
+};
+
+const audienceVisualLightStyle = {
+  backgroundImage:
+    "linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(31, 41, 55, 0.3) 100%), " +
+    "url('/images/host.jpg'), " +
+    "linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%)",
+  backgroundSize: 'cover, cover, auto',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat'
+};
+
 const Home = () => {
   const { isAuthenticated, user } = useAuth();
   const isHost = user?.userType === 'host' || user?.userType === 'both';
@@ -130,7 +188,7 @@ const Home = () => {
 
       {/* Hero Section */}
       <section className="ufs-hero">
-        <div className="ufs-hero-bg"></div>
+        <div className="ufs-hero-bg" style={heroBgStyle}></div>
         <div className="ufs-hero-overlay"></div>
         <div className="container ufs-hero-container">
           <div className="ufs-hero-location">
@@ -178,7 +236,7 @@ const Home = () => {
 
       {/* Visual Break / Showcase */}
       <section className="ufs-showcase">
-        <div className="ufs-showcase-bg"></div>
+        <div className="ufs-showcase-bg" style={showcaseBgStyle}></div>
         <div className="container ufs-showcase-content">
           <span className="ufs-showcase-eyebrow">Premium Fleet Access</span>
           <h2 className="ufs-showcase-title">From daily drivers to dream machines.</h2>
@@ -223,7 +281,7 @@ const Home = () => {
       <section className="ufs-search-stops">
         <div className="container">
           <div className="ufs-search-grid">
-            <div className="ufs-search-image">
+            <div className="ufs-search-image" style={searchImageStyle}>
               <div className="ufs-search-image-inner">
                 <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
@@ -302,7 +360,7 @@ const Home = () => {
                 <Link to="/marketplace" className="ufs-btn ufs-btn-primary">Find a Car</Link>
               </div>
             </div>
-            <div className="ufs-audience-visual ufs-audience-visual--dark">
+            <div className="ufs-audience-visual ufs-audience-visual--dark" style={audienceVisualDarkStyle}>
               <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="3" width="15" height="13" rx="2" ry="2"/>
                 <polygon points="16 8 20 12 16 16 16 8"/>
@@ -350,7 +408,7 @@ const Home = () => {
                 <Link to={isAuthenticated ? '/host/add-vehicle' : '/register?type=host'} className="ufs-btn ufs-btn-primary">List a Car</Link>
               </div>
             </div>
-            <div className="ufs-audience-visual ufs-audience-visual--light">
+            <div className="ufs-audience-visual ufs-audience-visual--light" style={audienceVisualLightStyle}>
               <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23"/>
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
