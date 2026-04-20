@@ -33,6 +33,10 @@ const Terms = () => {
               <li><a href="#section-9">Guidelines for Reviews</a></li>
               <li><a href="#section-10">Mobile Application License</a></li>
               <li><a href="#section-11">Social Media</a></li>
+              <li><a href="#section-12">Submissions</a></li>
+              <li><a href="#section-13">Third-Party Website and Content</a></li>
+              <li><a href="#section-14">Site Management</a></li>
+              <li><a href="#section-15">Privacy Policy</a></li>
             </ol>
             <p className="terms-toc-note">Additional sections will be added as the document is completed.</p>
           </div>
@@ -570,18 +574,131 @@ const Terms = () => {
               to disable the connection between your account on the Site and your
               Third-Party Account at any time.
             </p>
+            <p>
+              <strong>
+                PLEASE NOTE THAT YOUR RELATIONSHIP WITH THE THIRD-PARTY SERVICE
+                PROVIDERS ASSOCIATED WITH YOUR THIRD-PARTY ACCOUNTS IS GOVERNED
+                SOLELY BY YOUR AGREEMENT(S) WITH SUCH THIRD-PARTY SERVICE PROVIDERS.
+              </strong>{' '}
+              We make no effort to review any Social Network Content for any purpose,
+              including but not limited to, for accuracy, legality, or
+              non-infringement, and we are not responsible for any Social Network
+              Content. You acknowledge and agree that we may access your email
+              address book associated with a Third-Party Account and your contacts
+              list stored on your mobile device or tablet computer solely for
+              purposes of identifying and informing you of those contacts who have
+              also registered to use the Site. You can deactivate the connection
+              between the Site and your Third-Party Account by contacting us using
+              the contact information below or through your account settings (if
+              applicable). We will attempt to delete any information stored on our
+              servers that was obtained through such Third-Party Account, except the
+              username and profile picture that become associated with your account.
+            </p>
+          </article>
+
+          <article id="section-12" className="terms-section">
+            <h2>12. Submissions</h2>
+            <p>
+              You acknowledge and agree that any questions, comments, suggestions,
+              ideas, feedback, or other information regarding the Site
+              (&ldquo;Submissions&rdquo;) provided by you to us are non-confidential and shall
+              become our sole property. We shall own exclusive rights, including all
+              intellectual property rights, and shall be entitled to the unrestricted
+              use and dissemination of these Submissions for any lawful purpose,
+              commercial or otherwise, without acknowledgment or compensation to you.
+              You hereby waive all moral rights to any such Submissions, and you
+              hereby warrant that any such Submissions are original with you or that
+              you have the right to submit such Submissions. You agree there shall be
+              no recourse against us for any alleged or actual infringement or
+              misappropriation of any proprietary right in your Submissions.
+            </p>
+          </article>
+
+          <article id="section-13" className="terms-section">
+            <h2>13. Third-Party Website and Content</h2>
+            <p>
+              The Site may contain (or you may be sent via the Site) links to other
+              websites (&ldquo;Third-Party Websites&rdquo;) as well as articles, photographs,
+              text, graphics, pictures, designs, music, sound, video, information,
+              applications, software, and other content or items belonging to or
+              originating from third parties (&ldquo;Third-Party Content&rdquo;). Such
+              Third-Party Websites and Third-Party Content are not investigated,
+              monitored, or checked for accuracy, appropriateness, or completeness by
+              us, and we are not responsible for any Third-Party Websites accessed
+              through the Site or any Third-Party Content posted on, available
+              through, or installed from the Site, including the content, accuracy,
+              offensiveness, opinions, reliability, privacy practices, or other
+              policies of or contained in the Third-Party Websites or the Third-Party
+              Content. Inclusion of, linking to, or permitting the use or
+              installation of any Third-Party Websites or any Third-Party Content
+              does not imply approval or endorsement thereof by us. If you decide to
+              leave the Site and access the Third-Party Websites or to use or install
+              any Third-Party Content, you do so at your own risk, and you should be
+              aware these Terms of Service no longer govern. You should review the
+              applicable terms and policies, including privacy and data gathering
+              practices, of any website to which you navigate from the Site or
+              relating to any applications you use or install from the Site.
+            </p>
+            <p>
+              Any purchases you make through Third-Party Websites will be through
+              other websites and from other companies, and we take no responsibility
+              whatsoever in relation to such purchases which are exclusively between
+              you and the applicable third party. You agree and acknowledge that we
+              do not endorse the products or services offered on Third-Party Websites
+              and you shall hold us harmless from any harm caused by your purchase of
+              such products or services. Additionally, you shall hold us harmless
+              from any losses sustained by you or harm caused to you relating to or
+              resulting in any way from any Third-Party Content or any contact with
+              Third-Party Websites.
+            </p>
+          </article>
+
+          <article id="section-14" className="terms-section">
+            <h2>14. Site Management</h2>
+            <p>
+              We reserve the right, but not the obligation, to: (1) monitor the Site
+              for violations of these Terms of Service; (2) take appropriate legal
+              action against anyone who, in our sole discretion, violates the law or
+              these Terms of Service, including without limitation, reporting such
+              user to law enforcement authorities; (3) in our sole discretion and
+              without limitation, refuse, restrict access to, limit the availability
+              of, or disable (to the extent technologically feasible) any of your
+              Contributions or any portion thereof; (4) in our sole discretion and
+              without limitation, notice, or liability, to remove from the Site or
+              otherwise disable all files and content that are excessive in size or
+              are in any way burdensome to our systems; and (5) otherwise manage the
+              Site in a manner designed to protect our rights and property and to
+              facilitate the proper functioning of the Site.
+            </p>
+          </article>
+
+          <article id="section-15" className="terms-section">
+            <h2>15. Privacy Policy</h2>
+            <p>
+              We care about data privacy and security. Please review our Privacy
+              Policy:{' '}
+              <strong>rentufs.com/privacy-policy</strong>. By using the Site, you
+              agree to be bound by our Privacy Policy, which is incorporated into
+              these Terms of Service. Please be advised the Site is hosted in the
+              United States. If you access the Site from any other region of the
+              world with laws or other requirements governing personal data
+              collection, use, or disclosure that differ from applicable laws in the
+              United States, then through your continued use of the Site, you are
+              transferring your data to the United States, and you agree to have your
+              data transferred to and processed in the United States.
+            </p>
             <p className="terms-note">
               <em>
-                Note: Section 11 continues in the source document; additional
+                Note: Section 15 continues in the source document; additional
                 paragraphs will be added as they are provided.
               </em>
             </p>
           </article>
 
           <p className="terms-footnote">
-            This document is being populated incrementally. Section 12 onward will be
-            added as they are provided. For questions about these Terms, contact us
-            at <strong>support@rentufs.com</strong>.
+            This document is being populated incrementally. Additional sections will
+            be added as they are provided. For questions about these Terms, contact
+            us at <strong>support@rentufs.com</strong>.
           </p>
         </div>
       </section>
