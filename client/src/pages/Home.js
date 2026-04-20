@@ -192,6 +192,9 @@ const Home = () => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add('is-visible');
+            if (entry.target.hasAttribute('data-animate-once')) {
+              observer.unobserve(entry.target);
+            }
           } else {
             entry.target.classList.remove('is-visible');
           }
@@ -482,7 +485,7 @@ const Home = () => {
       <section className="ufs-faq">
         <div className="container">
           <div className="ufs-faq-grid">
-            <div className="ufs-faq-intro" data-animate>
+            <div className="ufs-faq-intro" data-animate data-animate-once>
               <span className="ufs-section-eyebrow ufs-section-eyebrow--light">FAQ</span>
               <h2 className="ufs-section-title ufs-section-title--light">
                 Frequently asked questions
@@ -498,6 +501,7 @@ const Home = () => {
                   key={index}
                   className={`ufs-faq-item ${openFaq === index ? 'is-open' : ''}`}
                   data-animate
+                  data-animate-once
                   style={{ transitionDelay: `${index * 0.1}s` }}
                 >
                   <button
