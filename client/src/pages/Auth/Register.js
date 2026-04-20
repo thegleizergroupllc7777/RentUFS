@@ -322,25 +322,6 @@ const Register = () => {
       return;
     }
 
-    // Validate age for drivers (must be at least 21)
-    if (formData.userType === 'driver' && formData.dateOfBirth) {
-      const birthDate = new Date(formData.dateOfBirth);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      const dayDiff = today.getDate() - birthDate.getDate();
-
-      // Calculate exact age
-      const exactAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-
-      if (exactAge < 21) {
-        setError('You must be at least 21 years old to register as a driver.');
-        setLoading(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-    }
-
     try {
       // License/address are collected later in the Profile page. Submit
       // minimal registration data here.
@@ -653,22 +634,6 @@ const Register = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Date of Birth *</label>
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      className="form-input"
-                      value={formData.dateOfBirth}
-                      onChange={handleChange}
-                      max={new Date(new Date().setFullYear(new Date().getFullYear() - 21)).toISOString().split('T')[0]}
-                      required
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      You must be at least 21 years old{formData.userType === 'driver' ? ' to rent vehicles' : ''}
-                    </p>
-                  </div>
-
-                  <div className="form-group">
                     <label className="form-label">I want to</label>
                     <select
                       name="userType"
@@ -700,7 +665,7 @@ const Register = () => {
 
                   {formData.userType === 'driver' && (
                     <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '1rem', padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
-                      ℹ️ You'll add your driver's license and home address from your Profile page after signing up. This only takes a minute and is required before you can book a vehicle.
+                      ℹ️ You'll add your date of birth, driver's license, and home address from your Profile page after signing up. This only takes a minute and is required before you can book a vehicle. You must be at least 21 to rent.
                     </p>
                   )}
 

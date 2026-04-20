@@ -136,6 +136,21 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Your driver\'s license is expired. Please update your license information in your profile.' });
     }
 
+    // Verify driver has a date of birth and is at least 21
+    if (!driver.dateOfBirth) {
+      return res.status(400).json({ message: 'Your date of birth is required to book a vehicle. Please add it in your profile.' });
+    }
+    const dob = new Date(driver.dateOfBirth);
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+    if (age < 21) {
+      return res.status(400).json({ message: 'You must be at least 21 years old to book a vehicle.' });
+    }
+
     // Validate required date fields
     if (!startDate || !endDate) {
       return res.status(400).json({ message: 'Please select a pick-up date' });
