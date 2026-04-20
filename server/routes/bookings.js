@@ -170,7 +170,6 @@ router.post('/', auth, async (req, res) => {
     }
 
     // Reject bookings with a pick-up date+time in the past
-    const now = new Date();
     const pickupHour = parseInt((pickupTime || '10:00').split(':')[0], 10);
     const pickupDateTime = new Date(start);
     pickupDateTime.setHours(pickupHour, 0, 0, 0);
