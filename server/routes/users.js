@@ -325,15 +325,24 @@ router.put('/host-display-preference', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only hosts can update display preference' });
     }
 
-    if (!['personal', 'business'].includes(displayPreference)) {
-      return res.status(400).json({ message: 'Display preference must be "personal" or "business"' });
+    if (!['personal', 'business', 'dba'].includes(displayPreference)) {
+      return res.status(400).json({ message: 'Display preference must be "personal", "business", or "dba"' });
     }
 
+    const hostInfo = user.hostInfo || {};
+
     // Business display requires business name to be set
-    if (displayPreference === 'business') {
-      const hostInfo = user.hostInfo || {};
-      if (!hostInfo.businessName) {
-        return res.status(400).json({ message: 'You must add a business name in tax settings before selecting business display' });
+    if (displayPreference === 'business' && !hostInfo.businessName) {
+      return res.status(400).json({ message: 'You must add a business name in tax settings before selecting business display' });
+    }
+
+    // DBA display requires a DBA to be set, and only makes sense for business accounts
+    if (displayPreference === 'dba') {
+      if (hostInfo.accountType !== 'business') {
+        return res.status(400).json({ message: 'DBA display is only available for business accounts' });
+      }
+      if (!hostInfo.dba) {
+        return res.status(400).json({ message: 'You must add a DBA in tax settings before selecting DBA display' });
       }
     }
 

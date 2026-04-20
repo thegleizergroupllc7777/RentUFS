@@ -136,7 +136,7 @@ const userSchema = new mongoose.Schema({
     },
     displayPreference: {
       type: String,
-      enum: ['personal', 'business'],
+      enum: ['personal', 'business', 'dba'],
       default: 'personal'
     }
   },
