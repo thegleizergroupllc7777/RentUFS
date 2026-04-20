@@ -233,7 +233,13 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
           <div className="agreement-fields">
             <div className="agreement-field">
               <span className="field-label">Name:</span>
-              <span className="field-value">{host?.firstName} {host?.lastName}</span>
+              <span className="field-value">{(() => {
+                const hi = host?.hostInfo;
+                if (hi?.accountType === 'business' && hi?.businessName) {
+                  return hi.dba ? `${hi.businessName} dba ${hi.dba}` : hi.businessName;
+                }
+                return `${host?.firstName || ''} ${host?.lastName || ''}`.trim();
+              })()}</span>
             </div>
             <div className="agreement-field">
               <span className="field-label">Vehicle:</span>
