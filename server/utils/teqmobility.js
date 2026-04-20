@@ -66,57 +66,51 @@ const isConfigured = () => {
 
 /**
  * 1. Upsert Owner - Creates or updates an owner (the vehicle host)
- * PUT /api/v2/owners
+ * PUT /api/v1/owners
+ *
+ * Per Teq Mobility docs, the body requires only: name, phone, email, external_id, address.
+ * type/dl_number/birth_date/fein are not body params for upsert — owners default to
+ * UNDETERMINED which is only ineligible for OFF_RENT. We only do ON_RENT, where the
+ * insurer validates the driver via the driver object on the coverage start call.
  */
 const upsertOwner = async (host) => {
-  // Teq Mobility treats every RentUFS host as a PERSONAL owner.
-  // The RentUFS "business" account type is only for Stripe payouts / tax reporting;
-  // the insurer validates the human owner via driver license + DOB regardless.
-  const body = {
-    external_id: host._id.toString(),
-    phone: host.phone || '',
-    email: host.email,
-    type: 'PERSONAL',
-    firstname: host.firstName || '',
-    lastname: host.lastName || ''
-  };
-
-  const dlNumber = host.driverLicense?.licenseNumber || '';
-  const dlState = toStateAbbr(host.driverLicense?.state);
-  const birthDate = host.dateOfBirth
-    ? new Date(host.dateOfBirth).toISOString().split('T')[0]
-    : '';
-
-  if (!dlNumber || !dlState || !birthDate) {
-    console.warn('🛡️ TeqMobility: Host missing required PERSONAL owner fields -', {
-      hasDlNumber: !!dlNumber,
-      hasDlState: !!dlState,
-      hasBirthDate: !!birthDate,
-      hostId: host._id
-    });
-    throw new Error('Host profile incomplete for insurance: missing driver license number, state, or date of birth');
-  }
-
-  body.dl_number = dlNumber;
-  body.dl_state = dlState;
-  body.birth_date = birthDate;
-
-  // Address - prefer personal address, fall back to legal then business address
   const addr = host.address?.street
     ? host.address
     : (host.hostInfo?.legalAddress?.street
         ? host.hostInfo.legalAddress
         : host.hostInfo?.businessAddress);
-  if (addr) {
-    body.address = {
-      line1: addr.street || addr.line1 || '',
-      city: addr.city || '',
-      state: toStateAbbr(addr.state),
-      zip_code: sanitizeZip(addr.zipCode)
-    };
+
+  if (!addr?.street || !addr?.city || !addr?.state || !addr?.zipCode) {
+    console.warn('🛡️ TeqMobility: Host missing required address for owner upsert', {
+      hostId: host._id,
+      hasStreet: !!addr?.street,
+      hasCity: !!addr?.city,
+      hasState: !!addr?.state,
+      hasZip: !!addr?.zipCode
+    });
+    throw new Error('Host profile incomplete for insurance: missing address');
   }
 
-  const response = await teqApi.put('/api/v2/owners', body);
+  const fullName = `${host.firstName || ''} ${host.lastName || ''}`.trim();
+  if (!fullName) {
+    throw new Error('Host profile incomplete for insurance: missing name');
+  }
+
+  const body = {
+    external_id: host._id.toString(),
+    name: fullName,
+    phone: host.phone || '',
+    email: host.email,
+    address: {
+      line1: addr.street || addr.line1 || '',
+      line2: null,
+      city: addr.city,
+      state: toStateAbbr(addr.state),
+      zip_code: sanitizeZip(addr.zipCode)
+    }
+  };
+
+  const response = await teqApi.put('/api/v1/owners', body);
   console.log('🛡️ TeqMobility: Owner upserted -', response.data.id);
   return response.data;
 };
