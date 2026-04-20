@@ -151,6 +151,12 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'You must be at least 21 years old to book a vehicle.' });
     }
 
+    // Verify driver has a complete home address (required for rental agreement
+    // and for insurance coverage — Teq Mobility rejects coverage without it)
+    if (!driver.address?.street || !driver.address?.city || !driver.address?.state || !driver.address?.zipCode) {
+      return res.status(400).json({ message: 'A complete home address is required to book a vehicle. Please add your street, city, state, and zip code in your profile.' });
+    }
+
     // Validate required date fields
     if (!startDate || !endDate) {
       return res.status(400).json({ message: 'Please select a pick-up date' });
