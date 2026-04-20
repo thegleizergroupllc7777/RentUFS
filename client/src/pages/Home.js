@@ -218,6 +218,65 @@ const Home = () => {
         {/* Aerial city grid background */}
         <div className="ufs-hero-citymap" aria-hidden="true">
           <svg viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" fill="none">
+            <defs>
+              {/* Top-down car shape facing right */}
+              <g id="car-right">
+                <rect x="-10" y="-4" width="20" height="8" rx="3" fill="#00FF66" />
+                <rect x="-5" y="-3" width="8" height="6" rx="1.5" fill="#00cc52" />
+                <rect x="-9" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="-9" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="5" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="5" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <circle cx="8" cy="-2" r="1" fill="#ffffff" opacity="0.9" />
+                <circle cx="8" cy="2" r="1" fill="#ffffff" opacity="0.9" />
+              </g>
+              {/* Top-down car shape facing down */}
+              <g id="car-down">
+                <rect x="-4" y="-10" width="8" height="20" rx="3" fill="#00FF66" />
+                <rect x="-3" y="-5" width="6" height="8" rx="1.5" fill="#00cc52" />
+                <rect x="-5.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="3.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="-5.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="3.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <circle cx="-2" cy="8" r="1" fill="#ffffff" opacity="0.9" />
+                <circle cx="2" cy="8" r="1" fill="#ffffff" opacity="0.9" />
+              </g>
+              {/* Car facing left */}
+              <g id="car-left">
+                <rect x="-10" y="-4" width="20" height="8" rx="3" fill="#00FF66" />
+                <rect x="-3" y="-3" width="8" height="6" rx="1.5" fill="#00cc52" />
+                <rect x="-9" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="-9" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="5" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="5" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <circle cx="-8" cy="-2" r="1" fill="#ff4444" opacity="0.8" />
+                <circle cx="-8" cy="2" r="1" fill="#ff4444" opacity="0.8" />
+              </g>
+              {/* Car facing up */}
+              <g id="car-up">
+                <rect x="-4" y="-10" width="8" height="20" rx="3" fill="#00FF66" />
+                <rect x="-3" y="-3" width="6" height="8" rx="1.5" fill="#00cc52" />
+                <rect x="-5.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="3.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="-5.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <rect x="3.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
+                <circle cx="-2" cy="-8" r="1" fill="#ffffff" opacity="0.9" />
+                <circle cx="2" cy="-8" r="1" fill="#ffffff" opacity="0.9" />
+              </g>
+            </defs>
+
+            {/* City blocks — faint rectangles */}
+            <rect x="285" y="185" width="200" height="110" rx="2" className="ufs-block" />
+            <rect x="495" y="185" width="200" height="110" rx="2" className="ufs-block" />
+            <rect x="705" y="185" width="200" height="230" rx="2" className="ufs-block" />
+            <rect x="285" y="425" width="200" height="230" rx="2" className="ufs-block" />
+            <rect x="705" y="425" width="200" height="110" rx="2" className="ufs-block" />
+            <rect x="915" y="425" width="200" height="230" rx="2" className="ufs-block" />
+            <rect x="1125" y="185" width="130" height="230" rx="2" className="ufs-block" />
+            <rect x="5" y="425" width="130" height="230" rx="2" className="ufs-block" />
+            <rect x="145" y="665" width="130" height="110" rx="2" className="ufs-block" />
+            <rect x="495" y="425" width="200" height="110" rx="2" className="ufs-block" />
+
             {/* Major roads */}
             <line x1="0" y1="180" x2="1400" y2="180" className="ufs-road ufs-road--major" />
             <line x1="0" y1="420" x2="1400" y2="420" className="ufs-road ufs-road--major" />
@@ -239,21 +298,27 @@ const Home = () => {
             <path d="M 0 80 Q 350 80 500 200 T 900 300 T 1400 150" className="ufs-road ufs-road--highway" />
             <path d="M 0 850 Q 300 700 600 720 T 1100 600 T 1400 680" className="ufs-road ufs-road--highway" />
 
-            {/* Intersection highlights */}
-            <circle cx="280" cy="180" r="6" className="ufs-intersection" />
-            <circle cx="700" cy="420" r="8" className="ufs-intersection ufs-intersection--pulse" />
-            <circle cx="1120" cy="660" r="6" className="ufs-intersection" />
-            <circle cx="490" cy="300" r="5" className="ufs-intersection" />
-            <circle cx="910" cy="420" r="5" className="ufs-intersection" />
+            {/* Intersection glows */}
+            <circle cx="280" cy="180" r="8" className="ufs-intersection" />
+            <circle cx="700" cy="420" r="10" className="ufs-intersection ufs-intersection--pulse" />
+            <circle cx="1120" cy="660" r="8" className="ufs-intersection" />
+            <circle cx="490" cy="300" r="6" className="ufs-intersection" />
+            <circle cx="910" cy="420" r="6" className="ufs-intersection" />
+            <circle cx="280" cy="420" r="7" className="ufs-intersection" />
+            <circle cx="700" cy="180" r="7" className="ufs-intersection ufs-intersection--pulse" style={{ animationDelay: '1.5s' }} />
+            <circle cx="1120" cy="420" r="6" className="ufs-intersection" />
 
-            {/* Animated car dots - horizontal */}
-            <circle r="3" className="ufs-car-dot ufs-car-dot--h1" />
-            <circle r="3" className="ufs-car-dot ufs-car-dot--h2" />
-            <circle r="3" className="ufs-car-dot ufs-car-dot--h3" />
+            {/* Animated cars — horizontal (driving right) */}
+            <use href="#car-right" className="ufs-car ufs-car--h1" />
+            <use href="#car-right" className="ufs-car ufs-car--h2" />
+            <use href="#car-right" className="ufs-car ufs-car--h3" />
+            <use href="#car-left" className="ufs-car ufs-car--h4" />
+            <use href="#car-right" className="ufs-car ufs-car--h5" />
 
-            {/* Animated car dots - vertical */}
-            <circle r="3" className="ufs-car-dot ufs-car-dot--v1" />
-            <circle r="3" className="ufs-car-dot ufs-car-dot--v2" />
+            {/* Animated cars — vertical (driving down / up) */}
+            <use href="#car-down" className="ufs-car ufs-car--v1" />
+            <use href="#car-down" className="ufs-car ufs-car--v2" />
+            <use href="#car-up" className="ufs-car ufs-car--v3" />
           </svg>
         </div>
 
