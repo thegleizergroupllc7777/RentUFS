@@ -153,25 +153,6 @@ const searchImageStyle = {
   backgroundRepeat: 'no-repeat'
 };
 
-const audienceVisualDarkStyle = {
-  backgroundImage:
-    "linear-gradient(135deg, rgba(21, 21, 21, 0.45) 0%, rgba(31, 41, 55, 0.3) 100%), " +
-    "url('/images/drive.jpg'), " +
-    "linear-gradient(135deg, #151515 0%, #1f2937 100%)",
-  backgroundSize: 'cover, cover, auto',
-  backgroundPosition: 'center',
-  backgroundRepeat: 'no-repeat'
-};
-
-const audienceVisualLightStyle = {
-  backgroundImage:
-    "linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(31, 41, 55, 0.3) 100%), " +
-    "url('/images/host.jpg'), " +
-    "linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%)",
-  backgroundSize: 'cover, cover, auto',
-  backgroundPosition: 'center',
-  backgroundRepeat: 'no-repeat'
-};
 
 const Home = () => {
   const { isAuthenticated, user } = useAuth();
@@ -516,14 +497,9 @@ const Home = () => {
                 <Link to="/marketplace" className="ufs-btn ufs-btn-primary">Find a Car</Link>
               </div>
             </div>
-            <div className="ufs-audience-visual ufs-audience-visual--dark" data-animate="fade-right" style={{ ...audienceVisualDarkStyle, transitionDelay: '0.2s' }}>
-              <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="3" width="15" height="13" rx="2" ry="2"/>
-                <polygon points="16 8 20 12 16 16 16 8"/>
-                <line x1="23" y1="5" x2="23" y2="19"/>
-                <path d="M5 21a7 7 0 0 1 0-14"/>
-              </svg>
-              <span className="ufs-audience-visual-label">Driver Experience</span>
+            <div className="ufs-audience-visual ufs-audience-visual--dark" data-animate="fade-right" style={{ transitionDelay: '0.2s' }}>
+              <img src="/images/driver.jpg" alt="Driver enjoying a rental car" className="ufs-audience-img" />
+              <div className="ufs-audience-visual-overlay"></div>
             </div>
           </div>
         </div>
@@ -564,12 +540,9 @@ const Home = () => {
                 <Link to={isAuthenticated ? '/host/add-vehicle' : '/register?type=host'} className="ufs-btn ufs-btn-primary">List a Car</Link>
               </div>
             </div>
-            <div className="ufs-audience-visual ufs-audience-visual--light" data-animate="fade-left" style={{ ...audienceVisualLightStyle, transitionDelay: '0.2s' }}>
-              <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              <span className="ufs-audience-visual-label">Start Earning</span>
+            <div className="ufs-audience-visual ufs-audience-visual--light" data-animate="fade-left" style={{ transitionDelay: '0.2s' }}>
+              <img src="/images/host.jpg" alt="Host handing car keys" className="ufs-audience-img" />
+              <div className="ufs-audience-visual-overlay"></div>
             </div>
           </div>
         </div>
