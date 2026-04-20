@@ -4,9 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ImageUpload from '../../components/ImageUpload';
-import AddressAutocomplete from '../../components/AddressAutocomplete';
-import FaceVerification from '../../components/FaceVerification';
-import LicenseOCR from '../../components/LicenseOCR';
 import { vehicleModels } from '../../data/vehicleModels';
 import API_URL from '../../config/api';
 import './Auth.css';
@@ -344,59 +341,10 @@ const Register = () => {
       }
     }
 
-    // Validate license photo and verification selfie for drivers
-    if (formData.userType === 'driver') {
-      if (!formData.driverLicense.licenseImage || formData.driverLicense.licenseImage.trim() === '') {
-        setError('Please upload a photo of your driver\'s license.');
-        setLoading(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-      if (!formData.driverLicense.verificationSelfie || formData.driverLicense.verificationSelfie.trim() === '') {
-        setError('Please upload a verification selfie of your face.');
-        setLoading(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-
-      // Check face verification result
-      if (faceVerification && !faceVerification.verified && faceVerification.reason !== 'error') {
-        const proceed = window.confirm(
-          'Face verification did not find a match between your selfie and driver\'s license photo. ' +
-          'This may affect your account verification.\n\n' +
-          'Do you still want to proceed with registration?'
-        );
-        if (!proceed) {
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Check license number OCR match result
-      if (licenseOcrResult && !licenseOcrResult.matched && licenseOcrResult.reason !== 'ocr_error') {
-        const proceed = window.confirm(
-          'The license number you entered does not appear to match the number on your uploaded license photo. ' +
-          'Please verify you entered the correct license number.\n\n' +
-          'Do you still want to proceed with registration?'
-        );
-        if (!proceed) {
-          setLoading(false);
-          return;
-        }
-      }
-    }
-
     try {
-      // Include face verification score in registration data
-      const registrationData = {
-        ...formData,
-        driverLicense: {
-          ...formData.driverLicense,
-          faceMatchScore: faceVerification?.score || null,
-          faceVerified: faceVerification?.verified || false,
-          licenseNumberMatched: licenseOcrResult?.matched || false
-        }
-      };
+      // License/address are collected later in the Profile page. Submit
+      // minimal registration data here.
+      const registrationData = { ...formData };
 
       await register(registrationData);
 
@@ -720,78 +668,6 @@ const Register = () => {
                     </p>
                   </div>
 
-                  {/* Address */}
-                  <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#10b981' }}>
-                      Home Address {formData.userType === 'driver' && '*'}
-                    </h3>
-                    <div className="form-group">
-                      <label className="form-label">Street Address</label>
-                      <AddressAutocomplete
-                        value={formData.address.street}
-                        onChange={(e) => setFormData(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))}
-                        onPlaceSelect={handleAddressSelect}
-                        placeholder="Start typing an address..."
-                        className="form-input"
-                        maxLength="60"
-                        required={formData.userType === 'driver'}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Apt / Suite / Unit</label>
-                      <input
-                        type="text"
-                        name="address.apt"
-                        className="form-input"
-                        value={formData.address.apt}
-                        onChange={handleChange}
-                        placeholder="Apt 4B, Suite 200, etc."
-                        maxLength="10"
-                      />
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">City</label>
-                        <input
-                          type="text"
-                          name="address.city"
-                          className="form-input"
-                          value={formData.address.city}
-                          onChange={handleChange}
-                          placeholder="New York"
-                          maxLength="35"
-                          required={formData.userType === 'driver'}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">State</label>
-                        <input
-                          type="text"
-                          name="address.state"
-                          className="form-input"
-                          value={formData.address.state}
-                          onChange={handleChange}
-                          placeholder="NY"
-                          maxLength="2"
-                          required={formData.userType === 'driver'}
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group" style={{ maxWidth: '200px' }}>
-                      <label className="form-label">Zip Code</label>
-                      <input
-                        type="text"
-                        name="address.zipCode"
-                        className="form-input"
-                        value={formData.address.zipCode}
-                        onChange={handleChange}
-                        placeholder="10001"
-                        maxLength="5"
-                        required={formData.userType === 'driver'}
-                      />
-                    </div>
-                  </div>
-
                   <div className="form-group">
                     <label className="form-label">I want to</label>
                     <select
@@ -822,155 +698,10 @@ const Register = () => {
                     </div>
                   )}
 
-                  {/* Driver License Information - Only for drivers */}
                   {formData.userType === 'driver' && (
-                    <>
-                      <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#10b981' }}>
-                          Driver's License Information
-                        </h3>
-
-                        <div className="form-group">
-                          <label className="form-label">License Number *</label>
-                          <input
-                            type="text"
-                            name="driverLicense.licenseNumber"
-                            className="form-input"
-                            value={formData.driverLicense.licenseNumber}
-                            onChange={handleChange}
-                            placeholder="e.g., D1234567"
-                            required
-                          />
-                        </div>
-
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label className="form-label">State *</label>
-                            <select
-                              name="driverLicense.state"
-                              className="form-input"
-                              value={formData.driverLicense.state}
-                              onChange={handleChange}
-                              required
-                            >
-                              <option value="">Select State</option>
-                              <option value="AL">AL - Alabama</option>
-                              <option value="AK">AK - Alaska</option>
-                              <option value="AZ">AZ - Arizona</option>
-                              <option value="AR">AR - Arkansas</option>
-                              <option value="CA">CA - California</option>
-                              <option value="CO">CO - Colorado</option>
-                              <option value="CT">CT - Connecticut</option>
-                              <option value="DE">DE - Delaware</option>
-                              <option value="DC">DC - District of Columbia</option>
-                              <option value="FL">FL - Florida</option>
-                              <option value="GA">GA - Georgia</option>
-                              <option value="HI">HI - Hawaii</option>
-                              <option value="ID">ID - Idaho</option>
-                              <option value="IL">IL - Illinois</option>
-                              <option value="IN">IN - Indiana</option>
-                              <option value="IA">IA - Iowa</option>
-                              <option value="KS">KS - Kansas</option>
-                              <option value="KY">KY - Kentucky</option>
-                              <option value="LA">LA - Louisiana</option>
-                              <option value="ME">ME - Maine</option>
-                              <option value="MD">MD - Maryland</option>
-                              <option value="MA">MA - Massachusetts</option>
-                              <option value="MI">MI - Michigan</option>
-                              <option value="MN">MN - Minnesota</option>
-                              <option value="MS">MS - Mississippi</option>
-                              <option value="MO">MO - Missouri</option>
-                              <option value="MT">MT - Montana</option>
-                              <option value="NE">NE - Nebraska</option>
-                              <option value="NV">NV - Nevada</option>
-                              <option value="NH">NH - New Hampshire</option>
-                              <option value="NJ">NJ - New Jersey</option>
-                              <option value="NM">NM - New Mexico</option>
-                              <option value="NY">NY - New York</option>
-                              <option value="NC">NC - North Carolina</option>
-                              <option value="ND">ND - North Dakota</option>
-                              <option value="OH">OH - Ohio</option>
-                              <option value="OK">OK - Oklahoma</option>
-                              <option value="OR">OR - Oregon</option>
-                              <option value="PA">PA - Pennsylvania</option>
-                              <option value="RI">RI - Rhode Island</option>
-                              <option value="SC">SC - South Carolina</option>
-                              <option value="SD">SD - South Dakota</option>
-                              <option value="TN">TN - Tennessee</option>
-                              <option value="TX">TX - Texas</option>
-                              <option value="UT">UT - Utah</option>
-                              <option value="VT">VT - Vermont</option>
-                              <option value="VA">VA - Virginia</option>
-                              <option value="WA">WA - Washington</option>
-                              <option value="WV">WV - West Virginia</option>
-                              <option value="WI">WI - Wisconsin</option>
-                              <option value="WY">WY - Wyoming</option>
-                            </select>
-                          </div>
-
-                          <div className="form-group">
-                            <label className="form-label">Expiration Date *</label>
-                            <input
-                              type="date"
-                              name="driverLicense.expirationDate"
-                              className="form-input"
-                              value={formData.driverLicense.expirationDate}
-                              onChange={handleChange}
-                              min={new Date().toISOString().split('T')[0]}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#10b981' }}>
-                          License Photo *
-                        </h4>
-                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-                          Upload a clear photo of the front of your driver's license.
-                        </p>
-                        <ImageUpload
-                          label="Driver's License Photo"
-                          value={formData.driverLicense.licenseImage}
-                          onChange={(url) => setFormData(prev => ({
-                            ...prev,
-                            driverLicense: { ...prev.driverLicense, licenseImage: url }
-                          }))}
-                          required={true}
-                        />
-
-                        <LicenseOCR
-                          licenseImage={formData.driverLicense.licenseImage}
-                          enteredLicenseNumber={formData.driverLicense.licenseNumber}
-                          onOcrResult={handleOcrResult}
-                        />
-
-                        <h4 style={{ fontSize: '1rem', marginTop: '1.5rem', marginBottom: '0.5rem', color: '#10b981' }}>
-                          Verification Selfie *
-                        </h4>
-                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-                          Take a clear selfie of your face. This will be compared to your license photo to verify your identity.
-                        </p>
-                        <ImageUpload
-                          label="Verification Selfie"
-                          value={formData.driverLicense.verificationSelfie}
-                          onChange={(url) => setFormData(prev => ({
-                            ...prev,
-                            driverLicense: { ...prev.driverLicense, verificationSelfie: url }
-                          }))}
-                          required={true}
-                        />
-
-                        <FaceVerification
-                          licenseImage={formData.driverLicense.licenseImage}
-                          selfieImage={formData.driverLicense.verificationSelfie}
-                          onVerificationResult={handleFaceVerificationResult}
-                        />
-
-                        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '1rem' }}>
-                          ℹ️ Your license information and photos are required to rent vehicles. Face verification compares your selfie to your license photo for identity confirmation.
-                        </p>
-                      </div>
-                    </>
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '1rem', padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
+                      ℹ️ You'll add your driver's license and home address from your Profile page after signing up. This only takes a minute and is required before you can book a vehicle.
+                    </p>
                   )}
 
                   <button
