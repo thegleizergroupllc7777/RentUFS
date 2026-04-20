@@ -48,8 +48,10 @@ const Terms = () => {
               <li><a href="#section-24">User Data</a></li>
               <li><a href="#section-25">Electronic Communications, Transactions, and Signatures</a></li>
               <li><a href="#section-26">Communications &amp; SMS Program (Transactional)</a></li>
+              <li><a href="#section-27">Miscellaneous</a></li>
+              <li><a href="#section-28">Cooperation</a></li>
+              <li><a href="#section-29">Contact Us</a></li>
             </ol>
-            <p className="terms-toc-note">Additional sections will be added as the document is completed.</p>
           </div>
 
           <article id="section-1" className="terms-section">
@@ -990,10 +992,58 @@ const Terms = () => {
             </p>
           </article>
 
+          <article id="section-27" className="terms-section">
+            <h2>27. Miscellaneous</h2>
+            <p>
+              These Terms of Service and any policies or operating rules posted by
+              us on the Site or in respect to the Site constitute the entire
+              agreement and understanding between you and us. Our failure to
+              exercise or enforce any right or provision of these Terms of Service
+              shall not operate as a waiver of such right or provision. These Terms
+              of Service operate to the fullest extent permissible by law. We may
+              assign any or all of our rights and obligations to others at any
+              time. We shall not be responsible or liable for any loss, damage,
+              delay, or failure to act caused by any cause beyond our reasonable
+              control. If any provision or part of a provision of these Terms of
+              Service is determined to be unlawful, void, or unenforceable, that
+              provision or part of the provision is deemed severable from these
+              Terms of Service and does not affect the validity and enforceability
+              of any remaining provisions. There is no joint venture, partnership,
+              employment or agency relationship created between you and us as a
+              result of these Terms of Service or use of the Site. You agree that
+              these Terms of Service will not be construed against us by virtue of
+              having drafted them. You hereby waive any and all defenses you may
+              have based on the electronic form of these Terms of Service and the
+              lack of signing by the parties hereto to execute these Terms of
+              Service.
+            </p>
+          </article>
+
+          <article id="section-28" className="terms-section">
+            <h2>28. Cooperation</h2>
+            <p>
+              You agree to fully cooperate with any reasonable request from us in
+              a timely manner. Furthermore, in the event of any claims, you and
+              your employees, including drivers, whether employed or contracted,
+              will be available at any reasonable working hours to meet with us to
+              resolve any outstanding business matters.
+            </p>
+          </article>
+
+          <article id="section-29" className="terms-section">
+            <h2>29. Contact Us</h2>
+            <p>
+              In order to resolve a complaint regarding the Site or to receive
+              further information regarding use of the Site, please contact us at:
+            </p>
+            <p>
+              <strong>support@rentufs.com</strong>
+            </p>
+          </article>
+
           <p className="terms-footnote">
-            This document is being populated incrementally. Additional sections will
-            be added as they are provided. For questions about these Terms, contact
-            us at <strong>support@rentufs.com</strong>.
+            For questions about these Terms, contact us at{' '}
+            <strong>support@rentufs.com</strong>.
           </p>
         </div>
       </section>
