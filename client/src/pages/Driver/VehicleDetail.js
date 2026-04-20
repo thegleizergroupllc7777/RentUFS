@@ -280,6 +280,13 @@ const VehicleDetail = () => {
       return;
     }
 
+    // Check if driver has a complete home address on file (required for
+    // rental agreement and insurance coverage)
+    if (!user.address?.street || !user.address?.city || !user.address?.state || !user.address?.zipCode) {
+      setError('ADDRESS_REQUIRED');
+      return;
+    }
+
     if (!bookingData.startDate) {
       setError('Please select a pick-up date');
       return;
@@ -677,7 +684,7 @@ const VehicleDetail = () => {
                   </div>
                 </div>
 
-                {error && (error === 'LICENSE_REQUIRED' || error === 'LICENSE_EXPIRED' || error === 'DOB_REQUIRED') ? (
+                {error && (error === 'LICENSE_REQUIRED' || error === 'LICENSE_EXPIRED' || error === 'DOB_REQUIRED' || error === 'ADDRESS_REQUIRED') ? (
                   <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
                     border: '1px solid #ef4444',
@@ -690,6 +697,8 @@ const VehicleDetail = () => {
                         ? 'A valid driver\'s license is required to book a vehicle.'
                         : error === 'LICENSE_EXPIRED'
                         ? 'Your driver\'s license has expired.'
+                        : error === 'ADDRESS_REQUIRED'
+                        ? 'A complete home address is required to book a vehicle.'
                         : 'Your date of birth is required to book a vehicle.'}
                     </p>
                     <p style={{ color: '#9ca3af', margin: '0 0 0.75rem 0', fontSize: '0.875rem' }}>
@@ -697,11 +706,13 @@ const VehicleDetail = () => {
                         ? 'Please add your driver\'s license details before making a reservation.'
                         : error === 'LICENSE_EXPIRED'
                         ? 'Please update your license with a valid expiration date.'
+                        : error === 'ADDRESS_REQUIRED'
+                        ? 'Please add your street, city, state, and zip code in your profile before making a reservation.'
                         : 'Please add your date of birth in your profile before making a reservation.'}
                     </p>
                     <button
                       type="button"
-                      onClick={() => navigate(error === 'DOB_REQUIRED' ? '/driver/profile?tab=profile' : '/driver/profile?tab=license')}
+                      onClick={() => navigate((error === 'DOB_REQUIRED' || error === 'ADDRESS_REQUIRED') ? '/driver/profile?tab=profile' : '/driver/profile?tab=license')}
                       style={{
                         background: '#10b981',
                         color: '#000',
@@ -713,7 +724,7 @@ const VehicleDetail = () => {
                         fontSize: '0.875rem'
                       }}
                     >
-                      {error === 'DOB_REQUIRED' ? 'Go to Profile' : 'Go to Driver\'s License'}
+                      {(error === 'DOB_REQUIRED' || error === 'ADDRESS_REQUIRED') ? 'Go to Profile' : 'Go to Driver\'s License'}
                     </button>
                   </div>
                 ) : error ? (
