@@ -219,49 +219,68 @@ const Home = () => {
         <div className="ufs-hero-citymap" aria-hidden="true">
           <svg viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" fill="none">
             <defs>
-              {/* Top-down car shape facing right */}
+              {/* Top-down sedan facing right — ~40x18 units */}
               <g id="car-right">
-                <rect x="-10" y="-4" width="20" height="8" rx="3" fill="#00FF66" />
-                <rect x="-5" y="-3" width="8" height="6" rx="1.5" fill="#00cc52" />
-                <rect x="-9" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="-9" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="5" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="5" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <circle cx="8" cy="-2" r="1" fill="#ffffff" opacity="0.9" />
-                <circle cx="8" cy="2" r="1" fill="#ffffff" opacity="0.9" />
+                {/* Body */}
+                <path d="M-18,-7 L-14,-9 L-4,-9 L2,-7 L16,-7 L19,-5 L20,-2 L20,2 L19,5 L16,7 L2,7 L-4,9 L-14,9 L-18,7 Z" fill="#00FF66" />
+                {/* Windshield */}
+                <path d="M2,-6 L8,-6 L10,-4 L10,4 L8,6 L2,6 Z" fill="#00994d" opacity="0.8" />
+                {/* Rear window */}
+                <path d="M-12,-6 L-6,-6 L-6,6 L-12,6 L-14,4 L-14,-4 Z" fill="#00994d" opacity="0.6" />
+                {/* Front wheels */}
+                <rect x="10" y="-10" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="10" y="7" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                {/* Rear wheels */}
+                <rect x="-10" y="-10" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="-10" y="7" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                {/* Headlights */}
+                <circle cx="19" cy="-4" r="1.5" fill="#ffffff" opacity="0.95" />
+                <circle cx="19" cy="4" r="1.5" fill="#ffffff" opacity="0.95" />
+                {/* Taillights */}
+                <rect x="-18" y="-6" width="2" height="3" rx="0.5" fill="#ff3333" opacity="0.8" />
+                <rect x="-18" y="3" width="2" height="3" rx="0.5" fill="#ff3333" opacity="0.8" />
               </g>
-              {/* Top-down car shape facing down */}
+              {/* Top-down sedan facing down */}
               <g id="car-down">
-                <rect x="-4" y="-10" width="8" height="20" rx="3" fill="#00FF66" />
-                <rect x="-3" y="-5" width="6" height="8" rx="1.5" fill="#00cc52" />
-                <rect x="-5.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="3.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="-5.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="3.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <circle cx="-2" cy="8" r="1" fill="#ffffff" opacity="0.9" />
-                <circle cx="2" cy="8" r="1" fill="#ffffff" opacity="0.9" />
+                <path d="M-7,-18 L-9,-14 L-9,-4 L-7,2 L-7,16 L-5,19 L-2,20 L2,20 L5,19 L7,16 L7,2 L9,-4 L9,-14 L7,-18 Z" fill="#00FF66" />
+                <path d="M-6,2 L-6,8 L-4,10 L4,10 L6,8 L6,2 Z" fill="#00994d" opacity="0.8" />
+                <path d="M-6,-12 L-6,-6 L6,-6 L6,-12 L4,-14 L-4,-14 Z" fill="#00994d" opacity="0.6" />
+                <rect x="-10" y="10" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="7" y="10" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="-10" y="-10" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="7" y="-10" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <circle cx="-4" cy="19" r="1.5" fill="#ffffff" opacity="0.95" />
+                <circle cx="4" cy="19" r="1.5" fill="#ffffff" opacity="0.95" />
+                <rect x="-6" y="-18" width="3" height="2" rx="0.5" fill="#ff3333" opacity="0.8" />
+                <rect x="3" y="-18" width="3" height="2" rx="0.5" fill="#ff3333" opacity="0.8" />
               </g>
-              {/* Car facing left */}
+              {/* Top-down sedan facing left */}
               <g id="car-left">
-                <rect x="-10" y="-4" width="20" height="8" rx="3" fill="#00FF66" />
-                <rect x="-3" y="-3" width="8" height="6" rx="1.5" fill="#00cc52" />
-                <rect x="-9" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="-9" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="5" y="-5.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="5" y="3.5" width="4" height="2" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <circle cx="-8" cy="-2" r="1" fill="#ff4444" opacity="0.8" />
-                <circle cx="-8" cy="2" r="1" fill="#ff4444" opacity="0.8" />
+                <path d="M18,-7 L14,-9 L4,-9 L-2,-7 L-16,-7 L-19,-5 L-20,-2 L-20,2 L-19,5 L-16,7 L-2,7 L4,9 L14,9 L18,7 Z" fill="#00FF66" />
+                <path d="M-2,-6 L-8,-6 L-10,-4 L-10,4 L-8,6 L-2,6 Z" fill="#00994d" opacity="0.8" />
+                <path d="M12,-6 L6,-6 L6,6 L12,6 L14,4 L14,-4 Z" fill="#00994d" opacity="0.6" />
+                <rect x="-16" y="-10" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="-16" y="7" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="4" y="-10" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="4" y="7" width="6" height="3" rx="1" fill="#00FF66" opacity="0.8" />
+                <circle cx="-19" cy="-4" r="1.5" fill="#ffffff" opacity="0.95" />
+                <circle cx="-19" cy="4" r="1.5" fill="#ffffff" opacity="0.95" />
+                <rect x="16" y="-6" width="2" height="3" rx="0.5" fill="#ff3333" opacity="0.8" />
+                <rect x="16" y="3" width="2" height="3" rx="0.5" fill="#ff3333" opacity="0.8" />
               </g>
-              {/* Car facing up */}
+              {/* Top-down sedan facing up */}
               <g id="car-up">
-                <rect x="-4" y="-10" width="8" height="20" rx="3" fill="#00FF66" />
-                <rect x="-3" y="-3" width="6" height="8" rx="1.5" fill="#00cc52" />
-                <rect x="-5.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="3.5" y="-9" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="-5.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <rect x="3.5" y="5" width="2" height="4" rx="0.5" fill="#00FF66" opacity="0.7" />
-                <circle cx="-2" cy="-8" r="1" fill="#ffffff" opacity="0.9" />
-                <circle cx="2" cy="-8" r="1" fill="#ffffff" opacity="0.9" />
+                <path d="M-7,18 L-9,14 L-9,4 L-7,-2 L-7,-16 L-5,-19 L-2,-20 L2,-20 L5,-19 L7,-16 L7,-2 L9,4 L9,14 L7,18 Z" fill="#00FF66" />
+                <path d="M-6,-2 L-6,-8 L-4,-10 L4,-10 L6,-8 L6,-2 Z" fill="#00994d" opacity="0.8" />
+                <path d="M-6,12 L-6,6 L6,6 L6,12 L4,14 L-4,14 Z" fill="#00994d" opacity="0.6" />
+                <rect x="-10" y="-16" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="7" y="-16" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="-10" y="4" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <rect x="7" y="4" width="3" height="6" rx="1" fill="#00FF66" opacity="0.8" />
+                <circle cx="-4" cy="-19" r="1.5" fill="#ffffff" opacity="0.95" />
+                <circle cx="4" cy="-19" r="1.5" fill="#ffffff" opacity="0.95" />
+                <rect x="-6" y="16" width="3" height="2" rx="0.5" fill="#ff3333" opacity="0.8" />
+                <rect x="3" y="16" width="3" height="2" rx="0.5" fill="#ff3333" opacity="0.8" />
               </g>
             </defs>
 
