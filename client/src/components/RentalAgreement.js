@@ -236,7 +236,10 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
               <span className="field-value">{(() => {
                 const hi = host?.hostInfo;
                 if (hi?.accountType === 'business' && hi?.businessName) {
-                  return hi.dba ? `${hi.businessName} dba ${hi.dba}` : hi.businessName;
+                  if (hi.displayPreference === 'dba' && hi.dba) {
+                    return `${hi.businessName} dba ${hi.dba}`;
+                  }
+                  return hi.businessName;
                 }
                 return `${host?.firstName || ''} ${host?.lastName || ''}`.trim();
               })()}</span>
