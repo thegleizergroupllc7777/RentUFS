@@ -68,17 +68,17 @@ const isConfigured = () => {
  * 1. Upsert Owner - Creates or updates an owner (the vehicle host)
  * PUT /api/v1/owners
  *
- * Required body: name, phone, email, external_id, address.
- * COMMERCIAL owners (vehicles titled to an LLC/corp) additionally require
- * fein and commercial_name. For individuals, type is omitted and defaults
- * to UNDETERMINED, which is still eligible for ON_RENT coverage.
+ * Body per Teq Mobility spec: external_id, name, phone, email, address.
+ * The API rejects `type`, `fein`, and `commercial_name` as unknown fields,
+ * so business hosts are upserted with the same minimal body as individuals —
+ * using their business name and business address. Owner type defaults to
+ * UNDETERMINED on the provider side, which is eligible for ON_RENT coverage.
  */
 const upsertOwner = async (host) => {
   const isBusinessHost = host.hostInfo?.accountType === 'business'
-    && !!host.hostInfo?.taxId
     && !!host.hostInfo?.businessName;
 
-  const addr = isBusinessHost
+  const addr = isBusinessHost && host.hostInfo?.businessAddress?.street
     ? host.hostInfo.businessAddress
     : (host.address?.street
         ? host.address
@@ -118,14 +118,8 @@ const upsertOwner = async (host) => {
     }
   };
 
-  if (isBusinessHost) {
-    body.type = 'COMMERCIAL';
-    body.fein = host.hostInfo.taxId;
-    body.commercial_name = host.hostInfo.businessName;
-  }
-
   const response = await teqApi.put('/api/v1/owners', body);
-  console.log(`🛡️ TeqMobility: Owner upserted - ${response.data.id} (${isBusinessHost ? 'COMMERCIAL' : 'default'})`);
+  console.log(`🛡️ TeqMobility: Owner upserted - ${response.data.id} (${isBusinessHost ? 'business' : 'individual'})`);
   return response.data;
 };
 
