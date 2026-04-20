@@ -225,6 +225,80 @@ const Terms = () => {
               coverage is contingent upon your having your own physical damage
               coverage in effect at all times.
             </p>
+            <p>
+              Coverage is further, in the event of a non-catastrophe event, limited
+              to a maximum of 10 vehicles with an ACV (actual cash value) of up to
+              $30,000 per vehicle.
+            </p>
+            <p>
+              To be eligible for the <strong>On-Rent</strong> insurance coverage for
+              &ldquo;physical damage,&rdquo; you must have in effect at all times your own
+              automobile insurance policy — personal or commercial — providing such
+              coverage. If you do not maintain this required coverage, we reserve the
+              sole and exclusive right to deny coverage, with you being fully
+              responsible for any and all damages, loss, replacement costs, or any
+              costs incurred to repair your vehicles.
+            </p>
+            <p>
+              You need to be aware that failure to maintain this coverage, should you
+              participate in any gig-work platform, will result in that platform
+              denying coverage.
+            </p>
+            <p>
+              It should be further noted that the <strong>On-Rent</strong> policy
+              does not provide online proof of insurance with the respective
+              Department of Insurance. To remain in compliance with your state&rsquo;s
+              insurance requirements as well as when working with a gig-work platform
+              company, you must purchase our <strong>Off-Rent</strong> insurance for
+              periods when your vehicle is not being actively rented.
+            </p>
+            <p>
+              <strong>
+                Duties in the event of an accident or loss, regardless of the level
+                of seriousness, the following applies.
+              </strong>
+            </p>
+            <p>
+              The insured, or any person involved or with knowledge of the accident
+              or claim, must fully cooperate with us in the investigation, defense,
+              or settlement of any claim or lawsuit.
+            </p>
+            <p>
+              In the event of an accident, regardless of the level of seriousness,
+              claim, or loss, the insured person must:
+            </p>
+            <ol className="terms-list">
+              <li>
+                <strong>Promptly notify</strong> the insurance company or agent of
+                the accident or loss, including all details such as time, place, and
+                the specific circumstances. For any accident involving a serious
+                bodily injury, notice should be provided at the earliest opportunity;
+              </li>
+              <li>
+                <strong>Cooperate fully</strong> with the insurer and any of its
+                representative designees in the investigation, defense, or settlement
+                of any claim or lawsuit;
+              </li>
+              <li>
+                <strong>Authorize</strong> the granting of approval for the insurer
+                to obtain police reports, medical reports, and any other records that
+                would assist in the claim process;
+              </li>
+              <li>
+                <strong>Submit</strong> to interviews and, if necessary, physical
+                examinations, if required;
+              </li>
+              <li>
+                <strong>Provide</strong> copies of all correspondence and legal
+                documents received, such as subpoenas, lawsuits, or notices;
+              </li>
+              <li>
+                <strong>Do not</strong> assume any obligation, admit fault, grant any
+                interviews without a representative of the carrier present, or incur
+                any expenses without the insurer&rsquo;s consent, except for emergency
+                medical care.
+              </li>
+            </ol>
           </article>
 
           <p className="terms-footnote">
