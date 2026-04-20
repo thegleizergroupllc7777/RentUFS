@@ -1216,26 +1216,14 @@ const DriverProfile = () => {
           </div>
         )}
 
-        {/* Display Preference */}
-        {hasData && !showTaxForm && (
+        {/* Display Preference — business hosts pick between legal name and DBA; individual hosts always display as personal name, so no toggle is shown */}
+        {hasData && !showTaxForm && taxInfo?.accountType === 'business' && (
           <div style={{ background: '#111', borderRadius: '0.5rem', padding: '1.25rem', marginBottom: '1.5rem', border: '1px solid #333' }}>
             <h4 style={{ color: '#e5e7eb', fontSize: '0.95rem', marginBottom: '0.25rem' }}>Listing Display Name</h4>
             <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1rem' }}>
               Choose what drivers see on your vehicle listings.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button type="button" disabled={displayPrefSaving}
-                onClick={() => handleDisplayPreferenceChange('personal')}
-                style={{
-                  flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
-                  border: displayPreference === 'personal' ? '2px solid #10b981' : '2px solid #333',
-                  background: displayPreference === 'personal' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                  color: '#e5e7eb', fontWeight: '500', fontSize: '0.85rem',
-                  opacity: displayPrefSaving ? 0.6 : 1
-                }}>
-                <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Personal Name</div>
-                <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{user?.firstName} {user?.lastName?.charAt(0)}.</div>
-              </button>
               <button type="button"
                 disabled={displayPrefSaving || !taxInfo?.businessName}
                 onClick={() => handleDisplayPreferenceChange('business')}
@@ -1248,6 +1236,19 @@ const DriverProfile = () => {
                 }}>
                 <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Business Name</div>
                 <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{taxInfo?.businessName || 'Add business info first'}</div>
+              </button>
+              <button type="button"
+                disabled={displayPrefSaving || !taxInfo?.dba}
+                onClick={() => handleDisplayPreferenceChange('dba')}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer',
+                  border: displayPreference === 'dba' ? '2px solid #10b981' : '2px solid #333',
+                  background: displayPreference === 'dba' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                  color: taxInfo?.dba ? '#e5e7eb' : '#4b5563', fontWeight: '500', fontSize: '0.85rem',
+                  opacity: (displayPrefSaving || !taxInfo?.dba) ? 0.6 : 1
+                }}>
+                <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>DBA</div>
+                <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{taxInfo?.dba || 'Add DBA in tax info first'}</div>
               </button>
             </div>
           </div>

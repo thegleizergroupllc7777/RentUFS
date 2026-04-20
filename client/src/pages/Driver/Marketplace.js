@@ -239,9 +239,12 @@ const Marketplace = () => {
                     <span>/day</span>
                   </div>
                   <div className="vehicle-host">
-                    Hosted by {vehicle.host?.hostInfo?.displayPreference === 'business' && vehicle.host?.hostInfo?.businessName
-                      ? vehicle.host.hostInfo.businessName
-                      : vehicle.host?.firstName}
+                    Hosted by {(() => {
+                      const h = vehicle.host?.hostInfo;
+                      if (h?.displayPreference === 'business' && h?.businessName) return h.businessName;
+                      if (h?.displayPreference === 'dba' && h?.dba) return h.dba;
+                      return vehicle.host?.firstName;
+                    })()}
                   </div>
                 </div>
               </div>

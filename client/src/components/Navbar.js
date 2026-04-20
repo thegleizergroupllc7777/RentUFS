@@ -122,8 +122,10 @@ const Navbar = () => {
   // Display name: respect host's displayPreference when in host mode
   const displayName = (() => {
     if (!user) return '';
-    if (isHostMode && user.hostInfo?.displayPreference === 'business' && user.hostInfo?.businessName) {
-      return user.hostInfo.businessName;
+    if (isHostMode) {
+      const pref = user.hostInfo?.displayPreference;
+      if (pref === 'business' && user.hostInfo?.businessName) return user.hostInfo.businessName;
+      if (pref === 'dba' && user.hostInfo?.dba) return user.hostInfo.dba;
     }
     return user.firstName;
   })();

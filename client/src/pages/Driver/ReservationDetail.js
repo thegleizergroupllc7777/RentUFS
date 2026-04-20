@@ -369,9 +369,12 @@ const ReservationDetail = () => {
 
               {/* Host Info */}
               <div className="vehicle-section">
-                <h2>Hosted by {vehicleData?.host?.hostInfo?.displayPreference === 'business' && vehicleData?.host?.hostInfo?.businessName
-                  ? vehicleData.host.hostInfo.businessName
-                  : `${booking.host?.firstName || vehicleData?.host?.firstName || ''} ${booking.host?.lastName || vehicleData?.host?.lastName || ''}`}</h2>
+                <h2>Hosted by {(() => {
+                  const h = vehicleData?.host?.hostInfo;
+                  if (h?.displayPreference === 'business' && h?.businessName) return h.businessName;
+                  if (h?.displayPreference === 'dba' && h?.dba) return h.dba;
+                  return `${booking.host?.firstName || vehicleData?.host?.firstName || ''} ${booking.host?.lastName || vehicleData?.host?.lastName || ''}`;
+                })()}</h2>
                 {vehicleData?.host?.rating > 0 && (
                   <p>Host rating: {vehicleData.host.rating.toFixed(1)} ({vehicleData.host.reviewCount} reviews)</p>
                 )}

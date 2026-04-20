@@ -446,9 +446,12 @@ const VehicleDetail = () => {
               )}
 
               <div className="vehicle-section">
-                <h2>Hosted by {vehicle.host?.hostInfo?.displayPreference === 'business' && vehicle.host?.hostInfo?.businessName
-                  ? vehicle.host.hostInfo.businessName
-                  : `${vehicle.host?.firstName} ${vehicle.host?.lastName}`}</h2>
+                <h2>Hosted by {(() => {
+                  const h = vehicle.host?.hostInfo;
+                  if (h?.displayPreference === 'business' && h?.businessName) return h.businessName;
+                  if (h?.displayPreference === 'dba' && h?.dba) return h.dba;
+                  return `${vehicle.host?.firstName} ${vehicle.host?.lastName}`;
+                })()}</h2>
                 {vehicle.host?.rating > 0 && (
                   <p>Host rating: ⭐ {vehicle.host.rating.toFixed(1)} ({vehicle.host.reviewCount} reviews)</p>
                 )}
