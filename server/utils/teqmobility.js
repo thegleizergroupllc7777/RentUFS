@@ -68,21 +68,26 @@ const isConfigured = () => {
  * 1. Upsert Owner - Creates or updates an owner (the vehicle host)
  * PUT /api/v1/owners
  *
- * Per Teq Mobility docs, the body requires only: name, phone, email, external_id, address.
- * type/dl_number/birth_date/fein are not body params for upsert — owners default to
- * UNDETERMINED which is only ineligible for OFF_RENT. We only do ON_RENT, where the
- * insurer validates the driver via the driver object on the coverage start call.
+ * Required body: name, phone, email, external_id, address.
+ * COMMERCIAL owners (vehicles titled to an LLC/corp) additionally require
+ * fein and commercial_name. For individuals, type is omitted and defaults
+ * to UNDETERMINED, which is still eligible for ON_RENT coverage.
  */
 const upsertOwner = async (host) => {
-  const addr = host.address?.street
-    ? host.address
-    : (host.hostInfo?.legalAddress?.street
-        ? host.hostInfo.legalAddress
-        : host.hostInfo?.businessAddress);
+  const isBusinessHost = host.hostInfo?.accountType === 'business'
+    && !!host.hostInfo?.taxId
+    && !!host.hostInfo?.businessName;
+
+  const addr = isBusinessHost
+    ? host.hostInfo.businessAddress
+    : (host.address?.street
+        ? host.address
+        : host.hostInfo?.legalAddress);
 
   if (!addr?.street || !addr?.city || !addr?.state || !addr?.zipCode) {
     console.warn('🛡️ TeqMobility: Host missing required address for owner upsert', {
       hostId: host._id,
+      isBusinessHost,
       hasStreet: !!addr?.street,
       hasCity: !!addr?.city,
       hasState: !!addr?.state,
@@ -91,14 +96,17 @@ const upsertOwner = async (host) => {
     throw new Error('Host profile incomplete for insurance: missing address');
   }
 
-  const fullName = `${host.firstName || ''} ${host.lastName || ''}`.trim();
-  if (!fullName) {
+  const name = isBusinessHost
+    ? host.hostInfo.businessName
+    : `${host.firstName || ''} ${host.lastName || ''}`.trim();
+
+  if (!name) {
     throw new Error('Host profile incomplete for insurance: missing name');
   }
 
   const body = {
     external_id: host._id.toString(),
-    name: fullName,
+    name,
     phone: host.phone || '',
     email: host.email,
     address: {
@@ -110,8 +118,14 @@ const upsertOwner = async (host) => {
     }
   };
 
+  if (isBusinessHost) {
+    body.type = 'COMMERCIAL';
+    body.fein = host.hostInfo.taxId;
+    body.commercial_name = host.hostInfo.businessName;
+  }
+
   const response = await teqApi.put('/api/v1/owners', body);
-  console.log('🛡️ TeqMobility: Owner upserted -', response.data.id);
+  console.log(`🛡️ TeqMobility: Owner upserted - ${response.data.id} (${isBusinessHost ? 'COMMERCIAL' : 'default'})`);
   return response.data;
 };
 
