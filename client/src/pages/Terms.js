@@ -37,6 +37,17 @@ const Terms = () => {
               <li><a href="#section-13">Third-Party Website and Content</a></li>
               <li><a href="#section-14">Site Management</a></li>
               <li><a href="#section-15">Privacy Policy</a></li>
+              <li><a href="#section-16">Term and Termination</a></li>
+              <li><a href="#section-17">Modifications and Interruptions</a></li>
+              <li><a href="#section-18">Governing Law</a></li>
+              <li><a href="#section-19">Dispute Resolution</a></li>
+              <li><a href="#section-20">Corrections</a></li>
+              <li><a href="#section-21">Disclaimer</a></li>
+              <li><a href="#section-22">Limitations of Liability</a></li>
+              <li><a href="#section-23">Indemnification</a></li>
+              <li><a href="#section-24">User Data</a></li>
+              <li><a href="#section-25">Electronic Communications, Transactions, and Signatures</a></li>
+              <li><a href="#section-26">Communications &amp; SMS Program (Transactional)</a></li>
             </ol>
             <p className="terms-toc-note">Additional sections will be added as the document is completed.</p>
           </div>
@@ -687,11 +698,295 @@ const Terms = () => {
               transferring your data to the United States, and you agree to have your
               data transferred to and processed in the United States.
             </p>
-            <p className="terms-note">
-              <em>
-                Note: Section 15 continues in the source document; additional
-                paragraphs will be added as they are provided.
-              </em>
+            <p>
+              It is important that we use only that personal data required for
+              RentUFS to provide the level of service expected by our customers and
+              commercial partners.
+            </p>
+          </article>
+
+          <article id="section-16" className="terms-section">
+            <h2>16. Term and Termination</h2>
+            <p>
+              These Terms of Service shall remain in full force and effect while you
+              use the Site.
+            </p>
+            <p>
+              <strong>
+                WITHOUT LIMITING ANY OTHER PROVISION OF THESE TERMS OF SERVICE, WE
+                RESERVE THE RIGHT TO, IN OUR SOLE DISCRETION AND WITHOUT NOTICE OR
+                LIABILITY, DENY ACCESS TO AND USE OF THE SITE (INCLUDING BLOCKING
+                CERTAIN IP ADDRESSES), TO ANY PERSON FOR ANY REASON OR FOR NO REASON,
+                INCLUDING WITHOUT LIMITATION FOR BREACH OF ANY REPRESENTATION,
+                WARRANTY, OR COVENANT CONTAINED IN THESE TERMS OF SERVICE OR OF ANY
+                APPLICABLE LAW OR REGULATION. WE MAY TERMINATE YOUR USE OR
+                PARTICIPATION IN THE SITE OR DELETE YOUR ACCOUNT AND ANY CONTENT OR
+                INFORMATION THAT YOU POSTED AT ANY TIME, WITHOUT WARNING, IN OUR
+                SOLE DISCRETION.
+              </strong>
+            </p>
+            <p>
+              If we terminate or suspend your account for any reason, you are
+              prohibited from registering and creating a new account under your
+              name, a fake or borrowed name, or the name of any third party, even if
+              you may be acting on behalf of the third party. In addition to
+              terminating or suspending your account, we reserve the right to take
+              appropriate legal action, including without limitation pursuing civil,
+              criminal, and injunctive redress.
+            </p>
+          </article>
+
+          <article id="section-17" className="terms-section">
+            <h2>17. Modifications and Interruptions</h2>
+            <p>
+              We reserve the right to change, modify, or remove the contents of the
+              Site at any time or for any reason at our sole discretion without
+              notice. However, we have no obligation to update any information on
+              our Site. We also reserve the right to modify or discontinue all or
+              part of the Site without notice at any time. We will not be liable to
+              you or any third party for any modification, price change, suspension,
+              or discontinuation of the Site.
+            </p>
+            <p>
+              We cannot guarantee the Site will be available at all times. We may
+              experience hardware, software, or other problems or need to perform
+              maintenance related to the Site, resulting in interruptions, delays,
+              or errors. We reserve the right to change, revise, update, suspend,
+              discontinue, or otherwise modify the Site at any time or for any
+              reason without notice to you. You agree that we have no liability
+              whatsoever for any loss, damage, or inconvenience caused by your
+              inability to access or use the Site during any downtime or
+              discontinuance of the Site. Nothing in these Terms of Service will be
+              construed to obligate us to maintain and support the Site or to supply
+              any corrections, updates, or releases in connection therewith.
+            </p>
+          </article>
+
+          <article id="section-18" className="terms-section">
+            <h2>18. Governing Law</h2>
+            <p>
+              These Terms of Service and your use of the Site are governed by and
+              construed in accordance with the laws of the State of California
+              applicable to agreements made and to be entirely performed within the
+              State of California, without regard to its conflict of law principles.
+            </p>
+          </article>
+
+          <article id="section-19" className="terms-section">
+            <h2>19. Dispute Resolution</h2>
+            <p>
+              To expedite resolution and control the cost of any dispute,
+              controversy, or claim related to these Terms of Service (each
+              &ldquo;Dispute&rdquo; and collectively, the &ldquo;Disputes&rdquo;) brought by either you or
+              us (individually, a &ldquo;Party&rdquo; and collectively, the &ldquo;Parties&rdquo;), the
+              Parties agree to first attempt to negotiate any Dispute (except those
+              Disputes expressly provided below) informally before initiating
+              arbitration. Such informal negotiations commence upon written notice
+              from one Party to the other Party.
+            </p>
+            <h3>Restrictions</h3>
+            <p>
+              The Parties agree that any arbitration shall be limited to the
+              Dispute between the Parties individually. To the full extent permitted
+              by law, (a) no arbitration shall be joined with any other proceeding;
+              (b) there is no right or authority for any Dispute to be arbitrated on
+              a class-action basis or to utilize class action procedures; and
+              (c) there is no right or authority for any Dispute to be brought in a
+              purported representative capacity on behalf of the general public or
+              any other persons.
+            </p>
+            <h3>Exceptions to Informal Negotiations and Arbitration</h3>
+            <p>
+              The Parties agree that the following Disputes are not subject to the
+              above provisions concerning informal negotiations and binding
+              arbitration: (a) any Disputes seeking to enforce or protect, or
+              concerning the validity of, any of the intellectual property rights
+              of a Party; (b) any Dispute related to, or arising from, allegations
+              of misappropriation, unauthorized access, or unauthorized use; and
+              (c) any claim for injunctive relief. If this provision is found to be
+              illegal or unenforceable, then neither Party will elect to arbitrate
+              any Dispute falling within that portion of this provision found to be
+              illegal or unenforceable and such Dispute shall be decided by a court
+              of competent jurisdiction within the courts listed for jurisdiction
+              above, and the Parties agree to submit to the personal jurisdiction
+              of that court.
+            </p>
+          </article>
+
+          <article id="section-20" className="terms-section">
+            <h2>20. Corrections</h2>
+            <p>
+              There may be information on the Site that contains typographical
+              errors, inaccuracies, or omissions, including descriptions, pricing,
+              availability, and various other information. We reserve the right to
+              correct any errors, inaccuracies, or omissions and to change or update
+              the information on the Site at any time, without prior notice.
+            </p>
+          </article>
+
+          <article id="section-21" className="terms-section">
+            <h2>21. Disclaimer</h2>
+            <p>
+              <strong>
+                THE SITE IS PROVIDED ON AN AS-IS AND AS-AVAILABLE BASIS. YOU AGREE
+                THAT YOUR USE OF THE SITE AND OUR SERVICES WILL BE AT YOUR SOLE
+                RISK. TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL
+                WARRANTIES, EXPRESS OR IMPLIED, IN CONNECTION WITH THE SITE AND
+                YOUR USE THEREOF, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+                WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+                AND NON-INFRINGEMENT. WE MAKE NO WARRANTIES OR REPRESENTATIONS
+                ABOUT THE ACCURACY OR COMPLETENESS OF THE SITE&rsquo;S CONTENT OR THE
+                CONTENT OF ANY WEBSITES LINKED TO THE SITE AND WE WILL ASSUME NO
+                LIABILITY OR RESPONSIBILITY FOR ANY (1) ERRORS, MISTAKES, OR
+                INACCURACIES OF CONTENT AND MATERIALS, (2) PERSONAL INJURY OR
+                PROPERTY DAMAGE, OF ANY NATURE WHATSOEVER, RESULTING FROM YOUR
+                ACCESS TO AND USE OF THE SITE, (3) ANY UNAUTHORIZED ACCESS TO OR
+                USE OF OUR SECURE SERVERS AND/OR ANY AND ALL PERSONAL INFORMATION
+                AND/OR FINANCIAL INFORMATION STORED THEREIN, (4) ANY INTERRUPTION
+                OR CESSATION OF TRANSMISSION TO OR FROM THE SITE, (5) ANY BUGS,
+                VIRUSES, OR THE LIKE WHICH MAY BE TRANSMITTED TO OR THROUGH THE
+                SITE BY ANY THIRD PARTY, AND/OR (6) ANY ERRORS OR OMISSIONS IN ANY
+                CONTENT AND MATERIALS OR FOR ANY LOSS OR DAMAGE OF ANY KIND
+                INCURRED AS A RESULT OF THE USE OF ANY CONTENT POSTED, TRANSMITTED,
+                OR OTHERWISE MADE AVAILABLE VIA THE SITE.
+              </strong>{' '}
+              We do not warrant, endorse, guarantee, or assume responsibility for
+              any product or service advertised or offered by a third party through
+              the Site, any hyperlinked website, or any website or mobile
+              application featured in any banner or other advertising, and we will
+              not be a party to or in any way be responsible for monitoring any
+              transaction between you and any third-party providers of products or
+              services. As with the purchase of a product or service through any
+              medium or in any environment, you should use your best judgment and
+              exercise caution where appropriate.
+            </p>
+          </article>
+
+          <article id="section-22" className="terms-section">
+            <h2>22. Limitations of Liability</h2>
+            <p>
+              <strong>
+                IN NO EVENT WILL WE OR OUR DIRECTORS, EMPLOYEES, OR AGENTS BE
+                LIABLE TO YOU OR ANY THIRD PARTY FOR ANY DIRECT, INDIRECT,
+                CONSEQUENTIAL, EXEMPLARY, INCIDENTAL, SPECIAL, OR PUNITIVE DAMAGES,
+                INCLUDING LOST PROFIT, LOST REVENUE, LOSS OF DATA, OR OTHER DAMAGES
+                ARISING FROM YOUR USE OF THE SITE, EVEN IF WE HAVE BEEN ADVISED OF
+                THE POSSIBILITY OF SUCH DAMAGES. NOTWITHSTANDING ANYTHING TO THE
+                CONTRARY CONTAINED HEREIN, OUR LIABILITY TO YOU FOR ANY CAUSE
+                WHATSOEVER AND REGARDLESS OF THE FORM OF THE ACTION, WILL AT ALL
+                TIMES BE LIMITED TO THE AMOUNT PAID, IF ANY, BY YOU TO US DURING
+                THE SIX (6) MONTH PERIOD PRIOR TO ANY CAUSE OF ACTION ARISING.
+                CERTAIN US STATE LAWS AND INTERNATIONAL LAWS DO NOT ALLOW
+                LIMITATIONS ON IMPLIED WARRANTIES OR THE EXCLUSION OR LIMITATION OF
+                CERTAIN DAMAGES. IF THESE LAWS APPLY TO YOU, SOME OR ALL OF THE
+                ABOVE DISCLAIMERS OR LIMITATIONS MAY NOT APPLY TO YOU, AND YOU MAY
+                HAVE ADDITIONAL RIGHTS.
+              </strong>
+            </p>
+          </article>
+
+          <article id="section-23" className="terms-section">
+            <h2>23. Indemnification</h2>
+            <p>
+              You agree to defend, indemnify, and hold us harmless, including our
+              subsidiaries, affiliates, and all of our respective officers, agents,
+              partners, and employees, from and against any loss, damage, liability,
+              claim, or demand, including reasonable attorneys&rsquo; fees and expenses,
+              made by any third party due to or arising out of: (1) your
+              Contributions; (2) use of the Site; (3) breach of these Terms of
+              Service; (4) any breach of your representations and warranties set
+              forth in these Terms of Service; (5) your violation of the rights of
+              a third party, including but not limited to intellectual property
+              rights; or (6) any overt harmful act toward any other user of the
+              Site with whom you connected via the Site. Notwithstanding the
+              foregoing, we reserve the right, at your expense, to assume the
+              exclusive defense and control of any matter for which you are
+              required to indemnify us, and you agree to cooperate, at your
+              expense, with our defense of such claims. We will use reasonable
+              efforts to notify you of any such claim, action, or proceeding which
+              is subject to this indemnification upon becoming aware of it.
+            </p>
+          </article>
+
+          <article id="section-24" className="terms-section">
+            <h2>24. User Data</h2>
+            <p>
+              We will maintain certain data that you transmit to the Site for the
+              purpose of managing the performance of the Site, as well as data
+              relating to your use of the Site. Although we perform regular routine
+              backups of data, you are solely responsible for all data that you
+              transmit or that relates to any activity you have undertaken using
+              the Site. You agree that we shall have no liability to you for any
+              loss or corruption of any such data, and you hereby waive any right
+              of action against us arising from any such loss or corruption of such
+              data.
+            </p>
+          </article>
+
+          <article id="section-25" className="terms-section">
+            <h2>25. Electronic Communications, Transactions, and Signatures</h2>
+            <p>
+              Visiting the Site, sending us emails and or SMS Text messages, and
+              completing online forms constitute electronic communications. You
+              consent to receive electronic communications, and you agree that all
+              agreements, notices, disclosures, and other communications we provide
+              to you electronically, via email and/or SMS Text Messages and on the
+              Site, satisfy any legal requirement that such communication be in
+              writing.{' '}
+              <strong>
+                YOU HEREBY AGREE TO THE USE OF ELECTRONIC SIGNATURES, CONTRACTS,
+                ORDERS, AND OTHER RECORDS, AND TO ELECTRONIC DELIVERY OF NOTICES,
+                POLICIES, AND RECORDS OF TRANSACTIONS INITIATED OR COMPLETED BY US
+                OR VIA THE SITE.
+              </strong>{' '}
+              You hereby waive any rights or requirements under any statutes,
+              regulations, rules, ordinances, or other laws in any jurisdiction
+              which require an original signature or delivery or retention of
+              non-electronic records, or to payments or the granting of credits by
+              any means other than electronic means.
+            </p>
+          </article>
+
+          <article id="section-26" className="terms-section">
+            <h2>26. Communications &amp; SMS Program (Transactional)</h2>
+            <p>
+              By creating a RentUFS account, adding or verifying your mobile
+              number, or enabling notification preferences, you agree that RentUFS
+              may send transactional SMS/text messages related to your account and
+              bookings (e.g., booking confirmations or updates, payment
+              reminders/receipts, pickup/return alerts, and customer support
+              updates). You may receive up to 3 messages per activity. Msg &amp;
+              data rates may apply. These messages are not marketing and are sent
+              only in connection with your account activity and settings.
+            </p>
+            <p>
+              <strong>STOP/Opt-Out.</strong> You can opt out of SMS at any time by
+              replying STOP to any message. You may also update preferences in the
+              app or contact support. We process opt-outs immediately and may send
+              a one-time confirmation.
+            </p>
+            <p>
+              <strong>HELP.</strong> Reply HELP for assistance or visit{' '}
+              <strong>rentufs.com/support</strong> or email{' '}
+              <strong>support@rentufs.com</strong>.
+            </p>
+            <p>
+              <strong>Delivery/Carriers.</strong> Delivery is not guaranteed.
+              Carriers are not liable for delayed or undelivered messages.
+            </p>
+            <p>
+              <strong>Eligibility &amp; Responsibility.</strong> You represent that
+              you are the mobile account holder or customary user and that the
+              number you provided is accurate. Service is intended for users 21+.
+            </p>
+            <p>
+              <strong>Data Use.</strong> We use your number solely to deliver
+              transactional messages and may share it with service providers (e.g.,
+              SMS gateways and carriers) to route messages and prevent abuse. See
+              our Privacy Policy at{' '}
+              <strong>rentufs.com/privacy-policy</strong>. By using the services,
+              you also consent to receive service-related electronic communications
+              as described in our Privacy Policy.
             </p>
           </article>
 
