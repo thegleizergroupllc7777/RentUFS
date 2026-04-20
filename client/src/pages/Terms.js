@@ -27,6 +27,9 @@ const Terms = () => {
               <li><a href="#section-3">User Representations</a></li>
               <li><a href="#section-4">User Registration</a></li>
               <li><a href="#section-5">Insurance Requirements and Conditions</a></li>
+              <li><a href="#section-6">Prohibited Activities</a></li>
+              <li><a href="#section-7">User-Generated Contributions</a></li>
+              <li><a href="#section-8">Contribution License</a></li>
             </ol>
             <p className="terms-toc-note">Additional sections will be added as the document is completed.</p>
           </div>
@@ -301,8 +304,131 @@ const Terms = () => {
             </ol>
           </article>
 
+          <article id="section-6" className="terms-section">
+            <h2>6. Prohibited Activities</h2>
+            <p>
+              You may not access or use the Site for any purpose other than that for
+              which we make the Site available. The Site may not be used in connection
+              with any commercial endeavors except those that are specifically endorsed
+              or approved by us.
+            </p>
+            <p>As a user of the Site, you agree <strong>not to</strong>:</p>
+            <ul className="terms-list">
+              <li>Systematically retrieve data or other content from the Site to create or compile, directly or indirectly, a collection, compilation, database, or directory without written permission from us.</li>
+              <li>Trick, defraud, or mislead us and other users, especially in any attempt to learn sensitive account information such as user passwords.</li>
+              <li>Circumvent, disable, or otherwise interfere with security-related features of the Site, including features that prevent or restrict the use or copying of any Content or enforce limitations on the use of the Site or the Content contained therein.</li>
+              <li>Disparage, tarnish, or otherwise harm, in our opinion, us, our directors, officers, employees, and/or the Site.</li>
+              <li>Use any information obtained from the Site in order to mistreat or harm another person.</li>
+              <li>Make improper use of our support services or submit false reports of abuse or misconduct.</li>
+              <li>Use the Site in a manner inconsistent with any applicable laws or regulations.</li>
+              <li>Engage in unauthorized framing of or linking to the Site.</li>
+              <li>Upload or transmit (or attempt to upload or transmit) malicious software or other material, including excessive use of capital letters and spamming (continuous posting of repetitive text), that interferes with any party&rsquo;s uninterrupted use and enjoyment of the Site or modifies, impairs, disrupts, alters, or interferes with the use, features, functions, operation, or maintenance of the Site.</li>
+              <li>Engage in any automated use of the system, such as using scripts to send comments or messages, or using any data mining, robots, or similar data gathering and extraction tools.</li>
+              <li>Delete the copyright or other proprietary rights notice from any Content.</li>
+              <li>Attempt to impersonate another user or person or use the username of another user.</li>
+              <li>Upload or transmit (or attempt to upload or transmit) any material that acts as a passive or active information collection or transmission mechanism, including tracking pixels, web bugs, cookies, or other similar devices (sometimes referred to as passive collection mechanisms).</li>
+              <li>Interfere with, disrupt, or create an undue burden on the Site or the networks or services connected to the Site.</li>
+              <li>Intimidate or threaten any of our employees or agents engaged in providing any portion of the Site to you.</li>
+              <li>Attempt to bypass any measures of the Site designed to prevent or restrict access to the Site, or any portion of the Site.</li>
+              <li>Copy or adapt the Site&rsquo;s software, including but not limited to Flash, PHP, HTML, JavaScript, or other code.</li>
+              <li>Except as permitted by applicable law, decipher, decompile, disassemble, or reverse engineer any of the software comprising or in any way making up a part of the Site.</li>
+              <li>Except as may be the result of standard search engine or Internet browser usage, use, launch, develop, or distribute any automated system, including without limitation any spider, robot, cheat utility, scraper, or offline reader that accesses the Site, or using or launching any unauthorized script or other software.</li>
+              <li>Use a buying agent or purchasing agent to make purchases on the Site.</li>
+              <li>Make any unauthorized use of the Site, including collecting usernames and/or email addresses of users by electronic or other means for the purpose of sending unsolicited email, or creating user accounts by automated means or under false pretenses.</li>
+              <li>Use the Site as part of any effort to compete with us or otherwise use the Site and/or the Content for any revenue-generating endeavor or commercial enterprise.</li>
+              <li>Use the Site to advertise or offer to sell goods and services.</li>
+              <li>Sell or otherwise transfer your profile.</li>
+              <li>Scrape data or otherwise collect data systematically.</li>
+            </ul>
+          </article>
+
+          <article id="section-7" className="terms-section">
+            <h2>7. User-Generated Contributions</h2>
+            <p>
+              The Site may invite you to chat, contribute to, or participate in blogs,
+              message boards, online forums, and other functionality, and may provide
+              you with the opportunity to create, submit, post, display, transmit,
+              perform, publish, distribute, or broadcast content and materials to us
+              or on the Site, including but not limited to text, writings, video,
+              audio, photographs, graphics, comments, suggestions, or personal
+              information or other material (collectively, &ldquo;Contributions&rdquo;).
+              Contributions may be viewable by other users of the Site and through
+              third-party websites. As such, any Contributions you transmit may be
+              treated as non-confidential and non-proprietary. When you create or make
+              available any Contributions, you thereby represent and warrant that:
+            </p>
+            <ul className="terms-list">
+              <li>The creation, distribution, transmission, public display, or performance, and the accessing, downloading, or copying of your Contributions do not and will not infringe the proprietary rights, including but not limited to the copyright, patent, trademark, trade secret, or moral rights of any third party.</li>
+              <li>You are the creator and owner of or have the necessary licenses, rights, consents, releases, and permissions to use and to authorize us, the Site, and other users of the Site to use your Contributions in any manner contemplated by the Site and these Terms of Service.</li>
+              <li>You have the written consent, release, and/or permission of each and every identifiable individual person in your Contributions to use the name or likeness of each and every such identifiable individual person to enable inclusion and use of your Contributions in any manner contemplated by the Site and these Terms of Service.</li>
+              <li>Your Contributions are not false, inaccurate, or misleading.</li>
+              <li>Your Contributions are not unsolicited or unauthorized advertising, promotional materials, pyramid schemes, chain letters, spam, mass mailings, or other forms of solicitation.</li>
+              <li>Your Contributions are not obscene, lewd, lascivious, filthy, violent, libelous, slanderous, or otherwise objectionable (as determined by us).</li>
+              <li>Your Contributions do not ridicule, mock, disparage, intimidate, or mistreat anyone.</li>
+              <li>Your Contributions are not used to threaten (in the legal sense of that term) any other person or to promote violence against a specific person or class of people.</li>
+              <li>Your Contributions do not violate any applicable law, regulation, or rule.</li>
+              <li>Your Contributions do not violate the privacy or publicity rights of any third party.</li>
+              <li>Your Contributions do not violate any applicable law intended to protect the health, safety, or well-being of minors.</li>
+              <li>Your Contributions do not include any offensive comments that are connected to race, national origin, gender, sexual preference, or physical handicap.</li>
+              <li>Your Contributions do not otherwise violate, or link to material that violates, any provision of these Terms of Service, or any applicable law or regulation.</li>
+            </ul>
+            <p>
+              Any use of the Site in violation of the foregoing violates these Terms of
+              Service and may result in, among other things, termination or suspension
+              of your rights to use the Site.
+            </p>
+          </article>
+
+          <article id="section-8" className="terms-section">
+            <h2>8. Contribution License</h2>
+            <p>
+              By posting your Contributions to any part of the Site or making
+              Contributions accessible to the Site by linking your account from the
+              Site to any of your social networking accounts, you automatically grant,
+              and you represent and warrant that you have the right to grant, to us an
+              unrestricted, unlimited, irrevocable, perpetual, non-exclusive,
+              transferable, royalty-free, fully-paid, worldwide right and license to
+              host, use, copy, reproduce, disclose, sell, resell, publish, broadcast,
+              retitle, archive, store, cache, publicly perform, publicly display,
+              reformat, translate, transmit, excerpt (in whole or in part), and
+              distribute such Contributions (including, without limitation, your image
+              and voice) for any purpose, commercial, advertising, or otherwise, and
+              to prepare derivative works of, or incorporate into other works, such
+              Contributions, and grant and authorize sublicenses of the foregoing. The
+              use and distribution may occur in any media formats and through any
+              media channels.
+            </p>
+            <p>
+              This license will apply to any form, media, or technology now known or
+              hereafter developed, and includes our use of your name, company name,
+              and franchise name, as applicable, and any of the trademarks, service
+              marks, trade names, logos, and personal and commercial images you
+              provide. You waive all moral rights in your Contributions, and you
+              warrant that moral rights have not otherwise been asserted in your
+              Contributions.
+            </p>
+            <p>
+              We do not assert any ownership over your Contributions. You retain full
+              ownership of all of your Contributions and any intellectual property
+              rights or other proprietary rights associated with your Contributions.
+              We are not liable for any statements or representations in your
+              Contributions provided by you in any area on the Site. You are solely
+              responsible for your Contributions to the Site and you expressly agree
+              to exonerate us from any and all responsibility and to refrain from any
+              legal action against us regarding your Contributions.
+            </p>
+            <p>
+              We have the right, in our sole and absolute discretion, (1) to edit,
+              redact, or otherwise change any Contributions; (2) to re-categorize any
+              Contributions to place them in more appropriate locations on the Site;
+              and (3) to pre-screen or delete any Contributions at any time and for
+              any reason, without notice. We have no obligation to monitor your
+              Contributions.
+            </p>
+          </article>
+
           <p className="terms-footnote">
-            This document is being populated incrementally. Sections 6 through 29 will
+            This document is being populated incrementally. Sections 9 through 29 will
             be added as they are provided. For questions about these Terms, contact us
             at <strong>support@rentufs.com</strong>.
           </p>
