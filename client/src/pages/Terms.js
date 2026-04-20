@@ -30,6 +30,9 @@ const Terms = () => {
               <li><a href="#section-6">Prohibited Activities</a></li>
               <li><a href="#section-7">User-Generated Contributions</a></li>
               <li><a href="#section-8">Contribution License</a></li>
+              <li><a href="#section-9">Guidelines for Reviews</a></li>
+              <li><a href="#section-10">Mobile Application License</a></li>
+              <li><a href="#section-11">Social Media</a></li>
             </ol>
             <p className="terms-toc-note">Additional sections will be added as the document is completed.</p>
           </div>
@@ -427,9 +430,157 @@ const Terms = () => {
             </p>
           </article>
 
+          <article id="section-9" className="terms-section">
+            <h2>9. Guidelines for Reviews</h2>
+            <p>
+              We may provide you areas on the Site to leave reviews or ratings. When
+              posting a review, you must comply with the following criteria: (1) you
+              should have firsthand experience with the person or vehicle being
+              reviewed; (2) your reviews should not contain offensive profanity, or
+              abusive, racist, offensive, or hate language; (3) your reviews should
+              not contain discriminatory references based on religion, race, gender,
+              national origin, age, marital status, sexual orientation, or disability;
+              (4) your reviews should not contain references to illegal activity;
+              (5) you should not be affiliated with competitors if posting negative
+              reviews; (6) you should not make any conclusions as to the legality of
+              conduct; (7) you may not post any false or misleading statements; and
+              (8) you may not organize a campaign encouraging others to post reviews,
+              whether positive or negative.
+            </p>
+            <p>
+              We may accept, reject, or remove reviews in our sole discretion. We have
+              absolutely no obligation to screen reviews or to delete reviews, even if
+              anyone considers reviews objectionable or inaccurate. Reviews are not
+              endorsed by us, and do not necessarily represent our opinions or the
+              views of any of our affiliates or partners. We do not assume liability
+              for any review or for any claims, liabilities, or losses resulting from
+              any review. By posting a review, you hereby grant us a perpetual,
+              non-exclusive, worldwide, royalty-free, fully-paid, assignable, and
+              sublicensable right and license to reproduce, modify, translate, transmit
+              by any means, display, perform, and/or distribute all content relating
+              to reviews.
+            </p>
+          </article>
+
+          <article id="section-10" className="terms-section">
+            <h2>10. Mobile Application License</h2>
+            <h3>Use of License</h3>
+            <p>
+              If you access the Site via a mobile application, then we grant you a
+              revocable, non-exclusive, non-transferable, limited right to install and
+              use the mobile application on wireless electronic devices owned or
+              controlled by you, and to access and use the mobile application on such
+              devices strictly in accordance with the terms and conditions of this
+              mobile application license contained in these Terms of Service. You
+              shall not: (1) except as permitted by applicable law, decompile, reverse
+              engineer, disassemble, attempt to derive the source code of, or decrypt
+              the application; (2) make any modification, adaptation, improvement,
+              enhancement, translation, or derivative work from the application;
+              (3) violate any applicable laws, rules, or regulations in connection
+              with your access or use of the application; (4) remove, alter, or
+              obscure any proprietary notice (including any notice of copyright or
+              trademark) posted by us or the licensors of the application; (5) use
+              the application for any revenue-generating endeavor, commercial
+              enterprise, or other purpose for which it is not designed or intended;
+              (6) make the application available over a network or other environment
+              permitting access or use by multiple devices or users at the same time;
+              (7) use the application for creating a product, service, or software
+              that is, directly or indirectly, competitive with or in any way a
+              substitute for the application; (8) use the application to send
+              automated queries to any website or to send any unsolicited commercial
+              e-mail; or (9) use any proprietary information or any of our interfaces
+              or our other intellectual property in the design, development,
+              manufacture, licensing, or distribution of any applications,
+              accessories, or devices for use with the application.
+            </p>
+            <h3>Apple and Android Devices</h3>
+            <p>
+              The following terms apply when you use a mobile application obtained
+              from either the Apple Store or Google Play (each an &ldquo;App Distributor&rdquo;)
+              to access the Site: (1) the license granted to you for our mobile
+              application is limited to a nontransferable license to use the
+              application on a device that utilizes the Apple iOS or Android
+              operating systems, as applicable, and in accordance with the usage
+              rules set forth in the applicable App Distributor&rsquo;s terms of service;
+              (2) we are responsible for providing any maintenance and support
+              services with respect to the mobile application as specified in the
+              terms and conditions of this mobile application license contained in
+              these Terms of Service or as otherwise required under applicable law,
+              and you acknowledge that each App Distributor has no obligation
+              whatsoever to furnish any maintenance and support services with respect
+              to the mobile application; (3) in the event of any failure of the
+              mobile application to conform to any applicable warranty, you may
+              notify the applicable App Distributor, and the App Distributor, in
+              accordance with its terms and policies, may refund the purchase price,
+              if any, paid for the mobile application, and to the maximum extent
+              permitted by applicable law, the App Distributor will have no other
+              warranty obligation whatsoever with respect to the mobile application;
+              (4) you represent and warrant that (i) you are not located in a country
+              that is subject to a U.S. government embargo, or that has been
+              designated by the U.S. government as a &ldquo;terrorist supporting&rdquo; country
+              and (ii) you are not listed on any U.S. government list of prohibited
+              or restricted parties; (5) you must comply with applicable third-party
+              terms of agreement when using the mobile application; and (6) you
+              acknowledge and agree that the App Distributors are third-party
+              beneficiaries of the terms and conditions in this mobile application
+              license contained in these Terms of Service, and that each App
+              Distributor will have the right (and will be deemed to have accepted
+              the right) to enforce the terms and conditions in this mobile
+              application license contained in these Terms of Service against you as
+              a third-party beneficiary thereof.
+            </p>
+          </article>
+
+          <article id="section-11" className="terms-section">
+            <h2>11. Social Media</h2>
+            <p>
+              As part of the functionality of the Site, you may link your account with
+              online accounts you have with third-party service providers (each such
+              account, a &ldquo;Third-Party Account&rdquo;) by either: (1) providing your
+              Third-Party Account login information through the Site; or
+              (2) allowing us to access your Third-Party Account, as is permitted
+              under the applicable terms and conditions that govern your use of each
+              Third-Party Account. You represent and warrant that you are entitled to
+              disclose your Third-Party Account login information to us and/or grant
+              us access to your Third-Party Account, without breach by you of any of
+              the terms and conditions that govern your use of the applicable
+              Third-Party Account, and without obligating us to pay any fees or
+              making us subject to any usage limitations imposed by the third-party
+              service provider of the Third-Party Account.
+            </p>
+            <p>
+              By granting us access to any Third-Party Accounts, you understand that
+              (1) we may access, make available, and store (if applicable) any content
+              that you have provided to and stored in your Third-Party Account (the
+              &ldquo;Social Network Content&rdquo;) so that it is available on and through the
+              Site via your account, including without limitation any friend lists,
+              and (2) we may submit to and receive from your Third-Party Account
+              additional information to the extent you are notified when you link your
+              account with the Third-Party Account. Depending on the Third-Party
+              Accounts you choose and subject to the privacy settings that you have
+              set in such Third-Party Accounts, personally identifiable information
+              that you post to your Third-Party Accounts may be available on and
+              through your account on the Site.
+            </p>
+            <p>
+              Please note that if a Third-Party Account or associated service becomes
+              unavailable or our access to such Third-Party Account is terminated by
+              the third-party service provider, then Social Network Content may no
+              longer be available on and through the Site. You will have the ability
+              to disable the connection between your account on the Site and your
+              Third-Party Account at any time.
+            </p>
+            <p className="terms-note">
+              <em>
+                Note: Section 11 continues in the source document; additional
+                paragraphs will be added as they are provided.
+              </em>
+            </p>
+          </article>
+
           <p className="terms-footnote">
-            This document is being populated incrementally. Sections 9 through 29 will
-            be added as they are provided. For questions about these Terms, contact us
+            This document is being populated incrementally. Section 12 onward will be
+            added as they are provided. For questions about these Terms, contact us
             at <strong>support@rentufs.com</strong>.
           </p>
         </div>
