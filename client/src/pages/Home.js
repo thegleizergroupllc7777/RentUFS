@@ -214,6 +214,49 @@ const Home = () => {
       {/* Hero Section */}
       <section className="ufs-hero">
         <div className="ufs-hero-bg" style={heroBgStyle}></div>
+
+        {/* Aerial city grid background */}
+        <div className="ufs-hero-citymap" aria-hidden="true">
+          <svg viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" fill="none">
+            {/* Major roads */}
+            <line x1="0" y1="180" x2="1400" y2="180" className="ufs-road ufs-road--major" />
+            <line x1="0" y1="420" x2="1400" y2="420" className="ufs-road ufs-road--major" />
+            <line x1="0" y1="660" x2="1400" y2="660" className="ufs-road ufs-road--major" />
+            <line x1="280" y1="0" x2="280" y2="900" className="ufs-road ufs-road--major" />
+            <line x1="700" y1="0" x2="700" y2="900" className="ufs-road ufs-road--major" />
+            <line x1="1120" y1="0" x2="1120" y2="900" className="ufs-road ufs-road--major" />
+
+            {/* Minor roads */}
+            <line x1="0" y1="300" x2="700" y2="300" className="ufs-road ufs-road--minor" />
+            <line x1="700" y1="540" x2="1400" y2="540" className="ufs-road ufs-road--minor" />
+            <line x1="0" y1="780" x2="1400" y2="780" className="ufs-road ufs-road--minor" />
+            <line x1="490" y1="0" x2="490" y2="660" className="ufs-road ufs-road--minor" />
+            <line x1="910" y1="180" x2="910" y2="900" className="ufs-road ufs-road--minor" />
+            <line x1="140" y1="420" x2="140" y2="900" className="ufs-road ufs-road--minor" />
+            <line x1="1260" y1="0" x2="1260" y2="660" className="ufs-road ufs-road--minor" />
+
+            {/* Highway / curved road */}
+            <path d="M 0 80 Q 350 80 500 200 T 900 300 T 1400 150" className="ufs-road ufs-road--highway" />
+            <path d="M 0 850 Q 300 700 600 720 T 1100 600 T 1400 680" className="ufs-road ufs-road--highway" />
+
+            {/* Intersection highlights */}
+            <circle cx="280" cy="180" r="6" className="ufs-intersection" />
+            <circle cx="700" cy="420" r="8" className="ufs-intersection ufs-intersection--pulse" />
+            <circle cx="1120" cy="660" r="6" className="ufs-intersection" />
+            <circle cx="490" cy="300" r="5" className="ufs-intersection" />
+            <circle cx="910" cy="420" r="5" className="ufs-intersection" />
+
+            {/* Animated car dots - horizontal */}
+            <circle r="3" className="ufs-car-dot ufs-car-dot--h1" />
+            <circle r="3" className="ufs-car-dot ufs-car-dot--h2" />
+            <circle r="3" className="ufs-car-dot ufs-car-dot--h3" />
+
+            {/* Animated car dots - vertical */}
+            <circle r="3" className="ufs-car-dot ufs-car-dot--v1" />
+            <circle r="3" className="ufs-car-dot ufs-car-dot--v2" />
+          </svg>
+        </div>
+
         <div className="ufs-hero-overlay"></div>
         <div className="container ufs-hero-container">
           <div className="ufs-hero-location" data-animate style={{ transitionDelay: '0.1s' }}>

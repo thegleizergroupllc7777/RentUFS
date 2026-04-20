@@ -236,6 +236,101 @@
   filter: blur(80px);
 }
 
+/* Aerial city grid overlay */
+.ufs-hero-citymap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.12;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ufs-hero-citymap svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ufs-road {
+  stroke-linecap: round;
+}
+
+.ufs-road--major {
+  stroke: rgba(0, 255, 102, 0.5);
+  stroke-width: 1.5;
+}
+
+.ufs-road--minor {
+  stroke: rgba(0, 255, 102, 0.3);
+  stroke-width: 0.8;
+  stroke-dasharray: 8 4;
+}
+
+.ufs-road--highway {
+  stroke: rgba(0, 255, 102, 0.6);
+  stroke-width: 2;
+}
+
+.ufs-intersection {
+  fill: rgba(0, 255, 102, 0.4);
+}
+
+.ufs-intersection--pulse {
+  animation: intersection-pulse 3s ease-in-out infinite;
+}
+
+.ufs-car-dot {
+  fill: #00FF66;
+  filter: drop-shadow(0 0 4px rgba(0, 255, 102, 0.8));
+}
+
+.ufs-car-dot--h1 {
+  cy: 180;
+  animation: drive-right 12s linear infinite;
+}
+
+.ufs-car-dot--h2 {
+  cy: 420;
+  animation: drive-right 9s linear infinite 3s;
+}
+
+.ufs-car-dot--h3 {
+  cy: 660;
+  animation: drive-right 14s linear infinite 7s;
+}
+
+.ufs-car-dot--v1 {
+  cx: 700;
+  animation: drive-down 11s linear infinite 2s;
+}
+
+.ufs-car-dot--v2 {
+  cx: 1120;
+  animation: drive-down 13s linear infinite 5s;
+}
+
+@keyframes drive-right {
+  0%   { cx: -20; }
+  100% { cx: 1420; }
+}
+
+@keyframes drive-down {
+  0%   { cy: -20; }
+  100% { cy: 920; }
+}
+
+@keyframes intersection-pulse {
+  0%, 100% { r: 8; opacity: 0.4; }
+  50%      { r: 14; opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ufs-car-dot,
+  .ufs-intersection--pulse {
+    animation: none;
+  }
+}
+
 .ufs-hero-overlay {
   position: absolute;
   inset: 0;
