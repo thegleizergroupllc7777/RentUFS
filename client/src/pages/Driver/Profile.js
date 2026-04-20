@@ -732,6 +732,7 @@ const DriverProfile = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLicenseData(response.data);
+      await refreshUser();
       setShowLicenseForm(false);
       setLicenseMessage('License information updated successfully');
     } catch (error) {
