@@ -274,6 +274,12 @@ const VehicleDetail = () => {
       return;
     }
 
+    // Check if driver has a date of birth on file
+    if (!user.dateOfBirth) {
+      setError('DOB_REQUIRED');
+      return;
+    }
+
     if (!bookingData.startDate) {
       setError('Please select a pick-up date');
       return;
@@ -663,7 +669,7 @@ const VehicleDetail = () => {
                   </div>
                 </div>
 
-                {error && (error === 'LICENSE_REQUIRED' || error === 'LICENSE_EXPIRED') ? (
+                {error && (error === 'LICENSE_REQUIRED' || error === 'LICENSE_EXPIRED' || error === 'DOB_REQUIRED') ? (
                   <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
                     border: '1px solid #ef4444',
@@ -674,16 +680,20 @@ const VehicleDetail = () => {
                     <p style={{ color: '#ef4444', fontWeight: '600', margin: '0 0 0.5rem 0' }}>
                       {error === 'LICENSE_REQUIRED'
                         ? 'A valid driver\'s license is required to book a vehicle.'
-                        : 'Your driver\'s license has expired.'}
+                        : error === 'LICENSE_EXPIRED'
+                        ? 'Your driver\'s license has expired.'
+                        : 'Your date of birth is required to book a vehicle.'}
                     </p>
                     <p style={{ color: '#9ca3af', margin: '0 0 0.75rem 0', fontSize: '0.875rem' }}>
                       {error === 'LICENSE_REQUIRED'
                         ? 'Please add your driver\'s license details before making a reservation.'
-                        : 'Please update your license with a valid expiration date.'}
+                        : error === 'LICENSE_EXPIRED'
+                        ? 'Please update your license with a valid expiration date.'
+                        : 'Please add your date of birth in your profile before making a reservation.'}
                     </p>
                     <button
                       type="button"
-                      onClick={() => navigate('/driver/profile?tab=license')}
+                      onClick={() => navigate(error === 'DOB_REQUIRED' ? '/driver/profile?tab=profile' : '/driver/profile?tab=license')}
                       style={{
                         background: '#10b981',
                         color: '#000',
@@ -695,7 +705,7 @@ const VehicleDetail = () => {
                         fontSize: '0.875rem'
                       }}
                     >
-                      Go to Driver's License
+                      {error === 'DOB_REQUIRED' ? 'Go to Profile' : 'Go to Driver\'s License'}
                     </button>
                   </div>
                 ) : error ? (
