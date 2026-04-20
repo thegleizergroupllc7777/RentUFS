@@ -246,7 +246,7 @@ const Home = () => {
         <div className="container">
           <div className="ufs-features-grid">
             {featureCards.map((card, idx) => (
-              <div key={idx} className="ufs-feature-card" data-animate style={{ transitionDelay: `${idx * 0.15}s` }}>
+              <div key={idx} className="ufs-feature-card" data-animate="card-reveal" style={{ transitionDelay: `${idx * 0.15}s` }}>
                 <div className="ufs-feature-icon">{card.icon}</div>
                 <h3 className="ufs-feature-title">{card.title}</h3>
                 <p className="ufs-feature-desc">{card.description}</p>
