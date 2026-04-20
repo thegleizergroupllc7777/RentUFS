@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
@@ -177,13 +177,34 @@ const Home = () => {
   const { isAuthenticated, user } = useAuth();
   const isHost = user?.userType === 'host' || user?.userType === 'both';
   const [openFaq, setOpenFaq] = useState(null);
+  const pageRef = useRef(null);
 
   const toggleFaq = (index) => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
+  useEffect(() => {
+    const els = pageRef.current?.querySelectorAll('[data-animate]');
+    if (!els || els.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="home-page">
+    <div className="home-page" ref={pageRef}>
       <Navbar />
 
       {/* Hero Section */}
@@ -191,20 +212,20 @@ const Home = () => {
         <div className="ufs-hero-bg" style={heroBgStyle}></div>
         <div className="ufs-hero-overlay"></div>
         <div className="container ufs-hero-container">
-          <div className="ufs-hero-location">
+          <div className="ufs-hero-location" data-animate style={{ transitionDelay: '0.1s' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
               <circle cx="12" cy="10" r="3"/>
             </svg>
             <span>Jersey City, NJ</span>
           </div>
-          <h1 className="ufs-hero-title">
+          <h1 className="ufs-hero-title" data-animate style={{ transitionDelay: '0.25s' }}>
             Rent the perfect car<br />for your next <span className="ufs-hero-accent">adventure</span>
           </h1>
-          <p className="ufs-hero-subtitle">
+          <p className="ufs-hero-subtitle" data-animate style={{ transitionDelay: '0.4s' }}>
             A peer-to-peer marketplace connecting drivers and hosts. Book in minutes, drive in confidence — every trip backed by insurance and 24/7 support.
           </p>
-          <div className="ufs-hero-actions">
+          <div className="ufs-hero-actions" data-animate style={{ transitionDelay: '0.55s' }}>
             <Link to={isHost ? '/host/dashboard' : '/marketplace'}>
               <button className="ufs-btn ufs-btn-primary">
                 {isHost ? 'My Dashboard' : 'Browse Cars'}
@@ -224,7 +245,7 @@ const Home = () => {
         <div className="container">
           <div className="ufs-features-grid">
             {featureCards.map((card, idx) => (
-              <div key={idx} className="ufs-feature-card">
+              <div key={idx} className="ufs-feature-card" data-animate style={{ transitionDelay: `${idx * 0.15}s` }}>
                 <div className="ufs-feature-icon">{card.icon}</div>
                 <h3 className="ufs-feature-title">{card.title}</h3>
                 <p className="ufs-feature-desc">{card.description}</p>
@@ -238,14 +259,16 @@ const Home = () => {
       <section className="ufs-showcase">
         <div className="ufs-showcase-bg" style={showcaseBgStyle}></div>
         <div className="container ufs-showcase-content">
-          <span className="ufs-showcase-eyebrow">Premium Fleet Access</span>
-          <h2 className="ufs-showcase-title">From daily drivers to dream machines.</h2>
-          <p className="ufs-showcase-desc">
+          <span className="ufs-showcase-eyebrow" data-animate style={{ transitionDelay: '0.1s' }}>Premium Fleet Access</span>
+          <h2 className="ufs-showcase-title" data-animate style={{ transitionDelay: '0.25s' }}>From daily drivers to dream machines.</h2>
+          <p className="ufs-showcase-desc" data-animate style={{ transitionDelay: '0.4s' }}>
             Whether you need a reliable sedan for your commute or a sports car for the weekend, UFS gives you the keys.
           </p>
-          <Link to="/marketplace">
-            <button className="ufs-btn ufs-btn-primary">Explore the Marketplace</button>
-          </Link>
+          <div data-animate style={{ transitionDelay: '0.55s' }}>
+            <Link to="/marketplace">
+              <button className="ufs-btn ufs-btn-primary">Explore the Marketplace</button>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -254,19 +277,19 @@ const Home = () => {
         <div className="container">
           <div className="ufs-who-grid">
             <div className="ufs-who-text">
-              <span className="ufs-section-eyebrow">Who We Are</span>
-              <h2 className="ufs-section-title">Driving excellence in peer-to-peer car rentals.</h2>
-              <p className="ufs-section-desc">
+              <span className="ufs-section-eyebrow" data-animate>Who We Are</span>
+              <h2 className="ufs-section-title" data-animate style={{ transitionDelay: '0.1s' }}>Driving excellence in peer-to-peer car rentals.</h2>
+              <p className="ufs-section-desc" data-animate style={{ transitionDelay: '0.2s' }}>
                 UFS was built by car people for car people. We connect drivers who need a vehicle with hosts who have one to share — all under one trusted, insurance-backed platform.
               </p>
-              <p className="ufs-section-desc">
+              <p className="ufs-section-desc" data-animate style={{ transitionDelay: '0.3s' }}>
                 From daily commuters to weekend adventurers, thousands of members trust UFS to deliver a rental experience that is simple, fair and always reliable.
               </p>
-              <Link to="/about" className="ufs-text-link">Learn more about us →</Link>
+              <Link to="/about" className="ufs-text-link" data-animate style={{ transitionDelay: '0.4s' }}>Learn more about us →</Link>
             </div>
             <div className="ufs-who-stats">
               {stats.map((stat, idx) => (
-                <div key={idx} className="ufs-stat-card">
+                <div key={idx} className="ufs-stat-card" data-animate style={{ transitionDelay: `${0.15 + idx * 0.15}s` }}>
                   <div className="ufs-stat-value">{stat.value}</div>
                   <div className="ufs-stat-label">{stat.label}</div>
                   <p className="ufs-stat-desc">{stat.description}</p>
@@ -281,7 +304,7 @@ const Home = () => {
       <section className="ufs-search-stops">
         <div className="container">
           <div className="ufs-search-grid">
-            <div className="ufs-search-image" style={searchImageStyle}>
+            <div className="ufs-search-image" style={searchImageStyle} data-animate="fade-left">
               <div className="ufs-search-image-inner">
                 <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
@@ -292,34 +315,36 @@ const Home = () => {
               </div>
             </div>
             <div className="ufs-search-text">
-              <h2 className="ufs-section-title">
+              <h2 className="ufs-section-title" data-animate style={{ transitionDelay: '0.1s' }}>
                 Your search for rentals <span className="ufs-hero-accent">STOPS</span> here!
               </h2>
               <ul className="ufs-check-list">
-                <li>
+                <li data-animate style={{ transitionDelay: '0.2s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Verified community:</strong> Every driver and host is ID-verified.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.3s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Zero commission for hosts:</strong> Keep more of every booking.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.4s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Insurance on every trip:</strong> Flexible coverage tiers at checkout.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.5s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Flexible rentals:</strong> Daily, weekly, monthly — extend anytime.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.6s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Transparent pricing:</strong> No hidden fees, no surprises.</span>
                 </li>
               </ul>
-              <Link to="/marketplace">
-                <button className="ufs-btn ufs-btn-primary">Find Your Car</button>
-              </Link>
+              <div data-animate style={{ transitionDelay: '0.7s' }}>
+                <Link to="/marketplace">
+                  <button className="ufs-btn ufs-btn-primary">Find Your Car</button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -330,37 +355,37 @@ const Home = () => {
         <div className="container">
           <div className="ufs-audience-grid">
             <div className="ufs-audience-text">
-              <span className="ufs-section-eyebrow">For Drivers</span>
-              <h2 className="ufs-section-title ufs-section-title--light">
+              <span className="ufs-section-eyebrow" data-animate>For Drivers</span>
+              <h2 className="ufs-section-title ufs-section-title--light" data-animate style={{ transitionDelay: '0.1s' }}>
                 <span className="ufs-hero-accent">Drive</span> with UFS
               </h2>
-              <p className="ufs-section-desc ufs-section-desc--light">
+              <p className="ufs-section-desc ufs-section-desc--light" data-animate style={{ transitionDelay: '0.2s' }}>
                 Seamless renting at your fingertips.
               </p>
               <ul className="ufs-audience-list">
-                <li>
+                <li data-animate style={{ transitionDelay: '0.3s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Find Your Ideal Vehicle:</strong> A wide range of cars for road trips, commutes or weekend fun.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.4s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Simple Booking:</strong> Verify your account and reserve a car in just a few clicks.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.5s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Flexible Usage:</strong> Rent daily, weekly or monthly — extend anytime.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.6s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Insurance Included:</strong> Every rental comes with coverage options.</span>
                 </li>
               </ul>
-              <div className="ufs-audience-actions">
+              <div className="ufs-audience-actions" data-animate style={{ transitionDelay: '0.7s' }}>
                 <Link to="/driver-guide" className="ufs-btn ufs-btn-outline-light">Learn More</Link>
                 <Link to="/marketplace" className="ufs-btn ufs-btn-primary">Find a Car</Link>
               </div>
             </div>
-            <div className="ufs-audience-visual ufs-audience-visual--dark" style={audienceVisualDarkStyle}>
+            <div className="ufs-audience-visual ufs-audience-visual--dark" data-animate="fade-right" style={{ ...audienceVisualDarkStyle, transitionDelay: '0.2s' }}>
               <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="3" width="15" height="13" rx="2" ry="2"/>
                 <polygon points="16 8 20 12 16 16 16 8"/>
@@ -378,37 +403,37 @@ const Home = () => {
         <div className="container">
           <div className="ufs-audience-grid ufs-audience-grid--reversed">
             <div className="ufs-audience-text">
-              <span className="ufs-section-eyebrow">For Hosts</span>
-              <h2 className="ufs-section-title">
+              <span className="ufs-section-eyebrow" data-animate>For Hosts</span>
+              <h2 className="ufs-section-title" data-animate style={{ transitionDelay: '0.1s' }}>
                 <span className="ufs-hero-accent">Host</span> with UFS
               </h2>
-              <p className="ufs-section-desc">
+              <p className="ufs-section-desc" data-animate style={{ transitionDelay: '0.2s' }}>
                 Rent out your vehicle and earn every month.
               </p>
               <ul className="ufs-audience-list ufs-audience-list--dark">
-                <li>
+                <li data-animate style={{ transitionDelay: '0.3s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Zero Commission:</strong> We charge a flat low fee — you keep more of what you earn.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.4s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Insurance Protection:</strong> Keep your cars protected with our coverage policies.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.5s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Expand Your Reach:</strong> Showcase vehicles to vetted, verified drivers.</span>
                 </li>
-                <li>
+                <li data-animate style={{ transitionDelay: '0.6s' }}>
                   <span className="ufs-check-icon">✓</span>
                   <span><strong>Dedicated Support:</strong> From listing to booking management, we're here to help.</span>
                 </li>
               </ul>
-              <div className="ufs-audience-actions">
+              <div className="ufs-audience-actions" data-animate style={{ transitionDelay: '0.7s' }}>
                 <Link to="/host-guide" className="ufs-btn ufs-btn-outline-dark">Learn More</Link>
                 <Link to={isAuthenticated ? '/host/add-vehicle' : '/register?type=host'} className="ufs-btn ufs-btn-primary">List a Car</Link>
               </div>
             </div>
-            <div className="ufs-audience-visual ufs-audience-visual--light" style={audienceVisualLightStyle}>
+            <div className="ufs-audience-visual ufs-audience-visual--light" data-animate="fade-left" style={{ ...audienceVisualLightStyle, transitionDelay: '0.2s' }}>
               <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#00FF66" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23"/>
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -422,7 +447,7 @@ const Home = () => {
       {/* Blog Preview Section */}
       <section className="ufs-blog">
         <div className="container">
-          <div className="ufs-blog-header">
+          <div className="ufs-blog-header" data-animate>
             <div>
               <span className="ufs-section-eyebrow">Blog &amp; News</span>
               <h2 className="ufs-section-title">Tips, guides and updates</h2>
@@ -430,8 +455,8 @@ const Home = () => {
             <Link to="/blog" className="ufs-text-link">View all articles →</Link>
           </div>
           <div className="ufs-blog-grid">
-            {blogPosts.map(post => (
-              <Link to="/blog" key={post.id} className="ufs-blog-card">
+            {blogPosts.map((post, idx) => (
+              <Link to="/blog" key={post.id} className="ufs-blog-card" data-animate style={{ transitionDelay: `${idx * 0.15}s` }}>
                 <div
                   className="ufs-blog-image"
                   style={{
@@ -456,7 +481,7 @@ const Home = () => {
       <section className="ufs-faq">
         <div className="container">
           <div className="ufs-faq-grid">
-            <div className="ufs-faq-intro">
+            <div className="ufs-faq-intro" data-animate>
               <span className="ufs-section-eyebrow ufs-section-eyebrow--light">FAQ</span>
               <h2 className="ufs-section-title ufs-section-title--light">
                 Frequently asked questions
@@ -471,6 +496,8 @@ const Home = () => {
                 <div
                   key={index}
                   className={`ufs-faq-item ${openFaq === index ? 'is-open' : ''}`}
+                  data-animate
+                  style={{ transitionDelay: `${index * 0.1}s` }}
                 >
                   <button
                     className="ufs-faq-question"
@@ -502,13 +529,13 @@ const Home = () => {
       {/* Final CTA Section */}
       <section className="ufs-final-cta">
         <div className="container">
-          <h2 className="ufs-final-cta-title">
+          <h2 className="ufs-final-cta-title" data-animate>
             Ready to hit the <span className="ufs-hero-accent">road</span>?
           </h2>
-          <p className="ufs-final-cta-subtitle">
+          <p className="ufs-final-cta-subtitle" data-animate style={{ transitionDelay: '0.15s' }}>
             Join thousands of drivers and hosts already on UFS.
           </p>
-          <div className="ufs-final-cta-actions">
+          <div className="ufs-final-cta-actions" data-animate style={{ transitionDelay: '0.3s' }}>
             <Link to={isAuthenticated ? (isHost ? '/host/dashboard' : '/marketplace') : '/register'}>
               <button className="ufs-btn ufs-btn-primary ufs-btn-lg">
                 {isAuthenticated ? (isHost ? 'Go to Dashboard' : 'Browse Cars') : 'Get Started'}

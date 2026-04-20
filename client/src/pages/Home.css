@@ -3,6 +3,39 @@
    Black / white / green (#00FF66) brand system
    ========================================================================== */
 
+/* ==========================================================================
+   SCROLL ANIMATIONS
+   Elements with [data-animate] start hidden and transition in when
+   scrolled into view (.is-visible). Stagger via inline transitionDelay.
+   ========================================================================== */
+[data-animate] {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  will-change: opacity, transform;
+}
+
+[data-animate="fade-left"] {
+  transform: translateX(-30px);
+}
+
+[data-animate="fade-right"] {
+  transform: translateX(30px);
+}
+
+[data-animate].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-animate] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 .home-page {
   background: #ffffff;
   color: #0a0a0a;
