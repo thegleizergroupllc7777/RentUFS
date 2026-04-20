@@ -5,6 +5,27 @@ import './GuidePages.css';
 
 const faqSections = [
   {
+    title: 'General',
+    questions: [
+      {
+        q: 'Where does UFS operate?',
+        a: 'UFS is available nationwide. Use our marketplace search to find vehicles in your area or at your destination.'
+      },
+      {
+        q: 'Is UFS safe?',
+        a: 'Safety is our top priority. Every user goes through identity verification. Our review system helps maintain community trust, and insurance coverage protects both drivers and hosts on every trip.'
+      },
+      {
+        q: 'What types of vehicles are available?',
+        a: 'Our marketplace features a wide range of vehicles including sedans, SUVs, trucks, vans, sports cars, luxury vehicles, and electric cars.'
+      },
+      {
+        q: 'How do reviews work?',
+        a: 'After each trip, both the driver and host can leave reviews and ratings. These reviews are visible on profiles and help the community make informed decisions.'
+      }
+    ]
+  },
+  {
     title: 'For Drivers',
     questions: [
       {
@@ -59,27 +80,6 @@ const faqSections = [
       {
         q: 'How many vehicles can I list?',
         a: 'There\'s no limit. List as many vehicles as you want and manage them all from your host dashboard.'
-      }
-    ]
-  },
-  {
-    title: 'General',
-    questions: [
-      {
-        q: 'Where does UFS operate?',
-        a: 'UFS is available nationwide. Use our marketplace search to find vehicles in your area or at your destination.'
-      },
-      {
-        q: 'Is UFS safe?',
-        a: 'Safety is our top priority. Every user goes through identity verification. Our review system helps maintain community trust, and insurance coverage protects both drivers and hosts on every trip.'
-      },
-      {
-        q: 'What types of vehicles are available?',
-        a: 'Our marketplace features a wide range of vehicles including sedans, SUVs, trucks, vans, sports cars, luxury vehicles, and electric cars.'
-      },
-      {
-        q: 'How do reviews work?',
-        a: 'After each trip, both the driver and host can leave reviews and ratings. These reviews are visible on profiles and help the community make informed decisions.'
       }
     ]
   }
