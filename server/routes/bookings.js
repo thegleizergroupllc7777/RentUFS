@@ -119,7 +119,7 @@ router.post('/migrate-reservation-ids', auth, async (req, res) => {
 // Create booking
 router.post('/', auth, async (req, res) => {
   try {
-    const { vehicleId, startDate, endDate, pickupTime, dropoffTime, rentalType, quantity, message } = req.body;
+    const { vehicleId, startDate, endDate, pickupTime, dropoffTime, rentalType, quantity, message, pickupDateTimeISO } = req.body;
 
     // Only drivers or 'both' users can create bookings
     const bookingUser = await User.findById(req.user._id).select('userType');
@@ -169,10 +169,20 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid date format' });
     }
 
-    // Reject bookings with a pick-up date+time in the past
-    const pickupHour = parseInt((pickupTime || '10:00').split(':')[0], 10);
-    const pickupDateTime = new Date(start);
-    pickupDateTime.setHours(pickupHour, 0, 0, 0);
+    // Reject bookings with a pick-up date+time in the past. Prefer the
+    // timezone-aware ISO timestamp sent by the client so the check works
+    // regardless of the server's timezone (Render runs in UTC).
+    let pickupDateTime;
+    if (pickupDateTimeISO) {
+      pickupDateTime = new Date(pickupDateTimeISO);
+      if (isNaN(pickupDateTime.getTime())) {
+        return res.status(400).json({ message: 'Invalid pick-up date/time' });
+      }
+    } else {
+      const pickupHour = parseInt((pickupTime || '10:00').split(':')[0], 10);
+      pickupDateTime = new Date(start);
+      pickupDateTime.setHours(pickupHour, 0, 0, 0);
+    }
     if (pickupDateTime <= now) {
       return res.status(400).json({ message: 'Pick-up time has already passed. Please select a later time or a future date.' });
     }

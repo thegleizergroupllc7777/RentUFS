@@ -303,9 +303,14 @@ const VehicleDetail = () => {
     setBookingLoading(true);
 
     try {
+      const pickupDateTimeISO = new Date(
+        `${bookingData.startDate}T${bookingData.pickupTime}:00`
+      ).toISOString();
+
       const response = await axios.post(`${API_URL}/api/bookings`, {
         vehicleId: id,
-        ...bookingData
+        ...bookingData,
+        pickupDateTimeISO
       });
 
       const bookingId = response.data._id;
