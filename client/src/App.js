@@ -15,6 +15,7 @@ import HostGuide from './pages/HostGuide';
 import FAQ from './pages/FAQ';
 import About from './pages/About';
 import Blog from './pages/Blog';
+import Terms from './pages/Terms';
 
 // Driver pages
 import Marketplace from './pages/Driver/Marketplace';
@@ -63,6 +64,7 @@ function App() {
             <Route path="/faq" element={<FAQ />} />
             <Route path="/about" element={<About />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/terms" element={<Terms />} />
 
             {/* Driver Routes */}
             <Route path="/marketplace" element={<Marketplace />} />
