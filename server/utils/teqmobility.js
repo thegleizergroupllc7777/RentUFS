@@ -69,62 +69,44 @@ const isConfigured = () => {
  * PUT /api/v2/owners
  */
 const upsertOwner = async (host) => {
-  const isBusinessHost = host.hostInfo?.accountType === 'business';
-
+  // Teq Mobility treats every RentUFS host as a PERSONAL owner.
+  // The RentUFS "business" account type is only for Stripe payouts / tax reporting;
+  // the insurer validates the human owner via driver license + DOB regardless.
   const body = {
     external_id: host._id.toString(),
     phone: host.phone || '',
     email: host.email,
-    type: isBusinessHost ? 'COMMERCIAL' : 'PERSONAL',
+    type: 'PERSONAL',
     firstname: host.firstName || '',
     lastname: host.lastName || ''
   };
 
-  // PERSONAL type requires dl_number, dl_state, birth_date, firstname, lastname
-  if (!isBusinessHost) {
-    const dlNumber = host.driverLicense?.licenseNumber || '';
-    const dlState = toStateAbbr(host.driverLicense?.state);
-    const birthDate = host.dateOfBirth
-      ? new Date(host.dateOfBirth).toISOString().split('T')[0]
-      : '';
+  const dlNumber = host.driverLicense?.licenseNumber || '';
+  const dlState = toStateAbbr(host.driverLicense?.state);
+  const birthDate = host.dateOfBirth
+    ? new Date(host.dateOfBirth).toISOString().split('T')[0]
+    : '';
 
-    // TeqMobility API rejects empty strings for required PERSONAL fields
-    if (!dlNumber || !dlState || !birthDate) {
-      console.warn('🛡️ TeqMobility: Host missing required PERSONAL owner fields -', {
-        hasDlNumber: !!dlNumber,
-        hasDlState: !!dlState,
-        hasBirthDate: !!birthDate,
-        hostId: host._id
-      });
-      throw new Error('Host profile incomplete for insurance: missing driver license number, state, or date of birth');
-    }
-
-    body.dl_number = dlNumber;
-    body.dl_state = dlState;
-    body.birth_date = birthDate;
+  if (!dlNumber || !dlState || !birthDate) {
+    console.warn('🛡️ TeqMobility: Host missing required PERSONAL owner fields -', {
+      hasDlNumber: !!dlNumber,
+      hasDlState: !!dlState,
+      hasBirthDate: !!birthDate,
+      hostId: host._id
+    });
+    throw new Error('Host profile incomplete for insurance: missing driver license number, state, or date of birth');
   }
 
-  // COMMERCIAL type requires fein, commercial_name, business_type
-  if (isBusinessHost) {
-    const taxId = host.hostInfo?.taxId;
-    const businessName = host.hostInfo?.businessName;
-    if (!taxId || !businessName) {
-      console.warn('🛡️ TeqMobility: Host missing required COMMERCIAL owner fields -', {
-        hasTaxId: !!taxId,
-        hasBusinessName: !!businessName,
-        hostId: host._id
-      });
-      throw new Error('Host profile incomplete for insurance: missing business tax ID (FEIN) or business name');
-    }
-    body.fein = taxId;
-    body.commercial_name = businessName;
-    body.business_type = 'company';
-  }
+  body.dl_number = dlNumber;
+  body.dl_state = dlState;
+  body.birth_date = birthDate;
 
-  // Address - for individual hosts, fall back to hostInfo.legalAddress if personal address is missing
-  const addr = isBusinessHost
-    ? host.hostInfo?.businessAddress
-    : (host.address?.street ? host.address : host.hostInfo?.legalAddress);
+  // Address - prefer personal address, fall back to legal then business address
+  const addr = host.address?.street
+    ? host.address
+    : (host.hostInfo?.legalAddress?.street
+        ? host.hostInfo.legalAddress
+        : host.hostInfo?.businessAddress);
   if (addr) {
     body.address = {
       line1: addr.street || addr.line1 || '',
