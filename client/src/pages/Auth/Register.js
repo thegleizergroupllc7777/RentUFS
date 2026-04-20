@@ -60,6 +60,7 @@ const Register = () => {
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -317,6 +318,14 @@ const Register = () => {
     // Validate passwords match
     if (formData.password !== confirmPassword) {
       setError('Passwords do not match. Please re-enter your password.');
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Require Terms of Service acceptance
+    if (!acceptedTerms) {
+      setError('You must agree to the Terms of Service to create an account.');
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -669,11 +678,29 @@ const Register = () => {
                     </p>
                   )}
 
+                  <div className="form-group terms-accept-group" style={{ marginTop: '1.5rem' }}>
+                    <label className="terms-accept-label">
+                      <input
+                        type="checkbox"
+                        className="terms-accept-checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      />
+                      <span>
+                        I have read and agree to the{' '}
+                        <Link to="/terms" target="_blank" rel="noopener noreferrer" className="auth-link">
+                          Terms of Service
+                        </Link>
+                        .
+                      </span>
+                    </label>
+                  </div>
+
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ width: '100%', marginTop: '1.5rem' }}
-                    disabled={loading}
+                    style={{ width: '100%', marginTop: '1rem' }}
+                    disabled={loading || !acceptedTerms}
                   >
                     {loading ? 'Creating account...' : 'Sign Up'}
                   </button>
