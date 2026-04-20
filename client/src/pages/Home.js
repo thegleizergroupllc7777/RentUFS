@@ -603,14 +603,11 @@ const Home = () => {
               </p>
               <Link to="/faq" className="ufs-text-link ufs-text-link--light">Visit the full FAQ →</Link>
             </div>
-            <div className="ufs-faq-list">
+            <div className="ufs-faq-list" data-animate data-animate-once style={{ transitionDelay: '0.2s' }}>
               {faqData.map((item, index) => (
                 <div
                   key={index}
                   className={`ufs-faq-item ${openFaq === index ? 'is-open' : ''}`}
-                  data-animate
-                  data-animate-once
-                  style={{ transitionDelay: `${index * 0.1}s` }}
                 >
                   <button
                     className="ufs-faq-question"
