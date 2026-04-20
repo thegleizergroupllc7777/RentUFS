@@ -104,10 +104,21 @@ const upsertOwner = async (host) => {
     body.birth_date = birthDate;
   }
 
-  // COMMERCIAL type requires fein
-  if (isBusinessHost && host.hostInfo?.taxId) {
-    body.fein = host.hostInfo.taxId;
-    body.commercial_name = host.hostInfo.businessName || '';
+  // COMMERCIAL type requires fein, commercial_name, business_type
+  if (isBusinessHost) {
+    const taxId = host.hostInfo?.taxId;
+    const businessName = host.hostInfo?.businessName;
+    if (!taxId || !businessName) {
+      console.warn('🛡️ TeqMobility: Host missing required COMMERCIAL owner fields -', {
+        hasTaxId: !!taxId,
+        hasBusinessName: !!businessName,
+        hostId: host._id
+      });
+      throw new Error('Host profile incomplete for insurance: missing business tax ID (FEIN) or business name');
+    }
+    body.fein = taxId;
+    body.commercial_name = businessName;
+    body.business_type = 'company';
   }
 
   // Address - for individual hosts, fall back to hostInfo.legalAddress if personal address is missing
