@@ -29,7 +29,11 @@ const userSchema = new mongoose.Schema({
   },
   lastName: {
     type: String,
-    required: true,
+    required: function() {
+      // Some Google profiles don't provide family_name (e.g. single-name
+      // accounts or certain locales); collect it later in the Profile page.
+      return !this.googleId;
+    },
     trim: true
   },
   phone: {
