@@ -185,29 +185,32 @@ const Register = () => {
   const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleNewUserCredential, setGoogleNewUserCredential] = useState(null);
 
-  // Google sign-up — uses the userType already selected in the form
-  // (defaults to 'driver' since the form defaults to driver). The server
-  // creates the account if new, or signs in if it already exists.
-  const handleGoogleCredential = async (credential) => {
+  const routeByUserType = (userData) => {
+    if (userData.userType === 'host') {
+      navigate('/host/dashboard');
+    } else if (userData.userType === 'both') {
+      const savedMode = localStorage.getItem('activeMode');
+      navigate(savedMode === 'host' ? '/host/dashboard' : '/marketplace');
+    } else {
+      navigate('/marketplace');
+    }
+  };
+
+  // Google sign-up — click Google first, then pick Driver/Host/Both on a
+  // clean follow-up screen (same flow as Login). Existing Google users are
+  // signed in immediately without being asked again.
+  const handleGoogleCredential = async (credential, userType) => {
     setError('');
     setGoogleLoading(true);
     try {
-      const result = await googleLogin(credential, formData.userType);
+      const result = await googleLogin(credential, userType);
       if (result.needsUserType) {
-        // Fallback shouldn't trigger since we always send userType, but
-        // surface a friendly error if the server rejects the type.
-        setError('Please pick Driver or Host before signing up with Google.');
+        setGoogleNewUserCredential(credential);
         return;
       }
-      if (result.userType === 'host') {
-        navigate('/host/dashboard');
-      } else if (result.userType === 'both') {
-        const savedMode = localStorage.getItem('activeMode');
-        navigate(savedMode === 'host' ? '/host/dashboard' : '/marketplace');
-      } else {
-        navigate('/marketplace');
-      }
+      routeByUserType(result);
     } catch (err) {
       setError(err.response?.data?.message || 'Google sign-up failed');
     } finally {
@@ -494,6 +497,42 @@ const Register = () => {
 
                 {error && <div className="error-message">{error}</div>}
 
+                {googleNewUserCredential ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <h3 style={{ color: '#10b981', marginBottom: '0.5rem' }}>One last step</h3>
+                    <p style={{ color: '#9ca3af', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                      How will you use RentUFS?
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {[
+                        { value: 'driver', label: 'Rent cars (Driver)' },
+                        { value: 'host', label: 'List my car (Host)' },
+                        { value: 'both', label: 'Both' }
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ width: '100%' }}
+                          disabled={googleLoading}
+                          onClick={() => handleGoogleCredential(googleNewUserCredential, opt.value)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ width: '100%', border: '1px solid #6b7280', color: '#6b7280', background: 'transparent' }}
+                        disabled={googleLoading}
+                        onClick={() => setGoogleNewUserCredential(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                <>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                   <GoogleLogin
                     onSuccess={(credentialResponse) => handleGoogleCredential(credentialResponse.credential)}
@@ -504,9 +543,6 @@ const Register = () => {
                     width="320"
                   />
                 </div>
-                <p style={{ color: '#6b7280', fontSize: '0.8rem', textAlign: 'center', marginTop: '-0.5rem', marginBottom: '1rem' }}>
-                  Signs you up as {formData.userType === 'host' ? 'a Host' : 'a Driver'} — change "I want to" below before clicking to switch.
-                </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1rem 0' }}>
                   <div style={{ flex: 1, height: '1px', background: '#374151' }} />
                   <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>or sign up with email</span>
@@ -762,6 +798,8 @@ const Register = () => {
                     Login
                   </Link>
                 </p>
+                </>
+                )}
               </>
             ) : (
               <>

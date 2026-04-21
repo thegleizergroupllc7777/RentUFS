@@ -411,8 +411,14 @@ router.post('/google', async (req, res) => {
 
     const googleId = payload.sub;
     const email = payload.email.toLowerCase().trim();
-    const firstName = payload.given_name || '';
-    const lastName = payload.family_name || '';
+    let firstName = payload.given_name || '';
+    let lastName = payload.family_name || '';
+    const fullName = (payload.name || '').trim();
+    if ((!firstName || !lastName) && fullName) {
+      const parts = fullName.split(/\s+/).filter(Boolean);
+      if (!firstName && parts.length > 0) firstName = parts[0];
+      if (!lastName && parts.length > 1) lastName = parts.slice(1).join(' ');
+    }
     const googleProfileImage = payload.picture || '';
 
     // Look for existing account by googleId, then by email (to link accounts)
