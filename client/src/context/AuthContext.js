@@ -82,6 +82,34 @@ export const AuthProvider = ({ children }) => {
     return fullUser.data;
   };
 
+  // Sign in with a Google ID token (credential). If the account doesn't exist
+  // yet, the server responds with { needsUserType: true } so the caller can
+  // prompt for driver/host/both and call this again with userType supplied.
+  const googleLogin = async (credential, userType) => {
+    const response = await axios.post(`${API_URL}/api/auth/google`, { credential, userType });
+
+    if (response.data.needsUserType) {
+      return { needsUserType: true };
+    }
+
+    const { token, user, deactivated } = response.data;
+
+    localStorage.setItem('token', token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    if (deactivated) {
+      const error = new Error('Account is deactivated');
+      error.deactivated = true;
+      error.token = token;
+      error.user = user;
+      throw error;
+    }
+
+    const fullUser = await axios.get(`${API_URL}/api/auth/me`);
+    setUser(fullUser.data);
+    return fullUser.data;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
@@ -123,6 +151,7 @@ export const AuthProvider = ({ children }) => {
     user,
     setUser,
     login,
+    googleLogin,
     reactivateAndLogin,
     register,
     logout,

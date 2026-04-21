@@ -11,7 +11,16 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true
+    required: function() {
+      // Password is required unless this is a Google-authenticated account
+      return !this.googleId;
+    }
+  },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true
   },
   firstName: {
     type: String,
@@ -25,7 +34,11 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: [true, 'Phone number is required'],
+    required: function() {
+      // Phone is required unless this is a Google-authenticated account
+      // (Google doesn't provide phone; collected later via profile/booking gates)
+      return !this.googleId;
+    },
     trim: true
   },
   dateOfBirth: {
@@ -223,7 +236,8 @@ const userSchema = new mongoose.Schema({
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  // Hash password for new documents OR when password is modified on existing documents
+  // Skip if no password (Google-only accounts) or password wasn't modified
+  if (!this.password) return next();
   if (!this.isNew && !this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();

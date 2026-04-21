@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import './Auth.css';
@@ -14,9 +15,44 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [deactivatedInfo, setDeactivatedInfo] = useState(null);
   const [reactivating, setReactivating] = useState(false);
+  const [googleNewUserCredential, setGoogleNewUserCredential] = useState(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
-  const { login, reactivateAndLogin } = useAuth();
+  const { login, googleLogin, reactivateAndLogin } = useAuth();
   const navigate = useNavigate();
+
+  const routeByUserType = (userData) => {
+    if (userData.userType === 'host') {
+      navigate('/host/dashboard');
+    } else if (userData.userType === 'both') {
+      const savedMode = localStorage.getItem('activeMode');
+      navigate(savedMode === 'host' ? '/host/dashboard' : '/marketplace');
+    } else {
+      navigate('/marketplace');
+    }
+  };
+
+  const handleGoogleCredential = async (credential, userType) => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      const result = await googleLogin(credential, userType);
+      if (result.needsUserType) {
+        // Brand new Google user — prompt for driver/host/both
+        setGoogleNewUserCredential(credential);
+        return;
+      }
+      routeByUserType(result);
+    } catch (err) {
+      if (err.deactivated) {
+        setDeactivatedInfo({ token: err.token, user: err.user });
+      } else {
+        setError(err.response?.data?.message || 'Google sign-in failed');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -33,19 +69,7 @@ const Login = () => {
 
     try {
       const userData = await login(formData.email, formData.password);
-
-      if (userData.userType === 'host') {
-        navigate('/host/dashboard');
-      } else if (userData.userType === 'both') {
-        // Respect the user's saved mode preference so the Navbar
-        // (which also reads activeMode) and the landing page agree.
-        // Navbar defaults 'both' users to driver when no preference
-        // is saved, so we mirror that here.
-        const savedMode = localStorage.getItem('activeMode');
-        navigate(savedMode === 'host' ? '/host/dashboard' : '/marketplace');
-      } else {
-        navigate('/marketplace');
-      }
+      routeByUserType(userData);
     } catch (err) {
       if (err.deactivated) {
         setDeactivatedInfo({ token: err.token, user: err.user });
@@ -111,8 +135,58 @@ const Login = () => {
                   Cancel
                 </button>
               </div>
+            ) : googleNewUserCredential ? (
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ color: '#10b981', marginBottom: '0.5rem' }}>One last step</h3>
+                <p style={{ color: '#9ca3af', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                  How will you use RentUFS?
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {[
+                    { value: 'driver', label: 'Rent cars (Driver)' },
+                    { value: 'host', label: 'List my car (Host)' },
+                    { value: 'both', label: 'Both' }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ width: '100%' }}
+                      disabled={googleLoading}
+                      onClick={() => handleGoogleCredential(googleNewUserCredential, opt.value)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: '100%', border: '1px solid #6b7280', color: '#6b7280', background: 'transparent' }}
+                    disabled={googleLoading}
+                    onClick={() => setGoogleNewUserCredential(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             ) : (
-              <form onSubmit={handleSubmit} className="auth-form">
+              <>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <GoogleLogin
+                    onSuccess={(credentialResponse) => handleGoogleCredential(credentialResponse.credential)}
+                    onError={() => setError('Google sign-in failed. Please try again.')}
+                    theme="filled_black"
+                    text="signin_with"
+                    shape="rectangular"
+                    width="320"
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1rem 0' }}>
+                  <div style={{ flex: 1, height: '1px', background: '#374151' }} />
+                  <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>or</span>
+                  <div style={{ flex: 1, height: '1px', background: '#374151' }} />
+                </div>
+                <form onSubmit={handleSubmit} className="auth-form">
                 <div className="form-group">
                   <label className="form-label">Email</label>
                   <input
@@ -163,7 +237,8 @@ const Login = () => {
                 >
                   {loading ? 'Logging in...' : 'Login'}
                 </button>
-              </form>
+                </form>
+              </>
             )}
 
             <p className="auth-footer">

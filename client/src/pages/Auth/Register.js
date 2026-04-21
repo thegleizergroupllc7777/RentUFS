@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
@@ -181,8 +182,38 @@ const Register = () => {
     }
   };
 
-  const { register } = useAuth();
+  const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Google sign-up — uses the userType already selected in the form
+  // (defaults to 'driver' since the form defaults to driver). The server
+  // creates the account if new, or signs in if it already exists.
+  const handleGoogleCredential = async (credential) => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      const result = await googleLogin(credential, formData.userType);
+      if (result.needsUserType) {
+        // Fallback shouldn't trigger since we always send userType, but
+        // surface a friendly error if the server rejects the type.
+        setError('Please pick Driver or Host before signing up with Google.');
+        return;
+      }
+      if (result.userType === 'host') {
+        navigate('/host/dashboard');
+      } else if (result.userType === 'both') {
+        const savedMode = localStorage.getItem('activeMode');
+        navigate(savedMode === 'host' ? '/host/dashboard' : '/marketplace');
+      } else {
+        navigate('/marketplace');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Google sign-up failed');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -462,6 +493,25 @@ const Register = () => {
                 <p className="auth-subtitle">Join the <span style={{color: '#10b981', fontWeight: 'bold'}}>RentUFS</span> community</p>
 
                 {error && <div className="error-message">{error}</div>}
+
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <GoogleLogin
+                    onSuccess={(credentialResponse) => handleGoogleCredential(credentialResponse.credential)}
+                    onError={() => setError('Google sign-up failed. Please try again.')}
+                    theme="filled_black"
+                    text="signup_with"
+                    shape="rectangular"
+                    width="320"
+                  />
+                </div>
+                <p style={{ color: '#6b7280', fontSize: '0.8rem', textAlign: 'center', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                  Signs you up as {formData.userType === 'host' ? 'a Host' : 'a Driver'} — change "I want to" below before clicking to switch.
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1rem 0' }}>
+                  <div style={{ flex: 1, height: '1px', background: '#374151' }} />
+                  <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>or sign up with email</span>
+                  <div style={{ flex: 1, height: '1px', background: '#374151' }} />
+                </div>
 
                 <form onSubmit={handleSubmit} className="auth-form">
                   <div className="form-row">
