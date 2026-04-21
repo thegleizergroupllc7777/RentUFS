@@ -1,12 +1,17 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Otp = require('../models/Otp');
 const auth = require('../middleware/auth');
 const { sendWelcomeEmail, sendPasswordResetEmail, sendRegistrationOtp } = require('../utils/emailService');
 
 const router = express.Router();
+
+const googleClient = process.env.GOOGLE_CLIENT_ID
+  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+  : null;
 
 // Rate limit tracker for password reset requests (email -> timestamp)
 const passwordResetRateLimit = new Map();
@@ -367,6 +372,128 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Google Sign-In: verify ID token, create user if new, return JWT
+// Body: { credential: <Google ID token>, userType?: 'driver'|'host'|'both' }
+// - Returning users: signed in immediately (userType ignored)
+// - New users with userType: account created
+// - New users without userType: responds { needsUserType: true } so UI can prompt
+router.post('/google', async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(500).json({ message: 'Google Sign-In is not configured on the server' });
+    }
+
+    const { credential, userType } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: 'Missing Google credential' });
+    }
+
+    // Verify the ID token with Google
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      payload = ticket.getPayload();
+    } catch (verifyErr) {
+      console.error('❌ Google token verification failed:', verifyErr.message);
+      return res.status(401).json({ message: 'Invalid Google credential' });
+    }
+
+    if (!payload?.email || !payload?.email_verified) {
+      return res.status(401).json({ message: 'Google account email is not verified' });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email.toLowerCase().trim();
+    const firstName = payload.given_name || '';
+    const lastName = payload.family_name || '';
+    const googleProfileImage = payload.picture || '';
+
+    // Look for existing account by googleId, then by email (to link accounts)
+    let user = await User.findOne({ googleId });
+    if (!user) {
+      user = await User.findOne({ email });
+      if (user) {
+        // Link the existing email-based account to this Google identity
+        user.googleId = googleId;
+        if (!user.profileImage && googleProfileImage) {
+          user.profileImage = googleProfileImage;
+        }
+        await user.save();
+      }
+    }
+
+    // New user flow
+    if (!user) {
+      const allowedTypes = ['driver', 'host', 'both'];
+      if (!userType || !allowedTypes.includes(userType)) {
+        // Tell the client to collect userType, then re-submit
+        return res.json({ needsUserType: true });
+      }
+
+      user = new User({
+        email,
+        firstName: firstName || email.split('@')[0],
+        lastName: lastName || '',
+        googleId,
+        userType,
+        profileImage: googleProfileImage || ''
+      });
+      await user.save();
+
+      sendWelcomeEmail({
+        email: user.email,
+        firstName: user.firstName,
+        userType: user.userType
+      }).catch(err => console.error('Failed to send welcome email:', err));
+    }
+
+    if (user.accountStatus === 'deactivated') {
+      const token = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET || 'your_jwt_secret_key',
+        { expiresIn: '7d' }
+      );
+      return res.json({
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userType: user.userType,
+          profileImage: resolveProfileImageUrl(user.profileImage, req)
+        },
+        deactivated: true,
+        deactivatedAt: user.deactivatedAt
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET || 'your_jwt_secret_key',
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userType: user.userType,
+        profileImage: resolveProfileImageUrl(user.profileImage, req)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Google auth error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
