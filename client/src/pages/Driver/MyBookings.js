@@ -235,6 +235,7 @@ const MyBookings = () => {
   const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
   const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
   const [tollChargesBookingId, setTollChargesBookingId] = useState(null);
+  const [outstandingChargesByBooking, setOutstandingChargesByBooking] = useState({});
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [cancelModal, setCancelModal] = useState({ open: false, booking: null, fee: 0, loading: false, isLate: false });
@@ -250,16 +251,28 @@ const MyBookings = () => {
     if (!token) { setLoading(false); return; }
     const headers = { Authorization: `Bearer ${token}` };
 
-    // Fetch bookings, unread counts, and user's reviews in parallel
+    // Fetch bookings, unread counts, user's reviews, and outstanding charges in parallel
     Promise.all([
       axios.get(`${API_URL}/api/bookings/my-bookings`, { headers }),
       axios.get(`${API_URL}/api/messages/unread/per-booking?role=driver`, { headers }).catch(() => ({ data: { counts: {} } })),
-      axios.get(`${API_URL}/api/reviews/my-reviews`, { headers }).catch(() => ({ data: [] }))
-    ]).then(([bookingsRes, unreadRes, reviewsRes]) => {
+      axios.get(`${API_URL}/api/reviews/my-reviews`, { headers }).catch(() => ({ data: [] })),
+      axios.get(`${API_URL}/api/charges/driver`, { headers }).catch(() => ({ data: { charges: [] } }))
+    ]).then(([bookingsRes, unreadRes, reviewsRes, chargesRes]) => {
       setBookings(bookingsRes.data);
       setUnreadCounts(unreadRes.data.counts || {});
       const ids = new Set(reviewsRes.data.map(r => String(r.booking)));
       setReviewedBookingIds(ids);
+
+      // Group outstanding (pending/failed) charges by booking id
+      const outstanding = {};
+      (chargesRes.data.charges || []).forEach(c => {
+        if (c.status !== 'pending' && c.status !== 'failed') return;
+        const bookingId = String(c.booking?._id || c.booking);
+        if (!outstanding[bookingId]) outstanding[bookingId] = { count: 0, total: 0 };
+        outstanding[bookingId].count += 1;
+        outstanding[bookingId].total += (c.amount || 0);
+      });
+      setOutstandingChargesByBooking(outstanding);
     }).catch(err => {
       console.error('Error fetching bookings:', err);
     }).finally(() => {
@@ -1105,6 +1118,28 @@ const MyBookings = () => {
                         </div>
                       )}
 
+                      {outstandingChargesByBooking[String(booking._id)] && (
+                        <div
+                          onClick={() => setTollChargesBookingId(booking._id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.6rem 0.85rem',
+                            margin: '0 0 0.75rem',
+                            background: 'rgba(245, 158, 11, 0.12)',
+                            border: '1px solid #f59e0b',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <span style={{ color: '#fbbf24', fontSize: '0.85rem', fontWeight: 600 }}>
+                            ⚠️ {outstandingChargesByBooking[String(booking._id)].count} outstanding charge{outstandingChargesByBooking[String(booking._id)].count !== 1 ? 's' : ''} (${outstandingChargesByBooking[String(booking._id)].total.toFixed(2)}) — tap to review &amp; pay
+                          </span>
+                        </div>
+                      )}
+
                       <div className="booking-actions">
                         <Link to={`/reservation/${booking._id}`}>
                           <button className="btn btn-secondary">View Vehicle</button>
@@ -1187,7 +1222,7 @@ const MyBookings = () => {
                             className="btn btn-secondary"
                             style={{ background: '#6366f1', color: 'white', border: 'none' }}
                           >
-                            View Tolls
+                            Tolls & Charges
                           </button>
                         )}
 
