@@ -10,15 +10,37 @@ import axiosInstance from '../config/axios';
  *   isHost - if true, shows the "+ Add Charge" action in the header
  *   onAddCharge - callback fired when the host clicks "+ Add Charge"
  */
+const CHARGE_TYPE_LABELS = {
+  citation: 'Traffic Citation',
+  parking_ticket: 'Parking Ticket',
+  manual_toll: 'Manual Toll',
+  late_return: 'Late Return Fee',
+  cleaning: 'Cleaning Fee',
+  fuel: 'Fuel Charge',
+  smoking_violation: 'Smoking Violation',
+  other: 'Other'
+};
+
+const STATUS_STYLES = {
+  pending: { label: 'Pending', bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
+  charged: { label: 'Paid', bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
+  failed: { label: 'Payment Failed', bg: '#fee2e2', color: '#991b1b', border: '#fecaca' },
+  waived: { label: 'Waived', bg: '#e5e7eb', color: '#374151', border: '#d1d5db' }
+};
+
 const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onAddCharge }) => {
   const [charges, setCharges] = useState([]);
   const [total, setTotal] = useState(0);
+  const [hostCharges, setHostCharges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [payingChargeId, setPayingChargeId] = useState(null);
+  const [payError, setPayError] = useState('');
 
   useEffect(() => {
     if (bookingId) {
       fetchTollCharges();
+      fetchHostCharges();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
@@ -32,7 +54,9 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
       setTotal(response.data.total || 0);
     } catch (err) {
       if (err.response?.status === 503) {
-        setError('Toll management is not configured');
+        // Toll service not configured — not a fatal error, charges may still load
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('Not authorized to view tolls');
       } else {
         setError(err.response?.data?.message || 'Failed to load toll charges');
       }
@@ -41,7 +65,30 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
     }
   };
 
+  const fetchHostCharges = async () => {
+    try {
+      const response = await axiosInstance.get(`/api/charges/booking/${bookingId}`);
+      setHostCharges(response.data.charges || []);
+    } catch (err) {
+      // Silent — host charges are optional, the modal still works without them
+    }
+  };
+
+  const handlePayNow = async (chargeId) => {
+    setPayingChargeId(chargeId);
+    setPayError('');
+    try {
+      const response = await axiosInstance.post(`/api/charges/${chargeId}/pay-now`);
+      setHostCharges(prev => prev.map(c => c._id === chargeId ? response.data.charge : c));
+    } catch (err) {
+      setPayError(err.response?.data?.message || 'Payment failed. Please try again or update your card.');
+    } finally {
+      setPayingChargeId(null);
+    }
+  };
+
   const totalAmount = charges.reduce((sum, c) => sum + (c.amount || 0), 0);
+  const hasAnyContent = charges.length > 0 || hostCharges.length > 0;
 
   const content = (
     <>
@@ -102,22 +149,142 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
         </div>
       )}
 
-      {!loading && !error && charges.length === 0 && (
+      {payError && (
+        <div style={{
+          padding: '0.75rem', borderRadius: '0.5rem',
+          background: embedded ? 'rgba(239,68,68,0.1)' : '#fef2f2',
+          color: embedded ? '#fca5a5' : '#991b1b',
+          border: `1px solid ${embedded ? '#7f1d1d' : '#fecaca'}`,
+          marginBottom: '1rem',
+          fontSize: '0.85rem'
+        }}>
+          {payError}
+        </div>
+      )}
+
+      {/* Host-added charges section */}
+      {!loading && hostCharges.length > 0 && (
+        <div style={{ marginBottom: '1rem' }}>
+          <h3 style={{
+            margin: '0 0 0.5rem',
+            color: embedded ? '#fff' : '#1f2937',
+            fontSize: embedded ? '0.85rem' : '0.95rem',
+            fontWeight: 600
+          }}>
+            Host-Added Charges
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {hostCharges.map(c => {
+              const status = STATUS_STYLES[c.status] || STATUS_STYLES.pending;
+              const canPay = !isHost && (c.status === 'pending' || c.status === 'failed');
+              return (
+                <div key={c._id} style={{
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: `1px solid ${embedded ? '#333' : '#e5e7eb'}`,
+                  background: embedded ? '#111' : '#fafafa'
+                }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    {c.proofImage && (
+                      <a href={c.proofImage} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
+                        <img
+                          src={c.proofImage}
+                          alt="Proof"
+                          style={{ width: '54px', height: '54px', objectFit: 'cover', borderRadius: '0.25rem', border: `1px solid ${embedded ? '#333' : '#e5e7eb'}` }}
+                        />
+                      </a>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        <p style={{ margin: 0, fontWeight: 600, color: embedded ? '#fff' : '#1f2937', fontSize: '0.9rem' }}>
+                          {CHARGE_TYPE_LABELS[c.chargeType] || c.chargeType}
+                        </p>
+                        <span style={{ fontWeight: 700, color: embedded ? '#fff' : '#1f2937', fontSize: '0.95rem' }}>
+                          ${c.amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.15rem 0', fontSize: '0.78rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.description}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.1rem 0.45rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          background: status.bg,
+                          color: status.color,
+                          border: `1px solid ${status.border}`
+                        }}>
+                          {status.label}
+                        </span>
+                        {c.status === 'pending' && c.scheduledChargeAt && (
+                          <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>
+                            Auto-charge {new Date(c.scheduledChargeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                        {canPay && (
+                          <button
+                            onClick={() => handlePayNow(c._id)}
+                            disabled={payingChargeId === c._id}
+                            style={{
+                              marginLeft: 'auto',
+                              padding: '0.3rem 0.75rem',
+                              borderRadius: '0.3rem',
+                              background: payingChargeId === c._id ? '#86efac' : '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              cursor: payingChargeId === c._id ? 'not-allowed' : 'pointer',
+                              fontWeight: 600,
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            {payingChargeId === c._id ? 'Processing…' : 'Pay Now'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {!isHost && hostCharges.some(c => c.status === 'pending' || c.status === 'failed') && (
+            <p style={{ margin: '0.6rem 0 0', fontSize: '0.75rem', color: embedded ? '#9ca3af' : '#6b7280' }}>
+              Think a charge is wrong?{' '}
+              <a href="mailto:support@rentufs.com" style={{ color: embedded ? '#34d399' : '#10b981' }}>
+                Contact Support
+              </a>
+            </p>
+          )}
+        </div>
+      )}
+
+      {!loading && !error && charges.length === 0 && hostCharges.length === 0 && (
         <div style={{
           textAlign: 'center', padding: embedded ? '1rem' : '2rem',
           color: '#6b7280',
           background: embedded ? 'transparent' : '#f9fafb',
           borderRadius: '0.5rem'
         }}>
-          <p style={{ fontSize: embedded ? '0.875rem' : '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>No toll charges found</p>
+          <p style={{ fontSize: embedded ? '0.875rem' : '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>No charges yet</p>
           <p style={{ fontSize: embedded ? '0.75rem' : '0.85rem', margin: 0 }}>
-            Toll charges may take up to 60 days to appear after the trip ends.
+            Tolls may take up to 60 days to appear after the trip ends.
           </p>
         </div>
       )}
 
       {!loading && !error && charges.length > 0 && (
         <>
+          <h3 style={{
+            margin: '0 0 0.5rem',
+            color: embedded ? '#fff' : '#1f2937',
+            fontSize: embedded ? '0.85rem' : '0.95rem',
+            fontWeight: 600
+          }}>
+            Toll Charges
+          </h3>
           {/* Summary */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
