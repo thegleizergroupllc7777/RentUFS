@@ -1304,7 +1304,7 @@ const HostBookings = () => {
                     </div>
                   )}
 
-                  <div className="booking-actions">
+                  <div className="host-booking-actions">
                     <Link to={`/host/reservation/${booking._id}`}>
                       <button className="btn btn-secondary">View Reservation</button>
                     </Link>
