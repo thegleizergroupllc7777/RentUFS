@@ -1509,6 +1509,15 @@ const HostBookings = () => {
         />
       )}
 
+      {/* Add Charge Modal */}
+      {addChargeBookingId && (
+        <AddChargeModal
+          bookingId={addChargeBookingId}
+          onClose={() => setAddChargeBookingId(null)}
+          onCreated={() => setTollChargesBookingId(addChargeBookingId)}
+        />
+      )}
+
       {/* Complete Reservation Confirmation Modal */}
       {showCompleteModal && completeBooking && (
         <div className="modal-overlay" onClick={() => setShowCompleteModal(false)}>
