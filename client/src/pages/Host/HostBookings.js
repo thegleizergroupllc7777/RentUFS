@@ -4,6 +4,7 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import ChatBox from '../../components/ChatBox';
 import TollCharges from '../../components/TollCharges';
+import AddChargeModal from '../../components/AddChargeModal';
 import { useAuth } from '../../context/AuthContext';
 import { formatTime } from '../../utils/formatTime';
 import { formatPhone } from '../../utils/formatPhone';
@@ -157,6 +158,7 @@ const HostBookings = () => {
   // Insurance card modal state
   const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
   const [tollChargesBookingId, setTollChargesBookingId] = useState(null);
+  const [addChargeBookingId, setAddChargeBookingId] = useState(null);
 
   // Complete reservation modal state
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -1046,7 +1048,17 @@ const HostBookings = () => {
                               className="btn btn-secondary"
                               style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: '#6366f1', color: 'white', border: 'none' }}
                             >
-                              View Tolls
+                              Tolls & Charges
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAddChargeBookingId(booking._id);
+                              }}
+                              className="btn btn-secondary"
+                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: '#f59e0b', color: '#000', border: 'none' }}
+                            >
+                              + Add Charge
                             </button>
                             <button
                               onClick={(e) => {
@@ -1366,7 +1378,14 @@ const HostBookings = () => {
                       className="btn btn-secondary"
                       style={{ background: '#6366f1', color: 'white', border: 'none' }}
                     >
-                      View Tolls
+                      Tolls & Charges
+                    </button>
+                    <button
+                      onClick={() => setAddChargeBookingId(booking._id)}
+                      className="btn btn-secondary"
+                      style={{ background: '#f59e0b', color: '#000', border: 'none' }}
+                    >
+                      + Add Charge
                     </button>
 
                     {booking.status === 'active' && (
@@ -1493,6 +1512,15 @@ const HostBookings = () => {
         <TollCharges
           bookingId={tollChargesBookingId}
           onClose={() => setTollChargesBookingId(null)}
+        />
+      )}
+
+      {/* Add Charge Modal */}
+      {addChargeBookingId && (
+        <AddChargeModal
+          bookingId={addChargeBookingId}
+          onClose={() => setAddChargeBookingId(null)}
+          onCreated={() => setTollChargesBookingId(addChargeBookingId)}
         />
       )}
 
