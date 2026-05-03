@@ -305,7 +305,7 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
           {/* Charge list */}
           <div className="transaction-scroll" style={{
             display: 'flex', flexDirection: 'column', gap: '0.75rem',
-            maxHeight: '400px', overflowY: 'auto', paddingRight: '0.75rem'
+            maxHeight: '400px', overflowY: 'auto', overscrollBehavior: 'contain', paddingRight: '0.75rem'
           }}>
             {charges.map((charge, idx) => (
               <div key={charge.id || idx} style={{
@@ -394,7 +394,7 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
     }}>
       <div style={{
         background: 'white', borderRadius: '1rem', padding: '1.5rem',
-        maxWidth: '600px', width: '100%', maxHeight: '80vh', overflow: 'auto'
+        maxWidth: '600px', width: '100%', maxHeight: '80vh', overflow: 'auto', overscrollBehavior: 'contain'
       }}>
         {content}
       </div>
