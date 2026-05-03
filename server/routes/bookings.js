@@ -1229,15 +1229,48 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
       }
     }
 
+    // Settle pending host-added charges (fire-and-forget, non-blocking).
+    // Failures fall back to the retry cron / lockout flow.
+    let chargeSettlement = null;
+    try {
+      const Charge = require('../models/Charge');
+      const { settleCharge } = require('../utils/chargeSettlement');
+      const pendingCharges = await Charge.find({
+        booking: booking._id,
+        status: { $in: ['pending', 'failed'] }
+      }).select('_id amount');
+      if (pendingCharges.length > 0) {
+        let settledCount = 0;
+        let settledAmount = 0;
+        for (const c of pendingCharges) {
+          const result = await settleCharge(c._id, 'return');
+          if (result.success) {
+            settledCount++;
+            settledAmount += c.amount;
+          }
+        }
+        if (settledCount > 0) {
+          chargeSettlement = {
+            chargeCount: settledCount,
+            amount: parseFloat(settledAmount.toFixed(2))
+          };
+          console.log(`💸 Return inspection: settled ${settledCount} host charge(s) totaling $${settledAmount.toFixed(2)} for booking ${booking._id}`);
+        }
+      }
+    } catch (err) {
+      console.error(`💸 Return inspection charge settlement error for booking ${booking._id}:`, err.message);
+    }
+
     res.json({
       success: true,
-      message: `Vehicle returned successfully!${tollSettlement ? ` ${tollSettlement.tollCount} toll(s) settled ($${tollSettlement.amount.toFixed(2)}).` : ''} Thank you for renting with us!`,
+      message: `Vehicle returned successfully!${tollSettlement ? ` ${tollSettlement.tollCount} toll(s) settled ($${tollSettlement.amount.toFixed(2)}).` : ''}${chargeSettlement ? ` ${chargeSettlement.chargeCount} charge(s) settled ($${chargeSettlement.amount.toFixed(2)}).` : ''} Thank you for renting with us!`,
       booking: {
         _id: booking._id,
         status: booking.status,
         returnInspection: booking.returnInspection
       },
-      tollSettlement
+      tollSettlement,
+      chargeSettlement
     });
   } catch (error) {
     console.error('Return inspection error:', error);
