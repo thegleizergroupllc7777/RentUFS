@@ -1949,6 +1949,135 @@ The RentUFS Team
   }
 };
 
+// =============================================================================
+// Host-added charges (citation, parking ticket, cleaning, etc.) lifecycle emails
+// =============================================================================
+
+const CHARGE_TYPE_LABELS = {
+  citation: 'Traffic Citation',
+  parking_ticket: 'Parking Ticket',
+  manual_toll: 'Manual Toll',
+  late_return: 'Late Return Fee',
+  cleaning: 'Cleaning Fee',
+  fuel: 'Fuel Charge',
+  smoking_violation: 'Smoking Violation',
+  other: 'Other'
+};
+
+// Sent when the host creates a new charge against the renter's booking.
+// Notifies the renter, shows the charge details + proof, and links to Pay Now.
+const sendChargeAddedToDriver = async (driver, host, booking, vehicle, charge) => {
+  try {
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Charge added email to ${driver.email}: $${charge.amount} ${charge.chargeType}`);
+      return { success: true, dev: true };
+    }
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const typeLabel = CHARGE_TYPE_LABELS[charge.chargeType] || charge.chargeType;
+    const total = (charge.amount + 0.50).toFixed(2);
+    const autoChargeDate = new Date(charge.scheduledChargeAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const hostName = `${host.firstName || ''} ${host.lastName || ''}`.trim() || 'Your host';
+    const vehicleLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental vehicle';
+
+    return await sendEmail({
+      to: driver.email,
+      subject: `New charge on ${booking.reservationId || 'your reservation'} — $${total}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0;">New Charge on Your Reservation</h2>
+            <p style="margin: 6px 0 0; opacity: 0.9;">${typeLabel} — $${total}</p>
+          </div>
+          <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
+            <p>Hi ${driver.firstName || 'there'},</p>
+            <p>${hostName} added a new charge to your reservation of the ${vehicleLabel}.</p>
+            <div style="background: white; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 16px 0;">
+              <p style="margin: 0;"><strong>${typeLabel}</strong></p>
+              <p style="margin: 6px 0; color: #6b7280; font-size: 0.9rem;">${charge.description}</p>
+              <p style="margin: 6px 0; font-size: 1.05rem;"><strong>Amount: $${charge.amount.toFixed(2)}</strong> + $0.50 service fee = <strong>$${total}</strong></p>
+              ${charge.proofImage ? `<p style="margin: 8px 0 0;"><a href="${charge.proofImage}" style="color: #10b981;">View proof →</a></p>` : ''}
+            </div>
+            <p>If no action is taken, this charge will be automatically billed to your saved card on <strong>${autoChargeDate}</strong>. You can pay now, or contact support if you believe the charge is incorrect.</p>
+            <p style="text-align: center; margin: 24px 0;">
+              <a href="${clientUrl}/my-bookings" style="background: #10b981; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Review &amp; Pay</a>
+            </p>
+            <p style="font-size: 0.85rem; color: #6b7280;">Think this charge is wrong? Reply to this email or contact <a href="mailto:support@rentufs.com">support@rentufs.com</a>.</p>
+          </div>
+        </div>
+      `,
+      text: `Hi ${driver.firstName || 'there'},
+
+${hostName} added a new charge to your reservation of the ${vehicleLabel}.
+
+${typeLabel}
+${charge.description}
+Amount: $${charge.amount.toFixed(2)} + $0.50 service fee = $${total}
+
+If no action is taken, this charge will be auto-billed to your saved card on ${autoChargeDate}.
+
+Review & pay: ${clientUrl}/my-bookings
+Contact support: support@rentufs.com
+`
+    });
+  } catch (error) {
+    console.error('❌ Error sending charge added email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Sent when the auto-charge attempt declines. Tells the renter to update their card.
+const sendChargePaymentFailedToDriver = async (driver, booking, charge, attempts, maxAttempts) => {
+  try {
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Charge payment failed email to ${driver.email} (attempt ${attempts}/${maxAttempts})`);
+      return { success: true, dev: true };
+    }
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const typeLabel = CHARGE_TYPE_LABELS[charge.chargeType] || charge.chargeType;
+    const total = (charge.amount + 0.50).toFixed(2);
+    const isFinal = attempts >= maxAttempts;
+
+    return await sendEmail({
+      to: driver.email,
+      subject: isFinal
+        ? `Final notice: $${total} charge unpaid — your account will be locked`
+        : `Payment failed for $${total} charge — please update your card`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="background: ${isFinal ? '#dc2626' : '#f59e0b'}; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0;">${isFinal ? 'Final Payment Notice' : 'Payment Failed'}</h2>
+          </div>
+          <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
+            <p>Hi ${driver.firstName || 'there'},</p>
+            <p>We tried to charge your saved card $${total} for the <strong>${typeLabel}</strong> on reservation <strong>${booking.reservationId || booking._id}</strong>, but the payment was declined.</p>
+            ${isFinal
+              ? `<p style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 12px; border-radius: 4px;"><strong>This was the final automatic attempt.</strong> You will not be able to book any new vehicles on RentUFS until this balance is cleared.</p>`
+              : `<p>We'll automatically retry in a few days, but the fastest way to clear this is to update your card and pay now.</p>`}
+            <p style="text-align: center; margin: 24px 0;">
+              <a href="${clientUrl}/my-bookings" style="background: #10b981; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Pay Now</a>
+            </p>
+            <p style="font-size: 0.85rem; color: #6b7280;">Need help? Email <a href="mailto:support@rentufs.com">support@rentufs.com</a>.</p>
+          </div>
+        </div>
+      `,
+      text: `Hi ${driver.firstName || 'there'},
+
+We tried to charge $${total} for the ${typeLabel} on reservation ${booking.reservationId || booking._id}, but the payment was declined.
+
+${isFinal
+  ? 'This was the final automatic attempt. You will not be able to book any new vehicles on RentUFS until this balance is cleared.'
+  : 'We will retry automatically in a few days, but you can update your card and pay now.'}
+
+Pay now: ${clientUrl}/my-bookings
+Contact support: support@rentufs.com
+`
+    });
+  } catch (error) {
+    console.error('❌ Error sending charge failure email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendVehicleListedEmail,
@@ -1963,5 +2092,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendPayoutNotificationEmail,
   sendTollChargeToDriver,
-  sendTollNotificationToHost
+  sendTollNotificationToHost,
+  sendChargeAddedToDriver,
+  sendChargePaymentFailedToDriver
 };

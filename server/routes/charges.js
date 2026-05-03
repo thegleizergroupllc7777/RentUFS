@@ -2,7 +2,10 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const Charge = require('../models/Charge');
+const User = require('../models/User');
+const Vehicle = require('../models/Vehicle');
 const { settleCharge, getDriverLockoutStatus } = require('../utils/chargeSettlement');
+const { sendChargeAddedToDriver } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -84,6 +87,18 @@ router.post('/', auth, async (req, res) => {
     await charge.save();
 
     console.log(`💸 Charge created: ${charge._id} ($${numericAmount} ${chargeType}) on booking ${booking.reservationId || booking._id}`);
+
+    // Notify the renter (fire-and-forget)
+    Promise.all([
+      User.findById(booking.driver),
+      User.findById(booking.host),
+      Vehicle.findById(booking.vehicle)
+    ]).then(([driver, host, vehicle]) => {
+      if (driver?.email) {
+        sendChargeAddedToDriver(driver, host, booking, vehicle, charge)
+          .catch(err => console.error('📧 Charge added email failed:', err.message));
+      }
+    }).catch(err => console.error('📧 Charge added email lookup failed:', err.message));
 
     res.status(201).json({ charge });
   } catch (error) {

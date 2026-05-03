@@ -2,6 +2,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_
 const Charge = require('../models/Charge');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
+const { sendChargePaymentFailedToDriver } = require('./emailService');
 
 // Per-charge fees on top of the host-entered amount.
 // Renter pays SERVICE_FEE on top of the charge amount; the host's payout is
@@ -70,15 +71,28 @@ const settleCharge = async (chargeId, trigger = 'auto') => {
 
   const breakdown = computeBreakdown(charge.amount);
 
+  // Mark a charge as failed and notify the renter (only when triggered by the
+  // auto-charge cron — manual Pay Now failures surface in the UI directly).
+  const markFailed = async (failureMessage, extraFields = {}) => {
+    const incRetry = trigger === 'retry' ? 1 : 0;
+    await Charge.findByIdAndUpdate(chargeId, {
+      status: 'failed',
+      lastFailureMessage: failureMessage,
+      lastRetryAt: new Date(),
+      ...extraFields,
+      $inc: { retryCount: incRetry }
+    });
+    if (trigger === 'auto' || trigger === 'retry') {
+      const attempts = (charge.retryCount || 0) + 1 + incRetry;
+      sendChargePaymentFailedToDriver(driver, charge.booking, charge, attempts, MAX_ATTEMPTS)
+        .catch(err => console.error('📧 Charge failure email error:', err.message));
+    }
+  };
+
   // Need a saved payment method on the driver.
   const defaultPM = driver.paymentMethods?.find(pm => pm.isDefault && pm.stripePaymentMethodId);
   if (!driver.stripeCustomerId || !defaultPM) {
-    await Charge.findByIdAndUpdate(chargeId, {
-      status: 'failed',
-      lastFailureMessage: 'No saved payment method on file',
-      lastRetryAt: new Date(),
-      $inc: { retryCount: trigger === 'retry' ? 1 : 0 }
-    });
+    await markFailed('No saved payment method on file');
     return { success: false, error: 'No saved payment method on file' };
   }
 
@@ -107,23 +121,12 @@ const settleCharge = async (chargeId, trigger = 'auto') => {
     });
   } catch (err) {
     console.error(`💸 Charge settlement failed [${chargeId}]:`, err.message);
-    await Charge.findByIdAndUpdate(chargeId, {
-      status: 'failed',
-      lastFailureMessage: err.message,
-      lastRetryAt: new Date(),
-      $inc: { retryCount: trigger === 'retry' ? 1 : 0 }
-    });
+    await markFailed(err.message);
     return { success: false, error: err.message };
   }
 
   if (paymentIntent.status !== 'succeeded') {
-    await Charge.findByIdAndUpdate(chargeId, {
-      status: 'failed',
-      paymentIntentId: paymentIntent.id,
-      lastFailureMessage: `Payment intent status: ${paymentIntent.status}`,
-      lastRetryAt: new Date(),
-      $inc: { retryCount: trigger === 'retry' ? 1 : 0 }
-    });
+    await markFailed(`Payment intent status: ${paymentIntent.status}`, { paymentIntentId: paymentIntent.id });
     return { success: false, error: `Payment intent status: ${paymentIntent.status}` };
   }
 
