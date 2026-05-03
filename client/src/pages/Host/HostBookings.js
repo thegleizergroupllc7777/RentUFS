@@ -1053,16 +1053,6 @@ const HostBookings = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setAddChargeBookingId(booking._id);
-                              }}
-                              className="btn btn-secondary"
-                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', background: '#f59e0b', color: '#000', border: 'none' }}
-                            >
-                              + Add Charge
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
                                 const isOpening = openChatBookingId !== booking._id;
                                 setOpenChatBookingId(isOpening ? booking._id : null);
                                 if (isOpening) {
@@ -1380,13 +1370,6 @@ const HostBookings = () => {
                     >
                       Tolls & Charges
                     </button>
-                    <button
-                      onClick={() => setAddChargeBookingId(booking._id)}
-                      className="btn btn-secondary"
-                      style={{ background: '#f59e0b', color: '#000', border: 'none' }}
-                    >
-                      + Add Charge
-                    </button>
 
                     {booking.status === 'active' && (
                       <>
@@ -1512,6 +1495,8 @@ const HostBookings = () => {
         <TollCharges
           bookingId={tollChargesBookingId}
           onClose={() => setTollChargesBookingId(null)}
+          isHost={true}
+          onAddCharge={() => setAddChargeBookingId(tollChargesBookingId)}
         />
       )}
 
