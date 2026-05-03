@@ -4,19 +4,19 @@
   min-height: 100vh;
 }
 
-/* Host reservation card action row — keep all buttons on one line.
-   Tighter padding/font than the shared .booking-actions so the row
-   accommodates 7+ buttons without overflowing on standard widths. */
+/* Host reservation card action row — buttons fill the row width evenly
+   and shrink as more are added. */
 .host-booking-actions {
   display: flex;
   flex-wrap: nowrap;
   gap: 0.4rem;
   align-items: center;
-  overflow-x: auto;
+  width: 100%;
 }
 
 .host-booking-actions .btn {
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-width: 110px;
   padding: 0.45rem 0.85rem;
   font-size: 0.825rem;
   white-space: nowrap;
