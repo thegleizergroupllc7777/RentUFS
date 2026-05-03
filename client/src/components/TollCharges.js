@@ -7,8 +7,10 @@ import axiosInstance from '../config/axios';
  *   bookingId - the booking ID to fetch tolls for
  *   onClose - callback to close the modal (only used in modal mode)
  *   embedded - if true, renders inline instead of as a modal overlay
+ *   isHost - if true, shows the "+ Add Charge" action in the header
+ *   onAddCharge - callback fired when the host clicks "+ Add Charge"
  */
-const TollCharges = ({ bookingId, onClose, embedded = false }) => {
+const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onAddCharge }) => {
   const [charges, setCharges] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,25 +45,42 @@ const TollCharges = ({ bookingId, onClose, embedded = false }) => {
 
   const content = (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '0.75rem' }}>
         <h2 style={{
           margin: 0,
           color: embedded ? '#fff' : '#1f2937',
           fontSize: embedded ? '1rem' : '1.25rem'
         }}>
-          {embedded ? 'Tolls & Charges' : 'Toll Charges'}
+          Tolls & Charges
         </h2>
-        {!embedded && onClose && (
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: 'none', fontSize: '1.5rem',
-              cursor: 'pointer', color: '#6b7280', padding: '0.25rem'
-            }}
-          >
-            &times;
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {isHost && onAddCharge && (
+            <button
+              onClick={onAddCharge}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                padding: embedded ? '0.25rem 0.6rem' : '0.35rem 0.75rem',
+                borderRadius: '0.375rem',
+                background: '#f59e0b', color: '#000', border: 'none',
+                cursor: 'pointer', fontWeight: 600,
+                fontSize: embedded ? '0.75rem' : '0.85rem'
+              }}
+            >
+              <span style={{ fontSize: '1.05em', lineHeight: 1 }}>+</span> Add Charge
+            </button>
+          )}
+          {!embedded && onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none', border: 'none', fontSize: '1.5rem',
+                cursor: 'pointer', color: '#6b7280', padding: '0.25rem'
+              }}
+            >
+              &times;
+            </button>
+          )}
+        </div>
       </div>
 
       {loading && (
