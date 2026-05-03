@@ -157,6 +157,18 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'A complete home address is required to book a vehicle. Please add your street, city, state, and zip code in your profile.' });
     }
 
+    // Block new bookings if the driver has unpaid post-trip charges that
+    // exhausted their automatic retry attempts.
+    const { getDriverLockoutStatus } = require('../utils/chargeSettlement');
+    const lockoutStatus = await getDriverLockoutStatus(req.user._id);
+    if (lockoutStatus.locked) {
+      return res.status(402).json({
+        message: `You have an outstanding balance of $${lockoutStatus.totalOwed.toFixed(2)} from a previous reservation. Please settle this charge from My Bookings before booking another vehicle.`,
+        code: 'OUTSTANDING_CHARGE',
+        totalOwed: lockoutStatus.totalOwed
+      });
+    }
+
     // Validate required date fields
     if (!startDate || !endDate) {
       return res.status(400).json({ message: 'Please select a pick-up date' });

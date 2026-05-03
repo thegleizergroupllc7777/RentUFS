@@ -6,6 +6,7 @@ const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendPayoutN
 const { sendOverdueReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
+const { checkAndSettleScheduledCharges } = require('./chargeSettlement');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
 const checkAndSendReturnReminders = async () => {
@@ -531,6 +532,7 @@ let registrationCheckInterval = null;
 let tollSettlementInterval = null;
 let tollSyncInterval = null;
 let weeklyPayoutInterval = null;
+let chargeSettlementInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run email reminders immediately on startup
@@ -599,6 +601,15 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   scheduleWeeklyPayout();
   console.log('⏱️  Weekly payout scheduler running every Monday at 6:00 AM EST');
 
+  // Host-added charge settlement: scan every 30 minutes for charges past their
+  // 3-day notice window or due for retry after a failed attempt.
+  console.log('🚀 Starting charge settlement scheduler...');
+  setTimeout(() => {
+    checkAndSettleScheduledCharges();
+    chargeSettlementInterval = setInterval(checkAndSettleScheduledCharges, 30 * 60 * 1000);
+  }, 3 * 60 * 1000); // delay first run by 3 minutes
+  console.log('⏱️  Charge settlement scheduler running every 30 minutes');
+
   return schedulerInterval;
 };
 
@@ -632,6 +643,11 @@ const stopReturnReminderScheduler = () => {
     clearInterval(weeklyPayoutInterval);
     weeklyPayoutInterval = null;
     console.log('🛑 Weekly payout scheduler stopped');
+  }
+  if (chargeSettlementInterval) {
+    clearInterval(chargeSettlementInterval);
+    chargeSettlementInterval = null;
+    console.log('🛑 Charge settlement scheduler stopped');
   }
 };
 

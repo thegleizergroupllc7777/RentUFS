@@ -2,6 +2,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const Charge = require('../models/Charge');
+const { settleCharge, getDriverLockoutStatus } = require('../utils/chargeSettlement');
 
 const router = express.Router();
 
@@ -181,6 +182,51 @@ router.get('/types', (req, res) => {
     maxAmount: MAX_CHARGE_AMOUNT,
     noticeDays: NOTICE_PERIOD_DAYS
   });
+});
+
+// POST /api/charges/:id/pay-now
+// Driver settles a pending or failed charge immediately instead of waiting
+// for the auto-charge cron. Same Stripe flow as the scheduler trigger.
+router.post('/:id/pay-now', auth, async (req, res) => {
+  try {
+    const charge = await Charge.findById(req.params.id);
+    if (!charge) return res.status(404).json({ message: 'Charge not found' });
+
+    if (String(charge.driver) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Only the renter can pay this charge' });
+    }
+    if (charge.status === 'charged') {
+      return res.status(400).json({ message: 'Charge has already been paid' });
+    }
+    if (charge.status === 'waived') {
+      return res.status(400).json({ message: 'Charge was waived by the host' });
+    }
+
+    const result = await settleCharge(charge._id, 'pay_now');
+    if (!result.success) {
+      return res.status(402).json({
+        message: result.error || 'Payment failed',
+        code: 'PAYMENT_FAILED'
+      });
+    }
+    res.json({ charge: result.charge });
+  } catch (error) {
+    console.error('❌ Failed to settle charge:', error);
+    res.status(500).json({ message: 'Failed to process payment', error: error.message });
+  }
+});
+
+// GET /api/charges/lockout-status
+// Used by the renter UI / new-booking flow to see if outstanding charges
+// are blocking new reservations.
+router.get('/lockout-status', auth, async (req, res) => {
+  try {
+    const status = await getDriverLockoutStatus(req.user._id);
+    res.json(status);
+  } catch (error) {
+    console.error('❌ Failed to fetch lockout status:', error);
+    res.status(500).json({ message: 'Failed to fetch lockout status', error: error.message });
+  }
 });
 
 module.exports = router;
