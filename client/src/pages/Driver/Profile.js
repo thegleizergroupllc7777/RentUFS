@@ -206,6 +206,7 @@ const DriverProfile = () => {
   const [tollspotPending, setTollspotPending] = useState(false);
   const [tollspotConnectedAt, setTollspotConnectedAt] = useState(null);
   const [tollspotLoading, setTollspotLoading] = useState(false);
+  const [tollspotSignupUrl, setTollspotSignupUrl] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -255,6 +256,7 @@ const DriverProfile = () => {
       });
       setTollspotActive(res.data.tollspot?.active || false);
       setTollspotConnectedAt(res.data.tollspot?.connectedAt || null);
+      setTollspotSignupUrl(res.data.tollspot?.signupUrl || null);
     } catch (err) {
       console.error('❌ Error fetching integrations:', err);
     }
@@ -291,10 +293,10 @@ const DriverProfile = () => {
       // Activating — open TollSpot but don't mark as connected yet
       setTollspotPending(true);
       if (user?._id) {
-        window.open(
-          `http://app3052.tollspot.app/?partnerId=public_5dee9706-bd2a-4ff8-8181-8973761bfb06&hostId=${user._id}`,
-          '_blank'
-        );
+        const base = tollspotSignupUrl || 'https://selfserve.tollspot.app';
+        const url = new URL(base);
+        url.searchParams.set('hostId', user._id);
+        window.open(url.toString(), '_blank', 'noopener,noreferrer');
       }
     }
   };
