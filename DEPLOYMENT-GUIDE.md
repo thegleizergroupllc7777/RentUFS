@@ -46,7 +46,7 @@ You need to deploy **BOTH parts** separately.
    - `NODE_ENV`: `production`
    - `CLIENT_URL`: `https://your-app-name.netlify.app` (we'll update this later)
 6. Click **"Create Web Service"**
-7. **Copy your backend URL** (e.g., `https://rentufs-api.onrender.com`)
+7. **Copy your backend URL** (e.g., `https://api.rentufs.com`)
 
 #### Step B: Deploy Frontend to Netlify
 
@@ -63,7 +63,7 @@ You need to deploy **BOTH parts** separately.
    - **Build command**: `npm run build`
    - **Publish directory**: `client/build`
 6. **Add Environment Variable:**
-   - `REACT_APP_API_URL`: `https://rentufs-api.onrender.com` (your Render backend URL)
+   - `REACT_APP_API_URL`: `https://api.rentufs.com` (your backend URL)
 7. Click **"Deploy site"**
 8. **Copy your Netlify URL** (e.g., `https://rentufs-marketplace.netlify.app`)
 

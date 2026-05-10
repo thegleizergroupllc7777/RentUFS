@@ -44,7 +44,7 @@ const vehicleSchema = new mongoose.Schema({
     type: String,
     trim: true,
     uppercase: true,
-    enum: ['AZ', 'CA', 'CO', 'CT', 'FL', 'GA', 'IL', 'MD', 'NV', 'PA', 'SC', 'TX']
+    enum: ['AZ', 'CA', 'CO', 'CT', 'FL', 'GA', 'IL', 'MD', 'NJ', 'NV', 'PA', 'SC', 'TX']
   },
   type: {
     type: String,
@@ -151,6 +151,18 @@ const vehicleSchema = new mongoose.Schema({
       enum: ['none', 'pre_registered', 'registered', 'unregister_scheduled', 'unregistered'],
       default: 'none'
     }
+  },
+  // Booking provider — determines how renters book this vehicle
+  // 'p2p' = standard peer-to-peer flow via this app's Stripe checkout
+  // 'wheelbase' = embed Wheelbase/Outdoorsy SDK widget for booking (used for RentUFS fleet vehicles)
+  bookingProvider: {
+    type: String,
+    enum: ['p2p', 'wheelbase'],
+    default: 'p2p'
+  },
+  // Wheelbase / Outdoorsy fleet integration
+  wheelbase: {
+    rentalId: { type: String, default: null }  // e.g., "4726129" — the Wheelbase data-rental ID
   },
   createdAt: {
     type: Date,

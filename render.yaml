@@ -41,4 +41,4 @@ services:
         destination: /index.html
     envVars:
       - key: REACT_APP_API_URL
-        sync: false  # Set to your backend URL (e.g., https://rentufs-api.onrender.com)
+        sync: false  # Set to your backend URL (e.g., https://api.rentufs.com)
