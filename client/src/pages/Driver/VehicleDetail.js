@@ -46,6 +46,25 @@ const VehicleDetail = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Load Wheelbase/Outdoorsy booking SDK only when viewing a fleet vehicle
+  useEffect(() => {
+    if (!vehicle || vehicle.bookingProvider !== 'wheelbase') return;
+
+    window.Outdoorsy = window.Outdoorsy || {};
+    window.Outdoorsy.color = '10b981';
+
+    const script = document.createElement('script');
+    script.src = 'https://d3cuf6g1arkgx6.cloudfront.net/sdk/wheelbase.min.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [vehicle]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -653,6 +672,32 @@ const VehicleDetail = () => {
                     >
                       Browse Marketplace
                     </button>
+                  </>
+                ) : vehicle.bookingProvider === 'wheelbase' ? (
+                  <>
+                    <h3>Book this car</h3>
+                    <div style={{
+                      backgroundColor: '#1a2e1a',
+                      border: '1px solid #10b981',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.9rem',
+                      color: '#e5e7eb'
+                    }}>
+                      <div style={{ marginBottom: '0.25rem' }}>
+                        <strong style={{ color: '#6ee7b7' }}>Booking:</strong> {vehicle.year} {vehicle.make} {vehicle.model}
+                        {vehicle.nickname ? ` (${vehicle.nickname})` : ''}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                        Complete your booking below
+                      </div>
+                    </div>
+                    <div
+                      id="outdoorsy-book-now-container"
+                      data-rental={vehicle.wheelbase?.rentalId}
+                      data-color="10b981"
+                    />
                   </>
                 ) : (
                   <>
