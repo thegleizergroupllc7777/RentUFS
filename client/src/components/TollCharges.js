@@ -36,6 +36,7 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
   const [error, setError] = useState('');
   const [payingChargeId, setPayingChargeId] = useState(null);
   const [payError, setPayError] = useState('');
+  const [removingChargeId, setRemovingChargeId] = useState(null);
 
   useEffect(() => {
     if (bookingId) {
@@ -84,6 +85,21 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
       setPayError(err.response?.data?.message || 'Payment failed. Please try again or update your card.');
     } finally {
       setPayingChargeId(null);
+    }
+  };
+
+  const handleRemove = async (chargeId) => {
+    const ok = window.confirm('Remove this charge? The renter will not be billed. This cannot be undone.');
+    if (!ok) return;
+    setRemovingChargeId(chargeId);
+    setPayError('');
+    try {
+      const response = await axiosInstance.post(`/api/charges/${chargeId}/waive`);
+      setHostCharges(prev => prev.map(c => c._id === chargeId ? response.data.charge : c));
+    } catch (err) {
+      setPayError(err.response?.data?.message || 'Failed to remove charge. Please try again.');
+    } finally {
+      setRemovingChargeId(null);
     }
   };
 
@@ -177,6 +193,7 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
             {hostCharges.map(c => {
               const status = STATUS_STYLES[c.status] || STATUS_STYLES.pending;
               const canPay = !isHost && (c.status === 'pending' || c.status === 'failed');
+              const canRemove = isHost && (c.status === 'pending' || c.status === 'failed');
               return (
                 <div key={c._id} style={{
                   padding: '0.75rem',
@@ -241,6 +258,26 @@ const TollCharges = ({ bookingId, onClose, embedded = false, isHost = false, onA
                             }}
                           >
                             {payingChargeId === c._id ? 'Processing…' : 'Pay Now'}
+                          </button>
+                        )}
+                        {canRemove && (
+                          <button
+                            onClick={() => handleRemove(c._id)}
+                            disabled={removingChargeId === c._id}
+                            style={{
+                              marginLeft: 'auto',
+                              padding: '0.3rem 0.75rem',
+                              borderRadius: '0.3rem',
+                              background: 'transparent',
+                              color: '#dc2626',
+                              border: '1px solid #dc2626',
+                              cursor: removingChargeId === c._id ? 'not-allowed' : 'pointer',
+                              fontWeight: 600,
+                              fontSize: '0.78rem',
+                              opacity: removingChargeId === c._id ? 0.6 : 1
+                            }}
+                          >
+                            {removingChargeId === c._id ? 'Removing…' : 'Remove'}
                           </button>
                         )}
                       </div>
