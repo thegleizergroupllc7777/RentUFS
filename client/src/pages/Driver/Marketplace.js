@@ -257,10 +257,10 @@ const Marketplace = () => {
 
   return (
     <div className="marketplace-fullscreen">
-      <Navbar />
-
-      {/* Sticky header wrapper — keeps search bar + results info bar locked at top while scrolling */}
+      {/* Sticky header wrapper — keeps Navbar + search bar + results info bar locked at top while scrolling */}
       <div className="marketplace-sticky-header">
+        <Navbar />
+
         {/* Top Search Bar */}
         <div className="marketplace-search-bar">
           <div className="search-container">
