@@ -259,54 +259,57 @@ const Marketplace = () => {
     <div className="marketplace-fullscreen">
       <Navbar />
 
-      {/* Top Search Bar */}
-      <div className="marketplace-search-bar">
-        <div className="search-container">
-          <div className="search-icon">🔍</div>
-          <input
-            type="text"
-            placeholder="Enter city or zip code..."
-            value={searchLocation}
-            onChange={(e) => setSearchLocation(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleQuickSearch()}
-            className="search-input-main"
-          />
-          <button onClick={handleQuickSearch} className="search-btn-main">
-            Search
-          </button>
+      {/* Sticky header wrapper — keeps search bar + results info bar locked at top while scrolling */}
+      <div className="marketplace-sticky-header">
+        {/* Top Search Bar */}
+        <div className="marketplace-search-bar">
+          <div className="search-container">
+            <div className="search-icon">🔍</div>
+            <input
+              type="text"
+              placeholder="Enter city or zip code..."
+              value={searchLocation}
+              onChange={(e) => setSearchLocation(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleQuickSearch()}
+              className="search-input-main"
+            />
+            <button onClick={handleQuickSearch} className="search-btn-main">
+              Search
+            </button>
+          </div>
+
+          {/* View Toggle */}
+          <div className="view-toggle-bar">
+            <button
+              className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+            >
+              📋 LIST
+            </button>
+            <button
+              className={`toggle-btn ${viewMode === 'map' ? 'active' : ''}`}
+              onClick={() => setViewMode('map')}
+            >
+              📍 MAP
+            </button>
+          </div>
         </div>
 
-        {/* View Toggle */}
-        <div className="view-toggle-bar">
+        {/* Results Info Bar */}
+        <div className="results-info-bar">
+          <div className="results-text">
+            <strong>{getLocationText()}</strong>
+            <span className="results-count">
+              {loading ? 'Loading...' : `Showing ${resultsInfo.showing} of ${resultsInfo.total} vehicles`}
+            </span>
+          </div>
           <button
-            className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
+            className="filters-toggle-btn"
+            onClick={() => setShowFilters(!showFilters)}
           >
-            📋 LIST
-          </button>
-          <button
-            className={`toggle-btn ${viewMode === 'map' ? 'active' : ''}`}
-            onClick={() => setViewMode('map')}
-          >
-            📍 MAP
+            {showFilters ? 'Hide Filters' : 'More Filters'} ⚙️
           </button>
         </div>
-      </div>
-
-      {/* Results Info Bar */}
-      <div className="results-info-bar">
-        <div className="results-text">
-          <strong>{getLocationText()}</strong>
-          <span className="results-count">
-            {loading ? 'Loading...' : `Showing ${resultsInfo.showing} of ${resultsInfo.total} vehicles`}
-          </span>
-        </div>
-        <button
-          className="filters-toggle-btn"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          {showFilters ? 'Hide Filters' : 'More Filters'} ⚙️
-        </button>
       </div>
 
       {/* Expanded Filters Panel */}

@@ -479,6 +479,16 @@
   background: #111111;
 }
 
+/* Sticky header wrapper — locks search bar + results info bar together
+   while user scrolls the marketplace. Sticks just below the Navbar
+   (Navbar is ~60-70px tall on desktop). */
+.marketplace-sticky-header {
+  position: sticky;
+  top: 60px;
+  z-index: 99;
+  background: #000000;
+}
+
 /* Search Bar */
 .marketplace-search-bar {
   display: flex;
@@ -487,9 +497,6 @@
   padding: 1rem 2rem;
   background: #000000;
   border-bottom: 1px solid #333333;
-  position: sticky;
-  top: 60px;
-  z-index: 100;
 }
 
 .search-container {
@@ -580,9 +587,6 @@
   padding: 0.75rem 2rem;
   background: #1a1a1a;
   border-bottom: 1px solid #333333;
-  position: sticky;
-  top: 140px;
-  z-index: 99;
 }
 
 .results-text {
