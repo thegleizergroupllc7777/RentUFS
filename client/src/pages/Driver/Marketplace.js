@@ -310,65 +310,67 @@ const Marketplace = () => {
             {showFilters ? 'Hide Filters' : 'More Filters'} ⚙️
           </button>
         </div>
-      </div>
 
-      {/* Expanded Filters Panel */}
-      {showFilters && (
-        <div className="filters-panel">
-          <div className="filters-grid">
-            <div className="filter-item">
-              <label>Location</label>
-              <input
-                type="text"
-                name="location"
-                placeholder="City or zip code"
-                value={filters.location}
-                onChange={handleFilterChange}
-              />
-            </div>
-            <div className="filter-item">
-              <label>Radius</label>
-              <select
-                name="radius"
-                value={filters.radius}
-                onChange={handleFilterChange}
-              >
-                <option value="10">10 miles</option>
-                <option value="25">25 miles</option>
-                <option value="50">50 miles</option>
-                <option value="100">100 miles</option>
-                <option value="">Any distance</option>
-              </select>
-            </div>
-            <div className="filter-item">
-              <DatePicker
-                label="Pick-up Date"
-                name="startDate"
-                value={filters.startDate}
-                onChange={handleFilterChange}
-                min={toLocalDateStr(new Date())}
-              />
-            </div>
-            <div className="filter-item">
-              <DatePicker
-                label="Return Date"
-                name="endDate"
-                value={filters.endDate}
-                onChange={handleFilterChange}
-                min={filters.startDate || toLocalDateStr(new Date())}
-              />
-            </div>
-            <div className="filter-actions">
-              <button onClick={fetchVehicles} className="btn btn-primary">
-                Apply Filters
-              </button>
-              <button onClick={clearFilters} className="btn btn-secondary">
-                Clear
-              </button>
+        {/* Expanded Filters Panel — kept inside the sticky header so it
+            stays locked at the top together with the search/results bars
+            when the user scrolls listings */}
+        {showFilters && (
+          <div className="filters-panel">
+            <div className="filters-grid">
+              <div className="filter-item">
+                <label>Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  placeholder="City or zip code"
+                  value={filters.location}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div className="filter-item">
+                <label>Radius</label>
+                <select
+                  name="radius"
+                  value={filters.radius}
+                  onChange={handleFilterChange}
+                >
+                  <option value="10">10 miles</option>
+                  <option value="25">25 miles</option>
+                  <option value="50">50 miles</option>
+                  <option value="100">100 miles</option>
+                  <option value="">Any distance</option>
+                </select>
+              </div>
+              <div className="filter-item">
+                <DatePicker
+                  label="Pick-up Date"
+                  name="startDate"
+                  value={filters.startDate}
+                  onChange={handleFilterChange}
+                  min={toLocalDateStr(new Date())}
+                />
+              </div>
+              <div className="filter-item">
+                <DatePicker
+                  label="Return Date"
+                  name="endDate"
+                  value={filters.endDate}
+                  onChange={handleFilterChange}
+                  min={filters.startDate || toLocalDateStr(new Date())}
+                />
+              </div>
+              <div className="filter-actions">
+                <button onClick={fetchVehicles} className="btn btn-primary">
+                  Apply Filters
+                </button>
+                <button onClick={clearFilters} className="btn btn-secondary">
+                  Clear
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Main Content Area */}
       <div className="marketplace-content">
