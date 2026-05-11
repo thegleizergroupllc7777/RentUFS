@@ -479,13 +479,14 @@
   background: #111111;
 }
 
-/* Sticky header wrapper — locks search bar + results info bar together
-   while user scrolls the marketplace. Sticks just below the Navbar
-   (Navbar is ~60-70px tall on desktop). */
+/* Sticky header wrapper — locks Navbar + search bar + results info bar
+   together at the very top of the viewport while user scrolls the
+   marketplace. Navbar is now nested inside this wrapper, so the entire
+   top section stays as one unit. */
 .marketplace-sticky-header {
   position: sticky;
-  top: 60px;
-  z-index: 99;
+  top: 0;
+  z-index: 100;
   background: #000000;
 }
 
