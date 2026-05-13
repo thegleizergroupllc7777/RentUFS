@@ -1661,6 +1661,179 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
   }
 };
 
+// Internal alert: a single host's weekly payout failed mid-run.
+// Sent to SUPPORT_EMAIL so the team can investigate before the next run.
+const sendPayoutFailureAlert = async ({ host, attemptedAmount, errorMessage, bookings = [] }) => {
+  try {
+    const supportEmail = process.env.SUPPORT_EMAIL;
+    if (!supportEmail) {
+      console.warn('⚠️ SUPPORT_EMAIL not configured — skipping payout failure alert');
+      return { success: false, skipped: true };
+    }
+
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Payout Failure Alert to: ${supportEmail} (host ${host._id})`);
+      return { success: true, dev: true };
+    }
+
+    const hostName = `${host.firstName || ''} ${host.lastName || ''}`.trim() || 'Unknown';
+    const amount = (attemptedAmount || 0).toFixed(2);
+    const when = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+
+    const bookingRows = bookings.map(b => `
+      <tr>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-family: monospace;">${b.reservationId || b.bookingId || 'N/A'}</td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb;">${b.type || 'N/A'}</td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(b.amount || 0).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const mailOptions = {
+      to: supportEmail,
+      subject: `[ALERT] Weekly payout failed for ${hostName} ($${amount})`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
+          <div style="max-width: 640px; margin: 0 auto; padding: 20px;">
+            <div style="background: #dc2626; color: white; padding: 16px 20px; border-radius: 6px 6px 0 0;">
+              <h2 style="margin: 0;">Weekly payout failed</h2>
+              <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">Internal alert · Action required</p>
+            </div>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 0 0 6px 6px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 6px 0; color: #6b7280; width: 160px;">Host</td><td style="padding: 6px 0;"><strong>${hostName}</strong></td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Host email</td><td style="padding: 6px 0;">${host.email || 'N/A'}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Host ID</td><td style="padding: 6px 0; font-family: monospace; font-size: 0.85rem;">${host._id}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Stripe Connect ID</td><td style="padding: 6px 0; font-family: monospace; font-size: 0.85rem;">${host.stripeConnectAccountId || 'N/A'}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Attempted amount</td><td style="padding: 6px 0;"><strong>$${amount}</strong></td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Bookings affected</td><td style="padding: 6px 0;">${bookings.length}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">When (ET)</td><td style="padding: 6px 0;">${when}</td></tr>
+              </table>
+
+              <h3 style="margin: 20px 0 8px 0; color: #374151;">Error</h3>
+              <pre style="background: #fef2f2; border: 1px solid #fecaca; padding: 12px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; font-size: 0.85rem; color: #991b1b;">${(errorMessage || 'No error message').toString()}</pre>
+
+              ${bookingRows ? `
+              <h3 style="margin: 20px 0 8px 0; color: #374151;">Affected bookings</h3>
+              <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 4px;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px 10px; text-align: left; font-size: 0.85rem; color: #6b7280;">Reservation</th>
+                    <th style="padding: 8px 10px; text-align: left; font-size: 0.85rem; color: #6b7280;">Type</th>
+                    <th style="padding: 8px 10px; text-align: right; font-size: 0.85rem; color: #6b7280;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>${bookingRows}</tbody>
+              </table>` : ''}
+
+              <p style="margin-top: 20px; font-size: 0.85rem; color: #6b7280;">
+                The booking payoutStatus was NOT updated, so this payout will be retried on the next weekly run.
+                Investigate the host's Stripe Connect account state before then.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log(`📧 Payout failure alert sent to ${supportEmail} for host ${host._id}`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending payout failure alert:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Internal digest: end-of-run summary covering successes and failures.
+// Sent to SUPPORT_EMAIL after each weekly payout run, only if there were any failures.
+const sendPayoutRunSummaryEmail = async ({ totalHosts, hostsSucceeded, hostsFailed, totalTransferred, failures = [] }) => {
+  try {
+    const supportEmail = process.env.SUPPORT_EMAIL;
+    if (!supportEmail) {
+      console.warn('⚠️ SUPPORT_EMAIL not configured — skipping payout run summary');
+      return { success: false, skipped: true };
+    }
+
+    if (failures.length === 0) {
+      return { success: true, skipped: true };
+    }
+
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Payout Run Summary to: ${supportEmail} (${hostsFailed} failures)`);
+      return { success: true, dev: true };
+    }
+
+    const when = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+
+    const failureRows = failures.map(f => `
+      <tr>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">${f.hostName || 'Unknown'}<br><span style="font-size: 0.75rem; color: #6b7280; font-family: monospace;">${f.hostId}</span></td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(f.attemptedAmount || 0).toFixed(2)}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${f.bookingCount || 0}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem; color: #991b1b;">${(f.errorMessage || '').toString().slice(0, 120)}</td>
+      </tr>
+    `).join('');
+
+    const mailOptions = {
+      to: supportEmail,
+      subject: `[Summary] Weekly payout run — ${hostsFailed} failure${hostsFailed === 1 ? '' : 's'}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
+          <div style="max-width: 720px; margin: 0 auto; padding: 20px;">
+            <div style="background: #f59e0b; color: white; padding: 16px 20px; border-radius: 6px 6px 0 0;">
+              <h2 style="margin: 0;">Weekly payout run — summary</h2>
+              <p style="margin: 4px 0 0 0; opacity: 0.95; font-size: 0.9rem;">${when} ET</p>
+            </div>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 0 0 6px 6px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 6px 0; color: #6b7280; width: 220px;">Total eligible hosts</td><td style="padding: 6px 0;"><strong>${totalHosts}</strong></td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Succeeded</td><td style="padding: 6px 0; color: #059669;"><strong>${hostsSucceeded}</strong></td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Failed</td><td style="padding: 6px 0; color: #dc2626;"><strong>${hostsFailed}</strong></td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Total transferred</td><td style="padding: 6px 0;"><strong>$${(totalTransferred || 0).toFixed(2)}</strong></td></tr>
+              </table>
+
+              <h3 style="margin: 20px 0 8px 0; color: #374151;">Failures</h3>
+              <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 4px;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px 10px; text-align: left; font-size: 0.85rem; color: #6b7280;">Host</th>
+                    <th style="padding: 8px 10px; text-align: right; font-size: 0.85rem; color: #6b7280;">Amount</th>
+                    <th style="padding: 8px 10px; text-align: right; font-size: 0.85rem; color: #6b7280;">Bookings</th>
+                    <th style="padding: 8px 10px; text-align: left; font-size: 0.85rem; color: #6b7280;">Error</th>
+                  </tr>
+                </thead>
+                <tbody>${failureRows}</tbody>
+              </table>
+
+              <p style="margin-top: 20px; font-size: 0.85rem; color: #6b7280;">
+                Each failed host received an individual alert earlier in this run.
+                Failed bookings retain their existing payoutStatus and will retry on the next weekly run.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log(`📧 Payout run summary sent to ${supportEmail} (${hostsFailed} failures)`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending payout run summary:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Send toll charge notification to driver (detailed)
 const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, tollSummary) => {
   try {
