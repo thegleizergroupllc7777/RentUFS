@@ -588,6 +588,7 @@ const Register = () => {
                         value={formData.email}
                         onChange={handleChange}
                         maxLength="100"
+                        autoComplete="username"
                         required
                         disabled={emailOtp.verified}
                       />
@@ -653,6 +654,7 @@ const Register = () => {
                         required
                         minLength="8"
                         maxLength="40"
+                        autoComplete="new-password"
                       />
                       <button
                         type="button"
