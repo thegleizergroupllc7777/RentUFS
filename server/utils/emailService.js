@@ -2264,6 +2264,8 @@ module.exports = {
   sendRegistrationExpirationReminder,
   sendPasswordResetEmail,
   sendPayoutNotificationEmail,
+  sendPayoutFailureAlert,
+  sendPayoutRunSummaryEmail,
   sendTollChargeToDriver,
   sendTollNotificationToHost,
   sendChargeAddedToDriver,
