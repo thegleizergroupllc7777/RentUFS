@@ -2,7 +2,7 @@ const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
-const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendPayoutNotificationEmail } = require('./emailService');
+const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
 const { sendOverdueReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
@@ -322,12 +322,13 @@ const processWeeklyPayouts = async () => {
 
     let hostsProcessed = 0;
     let totalTransferred = 0;
+    const failures = []; // For end-of-run summary email
     const now = new Date();
 
     for (const host of hosts) {
+      let hostPayoutAmount = 0;
+      const payoutBookings = []; // For email breakdown
       try {
-        let hostPayoutAmount = 0;
-        const payoutBookings = []; // For email breakdown
 
         // ── 1. Completed bookings: pay remaining balance ──
         const completedBookings = await Booking.find({
@@ -511,6 +512,26 @@ const processWeeklyPayouts = async () => {
 
       } catch (hostErr) {
         console.error(`💰 Weekly payout error for host ${host._id}:`, hostErr.message);
+
+        failures.push({
+          hostId: host._id.toString(),
+          hostName: `${host.firstName || ''} ${host.lastName || ''}`.trim() || 'Unknown',
+          attemptedAmount: hostPayoutAmount,
+          bookingCount: payoutBookings.length,
+          errorMessage: hostErr.message
+        });
+
+        sendPayoutFailureAlert({
+          host,
+          attemptedAmount: hostPayoutAmount,
+          errorMessage: hostErr.message,
+          bookings: payoutBookings.map(p => ({
+            reservationId: p.booking.reservationId,
+            bookingId: p.booking._id.toString(),
+            type: p.type,
+            amount: p.amount
+          }))
+        }).catch(err => console.error(`📧 Payout failure alert failed for host ${host._id}:`, err.message));
       }
     }
 
@@ -518,7 +539,18 @@ const processWeeklyPayouts = async () => {
       console.log(`💰 Weekly payouts complete: ${hostsProcessed} host(s), $${totalTransferred.toFixed(2)} total`);
     }
 
-    return { success: true, hostsProcessed, totalTransferred };
+    if (failures.length > 0) {
+      console.log(`⚠️ Weekly payouts: ${failures.length} host(s) failed`);
+      sendPayoutRunSummaryEmail({
+        totalHosts: hosts.length,
+        hostsSucceeded: hostsProcessed,
+        hostsFailed: failures.length,
+        totalTransferred,
+        failures
+      }).catch(err => console.error('📧 Payout run summary email failed:', err.message));
+    }
+
+    return { success: true, hostsProcessed, totalTransferred, hostsFailed: failures.length };
   } catch (error) {
     console.error('💰 Error in weekly payout scheduler:', error);
     return { success: false, error: error.message };
