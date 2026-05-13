@@ -6,6 +6,7 @@ import ImageUpload, { resolveImageUrl } from '../../components/ImageUpload';
 import AddressAutocomplete from '../../components/AddressAutocomplete';
 import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
+import { ALL_LISTED_STATES, isSupportedState } from '../../data/supportedStates';
 import API_URL from '../../config/api';
 import './Host.css';
 
@@ -251,6 +252,20 @@ const EditVehicle = () => {
     e.preventDefault();
     setError('');
     setSaving(true);
+
+    // Block save if either state is outside our insurance coverage area
+    if (formData.registrationState && !isSupportedState(formData.registrationState)) {
+      setError("We don't currently provide service in the selected registration state. Please choose a supported state.");
+      setSaving(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (formData.location.state && !isSupportedState(formData.location.state)) {
+      setError("We don't currently provide service in the selected vehicle location state. Please choose a supported state.");
+      setSaving(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     // Validate pricing
     const dailyPrice = parseFloat(formData.pricePerDay);
@@ -862,22 +877,24 @@ const EditVehicle = () => {
                       required
                     >
                       <option value="">Select State</option>
-                      <option value="AZ">Arizona (AZ)</option>
-                      <option value="CA">California (CA)</option>
-                      <option value="CO">Colorado (CO) *</option>
-                      <option value="CT">Connecticut (CT) *</option>
-                      <option value="FL">Florida (FL)</option>
-                      <option value="GA">Georgia (GA)</option>
-                      <option value="IL">Illinois (IL)</option>
-                      <option value="MD">Maryland (MD)</option>
-                      <option value="NV">Nevada (NV) *</option>
-                      <option value="PA">Pennsylvania (PA) *</option>
-                      <option value="SC">South Carolina (SC) *</option>
-                      <option value="TX">Texas (TX)</option>
+                      {ALL_LISTED_STATES.map(s => {
+                        const supported = isSupportedState(s.code);
+                        return (
+                          <option
+                            key={s.code}
+                            value={s.code}
+                            style={!supported ? { color: '#9ca3af' } : undefined}
+                          >
+                            {s.name} ({s.code}){!supported ? ' — Not in service area' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
-                    <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      * Requires specific coverage — inquire for additional details
-                    </p>
+                    {formData.registrationState && !isSupportedState(formData.registrationState) && (
+                      <p style={{ fontSize: '0.85rem', color: '#dc2626', marginTop: '0.25rem' }}>
+                        We don't currently provide service in this state. Please choose a supported state to continue.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -936,19 +953,24 @@ const EditVehicle = () => {
                       required
                     >
                       <option value="">Select State</option>
-                      <option value="AZ">Arizona (AZ)</option>
-                      <option value="CA">California (CA)</option>
-                      <option value="CO">Colorado (CO)</option>
-                      <option value="CT">Connecticut (CT)</option>
-                      <option value="FL">Florida (FL)</option>
-                      <option value="GA">Georgia (GA)</option>
-                      <option value="IL">Illinois (IL)</option>
-                      <option value="MD">Maryland (MD)</option>
-                      <option value="NV">Nevada (NV)</option>
-                      <option value="PA">Pennsylvania (PA)</option>
-                      <option value="SC">South Carolina (SC)</option>
-                      <option value="TX">Texas (TX)</option>
+                      {ALL_LISTED_STATES.map(s => {
+                        const supported = isSupportedState(s.code);
+                        return (
+                          <option
+                            key={s.code}
+                            value={s.code}
+                            style={!supported ? { color: '#9ca3af' } : undefined}
+                          >
+                            {s.name} ({s.code}){!supported ? ' — Not in service area' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
+                    {formData.location.state && !isSupportedState(formData.location.state) && (
+                      <p style={{ fontSize: '0.85rem', color: '#dc2626', marginTop: '0.25rem' }}>
+                        We don't currently provide service in this state. Please choose a supported state to continue.
+                      </p>
+                    )}
                   </div>
 
                   <div className="form-group">
