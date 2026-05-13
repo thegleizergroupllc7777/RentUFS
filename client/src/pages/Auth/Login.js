@@ -196,6 +196,7 @@ const Login = () => {
                     value={formData.email}
                     onChange={handleChange}
                     maxLength="100"
+                    autoComplete="username"
                     required
                   />
                 </div>
@@ -210,6 +211,7 @@ const Login = () => {
                       value={formData.password}
                       onChange={handleChange}
                       maxLength="40"
+                      autoComplete="current-password"
                       required
                     />
                     <button
