@@ -78,7 +78,6 @@ const sendEmail = async (mailOptions) => {
     'X-Mailer': 'RentUFS Notifications',
     'List-Unsubscribe': `<${clientUrl}/unsubscribe>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-    'Precedence': 'bulk',
     'X-Auto-Response-Suppress': 'OOF, AutoReply'
   };
 
