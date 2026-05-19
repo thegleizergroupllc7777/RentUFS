@@ -776,9 +776,9 @@ const Register = () => {
                       />
                       <span>
                         I have read and agree to the{' '}
-                        <Link to="/terms" target="_blank" rel="noopener noreferrer" className="auth-link">
+                        <a href="https://rentufs.com/terms-of-service" target="_blank" rel="noopener noreferrer" className="auth-link">
                           Terms of Service
-                        </Link>
+                        </a>
                         .
                       </span>
                     </label>

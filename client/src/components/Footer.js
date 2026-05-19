@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="footer-content">
         <div className="footer-main">
           <div className="footer-brand">
-            <Link to="/" className="footer-logo">UFS</Link>
+            <a href="https://rentufs.com" className="footer-logo">UFS</a>
             <div className="footer-social">
               <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="footer-social-link" aria-label="X (Twitter)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -32,23 +32,22 @@ const Footer = () => {
 
           <div className="footer-links-group">
             <h4 className="footer-links-title">Main</h4>
-            <Link to="/driver-guide" className="footer-link">Drivers</Link>
-            <Link to="/host-guide" className="footer-link">Hosts</Link>
-            <Link to="/about" className="footer-link">About Us</Link>
-            <Link to="/blog" className="footer-link">Blog</Link>
+            <a href="https://rentufs.com/driver-guide" className="footer-link">Drivers</a>
+            <a href="https://rentufs.com/host-guide" className="footer-link">Hosts</a>
+            <a href="https://rentufs.com/about-us" className="footer-link">About Us</a>
           </div>
 
           <div className="footer-links-group">
             <h4 className="footer-links-title">Support</h4>
-            <Link to="/faq" className="footer-link">FAQ</Link>
+            <a href="https://rentufs.com/faqs" className="footer-link">FAQ</a>
             <Link to="/marketplace" className="footer-link">Browse Cars</Link>
             <Link to="/register" className="footer-link">Sign Up</Link>
           </div>
 
           <div className="footer-links-group">
             <h4 className="footer-links-title">Legal</h4>
-            <Link to="/privacy" className="footer-link">Privacy Policy</Link>
-            <Link to="/terms" className="footer-link">Terms of Service</Link>
+            <a href="https://rentufs.com/privacy-policy" className="footer-link">Privacy Policy</a>
+            <a href="https://rentufs.com/terms-of-service" className="footer-link">Terms of Service</a>
           </div>
         </div>
 
