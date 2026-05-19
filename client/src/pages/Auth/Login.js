@@ -213,7 +213,7 @@ const Login = () => {
                     value={formData.email}
                     onChange={handleChange}
                     maxLength="100"
-                    autoComplete="email"
+                    autoComplete="username"
                     required
                   />
                 </div>
