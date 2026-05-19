@@ -69,6 +69,23 @@ const Login = () => {
 
     try {
       const userData = await login(formData.email, formData.password);
+
+      // Explicitly ask the browser to save the credential. Needed for
+      // React SPA logins because preventDefault() + History API navigation
+      // doesn't reliably trigger the browser's heuristic save prompt.
+      if (window.PasswordCredential) {
+        try {
+          const cred = new window.PasswordCredential({
+            id: formData.email,
+            password: formData.password,
+            name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || formData.email,
+          });
+          await navigator.credentials.store(cred);
+        } catch (credErr) {
+          // Credential storage is a nicety — silently continue if it fails
+        }
+      }
+
       routeByUserType(userData);
     } catch (err) {
       if (err.deactivated) {

@@ -372,6 +372,22 @@ const Register = () => {
 
       await register(registrationData);
 
+      // Explicitly ask the browser to save the credential. Needed for
+      // React SPA signups because preventDefault() + History API navigation
+      // doesn't reliably trigger the browser's heuristic save prompt.
+      if (window.PasswordCredential) {
+        try {
+          const cred = new window.PasswordCredential({
+            id: formData.email,
+            password: formData.password,
+            name: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.email,
+          });
+          await navigator.credentials.store(cred);
+        } catch (credErr) {
+          // Credential storage is a nicety — silently continue if it fails
+        }
+      }
+
       // If user is host, go to host dashboard
       if (formData.userType === 'host') {
         navigate('/host/dashboard');
