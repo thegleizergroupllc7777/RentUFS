@@ -10,14 +10,6 @@ import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ForgotPassword from './pages/Auth/ForgotPassword';
 import ResetPassword from './pages/Auth/ResetPassword';
-import Home from './pages/Home';
-import DriverGuide from './pages/DriverGuide';
-import HostGuide from './pages/HostGuide';
-import FAQ from './pages/FAQ';
-import About from './pages/About';
-import Blog from './pages/Blog';
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
 
 // Driver pages
 import Marketplace from './pages/Driver/Marketplace';
@@ -57,20 +49,13 @@ function App() {
       <Router>
         <div className="App">
           <Routes>
-            <Route path="/" element={<Home />} />
+            {/* Marketing/static pages live on Webflow at rentufs.com.
+                The React app subdomain (app.rentufs.com) only serves the marketplace. */}
+            <Route path="/" element={<Navigate to="/marketplace" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-            {/* Informational Pages */}
-            <Route path="/driver-guide" element={<DriverGuide />} />
-            <Route path="/host-guide" element={<HostGuide />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
 
             {/* Driver Routes */}
             <Route path="/marketplace" element={<Marketplace />} />
@@ -207,7 +192,7 @@ function App() {
             {/* Mobile Upload (QR code from phone) */}
             <Route path="/mobile-upload/:sessionId" element={<MobileUpload />} />
 
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="*" element={<Navigate to="/marketplace" />} />
           </Routes>
         </div>
       </Router>
