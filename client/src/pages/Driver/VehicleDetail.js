@@ -837,16 +837,21 @@ const VehicleDetail = () => {
 
                   <div className="form-group">
                     <label className="form-label">{getQuantityLabel()}</label>
-                    <input
-                      type="number"
+                    <select
                       name="quantity"
-                      className="form-input"
+                      className="form-select"
                       value={bookingData.quantity}
                       onChange={handleBookingChange}
-                      min="1"
-                      max={bookingData.rentalType === 'monthly' ? 12 : bookingData.rentalType === 'weekly' ? 52 : 365}
                       required
-                    />
+                    >
+                      {(() => {
+                        const max = bookingData.rentalType === 'monthly' ? 12 : bookingData.rentalType === 'weekly' ? 12 : 30;
+                        const unit = bookingData.rentalType === 'monthly' ? 'month' : bookingData.rentalType === 'weekly' ? 'week' : 'day';
+                        return Array.from({ length: max }, (_, i) => i + 1).map(n => (
+                          <option key={n} value={n}>{n} {n === 1 ? unit : `${unit}s`}</option>
+                        ));
+                      })()}
+                    </select>
                   </div>
 
                   <div className="form-group">
