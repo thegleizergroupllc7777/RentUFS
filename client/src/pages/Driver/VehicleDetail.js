@@ -845,7 +845,7 @@ const VehicleDetail = () => {
                       required
                     >
                       {(() => {
-                        const max = bookingData.rentalType === 'monthly' ? 12 : bookingData.rentalType === 'weekly' ? 12 : 30;
+                        const max = bookingData.rentalType === 'monthly' ? 12 : bookingData.rentalType === 'weekly' ? 52 : 365;
                         const unit = bookingData.rentalType === 'monthly' ? 'month' : bookingData.rentalType === 'weekly' ? 'week' : 'day';
                         return Array.from({ length: max }, (_, i) => i + 1).map(n => (
                           <option key={n} value={n}>{n} {n === 1 ? unit : `${unit}s`}</option>
