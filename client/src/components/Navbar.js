@@ -133,9 +133,9 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="container navbar-content">
-        <Link to="/" className="navbar-logo">
+        <a href="https://rentufs.com" className="navbar-logo">
           UFS
-        </Link>
+        </a>
 
         <div className="navbar-links">
           {!user && (
