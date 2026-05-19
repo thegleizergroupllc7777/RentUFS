@@ -479,7 +479,7 @@ const VehicleDetail = () => {
                   return `${vehicle.host?.firstName} ${vehicle.host?.lastName}`;
                 })()}</h2>
                 {vehicle.host?.rating > 0 && (
-                  <p>Host rating: ⭐ {vehicle.host.rating.toFixed(1)} ({vehicle.host.reviewCount} reviews)</p>
+                  <p>Host Rating: ⭐ {vehicle.host.rating.toFixed(1)} ({vehicle.host.reviewCount} reviews)</p>
                 )}
               </div>
 
