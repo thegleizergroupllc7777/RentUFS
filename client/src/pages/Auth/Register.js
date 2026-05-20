@@ -604,7 +604,7 @@ const Register = () => {
                         value={formData.email}
                         onChange={handleChange}
                         maxLength="100"
-                        autoComplete="username"
+                        autoComplete="email"
                         required
                         disabled={emailOtp.verified}
                       />
