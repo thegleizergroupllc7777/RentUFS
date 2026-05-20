@@ -813,21 +813,19 @@ const Register = () => {
                         onChange={(e) => setSmsOptIn(e.target.checked)}
                       />
                       <span>
-                        I agree to receive text messages from RentUFS at the
-                        phone number provided, including booking confirmations,
-                        reservation reminders, trip updates, host notifications,
-                        and account/security alerts. Message frequency varies.
-                        Message and data rates may apply. Reply STOP to
-                        unsubscribe, HELP for help. See our{' '}
+                        I agree to receive SMS from RentUFS for booking
+                        confirmations, reservation reminders, trip updates,
+                        host notifications, and account/security alerts. Msg
+                        frequency varies. Msg &amp; data rates may apply.
+                        Reply STOP to opt out, HELP for help.{' '}
                         <Link to="/sms-terms" target="_blank" rel="noopener noreferrer" className="auth-link">
                           SMS Terms
                         </Link>
-                        {' '}and{' '}
+                        {' · '}
                         <a href="https://rentufs.com/privacy" target="_blank" rel="noopener noreferrer" className="auth-link">
                           Privacy Policy
                         </a>
-                        . (Optional — you can still create an account without
-                        this.)
+                        . <em>(Optional)</em>
                       </span>
                     </label>
                   </div>
