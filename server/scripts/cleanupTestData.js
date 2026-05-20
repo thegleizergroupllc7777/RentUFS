@@ -85,14 +85,17 @@ async function run() {
   const allBookings = await Booking.find({}).select('_id reservationId vehicle status totalPrice paymentStatus').lean();
   const bookingsToDelete = allBookings.filter((b) => !wheelbaseIds.has(String(b.vehicle)));
 
-  // Users to delete (only if --include-users): deactivated AND not protected
+  // Users to delete (only if --include-users): non-active AND not protected.
+  // We match `accountStatus !== 'active'` rather than `=== 'deactivated'` so we
+  // catch legacy users from before the accountStatus field was added (where
+  // the field is undefined).
   let usersToDelete = [];
   if (includeUsers) {
     usersToDelete = await User.find({
-      accountStatus: 'deactivated',
+      accountStatus: { $ne: 'active' },
       email: { $nin: PROTECTED_EMAILS }
     })
-      .select('_id email firstName lastName userType')
+      .select('_id email firstName lastName userType accountStatus')
       .lean();
   }
 
