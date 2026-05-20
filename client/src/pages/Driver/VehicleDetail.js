@@ -74,7 +74,7 @@ const VehicleDetail = () => {
           axios.get(`${API_URL}/api/reviews/vehicle/${id}`)
         ];
 
-        // Also fetch active booking in parallel if user is logged in
+        // Also fetch the user's own bookings if logged in (for the activeBooking banner)
         const token = localStorage.getItem('token');
         if (user && token) {
           requests.push(
@@ -82,18 +82,15 @@ const VehicleDetail = () => {
               headers: { Authorization: `Bearer ${token}` }
             })
           );
-          requests.push(
-            axios.get(`${API_URL}/api/bookings/host-bookings`, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
-          );
         }
 
         const results = await Promise.allSettled(requests);
 
-        // Handle vehicle response
+        // Handle vehicle response — also drives the public "Rented" badge
         if (results[0].status === 'fulfilled') {
-          setVehicle(results[0].value.data);
+          const v = results[0].value.data;
+          setVehicle(v);
+          setIsRented(Boolean(v?.rentedNow));
         }
 
         // Handle reviews response
@@ -113,21 +110,6 @@ const VehicleDetail = () => {
           if (currentBooking) {
             setActiveBooking(currentBooking);
           }
-        }
-
-        // Check host bookings to determine if vehicle is currently rented
-        if (results[3]?.status === 'fulfilled') {
-          const today = new Date();
-          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-          const rented = results[3].value.data.some(b => {
-            const vehicleId = typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle;
-            if (String(vehicleId) !== id) return false;
-            if (!['confirmed', 'active'].includes(b.status)) return false;
-            const startStr = typeof b.startDate === 'string' ? b.startDate.split('T')[0] : new Date(b.startDate).toISOString().split('T')[0];
-            const endStr = typeof b.endDate === 'string' ? b.endDate.split('T')[0] : new Date(b.endDate).toISOString().split('T')[0];
-            return startStr <= todayStr && endStr >= todayStr;
-          });
-          setIsRented(rented);
         }
       } catch (error) {
         console.error('Error fetching vehicle data:', error);

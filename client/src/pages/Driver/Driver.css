@@ -737,9 +737,11 @@
 }
 
 .floating-card-image {
+  position: relative;
   width: 100%;
   height: 100px;
   background: #2a2a2a;
+  overflow: hidden;
 }
 
 .floating-card-image img {
@@ -866,6 +868,41 @@
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
+  z-index: 2;
+}
+
+/* Rented state — matches host dashboard treatment */
+.rented-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.availability-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  z-index: 2;
+  letter-spacing: 0.02em;
+}
+
+.availability-badge.rented {
+  background: #f59e0b;
+  color: #000000;
+}
+
+.vehicle-card-list.rented {
+  border-color: #f59e0b;
+}
+
+.floating-vehicle-card.rented {
+  border-color: #f59e0b;
 }
 
 .vehicle-card-content {

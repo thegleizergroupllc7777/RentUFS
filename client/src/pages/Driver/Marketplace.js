@@ -201,7 +201,7 @@ const Marketplace = () => {
             <Link
               key={vehicle._id}
               to={`/vehicle/${vehicle._id}`}
-              className="vehicle-card-list"
+              className={`vehicle-card-list ${vehicle.rentedNow ? 'rented' : ''}`}
             >
               <div className="vehicle-card-image">
                 {vehicle.images?.[0] ? (
@@ -209,8 +209,9 @@ const Marketplace = () => {
                 ) : (
                   <div className="vehicle-placeholder">No Image</div>
                 )}
+                {vehicle.rentedNow && <div className="rented-overlay"></div>}
                 {vehicle.rentedNow && (
-                  <div className="vehicle-status-badge vehicle-status-rented">Rented</div>
+                  <div className="availability-badge rented">Rented</div>
                 )}
                 {vehicle.rating > 0 && (
                   <div className="vehicle-rating-badge">
@@ -426,7 +427,7 @@ const Marketplace = () => {
                     <Link
                       key={vehicle._id}
                       to={`/vehicle/${vehicle._id}`}
-                      className={`floating-vehicle-card ${selectedVehicle === vehicle._id ? 'selected' : ''}`}
+                      className={`floating-vehicle-card ${selectedVehicle === vehicle._id ? 'selected' : ''} ${vehicle.rentedNow ? 'rented' : ''}`}
                       onMouseEnter={() => setSelectedVehicle(vehicle._id)}
                       onMouseLeave={() => setSelectedVehicle(null)}
                     >
@@ -435,6 +436,10 @@ const Marketplace = () => {
                           <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} />
                         ) : (
                           <div className="no-image">🚗</div>
+                        )}
+                        {vehicle.rentedNow && <div className="rented-overlay"></div>}
+                        {vehicle.rentedNow && (
+                          <div className="availability-badge rented">Rented</div>
                         )}
                       </div>
                       <div className="floating-card-info">
