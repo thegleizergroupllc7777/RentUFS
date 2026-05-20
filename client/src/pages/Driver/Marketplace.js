@@ -209,6 +209,9 @@ const Marketplace = () => {
                 ) : (
                   <div className="vehicle-placeholder">No Image</div>
                 )}
+                {vehicle.rentedNow && (
+                  <div className="vehicle-status-badge vehicle-status-rented">Rented</div>
+                )}
                 {vehicle.rating > 0 && (
                   <div className="vehicle-rating-badge">
                     ⭐ {vehicle.rating.toFixed(1)}

@@ -29,6 +29,30 @@ function resolveImageUrls(vehicle, req) {
   return vehicle;
 }
 
+// Decorate vehicles with `rentedNow: true/false` based on whether any
+// confirmed/active booking covers today. One Booking query, O(N) merge.
+async function attachRentedNow(vehicles) {
+  const list = Array.isArray(vehicles) ? vehicles : [vehicles];
+  if (list.length === 0) return vehicles;
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const ids = list.map(v => v._id);
+  const activeBookings = await Booking.find({
+    vehicle: { $in: ids },
+    status: { $in: ['confirmed', 'active'] },
+    startDate: { $lte: endOfToday },
+    endDate: { $gte: startOfToday }
+  }).select('vehicle').lean();
+
+  const rentedSet = new Set(activeBookings.map(b => String(b.vehicle)));
+  list.forEach(v => { v.rentedNow = rentedSet.has(String(v._id)); });
+  return vehicles;
+}
+
 // Lookup city/state from zip code using free Zippopotam API
 router.get('/lookup-zip/:zip', async (req, res) => {
   try {
@@ -325,6 +349,8 @@ router.get('/', async (req, res) => {
       vehicles = vehicles.filter(v => !unavailableVehicleIds.includes(v._id.toString()));
     }
 
+    await attachRentedNow(vehicles);
+
     res.json(vehicles);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -351,7 +377,8 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.params.id)
-      .populate('host', 'firstName lastName email phone rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba');
+      .populate('host', 'firstName lastName email phone rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
+      .lean();
 
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' });
@@ -359,6 +386,7 @@ router.get('/:id', async (req, res) => {
 
     // Resolve relative image paths to full URLs
     resolveImageUrls(vehicle, req);
+    await attachRentedNow(vehicle);
 
     res.json(vehicle);
   } catch (error) {
