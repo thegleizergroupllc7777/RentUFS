@@ -4,11 +4,18 @@ import { Link } from 'react-router-dom';
 const SmsTerms = () => {
   return (
     <div style={{
+      minHeight: '100vh',
+      background: '#000',
+      padding: '2rem 0'
+    }}>
+    <div style={{
       maxWidth: '800px',
       margin: '0 auto',
       padding: '2rem 1.25rem',
-      color: '#1f2937',
-      lineHeight: '1.6'
+      color: '#e5e7eb',
+      lineHeight: '1.6',
+      background: '#0a0a0a',
+      borderRadius: '0.5rem'
     }}>
       <Link to="/" style={{ color: '#10b981', textDecoration: 'none', fontSize: '0.9rem' }}>
         ← Back to RentUFS
@@ -162,6 +169,7 @@ const SmsTerms = () => {
           </a>
         </p>
       </section>
+    </div>
     </div>
   );
 };
