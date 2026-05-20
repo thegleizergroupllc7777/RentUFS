@@ -1,0 +1,210 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import axios from '../../config/axios';
+import AdminLayout from './AdminLayout';
+
+const USER_TYPES = ['driver', 'host', 'both'];
+const ROLES = ['user', 'admin'];
+
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+
+const AdminUsers = () => {
+  const [users, setUsers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [userType, setUserType] = useState('');
+  const [role, setRole] = useState('');
+  const [accountStatus, setAccountStatus] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [editUser, setEditUser] = useState(null);
+  const limit = 25;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await axios.get('/api/admin/users', {
+        params: { search, userType, role, accountStatus, page, limit }
+      });
+      setUsers(data.users);
+      setTotal(data.total);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, [search, userType, role, accountStatus, page]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  const performAction = async (userId, endpoint) => {
+    setError('');
+    try {
+      await axios.post(`/api/admin/users/${userId}/${endpoint}`);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Action failed');
+    }
+  };
+
+  return (
+    <AdminLayout title="Users" subtitle="All accounts on the platform">
+      {error && <div className="admin-error">{error}</div>}
+
+      <div className="admin-toolbar">
+        <input
+          type="search"
+          placeholder="Search by name, email, or phone..."
+          value={search}
+          onChange={(e) => { setPage(1); setSearch(e.target.value); }}
+        />
+        <select value={userType} onChange={(e) => { setPage(1); setUserType(e.target.value); }}>
+          <option value="">All types</option>
+          {USER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={role} onChange={(e) => { setPage(1); setRole(e.target.value); }}>
+          <option value="">All roles</option>
+          {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={accountStatus} onChange={(e) => { setPage(1); setAccountStatus(e.target.value); }}>
+          <option value="">All accounts</option>
+          <option value="active">active</option>
+          <option value="deactivated">deactivated</option>
+        </select>
+        <button className="admin-btn" onClick={load} disabled={loading}>{loading ? 'Loading...' : 'Refresh'}</button>
+      </div>
+
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Type</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length === 0 && !loading && (
+              <tr><td colSpan="8"><div className="admin-empty">No users found.</div></td></tr>
+            )}
+            {users.map((u) => (
+              <tr key={u._id}>
+                <td>
+                  <strong>{u.firstName} {u.lastName}</strong>
+                </td>
+                <td>{u.email}</td>
+                <td>{u.phone || '—'}</td>
+                <td>{u.userType}</td>
+                <td><span className={`badge ${u.role}`}>{u.role}</span></td>
+                <td>
+                  <span className={`badge ${u.accountStatus === 'active' ? 'active-acct' : 'deactivated'}`}>
+                    {u.accountStatus}
+                  </span>
+                </td>
+                <td>{formatDate(u.createdAt)}</td>
+                <td>
+                  <button className="admin-btn" onClick={() => setEditUser(u)}>Edit</button>
+                  {u.accountStatus === 'active' ? (
+                    <button className="admin-btn danger" onClick={() => performAction(u._id, 'suspend')}>Suspend</button>
+                  ) : (
+                    <button className="admin-btn" onClick={() => performAction(u._id, 'reactivate')}>Reactivate</button>
+                  )}
+                  {u.role === 'admin' ? (
+                    <button className="admin-btn" onClick={() => performAction(u._id, 'demote')}>Demote</button>
+                  ) : (
+                    <button className="admin-btn" onClick={() => performAction(u._id, 'promote')}>Make admin</button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="admin-pagination">
+          <span>Showing {users.length === 0 ? 0 : (page - 1) * limit + 1}-{Math.min(page * limit, total)} of {total}</span>
+          <div>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</button>
+            <span style={{ margin: '0 0.5rem' }}>Page {page} of {totalPages}</span>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</button>
+          </div>
+        </div>
+      </div>
+
+      {editUser && (
+        <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSaved={() => { setEditUser(null); load(); }} />
+      )}
+    </AdminLayout>
+  );
+};
+
+const EditUserModal = ({ user, onClose, onSaved }) => {
+  const [form, setForm] = useState({
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    userType: user.userType || 'driver'
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await axios.patch(`/api/admin/users/${user._id}`, form);
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Edit user</h2>
+        {error && <div className="admin-error">{error}</div>}
+        <div className="field">
+          <label>First name</label>
+          <input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+        </div>
+        <div className="field">
+          <label>Last name</label>
+          <input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+        </div>
+        <div className="field">
+          <label>Email</label>
+          <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        </div>
+        <div className="field">
+          <label>Phone</label>
+          <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+        </div>
+        <div className="field">
+          <label>User type</label>
+          <select value={form.userType} onChange={(e) => setForm({ ...form, userType: e.target.value })}>
+            {USER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="admin-modal-actions">
+          <button className="admin-btn" onClick={onClose} disabled={busy}>Cancel</button>
+          <button className="admin-btn primary" onClick={submit} disabled={busy}>{busy ? 'Saving...' : 'Save'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminUsers;
