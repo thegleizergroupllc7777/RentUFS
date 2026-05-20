@@ -18,6 +18,7 @@ const agreementRoutes = require('./routes/agreements');
 const connectRoutes = require('./routes/connect');
 const tollRoutes = require('./routes/tolls');
 const chargeRoutes = require('./routes/charges');
+const adminRoutes = require('./routes/admin');
 const { startReturnReminderScheduler } = require('./utils/scheduler');
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/agreements', agreementRoutes);
 app.use('/api/connect', connectRoutes);
 app.use('/api/tolls', tollRoutes);
 app.use('/api/charges', chargeRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Validate critical environment variables
 if (!process.env.MONGODB_URI) {
