@@ -222,6 +222,17 @@ const userSchema = new mongoose.Schema({
       signedUp: { type: Boolean, default: false }
     }
   },
+  // SMS messaging consent for TCPA compliance and Twilio toll-free verification.
+  // Granted only when the user explicitly checks the opt-in box at registration.
+  // If granted is false, do not send transactional or notification SMS to this user.
+  smsConsent: {
+    granted: { type: Boolean, default: false },
+    grantedAt: { type: Date, default: null },
+    ipAddress: { type: String, default: null },
+    // Version of the opt-in language the user agreed to, so we can re-prompt if
+    // the disclosure ever materially changes.
+    version: { type: String, default: null }
+  },
   paymentMethods: [{
     nickname: { type: String, trim: true },
     cardBrand: { type: String, trim: true },
