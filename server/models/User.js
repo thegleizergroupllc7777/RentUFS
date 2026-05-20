@@ -60,6 +60,11 @@ const userSchema = new mongoose.Schema({
     enum: ['driver', 'host', 'both'],
     default: 'driver'
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
   accountStatus: {
     type: String,
     enum: ['active', 'deactivated'],
