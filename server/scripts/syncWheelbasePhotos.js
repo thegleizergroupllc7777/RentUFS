@@ -40,17 +40,89 @@ const TARGET_RENTAL_ID = (() => {
 const widgetUrl = (rentalId) =>
   `https://widget.wheelbasepro.com/?dealer_id=${DEALER_ID}&store_type=auto&page=listing-details&rental_id=${rentalId}`;
 
+// Candidate Outdoorsy/Wheelbase JSON API endpoints to probe.
+// The widget's JavaScript calls one of these to load vehicle data.
+const apiCandidates = (rentalId) => [
+  `https://api.outdoorsy.com/v0/rentals/${rentalId}`,
+  `https://api.outdoorsy.com/v0/listings/${rentalId}`,
+  `https://api.outdoorsy.com/rentals/${rentalId}`,
+  `https://api.outdoorsy.com/v1/rentals/${rentalId}`,
+  `https://api.wheelbasepro.com/v0/rentals/${rentalId}`,
+  `https://api.wheelbasepro.com/rentals/${rentalId}`,
+  `https://api.wheelbasepro.com/widget/rentals/${rentalId}`
+];
+
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/html, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Origin': 'https://widget.wheelbasepro.com',
+  'Referer': 'https://widget.wheelbasepro.com/'
+};
+
 const fetchPage = async (rentalId) => {
   const response = await axios.get(widgetUrl(rentalId), {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9'
-    },
+    headers: BROWSER_HEADERS,
     timeout: 15000,
     maxRedirects: 5
   });
   return response.data;
+};
+
+// Recursively walk a JSON object collecting any Cloudinary image URLs
+// scoped to this rental's image folder.
+const collectImagesFromJSON = (data, rentalId) => {
+  const folder = `/p/rentals/${rentalId}/images/`;
+  const seen = new Set();
+  const urls = [];
+
+  const walk = (obj) => {
+    if (obj == null) return;
+    if (typeof obj === 'string') {
+      if (obj.includes(folder) && obj.includes('cloudinary.com')) {
+        const m = obj.match(new RegExp(`${folder}([a-zA-Z0-9_-]+)`));
+        const key = m ? m[1] : obj;
+        if (!seen.has(key)) {
+          seen.add(key);
+          urls.push(obj);
+        }
+      }
+    } else if (Array.isArray(obj)) {
+      obj.forEach(walk);
+    } else if (typeof obj === 'object') {
+      Object.values(obj).forEach(walk);
+    }
+  };
+
+  walk(data);
+  return urls;
+};
+
+const tryApiCandidates = async (rentalId) => {
+  for (const url of apiCandidates(rentalId)) {
+    try {
+      const response = await axios.get(url, {
+        headers: BROWSER_HEADERS,
+        timeout: 8000,
+        validateStatus: () => true
+      });
+      const ok = response.status === 200;
+      const isJson = typeof response.data === 'object' && response.data !== null;
+      console.log(`     ${url} → ${response.status}${isJson ? ' (json)' : ''}`);
+
+      if (ok && isJson) {
+        const images = collectImagesFromJSON(response.data, rentalId);
+        if (images.length > 0) {
+          return { source: url, images, raw: response.data };
+        }
+        // Log a snippet so we can see what came back even if no images matched
+        console.log(`     (top-level keys: ${Object.keys(response.data).slice(0, 10).join(', ')})`);
+      }
+    } catch (err) {
+      console.log(`     ${url} → error: ${err.message}`);
+    }
+  }
+  return null;
 };
 
 const extractImageUrls = (html, rentalId) => {
@@ -113,17 +185,34 @@ async function main() {
     console.log(`\n🚗 ${vehicle.nickname || '(no nickname)'} (rental_id: ${rentalId})`);
 
     try {
-      const html = await fetchPage(rentalId);
-      console.log(`   📥 Fetched ${html.length.toLocaleString()} bytes`);
+      // Strategy 1: try Outdoorsy/Wheelbase JSON API endpoints
+      console.log(`   🔍 Probing JSON API endpoints...`);
+      const apiResult = await tryApiCandidates(rentalId);
 
-      const imageUrls = extractImageUrls(html, rentalId);
-      console.log(`   🖼️  Found ${imageUrls.length} unique image URL(s)`);
+      let imageUrls = [];
+      let source = '';
+
+      if (apiResult) {
+        imageUrls = apiResult.images;
+        source = `API: ${apiResult.source}`;
+        console.log(`   ✅ Got ${imageUrls.length} image(s) from JSON API`);
+      } else {
+        // Strategy 2: fall back to scraping the widget HTML
+        console.log(`   📥 No JSON API hit. Falling back to HTML scrape...`);
+        const html = await fetchPage(rentalId);
+        console.log(`   📥 Fetched ${html.length.toLocaleString()} bytes from widget HTML`);
+        imageUrls = extractImageUrls(html, rentalId);
+        source = 'HTML scrape';
+        console.log(`   🖼️  Found ${imageUrls.length} unique image URL(s) in HTML`);
+      }
 
       if (imageUrls.length === 0) {
-        console.log(`   ⚠️  No images found in HTML — likely JS-rendered. Keeping existing images.`);
+        console.log(`   ⚠️  No images found via API or HTML. Keeping existing images.`);
         skipped++;
         continue;
       }
+
+      console.log(`   📍 Source: ${source}`);
 
       console.log(`   Current vehicle.images:`);
       (vehicle.images || []).forEach((u, i) => console.log(`     [${i}] ${u}`));
