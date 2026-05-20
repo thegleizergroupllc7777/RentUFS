@@ -37,6 +37,9 @@ import PaymentCancel from './pages/Payment/Cancel';
 // Mobile upload (QR code flow)
 import MobileUpload from './pages/MobileUpload';
 
+// Legal / compliance pages
+import SmsTerms from './pages/SmsTerms';
+
 import './App.css';
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
@@ -191,6 +194,10 @@ function App() {
 
             {/* Mobile Upload (QR code from phone) */}
             <Route path="/mobile-upload/:sessionId" element={<MobileUpload />} />
+
+            {/* SMS messaging terms — publicly visible, required for Twilio
+                toll-free verification compliance. */}
+            <Route path="/sms-terms" element={<SmsTerms />} />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />
           </Routes>

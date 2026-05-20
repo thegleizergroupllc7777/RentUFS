@@ -125,7 +125,7 @@ router.post('/verify-otp', async (req, res) => {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage, hostInfo, address } = req.body;
+    const { email, password, firstName, lastName, phone, dateOfBirth, userType, driverLicense, profileImage, hostInfo, address, smsConsent } = req.body;
 
     // Verify that email was confirmed via OTP
     const verifiedOtp = await Otp.findOne({
@@ -263,6 +263,17 @@ router.post('/register', async (req, res) => {
           state: hostInfo.businessAddress.state?.trim() || '',
           zipCode: hostInfo.businessAddress.zipCode?.trim() || ''
         } : undefined
+      };
+    }
+
+    // Capture SMS consent if the user opted in at registration. Stored with
+    // timestamp + IP for TCPA audit trail / Twilio compliance.
+    if (smsConsent && smsConsent.granted === true) {
+      userData.smsConsent = {
+        granted: true,
+        grantedAt: new Date(),
+        ipAddress: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || null,
+        version: '2026-05-20'
       };
     }
 

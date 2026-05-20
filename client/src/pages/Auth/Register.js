@@ -62,6 +62,7 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -368,7 +369,10 @@ const Register = () => {
     try {
       // License/address are collected later in the Profile page. Submit
       // minimal registration data here.
-      const registrationData = { ...formData };
+      const registrationData = {
+        ...formData,
+        smsConsent: { granted: smsOptIn }
+      };
 
       await register(registrationData);
 
@@ -796,6 +800,34 @@ const Register = () => {
                           Terms of Service
                         </a>
                         .
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="form-group terms-accept-group" style={{ marginTop: '0.75rem' }}>
+                    <label className="terms-accept-label">
+                      <input
+                        type="checkbox"
+                        className="terms-accept-checkbox"
+                        checked={smsOptIn}
+                        onChange={(e) => setSmsOptIn(e.target.checked)}
+                      />
+                      <span>
+                        I agree to receive text messages from RentUFS at the
+                        phone number provided, including booking confirmations,
+                        reservation reminders, trip updates, host notifications,
+                        and account/security alerts. Message frequency varies.
+                        Message and data rates may apply. Reply STOP to
+                        unsubscribe, HELP for help. See our{' '}
+                        <Link to="/sms-terms" target="_blank" rel="noopener noreferrer" className="auth-link">
+                          SMS Terms
+                        </Link>
+                        {' '}and{' '}
+                        <a href="https://rentufs.com/privacy" target="_blank" rel="noopener noreferrer" className="auth-link">
+                          Privacy Policy
+                        </a>
+                        . (Optional — you can still create an account without
+                        this.)
                       </span>
                     </label>
                   </div>
