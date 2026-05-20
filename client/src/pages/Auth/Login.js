@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
@@ -18,8 +18,24 @@ const Login = () => {
   const [googleNewUserCredential, setGoogleNewUserCredential] = useState(null);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const { login, googleLogin, reactivateAndLogin } = useAuth();
+  const { user, loading: authLoading, login, googleLogin, reactivateAndLogin } = useAuth();
   const navigate = useNavigate();
+
+  // If already signed in, send users to their dashboard instead of showing
+  // the login form. Admins go to /admin; otherwise route by userType.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    if (user.role === 'admin') {
+      navigate('/admin', { replace: true });
+    } else if (user.userType === 'host') {
+      navigate('/host/dashboard', { replace: true });
+    } else if (user.userType === 'both') {
+      const savedMode = localStorage.getItem('activeMode');
+      navigate(savedMode === 'host' ? '/host/dashboard' : '/marketplace', { replace: true });
+    } else {
+      navigate('/marketplace', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const routeByUserType = (userData) => {
     if (userData.userType === 'host') {
