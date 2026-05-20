@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { GoogleMapsProvider } from './context/GoogleMapsContext';
 import PrivateRoute from './components/PrivateRoute';
 import HostRoute from './components/HostRoute';
+import AdminRoute from './components/AdminRoute';
 
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
@@ -39,6 +40,12 @@ import MobileUpload from './pages/MobileUpload';
 
 // Legal / compliance pages
 import SmsTerms from './pages/SmsTerms';
+
+// Admin pages
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminBookings from './pages/Admin/AdminBookings';
+import AdminUsers from './pages/Admin/AdminUsers';
+import AdminVehicles from './pages/Admin/AdminVehicles';
 
 import './App.css';
 
@@ -198,6 +205,24 @@ function App() {
             {/* SMS messaging terms — publicly visible, required for Twilio
                 toll-free verification compliance. */}
             <Route path="/sms-terms" element={<SmsTerms />} />
+
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={<AdminRoute><AdminDashboard /></AdminRoute>}
+            />
+            <Route
+              path="/admin/bookings"
+              element={<AdminRoute><AdminBookings /></AdminRoute>}
+            />
+            <Route
+              path="/admin/users"
+              element={<AdminRoute><AdminUsers /></AdminRoute>}
+            />
+            <Route
+              path="/admin/vehicles"
+              element={<AdminRoute><AdminVehicles /></AdminRoute>}
+            />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />
           </Routes>

@@ -200,6 +200,17 @@ const Navbar = () => {
             </>
           )}
 
+          {user && user.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="navbar-link"
+              style={{ color: '#7c3aed', fontWeight: 600 }}
+              title="Admin panel"
+            >
+              Admin
+            </Link>
+          )}
+
           {user && (
             <>
               {/* Message icon - always visible, links to bookings page */}
