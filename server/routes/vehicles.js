@@ -6,6 +6,7 @@ const auth = require('../middleware/auth');
 const { sendVehicleListedEmail } = require('../utils/emailService');
 const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, deregisterVehicle, isCircuitOpen: tollspotCircuitOpen } = require('../utils/tollspot');
+const { isWheelbaseRentedToday } = require('../utils/wheelbaseAvailability');
 
 const router = express.Router();
 
@@ -50,6 +51,18 @@ async function attachRentedNow(vehicles) {
 
   const rentedSet = new Set(activeBookings.map(b => String(b.vehicle)));
   list.forEach(v => { v.rentedNow = rentedSet.has(String(v._id)); });
+
+  // Wheelbase fleet vehicles have their reservations in Outdoorsy, not our
+  // Booking collection — query Outdoorsy's availability endpoint in parallel.
+  // Helper is cached and fails closed (returns false on any error).
+  const wheelbaseChecks = list
+    .filter(v => v.bookingProvider === 'wheelbase' && v.wheelbase && v.wheelbase.rentalId)
+    .map(async (v) => {
+      if (v.rentedNow) return;
+      v.rentedNow = await isWheelbaseRentedToday(v.wheelbase.rentalId);
+    });
+  if (wheelbaseChecks.length > 0) await Promise.all(wheelbaseChecks);
+
   return vehicles;
 }
 
