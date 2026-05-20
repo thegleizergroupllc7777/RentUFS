@@ -379,6 +379,7 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
 
     // Resolve relative image paths to full URLs
     vehicles.forEach(v => resolveImageUrls(v, req));
+    await attachRentedNow(vehicles);
 
     res.json(vehicles);
   } catch (error) {
