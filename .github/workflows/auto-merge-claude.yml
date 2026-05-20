@@ -54,17 +54,56 @@ jobs:
               console.log(`Created PR #${prNumber}`);
             }
 
-            // Try to merge PR
-            try {
-              await github.rest.pulls.merge({
+            // Wait for GitHub to compute mergeable state. Right after a PR is
+            // created, mergeable is null and pulls.merge() returns 405. Poll
+            // with backoff until it's a definite true/false.
+            const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+            let mergeable = null;
+            let mergeableState = 'unknown';
+            for (let attempt = 1; attempt <= 8; attempt++) {
+              const { data: pr } = await github.rest.pulls.get({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: prNumber,
-                merge_method: 'squash'
+                pull_number: prNumber
               });
-              console.log(`Merged PR #${prNumber}`);
-            } catch (mergeError) {
-              console.log(`Could not merge PR #${prNumber}: ${mergeError.message}`);
-              console.log('This may be due to merge conflicts or branch protection rules.');
-              throw mergeError;
+              mergeable = pr.mergeable;
+              mergeableState = pr.mergeable_state;
+              console.log(`Attempt ${attempt}: mergeable=${mergeable}, mergeable_state=${mergeableState}`);
+              if (mergeable === true) break;
+              if (mergeable === false) {
+                throw new Error(`PR #${prNumber} is not mergeable (state: ${mergeableState})`);
+              }
+              await sleep(Math.min(2000 * attempt, 10000));
+            }
+            if (mergeable !== true) {
+              throw new Error(`PR #${prNumber} mergeability still unknown after polling (state: ${mergeableState})`);
+            }
+
+            // Merge with retries — even after mergeable=true, the squash call
+            // can transiently 405/422 if a status check is mid-update.
+            let merged = false;
+            let lastError;
+            for (let attempt = 1; attempt <= 5; attempt++) {
+              try {
+                await github.rest.pulls.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: prNumber,
+                  merge_method: 'squash'
+                });
+                console.log(`Merged PR #${prNumber} on attempt ${attempt}`);
+                merged = true;
+                break;
+              } catch (err) {
+                lastError = err;
+                console.log(`Merge attempt ${attempt} failed: ${err.status} ${err.message}`);
+                if (err.status === 409) {
+                  throw err; // genuine conflict, don't retry
+                }
+                await sleep(2000 * attempt);
+              }
+            }
+            if (!merged) {
+              console.log('All merge attempts failed.');
+              throw lastError;
             }
