@@ -34,10 +34,11 @@
   font-size: 1.5rem;
   font-weight: 500;
   color: #ffffff;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.15em !important;
   padding: 0.5rem 1rem;
   transition: all 0.3s;
   display: inline-block;
+  text-transform: uppercase !important;
 }
 
 .navbar-logo:hover {
