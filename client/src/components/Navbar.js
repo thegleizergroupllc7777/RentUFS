@@ -134,7 +134,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="container navbar-content">
         <a href="https://rentufs.com" className="navbar-logo">
-          UFS
+          RentUFS
         </a>
 
         <div className="navbar-links">
