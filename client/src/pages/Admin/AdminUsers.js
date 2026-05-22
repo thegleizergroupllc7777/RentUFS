@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 
@@ -18,6 +19,7 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editUser, setEditUser] = useState(null);
+  const navigate = useNavigate();
   const limit = 25;
 
   const load = useCallback(async () => {
@@ -98,7 +100,10 @@ const AdminUsers = () => {
               <tr><td colSpan="8"><div className="admin-empty">No users found.</div></td></tr>
             )}
             {users.map((u) => (
-              <tr key={u._id}>
+              <tr key={u._id} style={{ cursor: 'pointer' }} onClick={(e) => {
+                if (e.target.closest('button')) return;
+                navigate(`/admin/users/${u._id}`);
+              }}>
                 <td>
                   <strong>{u.firstName} {u.lastName}</strong>
                 </td>
