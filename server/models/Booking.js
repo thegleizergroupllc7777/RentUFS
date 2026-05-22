@@ -337,6 +337,16 @@ const bookingSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Audit log of admin actions taken on this booking (date edits, manual
+  // extensions, charges, refunds, status overrides). Append-only — never
+  // mutate existing entries.
+  adminActions: [{
+    admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    adminEmail: { type: String },
+    action: { type: String }, // status_changed | dates_changed | extended | charged | refunded | refund_failed | charge_failed | note
+    details: { type: mongoose.Schema.Types.Mixed },
+    timestamp: { type: Date, default: Date.now }
+  }],
   createdAt: {
     type: Date,
     default: Date.now

@@ -6,6 +6,22 @@ const adminAuth = require('../middleware/adminAuth');
 const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
+const { calculateProcessingFee } = require('../utils/stripeFee');
+const { sendBookingExtensionEmail } = require('../utils/emailService');
+
+// Append an admin action entry to a booking's audit log. Save before
+// returning so the entry is persisted even if a later step fails.
+async function logAdminAction(booking, admin, action, details = {}) {
+  if (!booking.adminActions) booking.adminActions = [];
+  booking.adminActions.push({
+    admin: admin._id,
+    adminEmail: admin.email,
+    action,
+    details,
+    timestamp: new Date()
+  });
+  await booking.save();
+}
 
 // Verify the caller is an admin. Used by the frontend to gate /admin pages.
 router.get('/ping', adminAuth, (req, res) => {
@@ -159,16 +175,246 @@ router.patch('/bookings/:id/status', adminAuth, async (req, res) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
+    const previousStatus = booking.status;
     booking.status = status;
     if (status === 'cancelled') {
       booking.cancelledBy = 'admin';
       booking.cancelledAt = new Date();
       if (note) booking.cancellationReason = note;
     }
-    await booking.save();
+    await logAdminAction(booking, req.user, 'status_changed', { from: previousStatus, to: status, note: note || null });
     res.json({ ok: true, booking });
   } catch (err) {
     res.status(500).json({ message: 'Failed to update status', error: err.message });
+  }
+});
+
+// Edit booking dates (and recalculate totalDays). Use with care — this does
+// not adjust pricing automatically. For paid extensions use /extend below.
+router.patch('/bookings/:id/dates', adminAuth, async (req, res) => {
+  try {
+    const { startDate, endDate, note } = req.body;
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    const previousStart = booking.startDate;
+    const previousEnd = booking.endDate;
+    if (startDate) booking.startDate = new Date(startDate);
+    if (endDate) booking.endDate = new Date(endDate);
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    booking.totalDays = Math.max(1, Math.ceil((booking.endDate - booking.startDate) / msPerDay));
+
+    await logAdminAction(booking, req.user, 'dates_changed', {
+      previousStart,
+      previousEnd,
+      newStart: booking.startDate,
+      newEnd: booking.endDate,
+      newTotalDays: booking.totalDays,
+      note: note || null
+    });
+
+    res.json({ ok: true, booking });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update dates', error: err.message });
+  }
+});
+
+// Admin-initiated booking extension. Default: auto-charge the driver via
+// Stripe using their saved payment method. Pass charge=false to skip the
+// charge (goodwill credit, manual reconciliation, etc.).
+router.post('/bookings/:id/extend', adminAuth, async (req, res) => {
+  try {
+    const { extensionDays, charge = true, reason } = req.body;
+    const days = parseInt(extensionDays, 10);
+    if (!days || days < 1 || days > 60) {
+      return res.status(400).json({ message: 'extensionDays must be between 1 and 60' });
+    }
+
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle')
+      .populate('driver')
+      .populate('host', 'firstName lastName email');
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    // Compute the new end date and extension cost using the same formula
+    // as the driver-initiated extension flow.
+    const previousEndDate = new Date(booking.endDate);
+    const newEndDate = new Date(booking.endDate);
+    newEndDate.setDate(newEndDate.getDate() + days);
+
+    const rentalCost = days * booking.pricePerDay;
+    const platformFee = days * (booking.platformFeePerDay || 1.50);
+    const insurance = days * (booking.insurance?.costPerDay || 0);
+    const baseTotal = rentalCost + platformFee + insurance;
+    const processing = calculateProcessingFee(baseTotal);
+    const extensionCost = baseTotal + processing.driverProcessingFee;
+
+    let chargeResult = null;
+    let chargeError = null;
+    if (charge) {
+      const driver = booking.driver;
+      const defaultPM = driver?.paymentMethods?.find((pm) => pm.isDefault && pm.stripePaymentMethodId);
+      if (!driver?.stripeCustomerId || !defaultPM) {
+        chargeError = 'Driver has no saved payment method on file';
+      } else {
+        try {
+          const intent = await stripe.paymentIntents.create({
+            amount: Math.round(extensionCost * 100),
+            currency: 'usd',
+            customer: driver.stripeCustomerId,
+            payment_method: defaultPM.stripePaymentMethodId,
+            off_session: true,
+            confirm: true,
+            automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+            metadata: {
+              type: 'admin_extension',
+              bookingId: String(booking._id),
+              reservationId: booking.reservationId || '',
+              extensionDays: String(days),
+              adminEmail: req.user.email
+            },
+            description: `Admin extension (${days} day${days !== 1 ? 's' : ''}) on ${booking.reservationId || booking._id}`
+          });
+          if (intent.status !== 'succeeded') {
+            chargeError = `Payment intent status: ${intent.status}`;
+          } else {
+            chargeResult = { id: intent.id, amount: extensionCost };
+          }
+        } catch (err) {
+          chargeError = err.message || 'Stripe charge failed';
+        }
+      }
+    }
+
+    // If we attempted a charge and it failed, do NOT mutate the booking dates.
+    // The admin should see the failure and decide what to do (recover the
+    // vehicle, escalate, retry with a different card, etc.).
+    if (charge && chargeError) {
+      await logAdminAction(booking, req.user, 'charge_failed', {
+        extensionDays: days,
+        attemptedAmount: extensionCost,
+        error: chargeError,
+        reason: reason || null
+      });
+      return res.status(402).json({
+        ok: false,
+        message: 'Extension charge failed — booking dates NOT updated.',
+        error: chargeError,
+        attemptedAmount: extensionCost
+      });
+    }
+
+    // Apply the extension. Mirrors the user-facing /confirm-extension path.
+    booking.endDate = newEndDate;
+    booking.totalDays = booking.totalDays + days;
+    booking.totalPrice = booking.totalPrice + (charge ? extensionCost : 0);
+    if (charge) {
+      booking.platformFee = (booking.platformFee || 0) + platformFee;
+      booking.driverProcessingFee = (booking.driverProcessingFee || 0) + processing.driverProcessingFee;
+      booking.hostProcessingFee = (booking.hostProcessingFee || 0) + processing.hostProcessingFee;
+      booking.stripeFee = (booking.stripeFee || 0) + processing.stripeFee;
+      if (booking.insurance && booking.insurance.totalCost !== undefined) {
+        booking.insurance.totalCost = (booking.insurance.totalCost || 0) + insurance;
+      }
+      const hostFee = days * (booking.hostPlatformFeePerDay || 1.50);
+      booking.hostPlatformFee = (booking.hostPlatformFee || 0) + hostFee;
+      booking.hostEarnings = (booking.hostEarnings || 0) + rentalCost - hostFee - processing.hostProcessingFee;
+      booking.platformRevenue = (booking.platformRevenue || 0) + platformFee + hostFee + insurance;
+    }
+
+    if (!booking.extensions) booking.extensions = [];
+    booking.extensions.push({
+      days,
+      cost: charge ? extensionCost : 0,
+      rental: charge ? rentalCost : 0,
+      rentalType: 'daily',
+      platformFee: charge ? platformFee : 0,
+      insurance: charge ? insurance : 0,
+      processingFee: charge ? processing.driverProcessingFee : 0,
+      hostProcessingFee: charge ? processing.hostProcessingFee : 0,
+      newEndDate,
+      paymentId: chargeResult?.id || null,
+      extendedAt: new Date()
+    });
+
+    await logAdminAction(booking, req.user, 'extended', {
+      extensionDays: days,
+      previousEndDate,
+      newEndDate,
+      charged: !!chargeResult,
+      amount: chargeResult?.amount || 0,
+      paymentIntentId: chargeResult?.id || null,
+      reason: reason || null
+    });
+
+    // Notify driver + host that the booking was extended.
+    try {
+      await sendBookingExtensionEmail(booking.driver, booking.host, booking, booking.vehicle);
+    } catch (emailErr) {
+      console.error('Admin extension email failed (non-blocking):', emailErr.message);
+    }
+
+    res.json({
+      ok: true,
+      booking,
+      charged: !!chargeResult,
+      paymentIntentId: chargeResult?.id || null,
+      amount: chargeResult?.amount || 0
+    });
+  } catch (err) {
+    console.error('Admin extension error:', err);
+    res.status(500).json({ message: 'Failed to extend booking', error: err.message });
+  }
+});
+
+// Manually charge the driver for an arbitrary amount (late fee, damage,
+// extension settlement, etc.). Uses the saved payment method.
+router.post('/bookings/:id/charge', adminAuth, async (req, res) => {
+  try {
+    const { amount, description = 'Manual admin charge' } = req.body;
+    const cents = Math.round(Number(amount) * 100);
+    if (!cents || cents < 50) {
+      return res.status(400).json({ message: 'amount must be at least $0.50' });
+    }
+    const booking = await Booking.findById(req.params.id).populate('driver');
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    const driver = booking.driver;
+    const defaultPM = driver?.paymentMethods?.find((pm) => pm.isDefault && pm.stripePaymentMethodId);
+    if (!driver?.stripeCustomerId || !defaultPM) {
+      return res.status(400).json({ message: 'Driver has no saved payment method on file' });
+    }
+
+    try {
+      const intent = await stripe.paymentIntents.create({
+        amount: cents,
+        currency: 'usd',
+        customer: driver.stripeCustomerId,
+        payment_method: defaultPM.stripePaymentMethodId,
+        off_session: true,
+        confirm: true,
+        automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+        metadata: {
+          type: 'admin_manual_charge',
+          bookingId: String(booking._id),
+          reservationId: booking.reservationId || '',
+          adminEmail: req.user.email
+        },
+        description: `${description} (${booking.reservationId || booking._id})`
+      });
+      if (intent.status !== 'succeeded') {
+        await logAdminAction(booking, req.user, 'charge_failed', { amount, description, status: intent.status });
+        return res.status(402).json({ ok: false, message: `Status: ${intent.status}` });
+      }
+      await logAdminAction(booking, req.user, 'charged', { amount, description, paymentIntentId: intent.id });
+      res.json({ ok: true, paymentIntentId: intent.id, amount });
+    } catch (err) {
+      await logAdminAction(booking, req.user, 'charge_failed', { amount, description, error: err.message });
+      res.status(402).json({ ok: false, message: err.message });
+    }
+  } catch (err) {
+    res.status(500).json({ message: 'Charge failed', error: err.message });
   }
 });
 
@@ -197,7 +443,12 @@ router.post('/bookings/:id/refund', adminAuth, async (req, res) => {
     const refund = await stripe.refunds.create(refundParams);
 
     booking.paymentStatus = amount ? 'partial_refund' : 'refunded';
-    await booking.save();
+    await logAdminAction(booking, req.user, 'refunded', {
+      amount: amount || null,
+      reason,
+      refundId: refund.id,
+      partial: !!amount
+    });
 
     res.json({ ok: true, refund, booking });
   } catch (err) {
@@ -246,6 +497,72 @@ router.get('/users/:id', adminAuth, async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Failed to load user', error: err.message });
+  }
+});
+
+// Bookings for a user — as driver AND as host, sorted by most recent first.
+router.get('/users/:id/bookings', adminAuth, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const [asDriver, asHost] = await Promise.all([
+      Booking.find({ driver: userId })
+        .populate('vehicle', 'make model year images')
+        .populate('host', 'firstName lastName email')
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean(),
+      Booking.find({ host: userId })
+        .populate('vehicle', 'make model year images')
+        .populate('driver', 'firstName lastName email')
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean()
+    ]);
+    res.json({ asDriver, asHost });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load user bookings', error: err.message });
+  }
+});
+
+// Vehicles owned by a user (host).
+router.get('/users/:id/vehicles', adminAuth, async (req, res) => {
+  try {
+    const vehicles = await Vehicle.find({ host: req.params.id }).sort({ createdAt: -1 }).lean();
+    res.json({ vehicles });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load user vehicles', error: err.message });
+  }
+});
+
+// Aggregate stats for a user's lifetime activity.
+router.get('/users/:id/stats', adminAuth, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const [driverAgg, hostAgg, vehicleCount] = await Promise.all([
+      Booking.aggregate([
+        { $match: { driver: new (require('mongoose').Types.ObjectId)(String(userId)), paymentStatus: 'paid' } },
+        { $group: { _id: null, count: { $sum: 1 }, totalSpent: { $sum: '$totalPrice' } } }
+      ]),
+      Booking.aggregate([
+        { $match: { host: new (require('mongoose').Types.ObjectId)(String(userId)), paymentStatus: 'paid' } },
+        { $group: { _id: null, count: { $sum: 1 }, totalEarned: { $sum: '$hostEarnings' }, grossBookings: { $sum: '$totalPrice' } } }
+      ]),
+      Vehicle.countDocuments({ host: userId })
+    ]);
+    res.json({
+      asDriver: {
+        paidBookings: driverAgg[0]?.count || 0,
+        totalSpent: driverAgg[0]?.totalSpent || 0
+      },
+      asHost: {
+        paidBookings: hostAgg[0]?.count || 0,
+        totalEarned: hostAgg[0]?.totalEarned || 0,
+        grossBookings: hostAgg[0]?.grossBookings || 0,
+        vehicleCount
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load user stats', error: err.message });
   }
 });
 
