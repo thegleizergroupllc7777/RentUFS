@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 
@@ -20,6 +21,7 @@ const AdminBookings = () => {
   const [error, setError] = useState('');
   const [editBooking, setEditBooking] = useState(null);
   const [refundBooking, setRefundBooking] = useState(null);
+  const navigate = useNavigate();
   const limit = 25;
 
   const load = useCallback(async () => {
@@ -86,7 +88,10 @@ const AdminBookings = () => {
               <tr><td colSpan="9"><div className="admin-empty">No bookings found.</div></td></tr>
             )}
             {bookings.map((b) => (
-              <tr key={b._id}>
+              <tr key={b._id} style={{ cursor: 'pointer' }} onClick={(e) => {
+                if (e.target.closest('button')) return;
+                navigate(`/admin/bookings/${b._id}`);
+              }}>
                 <td>
                   <strong>{b.reservationId || b._id.slice(-6)}</strong>
                   <div className="muted">{formatDate(b.createdAt)}</div>

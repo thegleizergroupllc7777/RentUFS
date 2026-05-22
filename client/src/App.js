@@ -44,7 +44,9 @@ import SmsTerms from './pages/SmsTerms';
 // Admin pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminBookings from './pages/Admin/AdminBookings';
+import AdminBookingDetail from './pages/Admin/AdminBookingDetail';
 import AdminUsers from './pages/Admin/AdminUsers';
+import AdminUserDetail from './pages/Admin/AdminUserDetail';
 import AdminVehicles from './pages/Admin/AdminVehicles';
 
 import './App.css';
@@ -216,8 +218,16 @@ function App() {
               element={<AdminRoute><AdminBookings /></AdminRoute>}
             />
             <Route
+              path="/admin/bookings/:id"
+              element={<AdminRoute><AdminBookingDetail /></AdminRoute>}
+            />
+            <Route
               path="/admin/users"
               element={<AdminRoute><AdminUsers /></AdminRoute>}
+            />
+            <Route
+              path="/admin/users/:id"
+              element={<AdminRoute><AdminUserDetail /></AdminRoute>}
             />
             <Route
               path="/admin/vehicles"
