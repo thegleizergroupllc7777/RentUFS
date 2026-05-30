@@ -1016,6 +1016,38 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
       return res.status(400).json({ message: 'Payment must be completed before starting' });
     }
 
+    // Time guard: drivers may start no earlier than 30 minutes before the booked
+    // pickup date + time. Prevents starting hours early (unpaid time + early
+    // insurance coverage burn). Enforced server-side so the UI cannot be bypassed.
+    const START_GRACE_MS = 30 * 60 * 1000; // 30 minutes
+    const pickupDateTime = new Date(booking.startDate);
+    const [pickupHour, pickupMinute] = (booking.pickupTime || '10:00').split(':').map(Number);
+    pickupDateTime.setHours(pickupHour || 0, pickupMinute || 0, 0, 0);
+    const earliestStart = new Date(pickupDateTime.getTime() - START_GRACE_MS);
+    if (new Date() < earliestStart) {
+      const startTimeLabel = earliestStart.toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+      });
+      return res.status(400).json({
+        message: `Too early to start. You can begin your reservation at ${startTimeLabel} (30 minutes before your pickup time).`
+      });
+    }
+
+    // Overlap guard: block starting if this vehicle is still out on another
+    // active rental. Avoids two active reservations — and two insurance
+    // coverages — on the same VIN at once.
+    const vehicleId = booking.vehicle._id || booking.vehicle;
+    const activeOnVehicle = await Booking.findOne({
+      vehicle: vehicleId,
+      status: 'active',
+      _id: { $ne: booking._id }
+    });
+    if (activeOnVehicle) {
+      return res.status(409).json({
+        message: 'This vehicle is currently still out on another active reservation. You can start once it has been returned.'
+      });
+    }
+
     // Validate all 4 photos are provided
     if (!photos || !photos.frontView || !photos.backView || !photos.leftSide || !photos.rightSide) {
       return res.status(400).json({
