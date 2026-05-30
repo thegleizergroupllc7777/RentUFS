@@ -485,15 +485,21 @@ const MyBookings = () => {
   };
 
   const canStartReservation = (booking) => {
-    // Can start if: confirmed, paid, pickup inspection not done, and within rental period
-    const todayStr = toLocalDateStr(new Date());
-    const startStr = toLocalDateStr(toLocalDate(booking.startDate));
+    // Can start if: confirmed, paid, pickup inspection not done, and within the
+    // start window (no earlier than 30 minutes before the booked pickup time).
+    // Mirrors the server-side guard in /start-inspection.
     const isConfirmed = booking.status === 'confirmed';
     const isPaid = booking.paymentStatus === 'paid';
     const inspectionNotDone = !booking.pickupInspection || !booking.pickupInspection.completed;
-    const isStartDateReached = startStr <= todayStr;
 
-    const result = isConfirmed && isPaid && inspectionNotDone && isStartDateReached;
+    // Build the booked pickup date + time, then allow starting 30 minutes early.
+    const pickupDateTime = toLocalDate(booking.startDate);
+    const [pickupHour, pickupMinute] = (booking.pickupTime || '10:00').split(':').map(Number);
+    pickupDateTime.setHours(pickupHour || 0, pickupMinute || 0, 0, 0);
+    const earliestStart = new Date(pickupDateTime.getTime() - 30 * 60 * 1000);
+    const isStartTimeReached = new Date() >= earliestStart;
+
+    const result = isConfirmed && isPaid && inspectionNotDone && isStartTimeReached;
 
     // Debug logging to help diagnose missing Start Reservation button
     if (isConfirmed && isPaid && !result) {
@@ -503,9 +509,9 @@ const MyBookings = () => {
         pickupInspection: booking.pickupInspection,
         inspectionNotDone,
         startDate: booking.startDate,
-        startStr,
-        todayStr,
-        isStartDateReached,
+        pickupTime: booking.pickupTime,
+        earliestStart,
+        isStartTimeReached,
         result
       });
     }
@@ -1167,24 +1173,33 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {/* Show info when booking is confirmed+paid but start date not reached */}
+                        {/* Show info when booking is confirmed+paid but the 30-min start window hasn't opened yet */}
                         {booking.status === 'confirmed' && booking.paymentStatus === 'paid' &&
                          !booking.pickupInspection?.completed &&
-                         toLocalDateStr(toLocalDate(booking.startDate)) > toLocalDateStr(new Date()) && (
-                          <div style={{
-                            padding: '0.5rem 1rem',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            border: '1px solid #10b981',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.8rem',
-                            color: '#10b981',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                          }}>
-                            Start Reservation will be available on pickup day
-                          </div>
-                        )}
+                         !canStartReservation(booking) && (() => {
+                          const pickupDateTime = toLocalDate(booking.startDate);
+                          const [ph, pm] = (booking.pickupTime || '10:00').split(':').map(Number);
+                          pickupDateTime.setHours(ph || 0, pm || 0, 0, 0);
+                          const earliestStart = new Date(pickupDateTime.getTime() - 30 * 60 * 1000);
+                          const label = earliestStart.toLocaleString('en-US', {
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                          });
+                          return (
+                            <div style={{
+                              padding: '0.5rem 1rem',
+                              background: 'rgba(16, 185, 129, 0.1)',
+                              border: '1px solid #10b981',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.8rem',
+                              color: '#10b981',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}>
+                              Start Reservation available at {label}
+                            </div>
+                          );
+                        })()}
 
                         {canReturnVehicle(booking) && (
                           <button
