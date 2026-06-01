@@ -12,7 +12,7 @@ const INSURANCE_PLANS = {
     id: 'rideshare',
     name: 'Full Coverage',
     description: 'Car Share & Ride Share — Full collision and liability protection',
-    pricePerDay: 28,
+    pricePerDay: 33,
     category: 'rideshare',
     usage: 'RIDESHARE',
     coverage: {
