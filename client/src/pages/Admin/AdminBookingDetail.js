@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import axios from '../../config/axios';
+import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
 
@@ -48,6 +49,7 @@ const AdminBookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,13 @@ const AdminBookingDetail = () => {
     try {
       const { data } = await axios.get(`/api/admin/bookings/${id}`);
       setBooking(data);
+      // Chat history is non-critical — don't fail the page if it errors
+      try {
+        const msgRes = await axios.get(`/api/admin/bookings/${id}/messages`);
+        setMessages(msgRes.data.messages || []);
+      } catch (_) {
+        setMessages([]);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load booking');
     } finally {
@@ -147,6 +156,51 @@ const AdminBookingDetail = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             <InspectionPhotos label="Pickup inspection" inspection={booking.pickupInspection} />
             <InspectionPhotos label="Return inspection" inspection={booking.returnInspection} />
+          </div>
+
+          {/* Insurance card */}
+          {booking.insurance?.type && booking.insurance.type !== 'none' && (
+            <>
+              <h3 style={{ color: '#374151' }}>Insurance card</h3>
+              <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+                {(booking.teqMobility?.cardUrl || booking.teqMobility?.cardImage) ? (
+                  <a
+                    href={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${encodeURIComponent(localStorage.getItem('token') || '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="admin-btn primary"
+                    style={{ textDecoration: 'none', display: 'inline-block' }}
+                  >
+                    View insurance card →
+                  </a>
+                ) : (
+                  <div className="muted">No insurance card on file yet (status: {booking.teqMobility?.status || 'none'}).</div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Chat history */}
+          <h3 style={{ color: '#374151' }}>Chat history ({messages.length})</h3>
+          <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+            {messages.length === 0 ? (
+              <div className="admin-empty">No messages for this reservation.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '420px', overflowY: 'auto' }}>
+                {messages.map((m) => (
+                  <div key={m._id} style={{ borderLeft: `3px solid ${m.senderRole === 'host' ? '#10b981' : '#3b82f6'}`, paddingLeft: '0.75rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <strong style={{ color: '#374151' }}>
+                        {m.sender ? `${m.sender.firstName} ${m.sender.lastName}` : 'Unknown'}
+                      </strong>{' '}
+                      <span style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>({m.senderRole})</span>
+                      {' · '}{formatDate(m.createdAt)}
+                    </div>
+                    <div style={{ color: '#111827', marginTop: '0.15rem' }}>{m.text}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Extensions */}
