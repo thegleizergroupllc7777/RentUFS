@@ -122,7 +122,8 @@ const AdminUserDetail = () => {
                 )}
               </div>
 
-              {/* Custom insurance rate (host override) */}
+              {/* Custom insurance rate (host override) — only relevant for hosts */}
+              {(user.userType === 'host' || user.userType === 'both') && (
               <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e5e7eb' }}>
                 <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
                   Custom insurance rate (per day)
@@ -148,6 +149,7 @@ const AdminUserDetail = () => {
                 </div>
                 {rateInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{rateInfo}</div>}
               </div>
+              )}
             </div>
           </div>
 
