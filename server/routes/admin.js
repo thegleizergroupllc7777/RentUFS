@@ -575,6 +575,22 @@ router.patch('/users/:id', adminAuth, async (req, res) => {
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
+
+    // Custom per-host insurance rate (per day). Empty string / null clears it
+    // (host reverts to the platform default). A positive number sets the override.
+    if (req.body.customInsuranceRate !== undefined) {
+      const raw = req.body.customInsuranceRate;
+      if (raw === '' || raw === null) {
+        updates['hostInfo.customInsuranceRate'] = null;
+      } else {
+        const rate = Number(raw);
+        if (Number.isNaN(rate) || rate < 0) {
+          return res.status(400).json({ message: 'Custom insurance rate must be a positive number' });
+        }
+        updates['hostInfo.customInsuranceRate'] = rate;
+      }
+    }
+
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);

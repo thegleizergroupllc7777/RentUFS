@@ -26,7 +26,7 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/insurance/plans`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { totalDays }
+        params: { totalDays, bookingId }
       });
 
       setPlans(response.data.plans);

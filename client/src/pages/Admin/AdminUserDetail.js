@@ -23,6 +23,9 @@ const AdminUserDetail = () => {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [insuranceRate, setInsuranceRate] = useState('');
+  const [savingRate, setSavingRate] = useState(false);
+  const [rateInfo, setRateInfo] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,6 +41,8 @@ const AdminUserDetail = () => {
       setBookings(b.data);
       setVehicles(v.data.vehicles);
       setStats(s.data);
+      const rate = u.data?.hostInfo?.customInsuranceRate;
+      setInsuranceRate(rate != null ? String(rate) : '');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load user');
     } finally {
@@ -56,6 +61,27 @@ const AdminUserDetail = () => {
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Action failed');
+    }
+  };
+
+  const saveInsuranceRate = async () => {
+    setSavingRate(true);
+    setError('');
+    setRateInfo('');
+    try {
+      await axios.patch(`/api/admin/users/${id}`, {
+        customInsuranceRate: insuranceRate.trim() === '' ? null : insuranceRate.trim()
+      });
+      setRateInfo(
+        insuranceRate.trim() === ''
+          ? 'Custom rate cleared — host uses the default rate.'
+          : `Custom insurance rate set to $${Number(insuranceRate).toFixed(2)}/day.`
+      );
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save insurance rate');
+    } finally {
+      setSavingRate(false);
     }
   };
 
@@ -94,6 +120,33 @@ const AdminUserDetail = () => {
                 ) : (
                   <button className="admin-btn" onClick={() => performAction('promote')}>Make admin</button>
                 )}
+              </div>
+
+              {/* Custom insurance rate (host override) */}
+              <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                  Custom insurance rate (per day)
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#6b7280' }}>$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={insuranceRate}
+                    onChange={(e) => setInsuranceRate(e.target.value)}
+                    placeholder="Default"
+                    style={{ width: '120px', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                  />
+                  <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>/day</span>
+                  <button className="admin-btn" onClick={saveInsuranceRate} disabled={savingRate}>
+                    {savingRate ? 'Saving...' : 'Save rate'}
+                  </button>
+                </div>
+                <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                  Applies to all of this host's vehicles. Leave blank to use the platform default rate.
+                </div>
+                {rateInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{rateInfo}</div>}
               </div>
             </div>
           </div>
