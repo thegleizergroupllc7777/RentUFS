@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import axios from '../../config/axios';
+import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
 
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
@@ -141,6 +142,13 @@ const AdminBookingDetail = () => {
             </div>
           </div>
 
+          {/* Inspection photos */}
+          <h3 style={{ color: '#374151' }}>Inspection photos</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <InspectionPhotos label="Pickup inspection" inspection={booking.pickupInspection} />
+            <InspectionPhotos label="Return inspection" inspection={booking.returnInspection} />
+          </div>
+
           {/* Extensions */}
           {booking.extensions && booking.extensions.length > 0 && (
             <>
@@ -210,6 +218,63 @@ const Field = ({ label, value }) => (
     <div style={{ color: '#111827', marginTop: '0.25rem', fontWeight: 500 }}>{value}</div>
   </div>
 );
+
+// Renders the 4 inspection photos (front/back/left/right) for a pickup or
+// return inspection. Click any photo to view it full-size in a new tab.
+const InspectionPhotos = ({ label, inspection }) => {
+  const photos = inspection?.photos || {};
+  const views = [
+    { key: 'frontView', label: 'Front' },
+    { key: 'backView', label: 'Back' },
+    { key: 'leftSide', label: 'Left side' },
+    { key: 'rightSide', label: 'Right side' }
+  ];
+  const hasAny = views.some(v => photos[v.key]);
+
+  return (
+    <div className="admin-table-wrap" style={{ padding: '1.25rem' }}>
+      <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+        {label}
+      </div>
+      {inspection?.completed ? (
+        <div style={{ color: '#059669', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+          Completed {formatDate(inspection.completedAt)}
+        </div>
+      ) : (
+        <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '0.75rem' }}>Not completed</div>
+      )}
+      {hasAny ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+          {views.map(v => (
+            <div key={v.key}>
+              <div style={{ color: '#6b7280', fontSize: '0.7rem', marginBottom: '0.25rem' }}>{v.label}</div>
+              {photos[v.key] ? (
+                <a href={getImageUrl(photos[v.key])} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={getImageUrl(photos[v.key])}
+                    alt={`${label} ${v.label}`}
+                    style={{ width: '100%', height: '110px', objectFit: 'cover', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}
+                  />
+                </a>
+              ) : (
+                <div style={{ width: '100%', height: '110px', borderRadius: '0.375rem', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '0.75rem' }}>
+                  No photo
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="muted">No photos uploaded.</div>
+      )}
+      {inspection?.notes && (
+        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#374151' }}>
+          <strong>Notes:</strong> {inspection.notes}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const PartyCard = ({ label, person, navigate }) => (
   <div className="admin-table-wrap" style={{ padding: '1.25rem' }}>
