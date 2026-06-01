@@ -160,6 +160,13 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['personal', 'business', 'dba'],
       default: 'personal'
+    },
+    // Optional per-host insurance rate (per day). When null/undefined, the
+    // platform default rate is used. Set by an admin to give a specific host
+    // a custom insurance price; applies to all of that host's vehicles.
+    customInsuranceRate: {
+      type: Number,
+      default: null
     }
   },
   profileImage: {

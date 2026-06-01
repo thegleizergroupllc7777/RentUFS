@@ -1,9 +1,28 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
+
+// Resolve the per-day insurance rate for a given host. Returns the host's
+// custom rate when set (a positive number), otherwise the plan's default.
+// Keeps display and charge consistent: every endpoint uses this same logic.
+const resolveRateForHost = (host, defaultRate) => {
+  const custom = host?.hostInfo?.customInsuranceRate;
+  if (typeof custom === 'number' && custom > 0) return custom;
+  return defaultRate;
+};
+
+// Given a booking (with host populated or as an id), return the host document
+// needed to resolve a custom insurance rate. Falls back gracefully.
+const getBookingHost = async (booking) => {
+  if (booking.host && booking.host.hostInfo !== undefined) return booking.host;
+  const hostId = booking.host?._id || booking.host || booking.vehicle?.host;
+  if (!hostId) return null;
+  return User.findById(hostId).select('hostInfo');
+};
 
 // Insurance plans — Full Coverage only (Car Share + Ride Share)
 // Pricing is placeholder — update to match carrier agreement
@@ -37,12 +56,24 @@ const INSURANCE_PLANS = {
 // Plan selection is static; actual coverage is activated via TeqMobility in bookings flow
 router.get('/plans', auth, async (req, res) => {
   try {
-    const { totalDays } = req.query;
+    const { totalDays, bookingId } = req.query;
 
-    const plans = Object.values(INSURANCE_PLANS).map(plan => ({
-      ...plan,
-      totalCost: plan.pricePerDay * (parseInt(totalDays) || 1)
-    }));
+    // If a booking is provided, resolve the host's custom rate (if any) so the
+    // displayed price matches what the driver will actually be charged.
+    let host = null;
+    if (bookingId) {
+      const booking = await Booking.findById(bookingId).populate('vehicle', 'host');
+      if (booking) host = await getBookingHost(booking);
+    }
+
+    const plans = Object.values(INSURANCE_PLANS).map(plan => {
+      const rate = resolveRateForHost(host, plan.pricePerDay);
+      return {
+        ...plan,
+        pricePerDay: rate,
+        totalCost: rate * (parseInt(totalDays) || 1)
+      };
+    });
 
     res.json({
       plans,
@@ -80,14 +111,16 @@ router.post('/quote', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid insurance plan' });
     }
 
-    // Calculate quote using static pricing
-    const totalCost = plan.pricePerDay * booking.totalDays;
+    // Resolve the host's rate (custom or default) so the quote is accurate
+    const host = await getBookingHost(booking);
+    const ratePerDay = resolveRateForHost(host, plan.pricePerDay);
+    const totalCost = ratePerDay * booking.totalDays;
 
     res.json({
       quote: {
         planId: plan.id,
         planName: plan.name,
-        pricePerDay: plan.pricePerDay,
+        pricePerDay: ratePerDay,
         totalDays: booking.totalDays,
         totalCost,
         coverage: plan.coverage,
@@ -134,7 +167,11 @@ router.post('/add-to-booking', auth, async (req, res) => {
     }
 
     const selectedPlan = plan;
-    const insuranceCost = selectedPlan.pricePerDay * booking.totalDays;
+    // Resolve the host's rate (custom or default) — this is the charged price,
+    // and it matches what /plans and /quote display to the driver.
+    const host = await getBookingHost(booking);
+    const ratePerDay = resolveRateForHost(host, selectedPlan.pricePerDay);
+    const insuranceCost = ratePerDay * booking.totalDays;
 
     // Calculate the difference in insurance cost
     const previousInsuranceCost = booking.insurance?.totalCost || 0;
@@ -146,7 +183,7 @@ router.post('/add-to-booking', auth, async (req, res) => {
       type: resolvedPlanId,
       provider: 'teqmobility',
       policyNumber: null,
-      costPerDay: selectedPlan.pricePerDay,
+      costPerDay: ratePerDay,
       totalCost: insuranceCost,
       coverage: selectedPlan.coverage
     };
