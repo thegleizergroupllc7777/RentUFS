@@ -424,9 +424,10 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    // Only allow driver or host to view
+    // Only allow driver, host, or an admin to view
     if (booking.driver.toString() !== req.user._id.toString() &&
-        booking.host.toString() !== req.user._id.toString()) {
+        booking.host.toString() !== req.user._id.toString() &&
+        req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 

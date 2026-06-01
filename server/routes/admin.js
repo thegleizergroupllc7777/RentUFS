@@ -6,6 +6,7 @@ const adminAuth = require('../middleware/adminAuth');
 const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
+const Message = require('../models/Message');
 const { calculateProcessingFee } = require('../utils/stripeFee');
 const { sendBookingExtensionEmail } = require('../utils/emailService');
 
@@ -161,6 +162,20 @@ router.get('/bookings/:id', adminAuth, async (req, res) => {
     res.json(booking);
   } catch (err) {
     res.status(500).json({ message: 'Failed to load booking', error: err.message });
+  }
+});
+
+// Read-only: all chat messages for a booking (admin oversight). Separate from
+// the driver/host /messages routes so their behavior is unchanged.
+router.get('/bookings/:id/messages', adminAuth, async (req, res) => {
+  try {
+    const messages = await Message.find({ booking: req.params.id })
+      .sort({ createdAt: 1 })
+      .populate('sender', 'firstName lastName profileImage')
+      .lean();
+    res.json({ messages });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load messages', error: err.message });
   }
 });
 
