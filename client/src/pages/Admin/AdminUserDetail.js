@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from '../../config/axios';
+import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
@@ -153,6 +154,25 @@ const AdminUserDetail = () => {
             </div>
           </div>
 
+          {/* Driver's license */}
+          <h3 style={{ color: '#374151' }}>Driver's license</h3>
+          <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+              <ProfileRow label="License number" value={user.driverLicense?.licenseNumber || '—'} />
+              <ProfileRow label="State" value={user.driverLicense?.state || '—'} />
+              <ProfileRow label="Expiration" value={formatDate(user.driverLicense?.expirationDate)} />
+              <ProfileRow label="Verified" value={
+                <span className={`badge ${user.driverLicense?.verified ? 'active-acct' : 'deactivated'}`}>
+                  {user.driverLicense?.verified ? 'verified' : 'not verified'}
+                </span>
+              } />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+              <LicenseImage label="License photo" src={user.driverLicense?.licenseImage} />
+              <LicenseImage label="Verification selfie" src={user.driverLicense?.verificationSelfie} />
+            </div>
+          </div>
+
           {/* Stats */}
           {stats && (
             <>
@@ -215,6 +235,26 @@ const ProfileRow = ({ label, value }) => (
   <div>
     <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
     <div style={{ color: '#111827', marginTop: '0.25rem' }}>{value}</div>
+  </div>
+);
+
+// Renders a license/selfie image; click to open full-size in a new tab.
+const LicenseImage = ({ label, src }) => (
+  <div>
+    <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.4rem' }}>{label}</div>
+    {src ? (
+      <a href={getImageUrl(src)} target="_blank" rel="noopener noreferrer">
+        <img
+          src={getImageUrl(src)}
+          alt={label}
+          style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', borderRadius: '0.5rem', border: '1px solid #e5e7eb', background: '#f9fafb' }}
+        />
+      </a>
+    ) : (
+      <div style={{ width: '100%', height: '120px', borderRadius: '0.5rem', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '0.8rem' }}>
+        Not uploaded
+      </div>
+    )}
   </div>
 );
 
