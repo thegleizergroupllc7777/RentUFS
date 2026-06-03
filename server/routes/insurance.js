@@ -9,15 +9,19 @@ const router = express.Router();
 // Default per-day rate when a host is set to Liability-only coverage.
 const LIABILITY_RATE_PER_DAY = 25;
 
-// Resolve the per-day insurance rate for a given host. Order of precedence:
-//   1. Host's custom rate, if explicitly set (admin hand-set price)
-//   2. $25 if the host's coverage type is LIABILITY
-//   3. The plan default (Full Coverage, $33)
+// Resolve the per-day insurance rate for a given host:
+//   - FULL_COVERAGE (default): always the plan default ($33). The custom rate
+//     box is ignored here — full coverage is fixed.
+//   - LIABILITY: the host's custom rate if set (VIP override), otherwise the
+//     standard $25 liability default.
 // Keeps display and charge consistent: every endpoint uses this same logic.
 const resolveRateForHost = (host, defaultRate) => {
-  const custom = host?.hostInfo?.customInsuranceRate;
-  if (typeof custom === 'number' && custom > 0) return custom;
-  if (host?.hostInfo?.coverageType === 'LIABILITY') return LIABILITY_RATE_PER_DAY;
+  if (host?.hostInfo?.coverageType === 'LIABILITY') {
+    const custom = host?.hostInfo?.customInsuranceRate;
+    if (typeof custom === 'number' && custom > 0) return custom;
+    return LIABILITY_RATE_PER_DAY;
+  }
+  // Full coverage (default): always the standard rate, custom box ignored.
   return defaultRate;
 };
 

@@ -176,7 +176,7 @@ const AdminUserDetail = () => {
               {(user.userType === 'host' || user.userType === 'both') && (
               <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e5e7eb' }}>
                 <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
-                  Custom insurance rate (per day)
+                  Custom liability rate (per day)
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ color: '#6b7280' }}>$</span>
@@ -195,7 +195,7 @@ const AdminUserDetail = () => {
                   </button>
                 </div>
                 <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
-                  Applies to all of this host's vehicles. Leave blank to use the platform default rate.
+                  Only applies when coverage type is Liability (VIP override). Leave blank for the standard $25 liability rate. Full Coverage is always $33 and ignores this box.
                 </div>
                 {rateInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{rateInfo}</div>}
 
