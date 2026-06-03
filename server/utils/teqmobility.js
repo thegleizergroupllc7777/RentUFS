@@ -169,8 +169,9 @@ const changeVehicleOwner = async (vin, ownerId) => {
  * VIN is a path parameter, body contains usage + optional fields
  * @param {string} vehicleId - TeqMobility vehicle ID (from upsertVehicle response)
  * @param {string} vin - Vehicle VIN (17-char, used as path param)
+ * @param {Object} host - Host user; host.hostInfo.coverageType selects FULL_COVERAGE vs LIABILITY
  */
-const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => {
+const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking, host) => {
   // Driver object (required) — uses nested license and address objects per API docs
   // birth_date is required in license object per API docs
   const birthDate = driver.dateOfBirth
@@ -207,8 +208,14 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking) => 
   // TeqMobility API accepts: RIDESHARE, PERSONAL, OFF_RENT
   const usageType = booking.insurance?.type === 'carshare' ? 'PERSONAL' : 'RIDESHARE';
 
+  // Coverage type comes from the host's configuration. Always send it explicitly
+  // so billing is accurate — if omitted, TeqMobility defaults the account to
+  // FULL_COVERAGE. Allowed values: FULL_COVERAGE, LIABILITY.
+  const coverageType = host?.hostInfo?.coverageType === 'LIABILITY' ? 'LIABILITY' : 'FULL_COVERAGE';
+
   const body = {
     usage: usageType,
+    coverage_type: coverageType,
     external_id: booking._id.toString(),
     driver: driverObj,
     pickup_address: {
@@ -434,7 +441,7 @@ const startRentalCoverage = async (host, driver, vehicle, booking) => {
     let coverageId;
     let cardUrl = null;
     try {
-      coverage = await startOnRentCoverage(vehicleResult.id, vehicle.vin, driver, vehicle, booking);
+      coverage = await startOnRentCoverage(vehicleResult.id, vehicle.vin, driver, vehicle, booking, host);
       coverageId = coverage.id || coverage.coverage_id || coverage.coverageId;
       cardUrl = extractCardUrl(coverage);
     } catch (startErr) {

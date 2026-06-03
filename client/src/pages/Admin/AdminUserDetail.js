@@ -27,6 +27,9 @@ const AdminUserDetail = () => {
   const [insuranceRate, setInsuranceRate] = useState('');
   const [savingRate, setSavingRate] = useState(false);
   const [rateInfo, setRateInfo] = useState('');
+  const [coverageType, setCoverageType] = useState('FULL_COVERAGE');
+  const [savingCoverage, setSavingCoverage] = useState(false);
+  const [coverageInfo, setCoverageInfo] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,6 +47,7 @@ const AdminUserDetail = () => {
       setStats(s.data);
       const rate = u.data?.hostInfo?.customInsuranceRate;
       setInsuranceRate(rate != null ? String(rate) : '');
+      setCoverageType(u.data?.hostInfo?.coverageType || 'FULL_COVERAGE');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load user');
     } finally {
@@ -83,6 +87,26 @@ const AdminUserDetail = () => {
       setError(err.response?.data?.message || 'Failed to save insurance rate');
     } finally {
       setSavingRate(false);
+    }
+  };
+
+  const saveCoverageType = async (newType) => {
+    setSavingCoverage(true);
+    setError('');
+    setCoverageInfo('');
+    try {
+      await axios.patch(`/api/admin/users/${id}`, { coverageType: newType });
+      setCoverageType(newType);
+      setCoverageInfo(
+        newType === 'LIABILITY'
+          ? 'Coverage set to Liability only for this host’s fleet.'
+          : 'Coverage set to Full Coverage for this host’s fleet.'
+      );
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save coverage type');
+    } finally {
+      setSavingCoverage(false);
     }
   };
 
@@ -149,6 +173,26 @@ const AdminUserDetail = () => {
                   Applies to all of this host's vehicles. Leave blank to use the platform default rate.
                 </div>
                 {rateInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{rateInfo}</div>}
+
+                <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '1rem 0 0.5rem' }}>
+                  Insurance coverage type
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    value={coverageType}
+                    onChange={(e) => saveCoverageType(e.target.value)}
+                    disabled={savingCoverage}
+                    style={{ padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', minWidth: '180px' }}
+                  >
+                    <option value="FULL_COVERAGE">Full Coverage (AL + Comp & Collision)</option>
+                    <option value="LIABILITY">Liability Only</option>
+                  </select>
+                  {savingCoverage && <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>Saving...</span>}
+                </div>
+                <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                  Applies to all of this host's vehicles. Sent to the insurer when coverage starts. Default is Full Coverage.
+                </div>
+                {coverageInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{coverageInfo}</div>}
               </div>
               )}
             </div>
