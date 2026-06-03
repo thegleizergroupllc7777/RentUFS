@@ -122,10 +122,18 @@ router.post('/', auth, async (req, res) => {
   try {
     const { vehicleId, startDate, endDate, pickupTime, dropoffTime, rentalType, quantity, message, pickupDateTimeISO } = req.body;
 
-    // Only drivers or 'both' users can create bookings
-    const bookingUser = await User.findById(req.user._id).select('userType');
+    // Only drivers or 'both' users can create bookings.
+    const bookingUser = await User.findById(req.user._id).select('userType hostInfo.accountType');
     if (bookingUser && bookingUser.userType === 'host') {
       return res.status(403).json({ message: 'Host accounts cannot rent vehicles. Please contact support to enable renting on your account.' });
+    }
+    // Business accounts cannot rent: a driver must be insured under a real
+    // person's legal name, but a business account's identity is the business
+    // name (which would print incorrectly on the insurance card). They must
+    // rent under a personal account instead. Reversible — only blocks while
+    // the account type is 'business'.
+    if (bookingUser && bookingUser.hostInfo?.accountType === 'business') {
+      return res.status(403).json({ message: 'Business accounts cannot rent vehicles. A driver must book under their personal legal name — please use a personal account or contact support.' });
     }
 
     // Verify driver has a valid license on file

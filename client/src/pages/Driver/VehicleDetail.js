@@ -625,7 +625,7 @@ const VehicleDetail = () => {
                       Go to My Bookings to manage this reservation
                     </p>
                   </>
-                ) : user && user.userType === 'host' ? (
+                ) : user && (user.userType === 'host' || user.hostInfo?.accountType === 'business') ? (
                   <>
                     <h3>Want to rent this car?</h3>
                     <div style={{
@@ -636,10 +636,14 @@ const VehicleDetail = () => {
                       border: '1px solid #3b82f6'
                     }}>
                       <p style={{ color: '#93c5fd', margin: '0 0 0.75rem 0', fontSize: '0.95rem' }}>
-                        You're currently signed in as a <strong>host</strong>. Host accounts can't rent vehicles.
+                        {user.hostInfo?.accountType === 'business'
+                          ? <>This is a <strong>business</strong> account. Business accounts can't rent vehicles.</>
+                          : <>You're currently signed in as a <strong>host</strong>. Host accounts can't rent vehicles.</>}
                       </p>
                       <p style={{ color: '#9ca3af', margin: 0, fontSize: '0.85rem' }}>
-                        Please contact support to enable renting on your account.
+                        {user.hostInfo?.accountType === 'business'
+                          ? 'A driver must book under their personal legal name. Please use a personal account or contact support.'
+                          : 'Please contact support to enable renting on your account.'}
                       </p>
                     </div>
                     <button
