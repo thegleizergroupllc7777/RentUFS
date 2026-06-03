@@ -4,9 +4,11 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
+import { useAuth } from '../../context/AuthContext';
 import './Host.css';
 
 const HostDashboard = () => {
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [taxInfo, setTaxInfo] = useState(null);
@@ -293,6 +295,33 @@ const HostDashboard = () => {
           </div>
 
           {/* Tax Info Link - only show until host submits tax info */}
+          {user && !(user.address?.street && user.address?.city && user.address?.state && user.address?.zipCode) && (
+            <div style={{
+              background: '#1a0000',
+              border: '1px solid #fca5a5',
+              borderRadius: '12px',
+              padding: '1rem 1.5rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#f9fafb', marginBottom: '0.25rem' }}>
+                  Address Required for Insurance
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#fca5a5', margin: 0 }}>
+                  Your vehicle listings will not go live until you add your full home address. It's required for insurance coverage.
+                </p>
+              </div>
+              <Link to="/driver/profile?tab=profile">
+                <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                  Add Address
+                </button>
+              </Link>
+            </div>
+          )}
+
           {taxInfo && !taxInfo.hasSubmitted && (
             <div style={{
               background: '#1a1200',
