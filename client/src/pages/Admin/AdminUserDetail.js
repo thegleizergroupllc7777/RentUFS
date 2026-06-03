@@ -30,6 +30,7 @@ const AdminUserDetail = () => {
   const [coverageType, setCoverageType] = useState('FULL_COVERAGE');
   const [savingCoverage, setSavingCoverage] = useState(false);
   const [coverageInfo, setCoverageInfo] = useState('');
+  const [savingUserType, setSavingUserType] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,6 +111,19 @@ const AdminUserDetail = () => {
     }
   };
 
+  const saveUserType = async (newType) => {
+    setSavingUserType(true);
+    setError('');
+    try {
+      await axios.patch(`/api/admin/users/${id}`, { userType: newType });
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update user type');
+    } finally {
+      setSavingUserType(false);
+    }
+  };
+
   return (
     <AdminLayout title={user ? `${user.firstName} ${user.lastName}` : 'User'} subtitle={user?.email}>
       {error && <div className="admin-error">{error}</div>}
@@ -124,7 +138,18 @@ const AdminUserDetail = () => {
               <h3 style={{ margin: 0, color: '#111827' }}>Profile</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
                 <ProfileRow label="Phone" value={user.phone || '—'} />
-                <ProfileRow label="User type" value={user.userType} />
+                <ProfileRow label="User type" value={
+                  <select
+                    value={user.userType}
+                    onChange={(e) => saveUserType(e.target.value)}
+                    disabled={savingUserType}
+                    style={{ padding: '0.3rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                  >
+                    <option value="driver">Driver</option>
+                    <option value="host">Host</option>
+                    <option value="both">Both (host + driver)</option>
+                  </select>
+                } />
                 <ProfileRow label="Role" value={<span className={`badge ${user.role}`}>{user.role}</span>} />
                 <ProfileRow label="Status" value={
                   <span className={`badge ${user.accountStatus === 'active' ? 'active-acct' : 'deactivated'}`}>
