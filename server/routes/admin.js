@@ -606,6 +606,16 @@ router.patch('/users/:id', adminAuth, async (req, res) => {
       }
     }
 
+    // Per-host insurance coverage type. Applies to all of the host's vehicles
+    // and is passed to TeqMobility when starting coverage.
+    if (req.body.coverageType !== undefined) {
+      const ct = req.body.coverageType;
+      if (ct !== 'FULL_COVERAGE' && ct !== 'LIABILITY') {
+        return res.status(400).json({ message: 'Coverage type must be FULL_COVERAGE or LIABILITY' });
+      }
+      updates['hostInfo.coverageType'] = ct;
+    }
+
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);

@@ -167,6 +167,15 @@ const userSchema = new mongoose.Schema({
     customInsuranceRate: {
       type: Number,
       default: null
+    },
+    // Insurance coverage type for this host's fleet, passed to TeqMobility's
+    // coverage_type when starting on-rent coverage. Admin-only; applies to all
+    // of the host's vehicles. Defaults to FULL_COVERAGE (TeqMobility's account
+    // default) so behavior is unchanged unless an admin sets LIABILITY.
+    coverageType: {
+      type: String,
+      enum: ['FULL_COVERAGE', 'LIABILITY'],
+      default: 'FULL_COVERAGE'
     }
   },
   profileImage: {
