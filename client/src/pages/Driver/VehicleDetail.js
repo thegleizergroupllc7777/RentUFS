@@ -245,8 +245,10 @@ const VehicleDetail = () => {
       }
     }
     if (!isStartDateToday) return allSlots;
-    // Only show slots still in the future today (at least 60 min out)
-    return allSlots.filter(opt => opt.minutes > nowMinutes + 60);
+    // Show the next available slot onward (no long lead time — a driver can
+    // book the upcoming slot). The separate 30-min pre-inspection start window
+    // still governs how early they can begin the trip relative to pickup time.
+    return allSlots.filter(opt => opt.minutes > nowMinutes);
   })();
 
   // Auto-advance pickupTime when the currently selected time is no longer available
