@@ -124,7 +124,7 @@ router.post('/', auth, async (req, res) => {
     // Only drivers or 'both' users can create bookings
     const bookingUser = await User.findById(req.user._id).select('userType');
     if (bookingUser && bookingUser.userType === 'host') {
-      return res.status(403).json({ message: 'Host-only accounts cannot book vehicles. Please register as a driver to rent vehicles.' });
+      return res.status(403).json({ message: 'Host accounts cannot rent vehicles. Please contact support to enable renting on your account.' });
     }
 
     // Verify driver has a valid license on file
