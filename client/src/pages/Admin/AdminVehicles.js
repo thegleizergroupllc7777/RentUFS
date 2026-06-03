@@ -138,6 +138,7 @@ const AdminVehicles = () => {
 
 const EditVehicleModal = ({ vehicle, onClose, onSaved }) => {
   const [form, setForm] = useState({
+    vin: vehicle.vin || '',
     make: vehicle.make || '',
     model: vehicle.model || '',
     year: vehicle.year || '',
@@ -166,6 +167,16 @@ const EditVehicleModal = ({ vehicle, onClose, onSaved }) => {
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Edit vehicle</h2>
         {error && <div className="admin-error">{error}</div>}
+        <div className="field">
+          <label>VIN (admin-only correction)</label>
+          <input
+            value={form.vin}
+            maxLength={17}
+            onChange={(e) => setForm({ ...form, vin: e.target.value.toUpperCase() })}
+            placeholder="17-character VIN"
+          />
+          <small style={{ color: '#9ca3af' }}>Validated on save. Cannot be changed during an active rental.</small>
+        </div>
         <div className="field">
           <label>Make</label>
           <input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} />
