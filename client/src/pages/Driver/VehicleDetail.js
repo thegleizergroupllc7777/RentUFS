@@ -625,19 +625,12 @@ const VehicleDetail = () => {
                       border: '1px solid #3b82f6'
                     }}>
                       <p style={{ color: '#93c5fd', margin: '0 0 0.75rem 0', fontSize: '0.95rem' }}>
-                        You're currently signed in as a <strong>host</strong>. To book vehicles, you need a driver account.
+                        You're currently signed in as a <strong>host</strong>. Host accounts can't rent vehicles.
                       </p>
                       <p style={{ color: '#9ca3af', margin: 0, fontSize: '0.85rem' }}>
-                        Register as a driver to start renting vehicles from other hosts.
+                        Please contact support to enable renting on your account.
                       </p>
                     </div>
-                    <button
-                      onClick={() => navigate('/register?type=driver')}
-                      className="btn btn-primary"
-                      style={{ width: '100%', marginBottom: '0.5rem' }}
-                    >
-                      Register as Driver
-                    </button>
                     <button
                       onClick={() => navigate('/marketplace')}
                       className="btn"
