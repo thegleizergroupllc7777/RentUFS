@@ -8,6 +8,7 @@ const auth = require('../middleware/auth');
 const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
 const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS, sendBookingCompletedSMS, sendBookingCancelledSMS, sendDriverCancelledNotificationSMS } = require('../utils/smsService');
 const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = require('../utils/teqmobility');
+const { isHostInsuranceReady } = require('../utils/hostReadiness');
 const { captureCardImage } = require('../utils/screenshotCard');
 const { isConfigured: tollspotConfigured, monitorCharges } = require('../utils/tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('../utils/tollSettlement');
@@ -177,6 +178,16 @@ router.post('/', auth, async (req, res) => {
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' });
+    }
+
+    // Defense in depth: the vehicle's host must be insurance-ready (complete
+    // name + address). Incomplete hosts are already hidden from the
+    // marketplace, but block here too so a stale link can't create a booking
+    // that would fail insurance at pickup.
+    const vehicleHost = await User.findById(vehicle.host)
+      .select('firstName lastName address hostInfo');
+    if (!isHostInsuranceReady(vehicleHost)) {
+      return res.status(400).json({ message: 'This vehicle is not currently available for booking. The host needs to complete their profile.' });
     }
 
     const start = new Date(startDate + 'T00:00:00');

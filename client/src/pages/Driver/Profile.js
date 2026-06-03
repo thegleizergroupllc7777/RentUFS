@@ -1056,6 +1056,19 @@ const DriverProfile = () => {
 
           <div style={{ borderTop: '1px solid #333', paddingTop: '1.5rem', marginTop: '1rem' }}>
             <h4 style={{ marginBottom: '1rem', color: '#e5e7eb', fontSize: '1rem' }}>Home Address</h4>
+            {addressNeedsAttention && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid #ef4444',
+                borderRadius: '0.5rem',
+                padding: '0.75rem 1rem',
+                marginBottom: '1rem',
+                color: '#fca5a5',
+                fontSize: '0.85rem'
+              }}>
+                ⚠️ Your address is required for insurance. Your vehicle listings will not go live in the marketplace until your full address is saved.
+              </div>
+            )}
             <div className="form-group">
               <label className="form-label">Street Address</label>
               <AddressAutocomplete
@@ -2382,11 +2395,16 @@ const DriverProfile = () => {
 
   const taxNeedsAttention = isHost && taxInfo && !taxInfo.hasSubmitted;
   const tollspotNeedsAttention = isHost && tollspotActive === false;
+  // Hosts need a complete home address for insurance; flag it if missing.
+  const addressNeedsAttention = isHost && !(
+    formData.address?.street && formData.address?.city &&
+    formData.address?.state && formData.address?.zipCode
+  );
 
   const isDriver = user?.userType === 'driver' || user?.userType === 'both';
 
   const tabs = [
-    { id: 'profile', label: 'My Profile' },
+    { id: 'profile', label: 'My Profile', alert: addressNeedsAttention },
     { id: 'license', label: "Driver's License" },
     { id: 'payment', label: 'Payment Methods' },
     ...(isHost ? [
