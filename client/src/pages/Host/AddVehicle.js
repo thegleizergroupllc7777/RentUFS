@@ -8,6 +8,7 @@ import { vehicleModels } from '../../data/vehicleModels';
 import { getFeaturesByCategory } from '../../data/vehicleFeatures';
 import { ALL_LISTED_STATES, isSupportedState } from '../../data/supportedStates';
 import API_URL from '../../config/api';
+import { validateVin } from '../../utils/vinValidation';
 import './Host.css';
 
 const BRANDS = [
@@ -66,6 +67,7 @@ const AddVehicle = () => {
   const [vinDuplicate, setVinDuplicate] = useState(null);
   const [vinDecodedData, setVinDecodedData] = useState(null); // Stores original VIN-decoded values for mismatch detection
   const [vinMismatch, setVinMismatch] = useState(null); // Mismatch warning message
+  const [vinInvalid, setVinInvalid] = useState(null); // Friendly check-digit validation message
 
   const checkVinDuplicate = async (vin) => {
     if (vin.length !== 17) {
@@ -119,6 +121,19 @@ const AddVehicle = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    // Friendly check-digit validation before decoding. The decoder (NHTSA) is
+    // lenient and accepts invalid VINs, but insurance requires a valid one — so
+    // catch it here with a helpful message instead of failing later at pickup.
+    const vinCheck = validateVin(vin);
+    if (!vinCheck.valid) {
+      setVinInvalid(vinCheck.reason);
+      setVinDecoded(false);
+      setError('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setVinInvalid(null);
 
     setVinLoading(true);
     setError('');
@@ -239,6 +254,17 @@ const AddVehicle = () => {
     }
     if (formData.location.state && !isSupportedState(formData.location.state)) {
       setError("We don't currently provide service in the selected vehicle location state. Please choose a supported state.");
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Block submission if the VIN fails check-digit validation (insurance needs
+    // a valid VIN). Friendly message guides the host to re-check it.
+    const vinCheck = validateVin(formData.vin);
+    if (!vinCheck.valid) {
+      setVinInvalid(vinCheck.reason);
+      setError('Please enter a valid VIN before listing. ' + vinCheck.reason);
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -405,6 +431,19 @@ const AddVehicle = () => {
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                     Found on your dashboard or driver's door jamb. Enter VIN and click Decode to auto-fill vehicle details.
                   </p>
+                  {vinInvalid && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem',
+                      backgroundColor: '#fef2f2',
+                      color: '#991b1b',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #fca5a5',
+                      fontSize: '0.9rem'
+                    }}>
+                      {vinInvalid}
+                    </div>
+                  )}
                   {vinDecoded && !vinDuplicate && (
                     <div style={{
                       marginTop: '0.5rem',
@@ -415,7 +454,7 @@ const AddVehicle = () => {
                       border: '1px solid #10b981',
                       fontSize: '0.9rem'
                     }}>
-                      VIN decoded successfully{formData.make || formData.model ? `: ${formData.year} ${formData.make} ${formData.model}`.trim() : ''}. Make and year are locked to match your VIN. Model is editable — verify it matches your vehicle. To change make or year, clear the VIN field above.
+                      ✓ VIN verified{formData.make || formData.model ? `: ${formData.year} ${formData.make} ${formData.model}`.trim() : ''}. Make and year are locked to match your VIN. Model is editable — verify it matches your vehicle. To change make or year, clear the VIN field above.
                     </div>
                   )}
                   {vinMismatch && (
