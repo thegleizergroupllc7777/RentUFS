@@ -66,10 +66,12 @@ router.get('/stats', adminAuth, async (req, res) => {
       User.countDocuments({ userType: { $in: ['host', 'both'] } }),
       Vehicle.countDocuments({}),
       Vehicle.countDocuments({ availability: true }),
-      Booking.countDocuments({}),
-      Booking.countDocuments({ createdAt: { $gte: startOfDay } }),
-      Booking.countDocuments({ createdAt: { $gte: startOfWeek } }),
-      Booking.countDocuments({ createdAt: { $gte: startOfMonth } }),
+      // Booking counts exclude cancelled and never-completed-checkout bookings so
+      // metrics reflect real bookings, not abandoned/cancelled ones.
+      Booking.countDocuments({ status: { $nin: ['cancelled', 'awaiting_payment'] } }),
+      Booking.countDocuments({ createdAt: { $gte: startOfDay }, status: { $nin: ['cancelled', 'awaiting_payment'] } }),
+      Booking.countDocuments({ createdAt: { $gte: startOfWeek }, status: { $nin: ['cancelled', 'awaiting_payment'] } }),
+      Booking.countDocuments({ createdAt: { $gte: startOfMonth }, status: { $nin: ['cancelled', 'awaiting_payment'] } }),
       Booking.countDocuments({ status: 'active' }),
       Booking.countDocuments({ status: 'pending' }),
       Booking.aggregate([
