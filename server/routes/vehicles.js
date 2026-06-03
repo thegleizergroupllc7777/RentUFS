@@ -7,6 +7,7 @@ const { sendVehicleListedEmail } = require('../utils/emailService');
 const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, deregisterVehicle, isCircuitOpen: tollspotCircuitOpen } = require('../utils/tollspot');
 const { isWheelbaseRentedToday } = require('../utils/wheelbaseAvailability');
+const { isHostInsuranceReady } = require('../utils/hostReadiness');
 
 const router = express.Router();
 
@@ -309,7 +310,7 @@ router.get('/', async (req, res) => {
           query['location.city'] = new RegExp(location, 'i');
         }
         vehicles = await Vehicle.find(query)
-          .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
+          .populate('host', 'firstName lastName rating reviewCount address hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
           .sort({ createdAt: -1 })
           .lean();
       }
@@ -322,13 +323,13 @@ router.get('/', async (req, res) => {
         query['location.city'] = new RegExp(location, 'i');
       }
       vehicles = await Vehicle.find(query)
-        .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
+        .populate('host', 'firstName lastName rating reviewCount address hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
         .sort({ createdAt: -1 })
         .lean();
     } else {
       // No location filter - return all available vehicles (limit to 100 for performance)
       vehicles = await Vehicle.find({ availability: true })
-        .populate('host', 'firstName lastName rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
+        .populate('host', 'firstName lastName rating reviewCount address hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
         .sort({ createdAt: -1 })
         .limit(100)
         .lean();
@@ -361,6 +362,10 @@ router.get('/', async (req, res) => {
       // Filter out unavailable vehicles
       vehicles = vehicles.filter(v => !unavailableVehicleIds.includes(v._id.toString()));
     }
+
+    // Hide listings whose host isn't insurance-ready (missing address/name).
+    // A car that can't be insured must not be bookable.
+    vehicles = vehicles.filter(v => isHostInsuranceReady(v.host));
 
     await attachRentedNow(vehicles);
 
