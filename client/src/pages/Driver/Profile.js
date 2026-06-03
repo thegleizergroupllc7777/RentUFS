@@ -2416,8 +2416,8 @@ const DriverProfile = () => {
   const tollspotNeedsAttention = isHost && tollspotActive === false;
   // Hosts need a complete home address for insurance; flag it if missing.
   const addressNeedsAttention = isHost && !(
-    formData.address?.street && formData.address?.city &&
-    formData.address?.state && formData.address?.zipCode
+    profileData.address?.street && profileData.address?.city &&
+    profileData.address?.state && profileData.address?.zipCode
   );
   // Hosts must finish Stripe Connect onboarding to receive their weekly payouts.
   const payoutsNeedAttention = isHost && !payoutsReady;
