@@ -1020,7 +1020,7 @@ const MyBookings = () => {
                                   Paid
                                 </div>
                               )}
-                              {booking.paymentStatus === 'pending' && (
+                              {booking.paymentStatus === 'pending' && booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                 <div style={{
                                   fontSize: '0.7rem',
                                   color: '#f59e0b',
