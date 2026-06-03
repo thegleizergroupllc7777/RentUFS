@@ -7,6 +7,7 @@ const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
 const Message = require('../models/Message');
+const { validateVin } = require('../utils/vinValidation');
 const { calculateProcessingFee } = require('../utils/stripeFee');
 const { sendBookingExtensionEmail } = require('../utils/emailService');
 
@@ -719,6 +720,23 @@ router.patch('/vehicles/:id', adminAuth, async (req, res) => {
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
+
+    // VIN correction is admin-only (hosts can't change it for insurance/legal
+    // integrity). Validate the check digit, and never allow a change while the
+    // vehicle is on an active rental (it would break the insurance link).
+    if (req.body.vin !== undefined) {
+      const newVin = String(req.body.vin).toUpperCase().trim();
+      const check = validateVin(newVin);
+      if (!check.valid) {
+        return res.status(400).json({ message: `Invalid VIN: ${check.reason}` });
+      }
+      const activeRental = await Booking.findOne({ vehicle: req.params.id, status: 'active' });
+      if (activeRental) {
+        return res.status(409).json({ message: 'Cannot change VIN while this vehicle has an active rental. Wait until the trip is completed.' });
+      }
+      updates.vin = newVin;
+    }
+
     const vehicle = await Vehicle.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!vehicle) return res.status(404).json({ message: 'Vehicle not found' });
     res.json(vehicle);
