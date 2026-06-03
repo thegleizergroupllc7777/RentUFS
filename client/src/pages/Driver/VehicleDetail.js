@@ -9,10 +9,12 @@ import getImageUrl from '../../config/imageUrl';
 import './Driver.css';
 
 const formatTime12h = (time24) => {
-  const h = parseInt(time24.split(':')[0], 10);
+  const [hStr, mStr] = time24.split(':');
+  const h = parseInt(hStr, 10);
+  const m = mStr || '00';
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:00 ${ampm}`;
+  return `${h12}:${m} ${ampm}`;
 };
 
 const VehicleDetail = () => {
@@ -229,17 +231,22 @@ const VehicleDetail = () => {
   // Check if the selected start date is today
   const isStartDateToday = bookingData.startDate === toLocalDateStr(new Date());
 
-  // Build the list of available pickup time options
+  // Build the list of available pickup time options (30-minute increments)
   const availableTimeOptions = (() => {
-    const allHours = Array.from({ length: 24 }, (_, i) => {
-      const val = String(i).padStart(2, '0') + ':00';
-      const h12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
-      const ampm = i >= 12 ? 'PM' : 'AM';
-      return { value: val, label: `${h12}:00 ${ampm}` };
-    });
-    if (!isStartDateToday) return allHours;
-    // Only show hours that are still in the future (at least next hour)
-    return allHours.filter(opt => parseInt(opt.value) > currentHour);
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const allSlots = [];
+    for (let i = 0; i < 24; i++) {
+      for (const min of [0, 30]) {
+        const val = String(i).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+        const h12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
+        const ampm = i >= 12 ? 'PM' : 'AM';
+        allSlots.push({ value: val, label: `${h12}:${String(min).padStart(2, '0')} ${ampm}`, minutes: i * 60 + min });
+      }
+    }
+    if (!isStartDateToday) return allSlots;
+    // Only show slots still in the future today (at least 60 min out)
+    return allSlots.filter(opt => opt.minutes > nowMinutes + 60);
   })();
 
   // Auto-advance pickupTime when the currently selected time is no longer available
@@ -295,8 +302,10 @@ const VehicleDetail = () => {
 
     // Prevent booking with a past pick-up time on today's date
     if (bookingData.startDate === toLocalDateStr(new Date())) {
-      const selectedHour = parseInt(bookingData.pickupTime.split(':')[0], 10);
-      if (selectedHour <= new Date().getHours()) {
+      const [selH, selM] = bookingData.pickupTime.split(':').map(Number);
+      const selectedMinutes = selH * 60 + (selM || 0);
+      const now = new Date();
+      if (selectedMinutes <= now.getHours() * 60 + now.getMinutes()) {
         setError('Pick-up time has already passed. Please select a later time or a future date.');
         return;
       }
