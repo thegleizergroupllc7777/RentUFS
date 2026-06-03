@@ -206,6 +206,8 @@ const DriverProfile = () => {
   const [tollspotPending, setTollspotPending] = useState(false);
   const [tollspotConnectedAt, setTollspotConnectedAt] = useState(null);
   const [tollspotLoading, setTollspotLoading] = useState(false);
+  // Stripe Connect (payouts) onboarding status — for the Payouts sidebar badge
+  const [payoutsReady, setPayoutsReady] = useState(true);
   const [tollspotSignupUrl, setTollspotSignupUrl] = useState(null);
 
   useEffect(() => {
@@ -229,6 +231,7 @@ const DriverProfile = () => {
       if (isHost) {
         fetchTaxInfo();
         fetchIntegrationsStatus();
+        fetchPayoutsStatus();
       }
       fetchPaymentMethods();
       fetchLicenseData();
@@ -259,6 +262,22 @@ const DriverProfile = () => {
       setTollspotSignupUrl(res.data.tollspot?.signupUrl || null);
     } catch (err) {
       console.error('❌ Error fetching integrations:', err);
+    }
+  };
+
+  // Fetch Stripe Connect (payouts) status for the sidebar badge. Payouts are
+  // "ready" only when the host has a Connect account with onboarding complete
+  // (platform owner is always ready).
+  const fetchPayoutsStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/api/connect/account-status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = res.data || {};
+      setPayoutsReady(!!(d.isPlatformOwner || (d.hasAccount && d.onboardingComplete)));
+    } catch (err) {
+      console.error('❌ Error fetching payouts status:', err);
     }
   };
 
@@ -2400,6 +2419,8 @@ const DriverProfile = () => {
     formData.address?.street && formData.address?.city &&
     formData.address?.state && formData.address?.zipCode
   );
+  // Hosts must finish Stripe Connect onboarding to receive their weekly payouts.
+  const payoutsNeedAttention = isHost && !payoutsReady;
 
   const isDriver = user?.userType === 'driver' || user?.userType === 'both';
 
@@ -2410,7 +2431,7 @@ const DriverProfile = () => {
     ...(isHost ? [
       { id: 'integrations', label: 'Integrations', alert: tollspotNeedsAttention },
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
-      { id: 'payouts', label: 'Payouts' },
+      { id: 'payouts', label: 'Payouts', alert: payoutsNeedAttention },
       { id: 'reports', label: 'Reports' }
     ] : []),
     { id: 'settings', label: 'Settings' }
