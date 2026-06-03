@@ -208,9 +208,9 @@ router.post('/', auth, async (req, res) => {
         return res.status(400).json({ message: 'Invalid pick-up date/time' });
       }
     } else {
-      const pickupHour = parseInt((pickupTime || '10:00').split(':')[0], 10);
+      const [pickupHour, pickupMin] = (pickupTime || '10:00').split(':').map(Number);
       pickupDateTime = new Date(start);
-      pickupDateTime.setHours(pickupHour, 0, 0, 0);
+      pickupDateTime.setHours(pickupHour || 0, pickupMin || 0, 0, 0);
     }
     if (pickupDateTime <= now) {
       return res.status(400).json({ message: 'Pick-up time has already passed. Please select a later time or a future date.' });
