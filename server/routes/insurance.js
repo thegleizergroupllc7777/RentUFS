@@ -6,12 +6,18 @@ const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
 
-// Resolve the per-day insurance rate for a given host. Returns the host's
-// custom rate when set (a positive number), otherwise the plan's default.
+// Default per-day rate when a host is set to Liability-only coverage.
+const LIABILITY_RATE_PER_DAY = 25;
+
+// Resolve the per-day insurance rate for a given host. Order of precedence:
+//   1. Host's custom rate, if explicitly set (admin hand-set price)
+//   2. $25 if the host's coverage type is LIABILITY
+//   3. The plan default (Full Coverage, $33)
 // Keeps display and charge consistent: every endpoint uses this same logic.
 const resolveRateForHost = (host, defaultRate) => {
   const custom = host?.hostInfo?.customInsuranceRate;
   if (typeof custom === 'number' && custom > 0) return custom;
+  if (host?.hostInfo?.coverageType === 'LIABILITY') return LIABILITY_RATE_PER_DAY;
   return defaultRate;
 };
 
