@@ -6,6 +6,7 @@ import MapView from '../../components/MapView';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
+import SEO from '../../components/SEO';
 import './Driver.css';
 
 // Convert Date to YYYY-MM-DD in local timezone (avoids UTC shift)
@@ -261,6 +262,10 @@ const Marketplace = () => {
 
   return (
     <div className="marketplace-fullscreen">
+      <SEO
+        title="Browse Cars for Rent"
+        description="Browse and rent cars from local hosts on RentUFS. Find sedans, SUVs, trucks, and more with insurance included. Book your next rental today."
+      />
       {/* Sticky header wrapper — keeps Navbar + search bar + results info bar locked at top while scrolling */}
       <div className="marketplace-sticky-header">
         <Navbar />
