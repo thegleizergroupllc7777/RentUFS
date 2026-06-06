@@ -187,6 +187,41 @@ app.get('/api/health', async (req, res) => {
   res.json(result);
 });
 
+// Dynamic sitemap.xml for SEO — lists public pages + every available vehicle
+// so search engines can discover listings. Read-only; never affects app flows.
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const Vehicle = require('./models/Vehicle');
+    const base = (process.env.CLIENT_URL || 'https://app.rentufs.com').replace(/\/$/, '');
+
+    // Static public pages
+    const staticUrls = ['', '/marketplace', '/login', '/register'];
+
+    // Available vehicles only (one URL per listing)
+    const vehicles = await Vehicle.find({ availability: true })
+      .select('_id updatedAt')
+      .limit(5000)
+      .lean();
+
+    const esc = (s) => String(s).replace(/&/g, '&amp;');
+    const urlTag = (loc, lastmod) =>
+      `  <url><loc>${esc(loc)}</loc>${lastmod ? `<lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>` : ''}</url>`;
+
+    const urls = [
+      ...staticUrls.map(p => urlTag(`${base}${p}`)),
+      ...vehicles.map(v => urlTag(`${base}/vehicle/${v._id}`, v.updatedAt))
+    ];
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>`;
+
+    res.set('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (err) {
+    console.error('❌ Error generating sitemap:', err.message);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {
   const fs = require('fs');

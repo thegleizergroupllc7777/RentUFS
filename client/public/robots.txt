@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Block private/authenticated areas from indexing
+Disallow: /admin
+Disallow: /host/
+Disallow: /my-bookings
+Disallow: /payment/
+Disallow: /reservation/
+
+Sitemap: https://api.rentufs.com/sitemap.xml
