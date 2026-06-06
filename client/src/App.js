@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { GoogleMapsProvider } from './context/GoogleMapsContext';
@@ -55,6 +56,7 @@ const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
 function App() {
   return (
+    <HelmetProvider>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <GoogleMapsProvider>
     <AuthProvider>
@@ -241,6 +243,7 @@ function App() {
     </AuthProvider>
     </GoogleMapsProvider>
     </GoogleOAuthProvider>
+    </HelmetProvider>
   );
 }
 

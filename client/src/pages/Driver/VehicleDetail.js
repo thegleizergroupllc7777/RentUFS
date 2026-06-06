@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
+import SEO from '../../components/SEO';
 import './Driver.css';
 
 const formatTime12h = (time24) => {
@@ -375,8 +376,16 @@ const VehicleDetail = () => {
   const platformFee = platformFeePerDay * totalDaysForFee;
   const baseTotal = rentalSubtotal > 0 ? rentalSubtotal + platformFee : 0;
 
+  const vehicleName = vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+  const locationStr = vehicle.location?.city ? ` in ${vehicle.location.city}${vehicle.location.state ? ', ' + vehicle.location.state : ''}` : '';
+
   return (
     <div>
+      <SEO
+        title={`Rent a ${vehicleName}${locationStr}`}
+        description={`Rent the ${vehicleName}${locationStr} on RentUFS for $${vehicle.pricePerDay}/day. ${vehicle.seats ? vehicle.seats + ' seats. ' : ''}Insurance included. Book now.`}
+        image={vehicle.images?.[0] ? getImageUrl(vehicle.images[0]) : undefined}
+      />
       <Navbar />
       <div className="page">
         <div className="container">
