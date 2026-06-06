@@ -426,7 +426,7 @@ const VehicleDetail = () => {
               <div className="vehicle-images">
                 {vehicle.images?.length > 0 ? (
                   vehicle.images.map((img, index) => (
-                    <img key={index} src={getImageUrl(img)} alt={`${vehicle.make} ${vehicle.model}`} />
+                    <img key={index} src={getImageUrl(img)} alt={`${vehicle.make} ${vehicle.model}`} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
                   ))
                 ) : (
                   <div className="vehicle-placeholder-large">No Images Available</div>
