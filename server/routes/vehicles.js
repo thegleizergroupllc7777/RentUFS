@@ -8,6 +8,7 @@ const { geocodeAddress, buildAddressString } = require('../utils/geocoding');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, deregisterVehicle, isCircuitOpen: tollspotCircuitOpen } = require('../utils/tollspot');
 const { isWheelbaseRentedToday } = require('../utils/wheelbaseAvailability');
 const { isHostInsuranceReady } = require('../utils/hostReadiness');
+const { buildVehicleSlug } = require('../utils/vehicleSlug');
 
 const router = express.Router();
 
@@ -395,7 +396,13 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
 // Get vehicle by ID
 router.get('/:id', async (req, res) => {
   try {
-    const vehicle = await Vehicle.findById(req.params.id)
+    // Accept either a Mongo _id (legacy/old links) OR a SEO slug. A valid
+    // ObjectId is a 24-char hex string; anything else is treated as a slug.
+    const param = req.params.id;
+    const isObjectId = /^[a-fA-F0-9]{24}$/.test(param);
+    const query = isObjectId ? { _id: param } : { slug: param };
+
+    const vehicle = await Vehicle.findOne(query)
       .populate('host', 'firstName lastName email phone rating reviewCount hostInfo.displayPreference hostInfo.businessName hostInfo.dba')
       .lean();
 
@@ -513,6 +520,15 @@ router.post('/', auth, async (req, res) => {
 
     const vehicle = new Vehicle(vehicleData);
     await vehicle.save();
+
+    // Generate the SEO slug (needs _id, so set after first save). Best-effort —
+    // a slug failure must never block listing creation.
+    try {
+      vehicle.slug = buildVehicleSlug(vehicle);
+      await vehicle.save();
+    } catch (slugErr) {
+      console.warn('Vehicle slug generation failed (non-blocking):', slugErr.message);
+    }
 
     // TollSpot: Pre-register vehicle with toll agencies (fire-and-forget)
     if (tollspotConfigured()) {
