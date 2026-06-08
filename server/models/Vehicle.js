@@ -6,6 +6,13 @@ const vehicleSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  // URL-friendly slug for SEO (e.g. "2024-bmw-x3-brooklyn-ny-a1b2c3").
+  // Used only for the public page URL; all internal lookups still use _id.
+  slug: {
+    type: String,
+    index: true,
+    default: null
+  },
   nickname: {
     type: String,
     required: true,

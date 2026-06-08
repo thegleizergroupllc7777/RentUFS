@@ -113,6 +113,25 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentufs',
       console.error('⚠️ tripCount backfill error:', err.message);
     }
 
+    // One-time backfill: generate SEO slugs for vehicles that don't have one.
+    // Idempotent — only touches vehicles where slug is missing.
+    try {
+      const Vehicle = require('./models/Vehicle');
+      const { buildVehicleSlug } = require('./utils/vehicleSlug');
+      const needSlug = await Vehicle.find({ $or: [{ slug: null }, { slug: { $exists: false } }] })
+        .select('_id year make model location')
+        .lean();
+      if (needSlug.length > 0) {
+        const ops = needSlug.map(v => ({
+          updateOne: { filter: { _id: v._id }, update: { $set: { slug: buildVehicleSlug(v) } } }
+        }));
+        const result = await Vehicle.bulkWrite(ops);
+        console.log(`✅ Backfilled slug for ${result.modifiedCount} vehicles`);
+      }
+    } catch (err) {
+      console.error('⚠️ slug backfill error:', err.message);
+    }
+
     // One-time backfill: assign reservationId to bookings missing one
     try {
       const bookingsCol = mongoose.connection.db.collection('bookings');
@@ -197,9 +216,10 @@ app.get('/sitemap.xml', async (req, res) => {
     // Static public pages
     const staticUrls = ['', '/marketplace', '/login', '/register'];
 
-    // Available vehicles only (one URL per listing)
+    // Available vehicles only (one URL per listing). Prefer the SEO slug;
+    // fall back to _id for any vehicle that doesn't have one yet.
     const vehicles = await Vehicle.find({ availability: true })
-      .select('_id updatedAt')
+      .select('_id slug updatedAt')
       .limit(5000)
       .lean();
 
@@ -209,7 +229,7 @@ app.get('/sitemap.xml', async (req, res) => {
 
     const urls = [
       ...staticUrls.map(p => urlTag(`${base}${p}`)),
-      ...vehicles.map(v => urlTag(`${base}/vehicle/${v._id}`, v.updatedAt))
+      ...vehicles.map(v => urlTag(`${base}/vehicle/${v.slug || v._id}`, v.updatedAt))
     ];
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>`;

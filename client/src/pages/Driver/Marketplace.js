@@ -201,7 +201,7 @@ const Marketplace = () => {
           vehicles.map(vehicle => (
             <Link
               key={vehicle._id}
-              to={`/vehicle/${vehicle._id}`}
+              to={`/vehicle/${vehicle.slug || vehicle._id}`}
               className={`vehicle-card-list ${vehicle.rentedNow ? 'rented' : ''}`}
             >
               <div className="vehicle-card-image">
@@ -431,7 +431,7 @@ const Marketplace = () => {
                   {vehicles.slice(0, 12).map(vehicle => (
                     <Link
                       key={vehicle._id}
-                      to={`/vehicle/${vehicle._id}`}
+                      to={`/vehicle/${vehicle.slug || vehicle._id}`}
                       className={`floating-vehicle-card ${selectedVehicle === vehicle._id ? 'selected' : ''} ${vehicle.rentedNow ? 'rented' : ''}`}
                       onMouseEnter={() => setSelectedVehicle(vehicle._id)}
                       onMouseLeave={() => setSelectedVehicle(null)}
