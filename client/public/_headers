@@ -1,0 +1,13 @@
+# Cache hashed build assets aggressively — their filenames change on every
+# content change, so this can never serve stale code. Improves repeat-visit
+# load times (addresses "Use efficient cache lifetimes").
+/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Never cache the HTML shell or these files, so new deploys are picked up.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+/robots.txt
+  Cache-Control: public, max-age=86400
