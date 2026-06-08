@@ -206,7 +206,7 @@ const Marketplace = () => {
             >
               <div className="vehicle-card-image">
                 {vehicle.images?.[0] ? (
-                  <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} loading="lazy" decoding="async" />
+                  <img src={getImageUrl(vehicle.images[0], 500)} alt={`${vehicle.make} ${vehicle.model}`} loading="lazy" decoding="async" />
                 ) : (
                   <div className="vehicle-placeholder">No Image</div>
                 )}
@@ -438,7 +438,7 @@ const Marketplace = () => {
                     >
                       <div className="floating-card-image">
                         {vehicle.images?.[0] ? (
-                          <img src={getImageUrl(vehicle.images[0])} alt={`${vehicle.make} ${vehicle.model}`} loading="lazy" decoding="async" />
+                          <img src={getImageUrl(vehicle.images[0], 500)} alt={`${vehicle.make} ${vehicle.model}`} loading="lazy" decoding="async" />
                         ) : (
                           <div className="no-image">🚗</div>
                         )}
