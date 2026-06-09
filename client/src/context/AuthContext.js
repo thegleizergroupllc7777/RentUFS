@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.get(`${API_URL}/api/auth/me`);
       setUser(response.data);
-      setSessionCookie();
+      setSessionCookie(response.data);
     } catch (error) {
       localStorage.removeItem('token');
       delete axios.defaults.headers.common['Authorization'];
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
     // Fetch full user data (login response only has basic fields, missing driverLicense etc.)
     const fullUser = await axios.get(`${API_URL}/api/auth/me`);
     setUser(fullUser.data);
-    setSessionCookie();
+    setSessionCookie(fullUser.data);
     return fullUser.data;
   };
 
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     await axios.post(`${API_URL}/api/users/account/reactivate`);
     const response = await axios.get(`${API_URL}/api/auth/me`);
     setUser(response.data);
-    setSessionCookie();
+    setSessionCookie(response.data);
     return response.data;
   };
 
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     // Fetch full user data (register response only has basic fields, missing driverLicense etc.)
     const fullUser = await axios.get(`${API_URL}/api/auth/me`);
     setUser(fullUser.data);
-    setSessionCookie();
+    setSessionCookie(fullUser.data);
 
     return fullUser.data;
   };
@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }) => {
 
     const fullUser = await axios.get(`${API_URL}/api/auth/me`);
     setUser(fullUser.data);
-    setSessionCookie();
+    setSessionCookie(fullUser.data);
     return fullUser.data;
   };
 
