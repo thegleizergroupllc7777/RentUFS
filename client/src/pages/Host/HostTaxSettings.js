@@ -233,6 +233,21 @@ const HostTaxSettings = () => {
                   </div>
                 </div>
 
+                {taxFormData.accountType === 'business' && (
+                  <div style={{
+                    background: '#fef3c7',
+                    border: '1px solid #f59e0b',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1rem',
+                    color: '#92400e',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.4
+                  }}>
+                    ⚠️ <strong>Business accounts cannot rent vehicles.</strong> Switching to a business account will turn off renting on this account.
+                  </div>
+                )}
+
                 {/* Individual: Legal name and address */}
                 {taxFormData.accountType === 'individual' && (
                   <>
