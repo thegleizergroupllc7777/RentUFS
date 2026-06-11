@@ -2251,6 +2251,7 @@ Contact support: support@rentufs.com
 };
 
 module.exports = {
+  sendEmail,
   sendWelcomeEmail,
   sendVehicleListedEmail,
   sendBookingConfirmationToDriver,

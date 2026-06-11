@@ -190,6 +190,13 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // When true, the user has unsubscribed from marketing / broadcast emails.
+  // Only affects the admin Broadcast tool — transactional emails (bookings,
+  // password resets, account alerts) are always delivered regardless.
+  emailOptOut: {
+    type: Boolean,
+    default: false
+  },
   resetPasswordToken: {
     type: String,
     default: null
