@@ -526,8 +526,7 @@ const Register = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {[
                         { value: 'driver', label: 'Rent cars (Driver)' },
-                        { value: 'host', label: 'List my car (Host)' },
-                        { value: 'both', label: 'Both' }
+                        { value: 'host', label: 'List my car (Host)' }
                       ].map(opt => (
                         <button
                           key={opt.value}
