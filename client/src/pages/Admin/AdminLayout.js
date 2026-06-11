@@ -19,6 +19,7 @@ const AdminLayout = ({ title, subtitle, children }) => {
           <NavLink to="/admin/bookings">Bookings</NavLink>
           <NavLink to="/admin/users">Users</NavLink>
           <NavLink to="/admin/vehicles">Vehicles</NavLink>
+          <NavLink to="/admin/broadcast">Broadcast</NavLink>
         </nav>
         {children}
       </div>

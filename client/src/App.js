@@ -49,6 +49,7 @@ import AdminBookingDetail from './pages/Admin/AdminBookingDetail';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminUserDetail from './pages/Admin/AdminUserDetail';
 import AdminVehicles from './pages/Admin/AdminVehicles';
+import AdminBroadcast from './pages/Admin/AdminBroadcast';
 
 import './App.css';
 
@@ -234,6 +235,10 @@ function App() {
             <Route
               path="/admin/vehicles"
               element={<AdminRoute><AdminVehicles /></AdminRoute>}
+            />
+            <Route
+              path="/admin/broadcast"
+              element={<AdminRoute><AdminBroadcast /></AdminRoute>}
             />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />

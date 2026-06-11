@@ -9,7 +9,9 @@ const Booking = require('../models/Booking');
 const Message = require('../models/Message');
 const { validateVin } = require('../utils/vinValidation');
 const { calculateProcessingFee } = require('../utils/stripeFee');
-const { sendBookingExtensionEmail } = require('../utils/emailService');
+const { sendBookingExtensionEmail, sendEmail } = require('../utils/emailService');
+const { sendSMS } = require('../utils/smsService');
+const BroadcastTemplate = require('../models/BroadcastTemplate');
 
 // Append an admin action entry to a booking's audit log. Save before
 // returning so the entry is persisted even if a later step fails.
@@ -742,6 +744,164 @@ router.patch('/vehicles/:id', adminAuth, async (req, res) => {
     res.json(vehicle);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update vehicle', error: err.message });
+  }
+});
+
+// ===========================================================================
+// Broadcast — admin mass email / SMS to platform users (hosts/drivers).
+// Additive feature. Does not touch booking, payment, insurance, or any
+// existing notification flow. Email goes out via the same SendGrid setup used
+// for transactional mail; SMS via the same Twilio setup used for booking
+// alerts (and only to users who opted in to texts).
+// ===========================================================================
+
+// Build the audience filter from a target keyword.
+function broadcastAudienceQuery(target) {
+  if (target === 'hosts') return { userType: { $in: ['host', 'both'] } };
+  if (target === 'drivers') return { userType: { $in: ['driver', 'both'] } };
+  return {}; // 'both' / anything else => everyone
+}
+
+// Replace {firstName} with the recipient's first name.
+function personalizeBroadcast(text, user) {
+  return (text || '').replace(/\{firstName\}/g, (user && user.firstName) || 'there');
+}
+
+// Wrap a plain-text broadcast message in simple branded HTML + an unsubscribe
+// footer (required for marketing email / keeps SendGrid happy).
+function broadcastEmailHtml(messageText, unsubscribeUrl) {
+  const safe = String(messageText || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f4f4f5">
+    <div style="max-width:560px;margin:0 auto;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111827">
+      <div style="background:#000;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-size:20px;font-weight:bold;letter-spacing:1px">RENTUFS</div>
+      <div style="background:#fff;padding:24px 20px;border-radius:0 0 10px 10px;font-size:15px;line-height:1.6;color:#1f2937">${safe}</div>
+      <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:16px;line-height:1.5">
+        RentUFS &middot; You're receiving this because you have a RentUFS account.<br>
+        <a href="${unsubscribeUrl}" style="color:#9ca3af">Unsubscribe from promotional emails</a>
+      </p>
+    </div></body></html>`;
+}
+
+// Preview how many people a target audience would reach on each channel.
+router.get('/broadcast/preview', adminAuth, async (req, res) => {
+  try {
+    const query = { ...broadcastAudienceQuery(req.query.audience), accountStatus: { $ne: 'deactivated' } };
+    const users = await User.find(query).select('email phone smsConsent emailOptOut').lean();
+    const emailCount = users.filter(u => u.email && !u.emailOptOut).length;
+    const smsCount = users.filter(u => u.phone && u.smsConsent && u.smsConsent.granted).length;
+    res.json({ total: users.length, emailCount, smsCount });
+  } catch (error) {
+    console.error('❌ Broadcast preview error:', error.message);
+    res.status(500).json({ message: 'Failed to load preview', error: error.message });
+  }
+});
+
+// Send a broadcast. channel: 'email' | 'sms' | 'both'; audience: 'hosts' | 'drivers' | 'both'.
+router.post('/broadcast', adminAuth, async (req, res) => {
+  try {
+    const { channel, audience, subject, message } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ message: 'Message is required.' });
+    }
+    if (!['email', 'sms', 'both'].includes(channel)) {
+      return res.status(400).json({ message: 'Please choose a valid channel.' });
+    }
+
+    const proto = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const base = `${proto}://${host}`;
+
+    const query = { ...broadcastAudienceQuery(audience), accountStatus: { $ne: 'deactivated' } };
+    const users = await User.find(query)
+      .select('firstName email phone userType smsConsent emailOptOut')
+      .lean();
+
+    const doEmail = channel === 'email' || channel === 'both';
+    const doSms = channel === 'sms' || channel === 'both';
+
+    const results = {
+      audience: users.length,
+      emailSent: 0, emailFailed: 0, emailSkipped: 0,
+      smsSent: 0, smsFailed: 0, smsSkipped: 0
+    };
+
+    for (const u of users) {
+      if (doEmail) {
+        if (!u.email || u.emailOptOut) {
+          results.emailSkipped++;
+        } else {
+          try {
+            const unsubscribeUrl = `${base}/api/users/unsubscribe/${u._id}`;
+            await sendEmail({
+              to: u.email,
+              subject: (subject && subject.trim()) ? subject.trim() : 'A message from RentUFS',
+              html: broadcastEmailHtml(personalizeBroadcast(message, u), unsubscribeUrl)
+            });
+            results.emailSent++;
+          } catch (e) {
+            results.emailFailed++;
+          }
+        }
+      }
+      if (doSms) {
+        if (!u.phone || !(u.smsConsent && u.smsConsent.granted)) {
+          results.smsSkipped++;
+        } else {
+          try {
+            await sendSMS(u.phone, personalizeBroadcast(message, u));
+            results.smsSent++;
+          } catch (e) {
+            results.smsFailed++;
+          }
+        }
+      }
+    }
+
+    console.log(`📣 Broadcast by ${req.user.email}: channel=${channel} audience=${audience} ->`, results);
+    res.json({ ok: true, results });
+  } catch (error) {
+    console.error('❌ Broadcast error:', error.message);
+    res.status(500).json({ message: 'Failed to send broadcast', error: error.message });
+  }
+});
+
+// Saved templates (admin convenience).
+router.get('/broadcast/templates', adminAuth, async (req, res) => {
+  try {
+    const templates = await BroadcastTemplate.find().sort({ createdAt: -1 }).lean();
+    res.json(templates);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to load templates', error: error.message });
+  }
+});
+
+router.post('/broadcast/templates', adminAuth, async (req, res) => {
+  try {
+    const { name, channel, subject, message } = req.body;
+    if (!name || !name.trim() || !message || !message.trim()) {
+      return res.status(400).json({ message: 'Template name and message are required.' });
+    }
+    const tpl = await BroadcastTemplate.create({
+      name: name.trim(),
+      channel: ['email', 'sms', 'both'].includes(channel) ? channel : 'both',
+      subject: subject || '',
+      message,
+      createdBy: req.user._id
+    });
+    res.json(tpl);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to save template', error: error.message });
+  }
+});
+
+router.delete('/broadcast/templates/:id', adminAuth, async (req, res) => {
+  try {
+    await BroadcastTemplate.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete template', error: error.message });
   }
 });
 

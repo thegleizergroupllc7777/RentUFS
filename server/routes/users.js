@@ -7,6 +7,24 @@ const { sendEmailVerificationCode } = require('../utils/emailService');
 
 const router = express.Router();
 
+// Public one-click unsubscribe from marketing / broadcast emails. Linked from
+// the footer of admin Broadcast emails. Sets emailOptOut only — transactional
+// emails (bookings, password resets, account alerts) are always delivered.
+router.get('/unsubscribe/:userId', async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.params.userId, { emailOptOut: true });
+  } catch (e) {
+    // Ignore — always show a friendly confirmation either way.
+  }
+  res.set('Content-Type', 'text/html');
+  res.send(`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+    <body style="font-family:Arial,Helvetica,sans-serif;text-align:center;padding:48px 24px;color:#111827;background:#f9fafb">
+      <h2 style="color:#10b981;margin-bottom:8px">You've been unsubscribed</h2>
+      <p style="margin:0 0 8px">You will no longer receive promotional emails from RentUFS.</p>
+      <p style="color:#6b7280;font-size:14px;margin:0">You'll still receive important emails about your bookings and account.</p>
+    </body></html>`);
+});
+
 // Helper: resolve relative profile image path to full URL
 function resolveProfileImage(user, req) {
   const userObj = typeof user.toObject === 'function' ? user.toObject() : { ...user };
