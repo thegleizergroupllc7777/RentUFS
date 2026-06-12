@@ -784,7 +784,7 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
       </div>
       <div style="background:#f9fafb;padding:30px 28px;border-radius:0 0 8px 8px;color:#333333;font-size:15px;line-height:1.7;">${safe}</div>
       <p style="text-align:center;color:#9ca3af;font-size:12px;line-height:1.6;margin:18px 8px 0;">
-        RentUFS &middot; United Fleet Services<br>597 West Side Ave, Jersey City, NJ 07304${unsub}
+        RentUFS<br>597 West Side Ave, PMB 194, Jersey City, NJ 07304${unsub}
       </p>
     </div>
   </body></html>`;
