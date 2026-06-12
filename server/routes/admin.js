@@ -773,13 +773,16 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
   const safe = String(messageText || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>');
+  const footer = unsubscribeUrl
+    ? `RentUFS &middot; You're receiving this because you have a RentUFS account.<br>
+        <a href="${unsubscribeUrl}" style="color:#9ca3af">Unsubscribe from promotional emails</a>`
+    : `RentUFS`;
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f4f4f5">
     <div style="max-width:560px;margin:0 auto;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111827">
       <div style="background:#000;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-size:20px;font-weight:bold;letter-spacing:1px">RENTUFS</div>
       <div style="background:#fff;padding:24px 20px;border-radius:0 0 10px 10px;font-size:15px;line-height:1.6;color:#1f2937">${safe}</div>
       <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:16px;line-height:1.5">
-        RentUFS &middot; You're receiving this because you have a RentUFS account.<br>
-        <a href="${unsubscribeUrl}" style="color:#9ca3af">Unsubscribe from promotional emails</a>
+        ${footer}
       </p>
     </div></body></html>`;
 }
@@ -809,6 +812,42 @@ router.post('/broadcast', adminAuth, async (req, res) => {
       return res.status(400).json({ message: 'Please choose a valid channel.' });
     }
 
+    const doEmail = channel === 'email' || channel === 'both';
+    const doSms = channel === 'sms' || channel === 'both';
+
+    // "Specific people" — send only to the exact emails / phone numbers entered
+    // (also used to test to yourself). Not pulled from the user list, so no
+    // per-user unsubscribe link is added.
+    if (audience === 'specific') {
+      const raw = String(req.body.recipients || '');
+      const tokens = raw.split(/[\s,;]+/).map(t => t.trim()).filter(Boolean);
+      const emails = tokens.filter(t => t.includes('@'));
+      const phones = tokens.filter(t => !t.includes('@'));
+      const r = { audience: tokens.length, emailSent: 0, emailFailed: 0, emailSkipped: 0, smsSent: 0, smsFailed: 0, smsSkipped: 0 };
+      if (doEmail) {
+        for (const email of emails) {
+          try {
+            await sendEmail({
+              to: email,
+              subject: (subject && subject.trim()) ? subject.trim() : 'A message from RentUFS',
+              html: broadcastEmailHtml(personalizeBroadcast(message, {}), null)
+            });
+            r.emailSent++;
+          } catch (e) { r.emailFailed++; }
+        }
+      }
+      if (doSms) {
+        for (const phone of phones) {
+          try {
+            await sendSMS(phone, personalizeBroadcast(message, {}));
+            r.smsSent++;
+          } catch (e) { r.smsFailed++; }
+        }
+      }
+      console.log(`📣 Broadcast (specific) by ${req.user.email}:`, r);
+      return res.json({ ok: true, results: r });
+    }
+
     const proto = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.headers['x-forwarded-host'] || req.get('host');
     const base = `${proto}://${host}`;
@@ -817,9 +856,6 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     const users = await User.find(query)
       .select('firstName email phone userType smsConsent emailOptOut')
       .lean();
-
-    const doEmail = channel === 'email' || channel === 'both';
-    const doSms = channel === 'sms' || channel === 'both';
 
     const results = {
       audience: users.length,

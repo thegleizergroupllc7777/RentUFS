@@ -27,6 +27,7 @@ const AdminBroadcast = () => {
   const [audience, setAudience] = useState('both');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [recipients, setRecipients] = useState('');
   const [preview, setPreview] = useState({ total: 0, emailCount: 0, smsCount: 0 });
   const [templates, setTemplates] = useState([]);
   const [sending, setSending] = useState(false);
@@ -58,18 +59,28 @@ const AdminBroadcast = () => {
     setResult(null);
     if (!message.trim()) { setError('Please write a message first.'); return; }
 
-    const reach = [];
-    if (doEmail) reach.push(`• ${preview.emailCount} by email`);
-    if (doSms) reach.push(`• ${preview.smsCount} by text`);
-    const audienceLabel = audience === 'both' ? 'all users' : audience;
-    const ok = window.confirm(
-      `Send this to ${audienceLabel}?\n\nIt will reach roughly:\n${reach.join('\n')}\n\nThis cannot be undone.`
-    );
-    if (!ok) return;
+    let confirmMsg;
+    if (audience === 'specific') {
+      const tokens = recipients.split(/[\s,;]+/).map((t) => t.trim()).filter(Boolean);
+      if (tokens.length === 0) { setError('Enter at least one email or phone number above.'); return; }
+      const emails = tokens.filter((t) => t.includes('@')).length;
+      const phones = tokens.filter((t) => !t.includes('@')).length;
+      const reach = [];
+      if (doEmail) reach.push(`• ${emails} email${emails === 1 ? '' : 's'}`);
+      if (doSms) reach.push(`• ${phones} phone number${phones === 1 ? '' : 's'}`);
+      confirmMsg = `Send this only to the people you entered?\n\n${reach.join('\n')}\n\nThis cannot be undone.`;
+    } else {
+      const reach = [];
+      if (doEmail) reach.push(`• ${preview.emailCount} by email`);
+      if (doSms) reach.push(`• ${preview.smsCount} by text`);
+      const audienceLabel = audience === 'both' ? 'all users' : audience;
+      confirmMsg = `Send this to ${audienceLabel}?\n\nIt will reach roughly:\n${reach.join('\n')}\n\nThis cannot be undone.`;
+    }
+    if (!window.confirm(confirmMsg)) return;
 
     setSending(true);
     try {
-      const { data } = await axios.post('/api/admin/broadcast', { channel, audience, subject, message });
+      const { data } = await axios.post('/api/admin/broadcast', { channel, audience, subject, message, recipients });
       setResult(data.results);
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to send. Please try again.');
@@ -123,11 +134,25 @@ const AdminBroadcast = () => {
 
           <div style={{ marginBottom: 16 }}>
             <span style={label}>Send to</span>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button style={pill(audience === 'both')} onClick={() => setAudience('both')}>Everyone</button>
               <button style={pill(audience === 'hosts')} onClick={() => setAudience('hosts')}>Hosts</button>
               <button style={pill(audience === 'drivers')} onClick={() => setAudience('drivers')}>Drivers</button>
+              <button style={pill(audience === 'specific')} onClick={() => setAudience('specific')}>Specific people</button>
             </div>
+            {audience === 'specific' && (
+              <div style={{ marginTop: 10 }}>
+                <textarea
+                  style={{ ...input, minHeight: 70, resize: 'vertical', fontFamily: 'inherit' }}
+                  value={recipients}
+                  onChange={(e) => setRecipients(e.target.value)}
+                  placeholder={'Enter emails and/or phone numbers, separated by commas\ne.g. you@email.com, +13472510825'}
+                />
+                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                  Goes <strong>only</strong> to the people you list here — perfect for testing to yourself or messaging one person. Use the channel buttons above to pick email, text, or both.
+                </div>
+              </div>
+            )}
           </div>
 
           {doEmail && (
@@ -158,14 +183,20 @@ const AdminBroadcast = () => {
 
           {/* Reach preview */}
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 14px', fontSize: '0.9rem', color: '#065f46', marginTop: 8 }}>
-            This will reach{' '}
-            {doEmail && <strong>{preview.emailCount} by email</strong>}
-            {doEmail && doSms && ' and '}
-            {doSms && <strong>{preview.smsCount} by text</strong>}
-            {' '}({audience === 'both' ? 'everyone' : audience}).
-            {doSms && (
-              <div style={{ color: '#92400e', marginTop: 6, fontSize: '0.82rem' }}>
-                ⚠️ Texts only deliver once your Twilio A2P registration is approved, and only to users who opted in to SMS.
+            {audience === 'specific' ? (
+              <span>This goes <strong>only</strong> to the email(s) and number(s) you entered above.</span>
+            ) : (
+              <span>
+                This will reach{' '}
+                {doEmail && <strong>{preview.emailCount} by email</strong>}
+                {doEmail && doSms && ' and '}
+                {doSms && <strong>{preview.smsCount} by text</strong>}
+                {' '}({audience === 'both' ? 'everyone' : audience}).
+              </span>
+            )}
+            {doSms && audience !== 'specific' && (
+              <div style={{ color: '#6b7280', marginTop: 6, fontSize: '0.82rem' }}>
+                ℹ️ Texts only go to users who opted in to SMS.
               </div>
             )}
           </div>
