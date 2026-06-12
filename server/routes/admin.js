@@ -773,18 +773,21 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
   const safe = String(messageText || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>');
-  const footer = unsubscribeUrl
-    ? `RentUFS &middot; You're receiving this because you have a RentUFS account.<br>
-        <a href="${unsubscribeUrl}" style="color:#9ca3af">Unsubscribe from promotional emails</a>`
-    : `RentUFS`;
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#f4f4f5">
-    <div style="max-width:560px;margin:0 auto;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111827">
-      <div style="background:#000;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-size:20px;font-weight:bold;letter-spacing:1px">RENTUFS</div>
-      <div style="background:#fff;padding:24px 20px;border-radius:0 0 10px 10px;font-size:15px;line-height:1.6;color:#1f2937">${safe}</div>
-      <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:16px;line-height:1.5">
-        ${footer}
+  const unsub = unsubscribeUrl
+    ? `<br><a href="${unsubscribeUrl}" style="color:#9ca3af;text-decoration:underline">Unsubscribe from promotional emails</a>`
+    : '';
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="background:#000000;padding:28px 20px;text-align:center;border-radius:8px 8px 0 0;">
+        <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+      </div>
+      <div style="background:#f9fafb;padding:30px 28px;border-radius:0 0 8px 8px;color:#333333;font-size:15px;line-height:1.7;">${safe}</div>
+      <p style="text-align:center;color:#9ca3af;font-size:12px;line-height:1.6;margin:18px 8px 0;">
+        RentUFS<br>597 West Side Ave, PMB 194, Jersey City, NJ 07304${unsub}
       </p>
-    </div></body></html>`;
+    </div>
+  </body></html>`;
 }
 
 // Preview how many people a target audience would reach on each channel.
