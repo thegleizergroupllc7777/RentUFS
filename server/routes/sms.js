@@ -27,7 +27,7 @@ const HELP_KEYWORDS = ['HELP', 'INFO'];
 // Auto-reply copy. Includes the legally required disclosures: program name,
 // message frequency, "msg & data rates may apply", and STOP/HELP instructions.
 const WELCOME_MSG =
-  "RentUFS: You're in! 🚗 Get $25 off your first rental with code WELCOME25 at app.rentufs.com. " +
+  "RentUFS: You're in! 🚗 Get $20 off your first rental with code WELCOME20 at app.rentufs.com. " +
   "You'll get occasional deals & updates. Msg freq varies. Msg & data rates may apply. " +
   'Reply STOP to opt out, HELP for help.';
 
@@ -40,7 +40,7 @@ const STOP_MSG =
   'Reply RENT to rejoin.';
 
 const NUDGE_MSG =
-  'Welcome to RentUFS! Reply RENT to join and get $25 off your first rental. ' +
+  'Welcome to RentUFS! Reply RENT to join and get $20 off your first rental. ' +
   'Msg & data rates may apply. Reply STOP to opt out.';
 
 // Build a minimal TwiML response. If message is empty, an empty <Response/>
