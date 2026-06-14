@@ -138,8 +138,14 @@ const AdminBroadcast = () => {
               <button style={pill(audience === 'both')} onClick={() => setAudience('both')}>Everyone</button>
               <button style={pill(audience === 'hosts')} onClick={() => setAudience('hosts')}>Hosts</button>
               <button style={pill(audience === 'drivers')} onClick={() => setAudience('drivers')}>Drivers</button>
+              <button style={pill(audience === 'sms-subscribers')} onClick={() => { setAudience('sms-subscribers'); setChannel('sms'); }}>Text sign-ups</button>
               <button style={pill(audience === 'specific')} onClick={() => setAudience('specific')}>Specific people</button>
             </div>
+            {audience === 'sms-subscribers' && (
+              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 8 }}>
+                People who opted in by texting your keyword (e.g. “RENT”) to 888-773-9405. Text only.
+              </div>
+            )}
             {audience === 'specific' && (
               <div style={{ marginTop: 10 }}>
                 <textarea
