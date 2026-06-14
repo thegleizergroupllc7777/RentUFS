@@ -155,6 +155,7 @@ const sendOverdueReminderSMS = async (driver, booking, vehicle, overdueInfo) => 
 module.exports = {
   isSmsConfigured,
   sendSMS,
+  formatToE164,
   sendExtensionReminderSMS,
   sendNewBookingNotificationSMS,
   sendBookingConfirmedSMS,

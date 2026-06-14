@@ -12,6 +12,7 @@ const { calculateProcessingFee } = require('../utils/stripeFee');
 const { sendBookingExtensionEmail, sendEmail } = require('../utils/emailService');
 const { sendSMS } = require('../utils/smsService');
 const BroadcastTemplate = require('../models/BroadcastTemplate');
+const SmsSubscriber = require('../models/SmsSubscriber');
 
 // Append an admin action entry to a booking's audit log. Save before
 // returning so the entry is persisted even if a later step fails.
@@ -793,6 +794,11 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
 // Preview how many people a target audience would reach on each channel.
 router.get('/broadcast/preview', adminAuth, async (req, res) => {
   try {
+    // "Text sign-ups" — people who opted in via the keyword flow (text-only).
+    if (req.query.audience === 'sms-subscribers') {
+      const smsCount = await SmsSubscriber.countDocuments({ optedIn: true });
+      return res.json({ total: smsCount, emailCount: 0, smsCount });
+    }
     const query = { ...broadcastAudienceQuery(req.query.audience), accountStatus: { $ne: 'deactivated' } };
     const users = await User.find(query).select('email phone smsConsent emailOptOut').lean();
     const emailCount = users.filter(u => u.email && !u.emailOptOut).length;
@@ -848,6 +854,23 @@ router.post('/broadcast', adminAuth, async (req, res) => {
         }
       }
       console.log(`📣 Broadcast (specific) by ${req.user.email}:`, r);
+      return res.json({ ok: true, results: r });
+    }
+
+    // "Text sign-ups" — opted-in keyword subscribers. Text-only audience.
+    if (audience === 'sms-subscribers') {
+      const subs = await SmsSubscriber.find({ optedIn: true }).select('phone').lean();
+      const r = { audience: subs.length, emailSent: 0, emailFailed: 0, emailSkipped: 0, smsSent: 0, smsFailed: 0, smsSkipped: 0 };
+      if (doSms) {
+        for (const s of subs) {
+          if (!s.phone) { r.smsSkipped++; continue; }
+          try {
+            await sendSMS(s.phone, personalizeBroadcast(message, {}));
+            r.smsSent++;
+          } catch (e) { r.smsFailed++; }
+        }
+      }
+      console.log(`📣 Broadcast (sms-subscribers) by ${req.user.email}:`, r);
       return res.json({ ok: true, results: r });
     }
 
