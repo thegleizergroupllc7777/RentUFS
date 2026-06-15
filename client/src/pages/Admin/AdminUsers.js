@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
+import { useAuth } from '../../context/AuthContext';
 
 const USER_TYPES = ['driver', 'host', 'both'];
 const ROLES = ['user', 'admin'];
@@ -9,6 +10,7 @@ const ROLES = ['user', 'admin'];
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 
 const AdminUsers = () => {
+  const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -124,10 +126,12 @@ const AdminUsers = () => {
                   ) : (
                     <button className="admin-btn" onClick={() => performAction(u._id, 'reactivate')}>Reactivate</button>
                   )}
-                  {u.role === 'admin' ? (
-                    <button className="admin-btn" onClick={() => performAction(u._id, 'demote')}>Demote</button>
-                  ) : (
-                    <button className="admin-btn" onClick={() => performAction(u._id, 'promote')}>Make admin</button>
+                  {me?.isSuperAdmin && (
+                    u.role === 'admin' ? (
+                      <button className="admin-btn" onClick={() => performAction(u._id, 'demote')}>Demote</button>
+                    ) : (
+                      <button className="admin-btn" onClick={() => performAction(u._id, 'promote')}>Make admin</button>
+                    )
                   )}
                 </td>
               </tr>

@@ -13,6 +13,7 @@ const { sendBookingExtensionEmail, sendEmail } = require('../utils/emailService'
 const { sendSMS } = require('../utils/smsService');
 const BroadcastTemplate = require('../models/BroadcastTemplate');
 const SmsSubscriber = require('../models/SmsSubscriber');
+const { isSuperAdmin } = require('../utils/superAdmin');
 
 // Append an admin action entry to a booking's audit log. Save before
 // returning so the entry is persisted even if a later step fails.
@@ -37,7 +38,8 @@ router.get('/ping', adminAuth, (req, res) => {
       email: req.user.email,
       firstName: req.user.firstName,
       lastName: req.user.lastName,
-      role: req.user.role
+      role: req.user.role,
+      isSuperAdmin: isSuperAdmin(req.user)
     }
   });
 });
@@ -591,6 +593,11 @@ router.get('/users/:id/stats', adminAuth, async (req, res) => {
 // trigger a reset link instead (separate endpoint).
 router.patch('/users/:id', adminAuth, async (req, res) => {
   try {
+    // Protect the owner: only a super admin may edit a super admin's account.
+    const target = await User.findById(req.params.id).select('email isSuperAdmin');
+    if (target && isSuperAdmin(target) && !isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'You cannot modify the owner account.' });
+    }
     const allowedFields = ['firstName', 'lastName', 'email', 'phone', 'userType', 'accountStatus'];
     const updates = {};
     for (const field of allowedFields) {
@@ -634,6 +641,9 @@ router.post('/users/:id/suspend', adminAuth, async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (isSuperAdmin(user) && !isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'You cannot deactivate the owner account.' });
+    }
     user.accountStatus = 'deactivated';
     user.deactivatedAt = new Date();
     await user.save();
@@ -658,6 +668,9 @@ router.post('/users/:id/reactivate', adminAuth, async (req, res) => {
 
 router.post('/users/:id/promote', adminAuth, async (req, res) => {
   try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only the owner can manage admin access.' });
+    }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     user.role = 'admin';
@@ -670,11 +683,17 @@ router.post('/users/:id/promote', adminAuth, async (req, res) => {
 
 router.post('/users/:id/demote', adminAuth, async (req, res) => {
   try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only the owner can manage admin access.' });
+    }
     if (String(req.user._id) === String(req.params.id)) {
       return res.status(400).json({ message: 'You cannot demote yourself' });
     }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (isSuperAdmin(user)) {
+      return res.status(403).json({ message: 'The owner account cannot be demoted.' });
+    }
     user.role = 'user';
     await user.save();
     res.json({ ok: true, user });
