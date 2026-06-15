@@ -766,7 +766,8 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
             .clock-icon { font-size: 3rem; margin-bottom: 10px; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
             .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
@@ -789,8 +790,9 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
         <body>
           <div class="container">
             <div class="header">
-              <div class="clock-icon">⏰</div>
-              <h1 style="margin: 0;">Rental Ending Soon!</h1>
+              <div class="logo">RentUFS</div>
+              <div class="clock-icon" style="margin-top: 12px;">⏰</div>
+              <h1 style="margin: 8px 0 0 0; color: #ffffff;">Rental Ending Soon!</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Your reservation ends in about 1 hour</p>
             </div>
 
@@ -950,7 +952,8 @@ const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
     const emailStyles = `
       body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
       .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-      .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+      .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+      .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
       .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
       .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
       .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
@@ -1036,7 +1039,8 @@ Updated Booking Details:
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0;">Booking Extended!</h1>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin-top: 15px; color: #00FF66;">Booking Extended!</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Your rental has been extended by ${extensionDays} day(s)</p>
             </div>
             <div class="content">
@@ -1089,7 +1093,8 @@ Updated Booking Details:
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0;">Booking Extended!</h1>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin-top: 15px; color: #00FF66;">Booking Extended!</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">A rental has been extended by ${extensionDays} day(s)</p>
             </div>
             <div class="content">
@@ -1173,7 +1178,8 @@ const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reas
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
             .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444; }
             .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
@@ -1189,7 +1195,8 @@ const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reas
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0;">Reservation Cancelled</h1>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin: 15px 0 0 0; color: #ffffff;">Reservation Cancelled</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking has been cancelled by the host</p>
             </div>
 
@@ -1572,7 +1579,8 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
             .payout-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
             .amount-display { font-size: 2rem; color: #10b981; font-weight: bold; text-align: center; padding: 15px 0; }
@@ -1588,7 +1596,8 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Payout On The Way!</h1>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin-top: 15px; color: #00FF66;">Payout On The Way!</h1>
               <p style="margin: 0; opacity: 0.9;">Your earnings have been transferred</p>
             </div>
 
@@ -1862,7 +1871,8 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
             .toll-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
             .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
@@ -1878,7 +1888,8 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0;">Toll Charge Detected</h1>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin: 15px 0 0 0; color: #ffffff;">Toll Charge Detected</h1>
               <p style="margin: 5px 0 0 0; opacity: 0.9;">A new toll has been added to your reservation</p>
             </div>
 
@@ -2013,7 +2024,8 @@ const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSu
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
             .toll-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
             .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
@@ -2028,7 +2040,8 @@ const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSu
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0;">New Toll Recorded</h1>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin: 15px 0 0 0; color: #ffffff;">New Toll Recorded</h1>
               <p style="margin: 5px 0 0 0; opacity: 0.9;">A toll has been recorded on one of your vehicles</p>
             </div>
 
