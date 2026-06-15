@@ -445,16 +445,17 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00FF66; }
             .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
             .detail-row:last-child { border-bottom: none; }
             .label { color: #6b7280; }
             .value { font-weight: bold; color: #111827; }
-            .total { font-size: 1.5rem; color: #10b981; font-weight: bold; text-align: right; margin-top: 15px; }
+            .total { font-size: 1.5rem; color: #00CC52; font-weight: bold; text-align: right; margin-top: 15px; }
             .host-info { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+            .button { background: #000000; color: #00FF66; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
             .reminders { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
           </style>
@@ -462,8 +463,9 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
         <body>
           <div class="container">
             <div class="header">
-              <h1>Booking Confirmed!</h1>
-              <p style="margin: 0; opacity: 0.9;">Your payment was successful</p>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin-top: 20px; color: #00FF66;">Booking Confirmed!</h1>
+              <p style="margin: 0; color: #ffffff; opacity: 0.85;">Your payment was successful</p>
             </div>
 
             <div class="content">
@@ -473,14 +475,14 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
               <div class="booking-card">
                 <div style="background: #f0fdf4; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
                   <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
-                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId || booking._id}</span>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #00CC52;">${booking.reservationId || booking._id}</span>
                 </div>
                 ${vehicleImageUrl ? `
                 <div style="text-align: center; margin-bottom: 15px;">
                   <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
                 </div>
                 ` : ''}
-                <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+                <h3 style="margin-top: 0; color: #000000;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
                   <span class="label">Pick-up Date</span>
@@ -606,16 +608,17 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header { background: #000000; color: #00FF66; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 2rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00FF66; }
             .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
             .detail-row:last-child { border-bottom: none; }
             .label { color: #6b7280; }
             .value { font-weight: bold; color: #111827; }
-            .earnings { font-size: 1.5rem; color: #10b981; font-weight: bold; text-align: right; margin-top: 15px; }
+            .earnings { font-size: 1.5rem; color: #00CC52; font-weight: bold; text-align: right; margin-top: 15px; }
             .driver-info { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+            .button { background: #000000; color: #00FF66; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
             .next-steps { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
           </style>
@@ -623,8 +626,9 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
         <body>
           <div class="container">
             <div class="header">
-              <h1>New Booking!</h1>
-              <p style="margin: 0; opacity: 0.9;">Payment has been processed</p>
+              <div class="logo">RentUFS</div>
+              <h1 style="margin-top: 20px; color: #00FF66;">New Booking!</h1>
+              <p style="margin: 0; color: #ffffff; opacity: 0.85;">Payment has been processed</p>
             </div>
 
             <div class="content">
@@ -634,14 +638,14 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
               <div class="booking-card">
                 <div style="background: #f0fdf4; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
                   <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
-                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId || booking._id}</span>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #00CC52;">${booking.reservationId || booking._id}</span>
                 </div>
                 ${vehicleImageUrl ? `
                 <div style="text-align: center; margin-bottom: 15px;">
                   <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
                 </div>
                 ` : ''}
-                <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+                <h3 style="margin-top: 0; color: #000000;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
                   <span class="label">Pick-up Date</span>
@@ -1888,7 +1892,7 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
                   <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #10b981;">${booking.reservationId}</span>
                 </div>
 
-                <h3 style="margin-top: 0; color: #10b981;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+                <h3 style="margin-top: 0; color: #000000;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
 
                 <div class="detail-row">
                   <span class="label">Toll Agency</span>
