@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from '../../config/axios';
 import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
+import { useAuth } from '../../context/AuthContext';
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 const formatCurrency = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
@@ -18,6 +19,7 @@ const StatTile = ({ label, value, sublabel }) => (
 const AdminUserDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: me } = useAuth();
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState({ asDriver: [], asHost: [] });
   const [vehicles, setVehicles] = useState([]);
@@ -165,10 +167,12 @@ const AdminUserDetail = () => {
                 ) : (
                   <button className="admin-btn" onClick={() => performAction('reactivate')}>Reactivate account</button>
                 )}
-                {user.role === 'admin' ? (
-                  <button className="admin-btn" onClick={() => performAction('demote')}>Revoke admin</button>
-                ) : (
-                  <button className="admin-btn" onClick={() => performAction('promote')}>Make admin</button>
+                {me?.isSuperAdmin && (
+                  user.role === 'admin' ? (
+                    <button className="admin-btn" onClick={() => performAction('demote')}>Revoke admin</button>
+                  ) : (
+                    <button className="admin-btn" onClick={() => performAction('promote')}>Make admin</button>
+                  )
                 )}
               </div>
 

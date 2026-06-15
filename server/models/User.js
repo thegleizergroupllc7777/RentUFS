@@ -65,6 +65,12 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  // Owner-level flag. A super admin cannot be demoted/deactivated by regular
+  // admins, and only super admins can promote/demote admins. See utils/superAdmin.js.
+  isSuperAdmin: {
+    type: Boolean,
+    default: false
+  },
   accountStatus: {
     type: String,
     enum: ['active', 'deactivated'],

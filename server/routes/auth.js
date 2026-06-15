@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Otp = require('../models/Otp');
 const auth = require('../middleware/auth');
 const { sendWelcomeEmail, sendPasswordResetEmail, sendRegistrationOtp } = require('../utils/emailService');
+const { isSuperAdmin } = require('../utils/superAdmin');
 
 const router = express.Router();
 
@@ -518,6 +519,8 @@ router.post('/google', async (req, res) => {
 // Get current user
 router.get('/me', auth, async (req, res) => {
   const user = req.user.toObject();
+  // Computed owner flag (honors email-based owners, not just the DB field).
+  user.isSuperAdmin = isSuperAdmin(user);
   // Resolve relative profile image path to full URL
   if (user.profileImage && user.profileImage.startsWith('/uploads/')) {
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
