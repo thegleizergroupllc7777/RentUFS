@@ -10,6 +10,7 @@ const { sendChargeAddedToDriver } = require('../utils/emailService');
 const router = express.Router();
 
 // Charge configuration (mirrors the toll fee pattern at PLATFORM_TOLL_FEE = $0.50)
+const MIN_CHARGE_AMOUNT = 3;          // floor so fees don't wipe out the host's payout
 const MAX_CHARGE_AMOUNT = 150;        // hard cap host can enter
 const NOTICE_PERIOD_DAYS = 3;          // days between creation and auto-charge
 
@@ -45,6 +46,11 @@ router.post('/', auth, async (req, res) => {
     const numericAmount = parseFloat(amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({ message: 'Amount must be greater than 0' });
+    }
+    if (numericAmount < MIN_CHARGE_AMOUNT) {
+      return res.status(400).json({
+        message: `Amount must be at least $${MIN_CHARGE_AMOUNT}.`
+      });
     }
     if (numericAmount > MAX_CHARGE_AMOUNT) {
       return res.status(400).json({

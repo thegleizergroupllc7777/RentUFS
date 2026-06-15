@@ -12,6 +12,7 @@ const CHARGE_TYPE_LABELS = {
   other: 'Other'
 };
 
+const MIN_AMOUNT = 3;
 const MAX_AMOUNT = 150;
 
 /**
@@ -66,6 +67,10 @@ const AddChargeModal = ({ bookingId, onClose, onCreated }) => {
     const numericAmount = parseFloat(amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setError('Enter a valid amount');
+      return;
+    }
+    if (numericAmount < MIN_AMOUNT) {
+      setError(`Amount must be at least $${MIN_AMOUNT}.`);
       return;
     }
     if (numericAmount > MAX_AMOUNT) {
@@ -127,7 +132,7 @@ const AddChargeModal = ({ bookingId, onClose, onCreated }) => {
 
         <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: '#6b7280' }}>
           The renter will be notified and auto-charged in 3 days unless you waive it.
-          Maximum ${MAX_AMOUNT} per charge.
+          Charges must be between ${MIN_AMOUNT} and ${MAX_AMOUNT}.
         </p>
 
         {error && (
@@ -168,7 +173,7 @@ const AddChargeModal = ({ bookingId, onClose, onCreated }) => {
             <input
               type="number"
               step="0.01"
-              min="0.01"
+              min={MIN_AMOUNT}
               max={MAX_AMOUNT}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
