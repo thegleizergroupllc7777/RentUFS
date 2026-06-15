@@ -1408,8 +1408,8 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
     const subject = `Registration Expiring Soon: ${vehicleName}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; border-radius: 12px; overflow: hidden;">
-        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center;">
-          <h1 style="margin: 0; font-size: 24px; color: #fff;">RentUFS</h1>
+        <div style="background: #000000; padding: 30px; text-align: center;">
+          <h1 style="margin: 0; font-size: 26px; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</h1>
           <p style="margin: 10px 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Registration Expiration Reminder</p>
         </div>
         <div style="padding: 30px;">
@@ -2173,9 +2173,10 @@ const sendChargeAddedToDriver = async (driver, host, booking, vehicle, charge) =
       subject: `New charge on ${booking.reservationId || 'your reservation'} — $${total}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">New Charge on Your Reservation</h2>
-            <p style="margin: 6px 0 0; opacity: 0.9;">${typeLabel} — $${total}</p>
+          <div style="background: #000000; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+            <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+            <h2 style="margin: 12px 0 0; color: #ffffff;">New Charge on Your Reservation</h2>
+            <p style="margin: 6px 0 0; color: rgba(255,255,255,0.85);">${typeLabel} — $${total}</p>
           </div>
           <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
             <p>Hi ${driver.firstName || 'there'},</p>
@@ -2233,8 +2234,9 @@ const sendChargePaymentFailedToDriver = async (driver, booking, charge, attempts
         : `Payment failed for $${total} charge — please update your card`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-          <div style="background: ${isFinal ? '#dc2626' : '#f59e0b'}; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">${isFinal ? 'Final Payment Notice' : 'Payment Failed'}</h2>
+          <div style="background: #000000; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+            <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+            <h2 style="margin: 12px 0 0; color: ${isFinal ? '#f87171' : '#fbbf24'};">${isFinal ? 'Final Payment Notice' : 'Payment Failed'}</h2>
           </div>
           <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
             <p>Hi ${driver.firstName || 'there'},</p>
