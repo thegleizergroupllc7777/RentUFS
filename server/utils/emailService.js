@@ -1194,7 +1194,7 @@ const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reas
         </head>
         <body>
           <div class="container">
-            <div class="header" style="padding: 0; border-radius: 8px 8px 0 0; overflow: hidden;">
+            <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
                 <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
               </div>
