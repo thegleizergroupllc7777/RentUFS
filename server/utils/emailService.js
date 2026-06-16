@@ -244,7 +244,7 @@ const sendWelcomeEmail = async (user) => {
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Welcome Aboard!</h1>
             </div>
@@ -342,7 +342,7 @@ const sendVehicleListedEmail = async (user, vehicle) => {
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: #00FF66;">Vehicle Listed Successfully!</h1>
             </div>
@@ -462,7 +462,7 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: #00FF66;">Booking Confirmed!</h1>
               <p style="margin: 0; color: #ffffff; opacity: 0.85;">Your payment was successful</p>
@@ -625,7 +625,7 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: #00FF66;">New Booking!</h1>
               <p style="margin: 0; color: #ffffff; opacity: 0.85;">Payment has been processed</p>
@@ -789,11 +789,14 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
-              <div class="clock-icon" style="margin-top: 12px;">⏰</div>
-              <h1 style="margin: 8px 0 0 0; color: #ffffff;">Rental Ending Soon!</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your reservation ends in about 1 hour</p>
+            <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+              <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+              </div>
+              <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">⏰ Rental Ending Soon!</h1>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">Your reservation ends in about 1 hour</p>
+              </div>
             </div>
 
             <div class="content">
@@ -1320,7 +1323,7 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Email Verification</h1>
             </div>
@@ -1373,7 +1376,7 @@ const sendRegistrationOtp = async (toEmail, code) => {
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: white;">Verify Your Email</h1>
             </div>
@@ -1419,10 +1422,13 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
 
     const subject = `Registration Expiring Soon: ${vehicleName}`;
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; border-radius: 12px; overflow: hidden;">
-        <div style="background: #000000; padding: 30px; text-align: center;">
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; border-radius: 12px; overflow: hidden; border: 3px solid #00FF66;">
+        <div style="background: #000000; padding: 24px 20px 14px; text-align: center;">
           <h1 style="margin: 0; font-size: 26px; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</h1>
-          <p style="margin: 10px 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Registration Expiration Reminder</p>
+        </div>
+        <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
+          <h2 style="margin: 0; color: #ffffff; font-size: 1.4rem;">Registration Expiring Soon</h2>
+          <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">Action needed on your vehicle</p>
         </div>
         <div style="padding: 30px;">
           <h2 style="color: #f59e0b; margin-top: 0;">⚠️ Registration Expiring Soon</h2>
@@ -1508,7 +1514,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 20px; color: #00FF66;">Password Reset</h1>
             </div>
@@ -1607,7 +1613,7 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
         </head>
         <body>
           <div class="container">
-            <div class="header">
+            <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
               <div class="logo">RentUFS</div>
               <h1 style="margin-top: 15px; color: #00FF66;">Payout On The Way!</h1>
               <p style="margin: 0; opacity: 0.9;">Your earnings have been transferred</p>
@@ -2055,10 +2061,14 @@ const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSu
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
-              <h1 style="margin: 15px 0 0 0; color: #ffffff;">New Toll Recorded</h1>
-              <p style="margin: 5px 0 0 0; opacity: 0.9;">A toll has been recorded on one of your vehicles</p>
+            <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+              <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+              </div>
+              <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">New Toll Recorded</h1>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">A toll has been recorded on one of your vehicles</p>
+              </div>
             </div>
 
             <div class="content">
@@ -2254,9 +2264,13 @@ const sendChargePaymentFailedToDriver = async (driver, booking, charge, attempts
         : `Payment failed for $${total} charge — please update your card`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-          <div style="background: #000000; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-            <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
-            <h2 style="margin: 12px 0 0; color: ${isFinal ? '#f87171' : '#fbbf24'};">${isFinal ? 'Final Payment Notice' : 'Payment Failed'}</h2>
+          <div style="border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+            <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+              <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+            </div>
+            <div style="background: ${isFinal ? '#dc2626' : '#f59e0b'}; padding: 18px 20px; text-align: center;">
+              <h2 style="margin: 0; color: #ffffff;">${isFinal ? 'Final Payment Notice' : 'Payment Failed'}</h2>
+            </div>
           </div>
           <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
             <p>Hi ${driver.firstName || 'there'},</p>
