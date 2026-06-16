@@ -1038,10 +1038,14 @@ Updated Booking Details:
         <head><style>${emailStyles}</style></head>
         <body>
           <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
-              <h1 style="margin-top: 15px; color: #00FF66;">Booking Extended!</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your rental has been extended by ${extensionDays} day(s)</p>
+            <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+              <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+              </div>
+              <div style="background: #3b82f6; padding: 18px 20px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Booking Extended!</h1>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">Your rental has been extended by ${extensionDays} day(s)</p>
+              </div>
             </div>
             <div class="content">
               <h2>Hi ${driver.firstName},</h2>
@@ -1092,10 +1096,14 @@ Updated Booking Details:
         <head><style>${emailStyles}</style></head>
         <body>
           <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
-              <h1 style="margin-top: 15px; color: #00FF66;">Booking Extended!</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">A rental has been extended by ${extensionDays} day(s)</p>
+            <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+              <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+              </div>
+              <div style="background: #3b82f6; padding: 18px 20px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Booking Extended!</h1>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">A rental has been extended by ${extensionDays} day(s)</p>
+              </div>
             </div>
             <div class="content">
               <h2>Hi ${host.firstName},</h2>
@@ -1891,10 +1899,14 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
-              <h1 style="margin: 15px 0 0 0; color: #ffffff;">Toll Charge Detected</h1>
-              <p style="margin: 5px 0 0 0; opacity: 0.9;">A new toll has been added to your reservation</p>
+            <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+              <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+              </div>
+              <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Toll Charge Detected</h1>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">A new toll has been added to your reservation</p>
+              </div>
             </div>
 
             <div class="content">
@@ -2177,10 +2189,14 @@ const sendChargeAddedToDriver = async (driver, host, booking, vehicle, charge) =
       subject: `New charge on ${booking.reservationId || 'your reservation'} — $${total}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-          <div style="background: #000000; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-            <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
-            <h2 style="margin: 12px 0 0; color: #ffffff;">New Charge on Your Reservation</h2>
-            <p style="margin: 6px 0 0; color: rgba(255,255,255,0.85);">${typeLabel} — $${total}</p>
+          <div style="border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+            <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+              <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+            </div>
+            <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
+              <h2 style="margin: 0; color: #ffffff;">New Charge on Your Reservation</h2>
+              <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95);">${typeLabel} — $${total}</p>
+            </div>
           </div>
           <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
             <p>Hi ${driver.firstName || 'there'},</p>
