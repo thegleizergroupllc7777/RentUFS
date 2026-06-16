@@ -34,6 +34,26 @@ const AdminBroadcast = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
+  // Send-a-test-email tool
+  const [testTemplate, setTestTemplate] = useState('cancellation');
+  const [testEmail, setTestEmail] = useState('');
+  const [testSending, setTestSending] = useState(false);
+  const [testMsg, setTestMsg] = useState('');
+
+  const sendTestEmail = async () => {
+    setTestMsg('');
+    if (!testEmail.trim() || !testEmail.includes('@')) { setTestMsg('Enter a valid email address.'); return; }
+    setTestSending(true);
+    try {
+      await axios.post('/api/admin/email-test', { to: testEmail.trim(), template: testTemplate });
+      setTestMsg(`✅ Test sent to ${testEmail.trim()} — check your inbox (and spam).`);
+    } catch (e) {
+      setTestMsg(`❌ ${e.response?.data?.error || e.response?.data?.message || 'Failed to send test.'}`);
+    } finally {
+      setTestSending(false);
+    }
+  };
+
   const loadPreview = useCallback(async (aud) => {
     try {
       const { data } = await axios.get('/api/admin/broadcast/preview', { params: { audience: aud } });
@@ -261,6 +281,36 @@ const AdminBroadcast = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Send a test email — preview any transactional template */}
+        <div style={card}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Send yourself a test email</div>
+          <div style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: 12 }}>
+            Preview how any email looks in your real inbox (try it on your phone in light and dark mode).
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div>
+              <label style={label}>Email</label>
+              <select style={{ ...input, minWidth: 200 }} value={testTemplate} onChange={(e) => setTestTemplate(e.target.value)}>
+                <option value="cancellation">Reservation Cancelled</option>
+                <option value="booking_driver">Booking Confirmed (driver)</option>
+                <option value="booking_host">New Booking (host)</option>
+                <option value="extension">Booking Extended</option>
+                <option value="toll">Toll Charge</option>
+                <option value="charge">Extra Charge</option>
+                <option value="reminder">Return Reminder</option>
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <label style={label}>Send to</label>
+              <input style={input} type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="you@email.com" />
+            </div>
+            <button onClick={sendTestEmail} disabled={testSending} style={{ ...pill(true), padding: '10px 20px', opacity: testSending ? 0.6 : 1 }}>
+              {testSending ? 'Sending…' : 'Send test'}
+            </button>
+          </div>
+          {testMsg && <div style={{ marginTop: 10, fontSize: '0.9rem', color: testMsg.startsWith('✅') ? '#065f46' : '#b91c1c' }}>{testMsg}</div>}
         </div>
 
       </div>

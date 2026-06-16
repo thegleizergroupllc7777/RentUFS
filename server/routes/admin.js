@@ -9,7 +9,16 @@ const Booking = require('../models/Booking');
 const Message = require('../models/Message');
 const { validateVin } = require('../utils/vinValidation');
 const { calculateProcessingFee } = require('../utils/stripeFee');
-const { sendBookingExtensionEmail, sendEmail } = require('../utils/emailService');
+const {
+  sendBookingExtensionEmail,
+  sendEmail,
+  sendBookingCancellationEmail,
+  sendBookingConfirmationToDriver,
+  sendBookingNotificationToHost,
+  sendTollChargeToDriver,
+  sendChargeAddedToDriver,
+  sendReturnReminderEmail
+} = require('../utils/emailService');
 const { sendSMS } = require('../utils/smsService');
 const BroadcastTemplate = require('../models/BroadcastTemplate');
 const SmsSubscriber = require('../models/SmsSubscriber');
@@ -945,6 +954,88 @@ router.post('/broadcast', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('❌ Broadcast error:', error.message);
     res.status(500).json({ message: 'Failed to send broadcast', error: error.message });
+  }
+});
+
+// Build realistic dummy data so any transactional template can be previewed
+// without a real booking. All emails go to the address the admin enters.
+function mockEmailData(toEmail) {
+  const now = new Date();
+  const later = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const vehicle = {
+    _id: '000000000000000000000000',
+    year: 2023, make: 'BMW', model: '530i', type: 'sedan',
+    transmission: 'automatic', seats: 5,
+    location: { address: '123 Main St', city: 'Jersey City', state: 'NJ', zipCode: '07304' },
+    images: [], pricePerDay: 50
+  };
+  const driver = {
+    _id: '000000000000000000000001', firstName: 'Test', lastName: 'Driver',
+    email: toEmail, phone: '3475551234', dateOfBirth: new Date('1990-01-01'),
+    driverLicense: { licenseNumber: 'D1234567', state: 'NJ', expirationDate: new Date('2030-01-01') },
+    address: { street: '1 Test Rd', city: 'Jersey City', state: 'NJ', zipCode: '07304' }
+  };
+  const host = {
+    _id: '000000000000000000000002', firstName: 'Test', lastName: 'Host',
+    email: toEmail, phone: '3475555678'
+  };
+  const booking = {
+    _id: '000000000000000000000003', reservationId: 'RUFS-TEST',
+    startDate: now, endDate: later, totalDays: 1, rentalType: 'daily',
+    pickupTime: '10:00', dropoffTime: '10:00', totalPrice: 36.18,
+    paymentStatus: 'refunded',
+    insurance: { type: 'rideshare', price: 25, coverage: 'Ride Share Coverage' },
+    platformFee: 1.5, platformFeePerDay: 1.5, driverProcessingFee: 1.2,
+    extensions: [{ days: 2, rental: 100 }]
+  };
+  return { vehicle, driver, host, booking };
+}
+
+// Send a test copy of a transactional email template to a chosen address, so
+// admins can preview how each one looks. Uses dummy data — no real booking.
+router.post('/email-test', adminAuth, async (req, res) => {
+  try {
+    const to = String(req.body.to || req.user.email || '').trim();
+    const template = String(req.body.template || 'cancellation');
+    if (!to || !to.includes('@')) {
+      return res.status(400).json({ message: 'Enter a valid email address.' });
+    }
+    const { vehicle, driver, host, booking } = mockEmailData(to);
+
+    let result;
+    switch (template) {
+      case 'cancellation':
+        result = await sendBookingCancellationEmail(driver, host, booking, vehicle, 'Test cancellation reason');
+        break;
+      case 'booking_driver':
+        result = await sendBookingConfirmationToDriver(driver, booking, vehicle, host);
+        break;
+      case 'booking_host':
+        result = await sendBookingNotificationToHost(host, booking, vehicle, driver);
+        break;
+      case 'extension':
+        result = await sendBookingExtensionEmail(driver, host, booking, vehicle);
+        break;
+      case 'toll':
+        result = await sendTollChargeToDriver(driver, booking, vehicle,
+          { amount: 5, exitTime: new Date(), exitLocation: 'NJ Turnpike Exit 14', agency: 'NJTA' },
+          { totalTolls: 1, driverTollTotal: 5.5 });
+        break;
+      case 'charge':
+        result = await sendChargeAddedToDriver(driver, host, booking, vehicle,
+          { amount: 25, chargeType: 'parking_ticket', description: 'Test parking ticket', proofImage: '', scheduledChargeAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) });
+        break;
+      case 'reminder':
+        result = await sendReturnReminderEmail(driver, booking, vehicle, host);
+        break;
+      default:
+        return res.status(400).json({ message: 'Unknown template.' });
+    }
+    console.log(`📧 Test email (${template}) sent to ${to} by ${req.user.email}`);
+    res.json({ ok: true, result });
+  } catch (error) {
+    console.error('❌ Test email error:', error.message);
+    res.status(500).json({ message: 'Failed to send test email', error: error.message });
   }
 });
 
