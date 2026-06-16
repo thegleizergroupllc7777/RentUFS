@@ -1194,10 +1194,14 @@ const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reas
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <div class="logo">RentUFS</div>
-              <h1 style="margin: 15px 0 0 0; color: #ffffff;">Reservation Cancelled</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking has been cancelled by the host</p>
+            <div class="header" style="padding: 0; border-radius: 8px 8px 0 0; overflow: hidden;">
+              <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+              </div>
+              <div style="background: #ef4444; padding: 18px 20px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Reservation Cancelled</h1>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">Your booking has been cancelled by the host</p>
+              </div>
             </div>
 
             <div class="content">
