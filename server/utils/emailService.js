@@ -277,7 +277,7 @@ const sendWelcomeEmail = async (user) => {
               <p>We're excited to have you as part of our community. Whether you're looking to rent a car or earn money by listing yours, we've got you covered!</p>
 
               <center>
-                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/marketplace" class="button">
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/marketplace" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   Explore Marketplace
                 </a>
               </center>
@@ -380,7 +380,7 @@ const sendVehicleListedEmail = async (user, vehicle) => {
               </ul>
 
               <center>
-                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/dashboard" class="button">
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/dashboard" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View Dashboard
                 </a>
               </center>
@@ -523,7 +523,7 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
               </div>
 
               <center>
-                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button">
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View My Bookings
                 </a>
               </center>
@@ -686,7 +686,7 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
               </div>
 
               <center>
-                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/bookings" class="button">
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/bookings" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View Bookings
                 </a>
               </center>
@@ -844,7 +844,7 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
                 <div class="option-card return">
                   <h4 style="margin: 0 0 10px 0; color: #1d4ed8;">Ready to Return?</h4>
                   <p style="font-size: 0.9rem; color: #6b7280; margin: 0 0 15px 0;">Complete the return inspection</p>
-                  <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button button-return">
+                  <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                     Return Vehicle
                   </a>
                 </div>
@@ -1073,7 +1073,7 @@ Updated Booking Details:
               </div>
 
               <center>
-                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button">
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/my-bookings" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View My Bookings
                 </a>
               </center>
@@ -1131,7 +1131,7 @@ Updated Booking Details:
               </div>
 
               <center>
-                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/bookings" class="button">
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/host/bookings" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View Bookings
                 </a>
               </center>
@@ -1267,7 +1267,7 @@ const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reas
               <p>We apologize for the inconvenience. You're welcome to browse other vehicles on our marketplace and book a new rental.</p>
 
               <center>
-                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/marketplace" class="button">
+                <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/marketplace" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   Browse Vehicles
                 </a>
               </center>
@@ -1510,7 +1510,7 @@ const sendVehiclePausedEmail = async (host, vehicle) => {
             <p>Your <strong>${vehicleName}</strong> has been temporarily paused from the marketplace because its registration expired on <strong>${expDate}</strong>.</p>
             <p>For safety and insurance compliance, vehicles with expired registration can't accept new bookings. <strong>Any active rentals are not affected.</strong></p>
             <p style="text-align: center; margin: 24px 0;">
-              <a href="${clientUrl}/host/dashboard" style="background: #000000; color: #00FF66; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold;">Update Registration</a>
+              <a href="${clientUrl}/host/dashboard" style="background: #10b981; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold;">Update Registration</a>
             </p>
             <p style="font-size: 0.85rem; color: #6b7280;">Once you enter a valid registration date, your vehicle will automatically relist — no extra steps needed.</p>
           </div>
@@ -1582,7 +1582,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
               <p>Click the button below to set a new password:</p>
 
               <center>
-                <a href="${resetUrl}" class="button" style="background: #00FF66; color: #000000; padding: 14px 35px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; font-size: 1.1rem;">
+                <a href="${resetUrl}" class="button" style="background: #10b981; color: #ffffff; padding: 14px 35px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; font-size: 1.1rem;">
                   Reset My Password
                 </a>
               </center>
@@ -1719,7 +1719,7 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
               </div>
 
               <center>
-                <a href="${clientUrl}/host/payouts" class="button">
+                <a href="${clientUrl}/host/payouts" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View Payout History
                 </a>
               </center>
@@ -2022,7 +2022,7 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
               </div>
 
               <center>
-                <a href="${clientUrl}/my-bookings" class="button">
+                <a href="${clientUrl}/my-bookings" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View My Bookings
                 </a>
               </center>
@@ -2169,7 +2169,7 @@ const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSu
               </div>
 
               <center>
-                <a href="${clientUrl}/host/bookings" class="button">
+                <a href="${clientUrl}/host/bookings" class="button" style="background:#10b981;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
                   View Host Dashboard
                 </a>
               </center>
