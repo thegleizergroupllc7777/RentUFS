@@ -33,6 +33,7 @@ const { sendSMS } = require('../utils/smsService');
 const BroadcastTemplate = require('../models/BroadcastTemplate');
 const SmsSubscriber = require('../models/SmsSubscriber');
 const { isSuperAdmin } = require('../utils/superAdmin');
+const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
 
 // Append an admin action entry to a booking's audit log. Save before
 // returning so the entry is persisted even if a later step fails.
@@ -1084,6 +1085,71 @@ router.post('/email-test', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('❌ Test email error:', error.message);
     res.status(500).json({ message: 'Failed to send test email', error: error.message });
+  }
+});
+
+// Diagnostic: attempt TeqMobility on-rent coverage with a TEST driver to check
+// whether insurance is working — WITHOUT creating a real reservation, booking,
+// or charging any customer. Owner (super admin) only.
+//
+// SAFE & ISOLATED: does not create a Booking, does not touch payments/Stripe,
+// tolls, or the live booking flow. It only calls TeqMobility's API directly with
+// dummy data and immediately cancels any coverage that starts. The only external
+// effect is a coverage attempt on TeqMobility's side (the point of the test).
+// NOTE: a *successful* start may incur a charge from TeqMobility.
+router.post('/insurance-test', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only the owner can run the insurance test.' });
+    }
+
+    // Pick a real registered vehicle (optionally by VIN) and its host.
+    const vinFilter = req.body.vin
+      ? { vin: String(req.body.vin).trim().toUpperCase() }
+      : { vin: { $exists: true, $ne: null } };
+    const vehicle = await Vehicle.findOne(vinFilter).populate('host');
+    if (!vehicle || !vehicle.vin) {
+      return res.status(400).json({ message: 'No registered vehicle with a VIN found to test with.' });
+    }
+    if (!vehicle.host) {
+      return res.status(400).json({ message: 'That vehicle has no host on file.' });
+    }
+
+    // Dummy test driver — not a real person, nothing is saved anywhere.
+    const driver = {
+      firstName: 'Insurance', lastName: 'Test',
+      email: 'insurance-test@rentufs.com', phone: '3475550100',
+      dateOfBirth: new Date('1990-01-01'),
+      driverLicense: { licenseNumber: 'TEST123456', state: 'NJ', expirationDate: new Date('2030-01-01') },
+      address: { street: '597 West Side Ave', city: 'Jersey City', state: 'NJ', zipCode: '07304' }
+    };
+    const booking = { _id: 'insurance-test-' + Date.now(), insurance: { type: 'rideshare' } };
+
+    const result = await startRentalCoverage(vehicle.host, driver, vehicle, booking);
+
+    // If coverage actually started, cancel it immediately to minimize any charge.
+    let cancelled = false;
+    if (result.success) {
+      try {
+        await stopRentalCoverage({ coverageId: result.coverageId, vin: vehicle.vin });
+        cancelled = true;
+      } catch (e) { /* best-effort cancel */ }
+    }
+
+    console.log(`🧪 Insurance test by ${req.user.email}: success=${result.success} vin=${vehicle.vin} cancelled=${cancelled}`);
+    res.json({
+      ok: true,
+      started: !!result.success,
+      cancelled,
+      cardUrl: result.cardUrl || null,
+      coverageId: result.coverageId || null,
+      error: result.success ? null : (result.error || result.reason || 'Coverage did not start'),
+      vehicle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      vin: vehicle.vin
+    });
+  } catch (error) {
+    console.error('❌ Insurance test error:', error.message);
+    res.status(500).json({ message: 'Insurance test failed', error: error.message });
   }
 });
 

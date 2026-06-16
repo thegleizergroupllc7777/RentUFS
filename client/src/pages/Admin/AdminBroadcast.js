@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
+import { useAuth } from '../../context/AuthContext';
 
 const card = {
   background: '#fff',
@@ -23,6 +24,24 @@ const pill = (active) => ({
 });
 
 const AdminBroadcast = () => {
+  const { user: me } = useAuth();
+  const [insTesting, setInsTesting] = useState(false);
+  const [insResult, setInsResult] = useState(null);
+
+  const runInsuranceTest = async () => {
+    if (!window.confirm('Run an insurance coverage test?\n\nThis uses a test driver — no reservation is created and no customer is charged. It checks TeqMobility directly and immediately cancels any coverage that starts.\n\nNote: if coverage SUCCEEDS, TeqMobility may charge RentUFS for it.')) return;
+    setInsResult(null);
+    setInsTesting(true);
+    try {
+      const { data } = await axios.post('/api/admin/insurance-test', {});
+      setInsResult(data);
+    } catch (e) {
+      setInsResult({ error: e.response?.data?.error || e.response?.data?.message || 'Test failed.' });
+    } finally {
+      setInsTesting(false);
+    }
+  };
+
   const [channel, setChannel] = useState('email');
   const [audience, setAudience] = useState('both');
   const [subject, setSubject] = useState('');
@@ -322,6 +341,36 @@ const AdminBroadcast = () => {
           </div>
           {testMsg && <div style={{ marginTop: 10, fontSize: '0.9rem', color: testMsg.startsWith('✅') ? '#065f46' : '#b91c1c' }}>{testMsg}</div>}
         </div>
+
+        {/* Insurance coverage test — owner only */}
+        {me?.isSuperAdmin && (
+          <div style={card}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Test insurance coverage</div>
+            <div style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: 12 }}>
+              Checks TeqMobility directly with a <strong>test driver</strong> — no reservation is created and no customer is charged. Any coverage that starts is cancelled immediately.
+            </div>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 12px', fontSize: '0.82rem', color: '#92400e', marginBottom: 12 }}>
+              ⚠️ While coverage is failing this is free. If coverage <strong>succeeds</strong>, TeqMobility may charge RentUFS for the policy.
+            </div>
+            <button onClick={runInsuranceTest} disabled={insTesting} style={{ ...pill(true), padding: '10px 20px', opacity: insTesting ? 0.6 : 1 }}>
+              {insTesting ? 'Testing…' : 'Run insurance test'}
+            </button>
+            {insResult && (
+              <div style={{ marginTop: 12, fontSize: '0.9rem' }}>
+                {insResult.error ? (
+                  <div style={{ color: '#b91c1c' }}>❌ Still failing: {insResult.error}</div>
+                ) : insResult.started ? (
+                  <div style={{ color: '#065f46' }}>
+                    ✅ Coverage started successfully on {insResult.vehicle} — insurance is working! {insResult.cancelled ? '(test coverage cancelled)' : '(⚠️ could not auto-cancel — check TeqMobility)'}
+                    {insResult.cardUrl && <div style={{ marginTop: 4 }}><a href={insResult.cardUrl} target="_blank" rel="noreferrer">View test card →</a></div>}
+                  </div>
+                ) : (
+                  <div style={{ color: '#b91c1c' }}>❌ Still failing: {insResult.error || 'Coverage did not start.'}</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
     </AdminLayout>
