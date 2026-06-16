@@ -1125,6 +1125,15 @@ router.post('/insurance-test', adminAuth, async (req, res) => {
     };
     const booking = { _id: 'insurance-test-' + Date.now(), insurance: { type: 'rideshare' } };
 
+    // Ensure a clean pickup address so the test reaches the actual coverage
+    // check (some vehicles have a missing/ZIP+4 zip TeqMobility rejects). This
+    // only affects the in-memory copy used for the test — nothing is saved.
+    if (!vehicle.location) vehicle.location = {};
+    vehicle.location.zipCode = String(vehicle.location.zipCode || '').replace(/\D/g, '').slice(0, 5) || '07304';
+    if (!vehicle.location.city) vehicle.location.city = 'Jersey City';
+    if (!vehicle.location.state) vehicle.location.state = 'NJ';
+    if (!vehicle.location.address) vehicle.location.address = '597 West Side Ave';
+
     const result = await startRentalCoverage(vehicle.host, driver, vehicle, booking);
 
     // If coverage actually started, cancel it immediately to minimize any charge.
