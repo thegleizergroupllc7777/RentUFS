@@ -813,18 +813,21 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>');
   const unsub = unsubscribeUrl
-    ? `<br><a href="${unsubscribeUrl}" style="color:#9ca3af;text-decoration:underline">Unsubscribe from promotional emails</a>`
+    ? `<br><a href="${unsubscribeUrl}" style="color:#064e3b;text-decoration:underline">Unsubscribe from promotional emails</a>`
     : '';
   return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
   <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
     <div style="max-width:600px;margin:0 auto;padding:20px;">
-      <div style="background:#000000;padding:28px 20px;text-align:center;border-radius:8px 8px 0 0;">
-        <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+      <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
+        <div style="background:#000000;padding:26px 20px;text-align:center;">
+          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+        </div>
+        <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">${safe}</div>
+        <div style="background:#00FF66;text-align:center;color:#000000;padding:20px;font-size:12px;line-height:1.6;">
+          &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>
+          597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}
+        </div>
       </div>
-      <div style="background:#f9fafb;padding:30px 28px;border-radius:0 0 8px 8px;color:#333333;font-size:15px;line-height:1.7;">${safe}</div>
-      <p style="text-align:center;color:#9ca3af;font-size:12px;line-height:1.6;margin:18px 8px 0;">
-        RentUFS<br>597 West Side Ave, PMB 194, Jersey City, NJ 07304${unsub}
-      </p>
     </div>
   </body></html>`;
 }
