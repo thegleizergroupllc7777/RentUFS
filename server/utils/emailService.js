@@ -391,7 +391,7 @@ const sendVehicleListedEmail = async (user, vehicle) => {
             </div>
 
             <div class="footer">
-              <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
               <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
@@ -457,7 +457,7 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
             .host-info { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .button { background: #000000; color: #00FF66; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
             .reminders { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
         <body>
@@ -620,7 +620,7 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
             .driver-info { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .button { background: #000000; color: #00FF66; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
             .next-steps { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
         <body>
@@ -784,7 +784,7 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
             .button-return { background: #3b82f6; color: white; }
             .host-info { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .reminders { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
         <body>
@@ -966,7 +966,7 @@ const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
       .extension-badge { background: #dbeafe; color: #1d4ed8; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: bold; font-size: 0.9rem; }
       .updated { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
       .button { background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
-      .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+      .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
     `;
 
     const bookingDetailsHtml = `
@@ -1200,7 +1200,7 @@ const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reas
             .refund-notice { background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; text-align: center; }
             .reason-box { background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444; }
             .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; font-weight: bold; }
-            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
         <body>
@@ -1336,7 +1336,7 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
               <p style="color: #6b7280; font-size: 0.9rem;">If you didn't request this change, please ignore this email. Your current email will remain unchanged.</p>
             </div>
             <div class="footer">
-              <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
               <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
@@ -1388,7 +1388,7 @@ const sendRegistrationOtp = async (toEmail, code) => {
               <p style="color: #6b7280; font-size: 0.9rem;">If you didn't request this, please ignore this email.</p>
             </div>
             <div class="footer">
-              <p style="margin: 0;">&copy; ${new Date().getFullYear()} UFS. All rights reserved.</p>
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
               <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
             </div>
           </div>
@@ -1456,10 +1456,9 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
             Vehicles with expired registrations may be temporarily delisted from the marketplace. Please update your registration as soon as possible.
           </p>
         </div>
-        <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #222;">
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.
-          </p>
+        <div style="background: #00FF66; padding: 20px; text-align: center; color: #000000;">
+          <p style="margin: 0; font-size: 0.9rem;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+          <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
         </div>
       </div>
     `;
@@ -1514,6 +1513,10 @@ const sendVehiclePausedEmail = async (host, vehicle) => {
               <a href="${clientUrl}/host/dashboard" style="background: #000000; color: #00FF66; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold;">Update Registration</a>
             </p>
             <p style="font-size: 0.85rem; color: #6b7280;">Once you enter a valid registration date, your vehicle will automatically relist — no extra steps needed.</p>
+          </div>
+          <div style="background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; border-radius: 0 0 8px 8px;">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
           </div>
         </div>
       `,
@@ -1660,7 +1663,7 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
             .value { font-weight: bold; color: #111827; }
             .info-box { background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
-            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
         <body>
@@ -1952,7 +1955,7 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
             .summary-box { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
             .info-box { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
             .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
-            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
         <body>
@@ -2108,7 +2111,7 @@ const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSu
             .value { font-weight: bold; color: #111827; text-align: right; }
             .info-box { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
             .button { background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
-            .footer { text-align: center; color: #6b7280; padding: 20px; font-size: 0.9rem; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
           </style>
         </head>
         <body>
@@ -2275,6 +2278,10 @@ const sendChargeAddedToDriver = async (driver, host, booking, vehicle, charge) =
             </p>
             <p style="font-size: 0.85rem; color: #6b7280;">Think this charge is wrong? Reply to this email or contact <a href="mailto:support@rentufs.com">support@rentufs.com</a>.</p>
           </div>
+          <div style="background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; border-radius: 0 0 8px 8px;">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
+          </div>
         </div>
       `,
       text: `Hi ${driver.firstName || 'there'},
@@ -2334,6 +2341,10 @@ const sendChargePaymentFailedToDriver = async (driver, booking, charge, attempts
               <a href="${clientUrl}/my-bookings" style="background: #10b981; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Pay Now</a>
             </p>
             <p style="font-size: 0.85rem; color: #6b7280;">Need help? Email <a href="mailto:support@rentufs.com">support@rentufs.com</a>.</p>
+          </div>
+          <div style="background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; border-radius: 0 0 8px 8px;">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
           </div>
         </div>
       `,
