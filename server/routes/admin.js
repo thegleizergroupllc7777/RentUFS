@@ -16,8 +16,18 @@ const {
   sendBookingConfirmationToDriver,
   sendBookingNotificationToHost,
   sendTollChargeToDriver,
+  sendTollNotificationToHost,
   sendChargeAddedToDriver,
-  sendReturnReminderEmail
+  sendChargePaymentFailedToDriver,
+  sendReturnReminderEmail,
+  sendWelcomeEmail,
+  sendVehicleListedEmail,
+  sendPayoutNotificationEmail,
+  sendRegistrationExpirationReminder,
+  sendVehiclePausedEmail,
+  sendEmailVerificationCode,
+  sendRegistrationOtp,
+  sendPasswordResetEmail
 } = require('../utils/emailService');
 const { sendSMS } = require('../utils/smsService');
 const BroadcastTemplate = require('../models/BroadcastTemplate');
@@ -1027,6 +1037,41 @@ router.post('/email-test', adminAuth, async (req, res) => {
         break;
       case 'reminder':
         result = await sendReturnReminderEmail(driver, booking, vehicle, host);
+        break;
+      case 'toll_host':
+        result = await sendTollNotificationToHost(host, booking, vehicle, driver,
+          { totalTolls: 1, driverTollTotal: 5.5, hostTollTotal: 5 });
+        break;
+      case 'payment_failed':
+        result = await sendChargePaymentFailedToDriver(driver, booking,
+          { amount: 25, chargeType: 'parking_ticket' }, 3, 3);
+        break;
+      case 'welcome':
+        result = await sendWelcomeEmail({ email: to, firstName: 'Test', userType: 'host' });
+        break;
+      case 'vehicle_listed':
+        result = await sendVehicleListedEmail({ email: to, firstName: 'Test' }, vehicle);
+        break;
+      case 'payout':
+        result = await sendPayoutNotificationEmail(host,
+          { totalAmount: 142.50, bookings: [{ reservationId: 'RUFS-TEST', vehicle: '2023 BMW 530i', amount: 142.50 }] });
+        break;
+      case 'registration':
+        result = await sendRegistrationExpirationReminder(host,
+          { ...vehicle, vin: 'WBA13BJ02PCM91747', registrationExpiration: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) });
+        break;
+      case 'vehicle_paused':
+        result = await sendVehiclePausedEmail(host,
+          { ...vehicle, registrationExpiration: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) });
+        break;
+      case 'email_verify':
+        result = await sendEmailVerificationCode(to, 'Test', '123456');
+        break;
+      case 'otp':
+        result = await sendRegistrationOtp(to, '123456');
+        break;
+      case 'password_reset':
+        result = await sendPasswordResetEmail({ email: to, firstName: 'Test' }, 'test-reset-token-abc123');
         break;
       default:
         return res.status(400).json({ message: 'Unknown template.' });

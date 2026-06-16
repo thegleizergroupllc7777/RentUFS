@@ -2,7 +2,7 @@ const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
-const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
+const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendVehiclePausedEmail, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
 const { sendOverdueReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
@@ -178,6 +178,48 @@ const checkRegistrationExpirations = async () => {
     return { success: true, remindersSent };
   } catch (error) {
     console.error('❌ Error in registration expiration scheduler:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Auto-pause vehicles whose registration has FULLY expired (the date has passed)
+// and the host hasn't updated it. Only pauses currently-available vehicles, and
+// flags them so we can auto-relist when the host updates the registration.
+//
+// SAFE: this only flips `availability` to false (same as the host clicking
+// "Mark Unavailable") — it removes the car from NEW bookings only. It does NOT
+// touch existing/active rentals, payments, insurance, or any other flow.
+const pauseExpiredRegistrations = async () => {
+  try {
+    const now = new Date();
+
+    const expiredVehicles = await Vehicle.find({
+      registrationExpiration: { $lt: now },     // already past
+      availability: true,                        // only pause live listings
+      registrationExpiredDeactivated: { $ne: true }
+    }).populate('host', 'firstName lastName email');
+
+    let pausedCount = 0;
+
+    for (const vehicle of expiredVehicles) {
+      vehicle.availability = false;
+      vehicle.registrationExpiredDeactivated = true;
+      await vehicle.save();
+      pausedCount++;
+      console.log(`⏸️  Paused ${vehicle.year} ${vehicle.make} ${vehicle.model} — registration expired ${vehicle.registrationExpiration.toISOString().substring(0, 10)}`);
+
+      if (vehicle.host && vehicle.host.email) {
+        sendVehiclePausedEmail(vehicle.host, vehicle)
+          .catch(err => console.error('📧 Vehicle paused email error:', err.message));
+      }
+    }
+
+    if (pausedCount > 0) {
+      console.log(`⏸️  Auto-paused ${pausedCount} vehicle(s) with expired registration`);
+    }
+    return { success: true, pausedCount };
+  } catch (error) {
+    console.error('❌ Error in pauseExpiredRegistrations:', error);
     return { success: false, error: error.message };
   }
 };
@@ -585,10 +627,14 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Also start the daily registration expiration check
   console.log('🚀 Starting registration expiration scheduler...');
   checkRegistrationExpirations();
+  pauseExpiredRegistrations();
 
-  // Run registration check once every 24 hours
+  // Run registration checks once every 24 hours
   const oneDayMs = 24 * 60 * 60 * 1000;
-  registrationCheckInterval = setInterval(checkRegistrationExpirations, oneDayMs);
+  registrationCheckInterval = setInterval(() => {
+    checkRegistrationExpirations();
+    pauseExpiredRegistrations();
+  }, oneDayMs);
   console.log('⏱️  Registration expiration scheduler running every 24 hours');
 
   // TollSpot status sync: check every 30 minutes for pre_registered vehicles to promote

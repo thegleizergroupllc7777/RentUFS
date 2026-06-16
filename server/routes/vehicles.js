@@ -628,6 +628,15 @@ router.put('/:id', auth, async (req, res) => {
     if (updateData.registrationExpiration &&
         updateData.registrationExpiration !== vehicle.registrationExpiration?.toISOString()?.substring(0, 10)) {
       updateData.registrationReminderSent = false;
+
+      // Auto-relist a vehicle the platform paused for an expired registration,
+      // once the new date is valid (in the future). Only affects vehicles WE
+      // paused (flagged) — never overrides a manual "Mark Unavailable".
+      const newExp = new Date(updateData.registrationExpiration);
+      if (vehicle.registrationExpiredDeactivated && !isNaN(newExp) && newExp > new Date()) {
+        updateData.availability = true;
+        updateData.registrationExpiredDeactivated = false;
+      }
     }
 
     Object.assign(vehicle, updateData);

@@ -293,13 +293,23 @@ const AdminBroadcast = () => {
             <div>
               <label style={label}>Email</label>
               <select style={{ ...input, minWidth: 200 }} value={testTemplate} onChange={(e) => setTestTemplate(e.target.value)}>
-                <option value="cancellation">Reservation Cancelled</option>
                 <option value="booking_driver">Booking Confirmed (driver)</option>
                 <option value="booking_host">New Booking (host)</option>
                 <option value="extension">Booking Extended</option>
-                <option value="toll">Toll Charge</option>
+                <option value="cancellation">Reservation Cancelled</option>
+                <option value="payment_failed">Payment Failed</option>
+                <option value="toll">Toll Charge (driver)</option>
+                <option value="toll_host">Toll Recorded (host)</option>
                 <option value="charge">Extra Charge</option>
                 <option value="reminder">Return Reminder</option>
+                <option value="payout">Payout Sent</option>
+                <option value="vehicle_listed">Vehicle Listed</option>
+                <option value="registration">Registration Expiring</option>
+                <option value="vehicle_paused">Vehicle Paused (reg. expired)</option>
+                <option value="welcome">Welcome</option>
+                <option value="email_verify">Email Verification</option>
+                <option value="otp">Registration OTP</option>
+                <option value="password_reset">Password Reset</option>
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
