@@ -134,6 +134,13 @@ const vehicleSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Set true when the platform auto-pauses a vehicle because its registration
+  // fully expired. Used so we only auto-relist vehicles WE paused (not ones the
+  // host manually set unavailable). Cleared when the host updates registration.
+  registrationExpiredDeactivated: {
+    type: Boolean,
+    default: false
+  },
   availability: {
     type: Boolean,
     default: true

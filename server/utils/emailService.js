@@ -1480,6 +1480,58 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
   }
 };
 
+// Sent when the platform auto-pauses a host's vehicle because its registration
+// fully expired. Tells them to update the registration to relist it.
+const sendVehiclePausedEmail = async (host, vehicle) => {
+  try {
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Vehicle Paused Email to Host: ${host.email}`);
+      return { success: true, dev: true };
+    }
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+    const expDate = vehicle.registrationExpiration
+      ? new Date(vehicle.registrationExpiration).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : 'recently';
+    return await sendEmail({
+      to: host.email,
+      subject: `Action needed: ${vehicleName} paused — registration expired`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+            <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+              <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+            </div>
+            <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
+              <h2 style="margin: 0; color: #ffffff;">Vehicle Paused — Registration Expired</h2>
+            </div>
+          </div>
+          <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
+            <p>Hi ${host.firstName || 'there'},</p>
+            <p>Your <strong>${vehicleName}</strong> has been temporarily paused from the marketplace because its registration expired on <strong>${expDate}</strong>.</p>
+            <p>For safety and insurance compliance, vehicles with expired registration can't accept new bookings. <strong>Any active rentals are not affected.</strong></p>
+            <p style="text-align: center; margin: 24px 0;">
+              <a href="${clientUrl}/host/dashboard" style="background: #000000; color: #00FF66; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold;">Update Registration</a>
+            </p>
+            <p style="font-size: 0.85rem; color: #6b7280;">Once you enter a valid registration date, your vehicle will automatically relist — no extra steps needed.</p>
+          </div>
+        </div>
+      `,
+      text: `Hi ${host.firstName || 'there'},
+
+Your ${vehicleName} has been paused from the marketplace because its registration expired on ${expDate}.
+
+Vehicles with expired registration can't accept new bookings (active rentals are not affected). Update your registration to bring it back online — it will automatically relist.
+
+Update here: ${clientUrl}/host/dashboard
+`
+    });
+  } catch (error) {
+    console.error('❌ Error sending vehicle paused email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Send password reset email
 const sendPasswordResetEmail = async (user, resetToken) => {
   try {
@@ -2315,6 +2367,7 @@ module.exports = {
   sendEmailVerificationCode,
   sendRegistrationOtp,
   sendRegistrationExpirationReminder,
+  sendVehiclePausedEmail,
   sendPasswordResetEmail,
   sendPayoutNotificationEmail,
   sendPayoutFailureAlert,
