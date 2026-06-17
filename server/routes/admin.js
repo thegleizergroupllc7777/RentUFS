@@ -1097,6 +1097,25 @@ router.post('/email-test', adminAuth, async (req, res) => {
 // dummy data and immediately cancels any coverage that starts. The only external
 // effect is a coverage attempt on TeqMobility's side (the point of the test).
 // NOTE: a *successful* start may incur a charge from TeqMobility.
+// List registered vehicles (VIN + state) for the insurance-test picker. Owner only.
+router.get('/insurance-test/vehicles', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only the owner can do this.' });
+    }
+    const vehicles = await Vehicle.find({ vin: { $exists: true, $ne: null } })
+      .select('vin year make model location.state')
+      .lean();
+    res.json(vehicles.map(v => ({
+      vin: v.vin,
+      label: `${v.year} ${v.make} ${v.model}`,
+      state: v.location?.state || '—'
+    })));
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to load vehicles', error: error.message });
+  }
+});
+
 router.post('/insurance-test', adminAuth, async (req, res) => {
   try {
     if (!isSuperAdmin(req.user)) {
