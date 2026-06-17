@@ -27,13 +27,24 @@ const AdminBroadcast = () => {
   const { user: me } = useAuth();
   const [insTesting, setInsTesting] = useState(false);
   const [insResult, setInsResult] = useState(null);
+  const [insVehicles, setInsVehicles] = useState([]);
+  const [insVin, setInsVin] = useState('');
+
+  const loadInsVehicles = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/admin/insurance-test/vehicles');
+      setInsVehicles(data);
+    } catch (e) { /* non-blocking */ }
+  }, []);
 
   const runInsuranceTest = async () => {
-    if (!window.confirm('Run an insurance coverage test?\n\nThis uses a test driver — no reservation is created and no customer is charged. It checks TeqMobility directly and immediately cancels any coverage that starts.\n\nNote: if coverage SUCCEEDS, TeqMobility may charge RentUFS for it.')) return;
+    const picked = insVehicles.find(v => v.vin === insVin);
+    const label = picked ? `${picked.label} (${picked.state})` : 'the first registered vehicle';
+    if (!window.confirm(`Run an insurance coverage test on ${label}?\n\nUses a test driver — no reservation, no customer charged. Any coverage that starts is cancelled immediately.\n\n⚠️ If the state IS covered, coverage will SUCCEED and TeqMobility may charge RentUFS. (A non-covered state like NJ fails for free.)`)) return;
     setInsResult(null);
     setInsTesting(true);
     try {
-      const { data } = await axios.post('/api/admin/insurance-test', {});
+      const { data } = await axios.post('/api/admin/insurance-test', insVin ? { vin: insVin } : {});
       setInsResult(data);
     } catch (e) {
       setInsResult({ error: e.response?.data?.error || e.response?.data?.message || 'Test failed.' });
@@ -89,6 +100,7 @@ const AdminBroadcast = () => {
 
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
   useEffect(() => { loadPreview(audience); }, [audience, loadPreview]);
+  useEffect(() => { if (me?.isSuperAdmin) loadInsVehicles(); }, [me, loadInsVehicles]);
 
   const doEmail = channel === 'email' || channel === 'both';
   const doSms = channel === 'sms' || channel === 'both';
@@ -350,7 +362,19 @@ const AdminBroadcast = () => {
               Checks TeqMobility directly with a <strong>test driver</strong> — no reservation is created and no customer is charged. Any coverage that starts is cancelled immediately.
             </div>
             <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 12px', fontSize: '0.82rem', color: '#92400e', marginBottom: 12 }}>
-              ⚠️ While coverage is failing this is free. If coverage <strong>succeeds</strong>, TeqMobility may charge RentUFS for the policy.
+              ⚠️ A non-covered state (like NJ) fails for <strong>free</strong>. If the state IS covered, coverage <strong>succeeds</strong> and TeqMobility may <strong>charge</strong> RentUFS.
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={label}>Vehicle to test</label>
+              <select style={{ ...input, minWidth: 260 }} value={insVin} onChange={(e) => setInsVin(e.target.value)}>
+                <option value="">First registered vehicle</option>
+                {insVehicles.map(v => (
+                  <option key={v.vin} value={v.vin}>{v.label} — {v.state}</option>
+                ))}
+              </select>
+              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                The state shown is what RentUFS has on file for each car. TeqMobility doesn't cover NJ — covered states (e.g. GA, TX) will charge if the test succeeds.
+              </div>
             </div>
             <button onClick={runInsuranceTest} disabled={insTesting} style={{ ...pill(true), padding: '10px 20px', opacity: insTesting ? 0.6 : 1 }}>
               {insTesting ? 'Testing…' : 'Run insurance test'}
