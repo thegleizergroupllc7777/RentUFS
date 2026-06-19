@@ -57,6 +57,7 @@ const AdminBroadcast = () => {
   const [audience, setAudience] = useState('both');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [design, setDesign] = useState(''); // '' = plain message, 'become_host' = host pitch
   const [recipients, setRecipients] = useState('');
   const [preview, setPreview] = useState({ total: 0, emailCount: 0, smsCount: 0 });
   const [templates, setTemplates] = useState([]);
@@ -105,10 +106,12 @@ const AdminBroadcast = () => {
   const doEmail = channel === 'email' || channel === 'both';
   const doSms = channel === 'sms' || channel === 'both';
 
+  const isHostPitch = design === 'become_host';
+
   const handleSend = async () => {
     setError('');
     setResult(null);
-    if (!message.trim()) { setError('Please write a message first.'); return; }
+    if (!isHostPitch && !message.trim()) { setError('Please write a message first.'); return; }
 
     let confirmMsg;
     if (audience === 'specific') {
@@ -131,7 +134,7 @@ const AdminBroadcast = () => {
 
     setSending(true);
     try {
-      const { data } = await axios.post('/api/admin/broadcast', { channel, audience, subject, message, recipients });
+      const { data } = await axios.post('/api/admin/broadcast', { channel, audience, subject, message, recipients, design });
       setResult(data.results);
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to send. Please try again.');
@@ -214,29 +217,46 @@ const AdminBroadcast = () => {
 
           {doEmail && (
             <div style={{ marginBottom: 16 }}>
+              <label style={label}>Email design</label>
+              <select style={input} value={design} onChange={(e) => setDesign(e.target.value)}>
+                <option value="">Standard message (write your own)</option>
+                <option value="become_host">Become a Host — pitch email (pre-designed)</option>
+              </select>
+              {isHostPitch && (
+                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                  A polished, ready-made pitch (RentUFS intro, 0% commission, Host Guide button + contact info). Just pick who to send it to below — no message needed. <strong>Email only.</strong>
+                </div>
+              )}
+            </div>
+          )}
+
+          {doEmail && (
+            <div style={{ marginBottom: 16 }}>
               <label style={label}>Email subject</label>
               <input
                 style={input}
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g., A special offer just for you 🎉"
+                placeholder={isHostPitch ? 'Leave blank for the default host-pitch subject' : 'e.g., A special offer just for you 🎉'}
               />
             </div>
           )}
 
-          <div style={{ marginBottom: 8 }}>
-            <label style={label}>Message</label>
-            <textarea
-              style={{ ...input, minHeight: 140, resize: 'vertical', fontFamily: 'inherit' }}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder={'Hi {firstName}, ...'}
-            />
-            <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
-              Tip: type <code style={{ background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>{'{firstName}'}</code> and each person sees their own name.
-              {doSms && <span> Texts automatically include “Reply STOP to opt out”.</span>}
+          {!isHostPitch && (
+            <div style={{ marginBottom: 8 }}>
+              <label style={label}>Message</label>
+              <textarea
+                style={{ ...input, minHeight: 140, resize: 'vertical', fontFamily: 'inherit' }}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={'Hi {firstName}, ...'}
+              />
+              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                Tip: type <code style={{ background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>{'{firstName}'}</code> and each person sees their own name.
+                {doSms && <span> Texts automatically include “Reply STOP to opt out”.</span>}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Reach preview */}
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 14px', fontSize: '0.9rem', color: '#065f46', marginTop: 8 }}>
@@ -341,6 +361,7 @@ const AdminBroadcast = () => {
                 <option value="email_verify">Email Verification</option>
                 <option value="otp">Registration OTP</option>
                 <option value="password_reset">Password Reset</option>
+                <option value="become_host">Become a Host (sales pitch)</option>
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
