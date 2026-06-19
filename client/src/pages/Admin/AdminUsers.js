@@ -48,6 +48,12 @@ const AdminUsers = () => {
 
   const performAction = async (userId, endpoint) => {
     setError('');
+    const confirmMsgs = {
+      demote: 'Are you sure you want to remove admin access from this user?',
+      promote: 'Make this user an admin? They will get full admin access.',
+      suspend: 'Suspend this account? The user will not be able to log in until reactivated.'
+    };
+    if (confirmMsgs[endpoint] && !window.confirm(confirmMsgs[endpoint])) return;
     try {
       await axios.post(`/api/admin/users/${userId}/${endpoint}`);
       load();
