@@ -837,7 +837,7 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
 // prospective hosts. Branded, generic (no individual's name so it never needs
 // updating when sales staff change), with a Host Guide button + support contact.
 function becomeHostEmailHtml(firstName, unsubscribeUrl) {
-  const name = firstName || 'there';
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
   const unsub = unsubscribeUrl
     ? `<br><a href="${unsubscribeUrl}" style="color:#064e3b;text-decoration:underline">Unsubscribe</a>`
     : '';
@@ -850,7 +850,7 @@ function becomeHostEmailHtml(firstName, unsubscribeUrl) {
         </div>
         <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
           <p style="margin:0 0 14px;font-size:1.25rem;font-weight:bold;color:#111827;">Turn your car into income — and keep 100% of it. 🚗</p>
-          <p style="margin:0 0 14px;">Hi ${name},</p>
+          <p style="margin:0 0 14px;">${greeting}</p>
           <p style="margin:0 0 14px;">RentUFS is a car-sharing marketplace that connects your vehicle with verified, insured renters — so your car earns money even when you're not using it.</p>
           <p style="margin:0 0 10px;">Here's why hosts choose us:</p>
           <ul style="margin:0 0 18px;padding-left:20px;">
@@ -930,7 +930,7 @@ router.post('/broadcast', adminAuth, async (req, res) => {
               to: email,
               subject: emailSubject,
               html: isHostPitch
-                ? becomeHostEmailHtml('there', null)
+                ? becomeHostEmailHtml('', null)
                 : broadcastEmailHtml(personalizeBroadcast(message, {}), null)
             });
             r.emailSent++;
@@ -1133,7 +1133,7 @@ router.post('/email-test', adminAuth, async (req, res) => {
         result = await sendEmail({
           to,
           subject: 'List your car on RentUFS — keep 100% of your earnings 🚗',
-          html: becomeHostEmailHtml('Test', null)
+          html: becomeHostEmailHtml('', null)
         });
         break;
       default:
