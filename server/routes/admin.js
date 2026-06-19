@@ -833,6 +833,48 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
   </body></html>`;
 }
 
+// Pre-designed "Become a Host" pitch email for the sales team to send to
+// prospective hosts. Branded, generic (no individual's name so it never needs
+// updating when sales staff change), with a Host Guide button + support contact.
+function becomeHostEmailHtml(firstName, unsubscribeUrl) {
+  const name = firstName || 'there';
+  const unsub = unsubscribeUrl
+    ? `<br><a href="${unsubscribeUrl}" style="color:#064e3b;text-decoration:underline">Unsubscribe</a>`
+    : '';
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
+        <div style="background:#000000;padding:26px 20px;text-align:center;">
+          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+        </div>
+        <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
+          <p style="margin:0 0 14px;font-size:1.25rem;font-weight:bold;color:#111827;">Turn your car into income — and keep 100% of it. 🚗</p>
+          <p style="margin:0 0 14px;">Hi ${name},</p>
+          <p style="margin:0 0 14px;">RentUFS is a car-sharing marketplace that connects your vehicle with verified, insured renters — so your car earns money even when you're not using it.</p>
+          <p style="margin:0 0 10px;">Here's why hosts choose us:</p>
+          <ul style="margin:0 0 18px;padding-left:20px;">
+            <li style="margin-bottom:6px;"><strong>0% commission</strong> — you keep <strong>100%</strong> of your rental income.</li>
+            <li style="margin-bottom:6px;">You set your own <strong>price and availability</strong>.</li>
+            <li style="margin-bottom:6px;">Every renter is <strong>verified and insured</strong> during the trip.</li>
+            <li style="margin-bottom:6px;">Simple setup — list your car in minutes.</li>
+          </ul>
+          <p style="margin:0 0 8px;">Want to see exactly how it works? Our Host Guide walks you through everything:</p>
+          <p style="text-align:center;margin:22px 0;">
+            <a href="https://rentufs.com/host-guide" style="display:inline-block;background:#10b981;color:#ffffff;padding:13px 32px;text-decoration:none;border-radius:6px;font-weight:bold;">View the Host Guide</a>
+          </p>
+          <p style="margin:0;">Questions or need a hand getting started? Just reply to this email, call or text us at <a href="tel:+13187368837" style="color:#10b981;font-weight:bold;">318-RENT-UFS</a>, or email <a href="mailto:support@rentufs.com" style="color:#10b981;">support@rentufs.com</a> — we're happy to help.</p>
+          <p style="margin:16px 0 0;">Looking forward to having you on board,<br>The RentUFS Team</p>
+        </div>
+        <div style="background:#00FF66;text-align:center;color:#000000;padding:20px;font-size:12px;line-height:1.6;">
+          &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>
+          597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
 // Preview how many people a target audience would reach on each channel.
 router.get('/broadcast/preview', adminAuth, async (req, res) => {
   try {
@@ -855,8 +897,9 @@ router.get('/broadcast/preview', adminAuth, async (req, res) => {
 // Send a broadcast. channel: 'email' | 'sms' | 'both'; audience: 'hosts' | 'drivers' | 'both'.
 router.post('/broadcast', adminAuth, async (req, res) => {
   try {
-    const { channel, audience, subject, message } = req.body;
-    if (!message || !message.trim()) {
+    const { channel, audience, subject, message, design } = req.body;
+    const isHostPitch = design === 'become_host';
+    if (!isHostPitch && (!message || !message.trim())) {
       return res.status(400).json({ message: 'Message is required.' });
     }
     if (!['email', 'sms', 'both'].includes(channel)) {
@@ -864,7 +907,12 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     }
 
     const doEmail = channel === 'email' || channel === 'both';
-    const doSms = channel === 'sms' || channel === 'both';
+    // The host-pitch design is an email-only template, so never send it by SMS.
+    const doSms = (channel === 'sms' || channel === 'both') && !isHostPitch;
+
+    const emailSubject = (subject && subject.trim())
+      ? subject.trim()
+      : (isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗' : 'A message from RentUFS');
 
     // "Specific people" — send only to the exact emails / phone numbers entered
     // (also used to test to yourself). Not pulled from the user list, so no
@@ -880,8 +928,10 @@ router.post('/broadcast', adminAuth, async (req, res) => {
           try {
             await sendEmail({
               to: email,
-              subject: (subject && subject.trim()) ? subject.trim() : 'A message from RentUFS',
-              html: broadcastEmailHtml(personalizeBroadcast(message, {}), null)
+              subject: emailSubject,
+              html: isHostPitch
+                ? becomeHostEmailHtml('there', null)
+                : broadcastEmailHtml(personalizeBroadcast(message, {}), null)
             });
             r.emailSent++;
           } catch (e) { r.emailFailed++; }
@@ -940,8 +990,10 @@ router.post('/broadcast', adminAuth, async (req, res) => {
             const unsubscribeUrl = `${base}/api/users/unsubscribe/${u._id}`;
             await sendEmail({
               to: u.email,
-              subject: (subject && subject.trim()) ? subject.trim() : 'A message from RentUFS',
-              html: broadcastEmailHtml(personalizeBroadcast(message, u), unsubscribeUrl)
+              subject: emailSubject,
+              html: isHostPitch
+                ? becomeHostEmailHtml(u.firstName, unsubscribeUrl)
+                : broadcastEmailHtml(personalizeBroadcast(message, u), unsubscribeUrl)
             });
             results.emailSent++;
           } catch (e) {
@@ -1076,6 +1128,13 @@ router.post('/email-test', adminAuth, async (req, res) => {
         break;
       case 'password_reset':
         result = await sendPasswordResetEmail({ email: to, firstName: 'Test' }, 'test-reset-token-abc123');
+        break;
+      case 'become_host':
+        result = await sendEmail({
+          to,
+          subject: 'List your car on RentUFS — keep 100% of your earnings 🚗',
+          html: becomeHostEmailHtml('Test', null)
+        });
         break;
       default:
         return res.status(400).json({ message: 'Unknown template.' });
