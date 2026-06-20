@@ -89,7 +89,7 @@ const sendEmail = async (mailOptions) => {
         name: sender.name
       },
       replyTo: {
-        email: process.env.EMAIL_REPLY_TO || sender.email,
+        email: process.env.EMAIL_REPLY_TO || process.env.SUPPORT_EMAIL || sender.email,
         name: sender.name
       },
       subject: mailOptions.subject,
@@ -118,7 +118,7 @@ const sendEmail = async (mailOptions) => {
       text: mailOptions.text || stripHtml(mailOptions.html),
       html: mailOptions.html,
       headers: antiSpamHeaders,
-      replyTo: process.env.EMAIL_REPLY_TO || sender.email
+      replyTo: process.env.EMAIL_REPLY_TO || process.env.SUPPORT_EMAIL || sender.email
     };
 
     const info = await transporter.sendMail(nodemailerOptions);
