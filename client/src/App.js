@@ -50,6 +50,7 @@ import AdminUsers from './pages/Admin/AdminUsers';
 import AdminUserDetail from './pages/Admin/AdminUserDetail';
 import AdminVehicles from './pages/Admin/AdminVehicles';
 import AdminBroadcast from './pages/Admin/AdminBroadcast';
+import AdminTax from './pages/Admin/AdminTax';
 
 import './App.css';
 
@@ -239,6 +240,10 @@ function App() {
             <Route
               path="/admin/broadcast"
               element={<AdminRoute><AdminBroadcast /></AdminRoute>}
+            />
+            <Route
+              path="/admin/tax"
+              element={<AdminRoute><AdminTax /></AdminRoute>}
             />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />
