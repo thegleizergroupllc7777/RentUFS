@@ -64,6 +64,94 @@ router.get('/ping', adminAuth, (req, res) => {
   });
 });
 
+// ── Tax / 1099 export (OWNER-ONLY) ──────────────────────────────────────────
+// Returns every host's tax info + yearly NET earnings for 1099 filing.
+// Restricted to super admins (the platform owner) — enforced here on the server
+// AND hidden on the frontend, so regular admins can never see it.
+// Includes DEACTIVATED accounts on purpose: a host who deletes/deactivates
+// before tax season must still appear so their 1099 can be filed. Net earnings
+// use the same segment-based math as the host's own reports & payouts.
+router.get('/tax-export', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+
+    const { getBookingSegments } = require('../utils/earningSegments');
+
+    // Calendar year range in EST (Jan 1 – Dec 31). Defaults to current year.
+    const EST_OFFSET = 5;
+    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+    const start = new Date(Date.UTC(year, 0, 1, EST_OFFSET, 0, 0, 0));
+    const end = new Date(Date.UTC(year + 1, 0, 1, EST_OFFSET, 0, 0, 0) - 1);
+
+    // All hosts — active AND deactivated (never drop tax data).
+    const hosts = await User.find({ userType: { $in: ['host', 'both'] } })
+      .select('firstName lastName email phone address accountStatus createdAt hostInfo')
+      .lean();
+
+    // All PAID bookings within the year, grouped by host.
+    const bookings = await Booking.find({
+      paymentStatus: 'paid',
+      createdAt: { $gte: start, $lte: end }
+    })
+      .select('host totalPrice totalDays rentalType rentalSubtotal pricePerDay pricePerUnit quantity hostPlatformFeePerDay hostProcessingFee extensions')
+      .lean();
+
+    const byHost = {};
+    for (const b of bookings) {
+      const hid = String(b.host);
+      if (!byHost[hid]) byHost[hid] = { gross: 0, platformFees: 0, stripeFees: 0, net: 0, count: 0 };
+      const segments = getBookingSegments(b);
+      byHost[hid].gross += segments.reduce((s, seg) => s + seg.rental, 0);
+      byHost[hid].platformFees += segments.reduce((s, seg) => s + seg.hostFee, 0);
+      byHost[hid].stripeFees += segments.reduce((s, seg) => s + seg.hostProcessingFee, 0);
+      byHost[hid].net += segments.reduce((s, seg) => s + seg.earnings, 0);
+      byHost[hid].count += 1;
+    }
+
+    const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+    const rows = hosts.map((h) => {
+      const hi = h.hostInfo || {};
+      const isBusiness = hi.accountType === 'business';
+      const legalName = [hi.legalFirstName, hi.legalLastName].filter(Boolean).join(' ').trim();
+      const displayName = legalName || `${h.firstName || ''} ${h.lastName || ''}`.trim();
+      // Use the legal/business tax address on file; fall back to home address.
+      const addr = (isBusiness ? hi.businessAddress : hi.legalAddress) || h.address || {};
+      const e = byHost[String(h._id)] || { gross: 0, platformFees: 0, stripeFees: 0, net: 0, count: 0 };
+      return {
+        id: String(h._id),
+        name: displayName || '—',
+        businessName: hi.businessName || '',
+        accountType: hi.accountType || 'individual',
+        taxIdType: isBusiness ? 'EIN' : 'SSN',
+        taxIdLast4: hi.taxIdLast4 || '',
+        taxIdFull: hi.taxId || '',
+        street: addr.street || '',
+        city: addr.city || '',
+        state: addr.state || '',
+        zip: addr.zipCode || '',
+        email: h.email || '',
+        gross: round2(e.gross),
+        platformFees: round2(e.platformFees),
+        stripeFees: round2(e.stripeFees),
+        netEarnings: round2(e.net),
+        bookingCount: e.count,
+        accountStatus: h.accountStatus || 'active'
+      };
+    });
+
+    // Biggest earners first (most relevant for 1099 thresholds).
+    rows.sort((a, b) => b.netEarnings - a.netEarnings);
+
+    res.json({ year, hosts: rows });
+  } catch (error) {
+    console.error('Tax export error:', error);
+    res.status(500).json({ message: 'Failed to build tax export', error: error.message });
+  }
+});
+
 // Dashboard stats — counts and totals for the admin landing page.
 router.get('/stats', adminAuth, async (req, res) => {
   try {

@@ -1,9 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
 const AdminLayout = ({ title, subtitle, children }) => {
+  const { user: me } = useAuth();
   return (
     <div className="admin-page">
       <Navbar />
@@ -20,6 +22,8 @@ const AdminLayout = ({ title, subtitle, children }) => {
           <NavLink to="/admin/users">Users</NavLink>
           <NavLink to="/admin/vehicles">Vehicles</NavLink>
           <NavLink to="/admin/broadcast">Broadcast</NavLink>
+          {/* Owner-only: tax/1099 data is sensitive, hidden from regular admins. */}
+          {me?.isSuperAdmin && <NavLink to="/admin/tax">Tax / 1099</NavLink>}
         </nav>
         {children}
       </div>
