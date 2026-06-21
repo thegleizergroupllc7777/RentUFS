@@ -47,6 +47,18 @@ const STATE_ABBR = {
 // Strip non-alphanumeric characters from zip codes (TeqMobility rejects hyphens, spaces, etc.)
 const sanitizeZip = (zip) => (zip || '').replace(/[^a-zA-Z0-9]/g, '');
 
+// Format a US phone number to E.164 (+1XXXXXXXXXX). TeqMobility rejects
+// display-formatted numbers like "(219) 210-5154" — same class of issue as
+// zips above. Returns '' for an empty/unusable value so it fails loudly rather
+// than sending garbage.
+const toE164Phone = (phone) => {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 10) return `+1${digits}`;                 // US 10-digit
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`; // 1 + 10-digit
+  return `+${digits}`;                                            // best effort otherwise
+};
+
 const toStateAbbr = (state) => {
   if (!state) return '';
   const trimmed = state.trim();
@@ -107,7 +119,7 @@ const upsertOwner = async (host) => {
   const body = {
     external_id: host._id.toString(),
     name,
-    phone: host.phone || '',
+    phone: toE164Phone(host.phone),
     email: host.email,
     address: {
       line1: addr.street || addr.line1 || '',
@@ -194,7 +206,7 @@ const startOnRentCoverage = async (vehicleId, vin, driver, vehicle, booking, hos
     firstname: driver.firstName || '',
     lastname: driver.lastName || '',
     email: driver.email || '',
-    phone: driver.phone || '',
+    phone: toE164Phone(driver.phone),
     license: licenseObj,
     address: {
       line1: driver.address?.street || '',
