@@ -560,8 +560,16 @@ router.post('/bookings/:id/refund', adminAuth, async (req, res) => {
       return res.status(400).json({ message: 'No payment session attached to this booking' });
     }
 
-    const session = await stripe.checkout.sessions.retrieve(booking.paymentSessionId);
-    const paymentIntentId = session.payment_intent;
+    // paymentSessionId can hold EITHER a Checkout Session id (cs_...) or a
+    // PaymentIntent id (pi_...), depending on which payment flow the driver
+    // used. Resolve to a PaymentIntent id for both so refunds always work.
+    let paymentIntentId;
+    if (booking.paymentSessionId.startsWith('pi_')) {
+      paymentIntentId = booking.paymentSessionId;
+    } else {
+      const session = await stripe.checkout.sessions.retrieve(booking.paymentSessionId);
+      paymentIntentId = session.payment_intent;
+    }
     if (!paymentIntentId) {
       return res.status(400).json({ message: 'Stripe payment intent not found' });
     }
