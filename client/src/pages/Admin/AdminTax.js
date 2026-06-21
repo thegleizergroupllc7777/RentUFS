@@ -6,7 +6,10 @@ import { useAuth } from '../../context/AuthContext';
 const formatCurrency = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
 
 const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: 6 }, (_, i) => currentYear - i);
+// RentUFS launched in 2026 — never offer years before there was any activity.
+const LAUNCH_YEAR = 2026;
+const YEARS = [];
+for (let y = Math.max(currentYear, LAUNCH_YEAR); y >= LAUNCH_YEAR; y--) YEARS.push(y);
 
 // Owner-only page: host tax info + yearly NET earnings for 1099 filing.
 // The "Net Earnings" column is the host's actual take-home (Gross − Platform
