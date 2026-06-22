@@ -16,6 +16,7 @@ import ResetPassword from './pages/Auth/ResetPassword';
 // Driver pages
 import Marketplace from './pages/Driver/Marketplace';
 import VehicleDetail from './pages/Driver/VehicleDetail';
+import HostStorefront from './pages/HostStorefront';
 import MyBookings from './pages/Driver/MyBookings';
 import ReservationDetail from './pages/Driver/ReservationDetail';
 import DriverProfile from './pages/Driver/Profile';
@@ -76,6 +77,8 @@ function App() {
             {/* Driver Routes */}
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/vehicle/:id" element={<VehicleDetail />} />
+            {/* Public host storefront (shareable referral link) */}
+            <Route path="/h/:hostId" element={<HostStorefront />} />
             <Route
               path="/my-bookings"
               element={
