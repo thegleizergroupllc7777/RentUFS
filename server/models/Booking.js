@@ -181,6 +181,10 @@ const bookingSchema = new mongoose.Schema({
   cancelledBy: { type: String, enum: ['host', 'driver', 'admin', null], default: null },
   cancelledAt: { type: Date, default: null },
   cancellationFee: { type: Number, default: 0 },
+  // Persistent admin note shown on the booking (e.g. "Refunded via Stripe").
+  // Kept separate from the append-only adminActions audit log so it stays
+  // visible and editable in the admin UI instead of disappearing.
+  adminNote: { type: String, default: '' },
   // Vehicle switch history for when host transfers booking to another vehicle
   vehicleSwitchHistory: [{
     previousVehicle: {
