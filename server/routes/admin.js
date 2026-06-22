@@ -298,22 +298,40 @@ router.get('/bookings/:id/messages', adminAuth, async (req, res) => {
 // Change booking status. Admins can override the normal flow.
 router.patch('/bookings/:id/status', adminAuth, async (req, res) => {
   try {
-    const { status, note } = req.body;
+    const { status, paymentStatus, note } = req.body;
     const allowed = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
-    if (!allowed.includes(status)) {
+    if (status && !allowed.includes(status)) {
       return res.status(400).json({ message: `Invalid status. Must be one of: ${allowed.join(', ')}` });
+    }
+    // Payment status is RECORD-ONLY here — it does NOT call Stripe. It's for
+    // reflecting a refund already issued in Stripe, or correcting a record. To
+    // actually move money, use the /refund route instead.
+    const allowedPayments = ['pending', 'paid', 'refunded', 'partial_refund', 'failed'];
+    if (paymentStatus && !allowedPayments.includes(paymentStatus)) {
+      return res.status(400).json({ message: `Invalid payment status. Must be one of: ${allowedPayments.join(', ')}` });
     }
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
     const previousStatus = booking.status;
-    booking.status = status;
+    const previousPayment = booking.paymentStatus;
+    if (status) booking.status = status;
     if (status === 'cancelled') {
       booking.cancelledBy = 'admin';
       booking.cancelledAt = new Date();
       if (note) booking.cancellationReason = note;
     }
-    await logAdminAction(booking, req.user, 'status_changed', { from: previousStatus, to: status, note: note || null });
+    if (paymentStatus) booking.paymentStatus = paymentStatus;
+    // Persistent, editable note shown on the booking (not buried in the log).
+    if (note !== undefined) booking.adminNote = note;
+
+    await logAdminAction(booking, req.user, 'status_changed', {
+      from: previousStatus,
+      to: status || previousStatus,
+      paymentFrom: previousPayment,
+      paymentTo: paymentStatus || previousPayment,
+      note: note || null
+    });
     res.json({ ok: true, booking });
   } catch (err) {
     res.status(500).json({ message: 'Failed to update status', error: err.message });

@@ -149,7 +149,9 @@ const AdminBookings = () => {
 
 const EditBookingModal = ({ booking, onClose, onSaved }) => {
   const [status, setStatus] = useState(booking.status);
-  const [note, setNote] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState(booking.paymentStatus || 'pending');
+  // Pre-fill with the saved note so it persists (no longer disappears).
+  const [note, setNote] = useState(booking.adminNote || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -157,7 +159,7 @@ const EditBookingModal = ({ booking, onClose, onSaved }) => {
     setBusy(true);
     setError('');
     try {
-      await axios.patch(`/api/admin/bookings/${booking._id}/status`, { status, note });
+      await axios.patch(`/api/admin/bookings/${booking._id}/status`, { status, paymentStatus, note });
       onSaved();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update');
@@ -169,7 +171,7 @@ const EditBookingModal = ({ booking, onClose, onSaved }) => {
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Edit booking status</h2>
+        <h2>Edit booking</h2>
         <p className="muted" style={{ fontSize: '0.85rem', color: '#6b7280' }}>{booking.reservationId || booking._id}</p>
         {error && <div className="admin-error">{error}</div>}
         <div className="field">
@@ -178,12 +180,20 @@ const EditBookingModal = ({ booking, onClose, onSaved }) => {
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        {status === 'cancelled' && (
-          <div className="field">
-            <label>Cancellation note (optional)</label>
-            <textarea rows="2" value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
-        )}
+        <div className="field">
+          <label>Payment Status</label>
+          <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
+            {PAYMENT_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <small style={{ color: '#6b7280' }}>
+            Record only — does not charge or refund. Use to reflect a refund already done in Stripe.
+          </small>
+        </div>
+        <div className="field">
+          <label>Note</label>
+          <textarea rows="2" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g., Refunded via Stripe — 6/22, insurance not ready" />
+          <small style={{ color: '#6b7280' }}>Saved on the booking — stays visible until you change it.</small>
+        </div>
         <div className="admin-modal-actions">
           <button className="admin-btn" onClick={onClose} disabled={busy}>Cancel</button>
           <button className="admin-btn primary" onClick={submit} disabled={busy}>{busy ? 'Saving...' : 'Save'}</button>
