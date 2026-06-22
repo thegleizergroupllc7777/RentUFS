@@ -393,6 +393,41 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
   }
 });
 
+// Public host storefront — one host's available, bookable cars. Powers the
+// shareable referral link (e.g. /h/:hostId). Read-only and no auth; mirrors the
+// marketplace's availability + insurance-ready filtering. Purely additive — it
+// does not change the marketplace, bookings, payments, or insurance.
+router.get('/storefront/:hostId', async (req, res) => {
+  try {
+    let vehicles = await Vehicle.find({ host: req.params.hostId, availability: true })
+      .populate('host', 'firstName lastName rating reviewCount profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Only show cars whose host can actually be insured (same rule as the marketplace).
+    vehicles = vehicles.filter(v => isHostInsuranceReady(v.host));
+    vehicles = vehicles.map(v => resolveImageUrls(v, req));
+
+    // Resolve the host's display name from the populated host (business name
+    // when the host presents as a business, otherwise first + last).
+    const h = vehicles[0]?.host;
+    let hostName = '';
+    if (h) {
+      const hi = h.hostInfo || {};
+      hostName = (hi.displayPreference === 'business' && hi.businessName)
+        ? hi.businessName
+        : `${h.firstName || ''} ${h.lastName || ''}`.trim();
+    }
+
+    res.json({
+      host: { name: hostName, rating: h?.rating || 0, reviewCount: h?.reviewCount || 0 },
+      vehicles
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get vehicle by ID
 router.get('/:id', async (req, res) => {
   try {

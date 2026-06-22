@@ -201,6 +201,9 @@ const DriverProfile = () => {
   const [settingsMessage, setSettingsMessage] = useState('');
   const [settingsError, setSettingsError] = useState('');
 
+  // Refer tab state (host storefront share link)
+  const [referCopied, setReferCopied] = useState(false);
+
   // Integrations state
   const [tollspotActive, setTollspotActive] = useState(false);
   const [tollspotPending, setTollspotPending] = useState(false);
@@ -2068,6 +2071,46 @@ const DriverProfile = () => {
     }
   };
 
+  // === Refer tab (shareable host storefront link) ===
+  const referLink = `${window.location.origin}/h/${user?._id || ''}`;
+  const copyReferLink = async () => {
+    try {
+      await navigator.clipboard.writeText(referLink);
+      setReferCopied(true);
+      setTimeout(() => setReferCopied(false), 2000);
+    } catch (e) {
+      // Clipboard unavailable — the user can still select and copy manually.
+    }
+  };
+  const renderReferTab = () => (
+    <div>
+      <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333' }}>
+        <h2 style={{ color: '#fff', marginBottom: '0.5rem', fontSize: '1.25rem' }}>Refer renters to your cars</h2>
+        <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+          Share your personal link — anyone who clicks it lands on a page showing your cars, ready to book. It's free: just copy and send it however you like.
+        </p>
+        <label style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Your link</label>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+          <input
+            readOnly
+            value={referLink}
+            onFocus={(e) => e.target.select()}
+            style={{ flex: 1, minWidth: '220px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', padding: '0.6rem 0.8rem' }}
+          />
+          <button
+            onClick={copyReferLink}
+            style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '0.5rem', padding: '0.6rem 1.2rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            {referCopied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+        <p style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '0.75rem' }}>
+          Text it to past renters, post it on social, or add it to your business page. Every booking still happens on RentUFS with full insurance and 24/7 support.
+        </p>
+      </div>
+    </div>
+  );
+
   const renderSettingsTab = () => (
     <div>
       <div style={{ background: '#111', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #333', marginBottom: '1.5rem' }}>
@@ -2432,7 +2475,8 @@ const DriverProfile = () => {
       { id: 'integrations', label: 'Integrations', alert: tollspotNeedsAttention },
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
       { id: 'payouts', label: 'Payouts', alert: payoutsNeedAttention },
-      { id: 'reports', label: 'Reports' }
+      { id: 'reports', label: 'Reports' },
+      { id: 'refer', label: 'Refer' }
     ] : []),
     { id: 'settings', label: 'Settings' }
   ];
@@ -2619,6 +2663,7 @@ const DriverProfile = () => {
               {activeTab === 'tax' && isHost && renderTaxTab()}
               {payoutsOpened && isHost && <div style={{ display: activeTab === 'payouts' ? 'block' : 'none' }}><PayoutsContent /></div>}
               {activeTab === 'reports' && isHost && renderReportsTab()}
+              {activeTab === 'refer' && isHost && renderReferTab()}
               {activeTab === 'settings' && renderSettingsTab()}
             </div>
           </div>
