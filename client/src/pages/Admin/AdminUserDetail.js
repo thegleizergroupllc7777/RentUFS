@@ -277,7 +277,7 @@ const AdminUserDetail = () => {
           {/* Vehicles — capped height so a long list scrolls in its own box
               instead of stretching the whole page. */}
           <h3 style={{ color: '#374151', marginTop: '1.5rem' }}>Vehicles ({vehicles.length})</h3>
-          <div className="admin-table-wrap" style={{ maxHeight: '360px', overflowY: 'auto' }}>
+          <div className="admin-table-wrap" style={{ maxHeight: '300px', overflowY: 'auto' }}>
             {vehicles.length === 0 ? (
               <div className="admin-empty">No vehicles listed.</div>
             ) : (
@@ -345,7 +345,7 @@ const BookingList = ({ bookings, otherParty, navigate }) => {
   return (
     // Capped height so a long booking list scrolls in its own box instead of
     // stretching the whole page. The header row stays pinned while you scroll.
-    <div className="admin-table-wrap" style={{ maxHeight: '360px', overflowY: 'auto' }}>
+    <div className="admin-table-wrap" style={{ maxHeight: '300px', overflowY: 'auto' }}>
       <table className="admin-table">
         <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
           <tr>
