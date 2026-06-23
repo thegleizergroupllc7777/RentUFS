@@ -885,7 +885,7 @@ const EditVehicle = () => {
                             value={s.code}
                             style={!supported ? { color: '#9ca3af' } : undefined}
                           >
-                            {s.name} ({s.code}){!supported ? ' — Not in service area' : ''}
+                            {s.name} ({s.code}){!supported ? ' — Coming soon' : ''}
                           </option>
                         );
                       })}
@@ -961,7 +961,7 @@ const EditVehicle = () => {
                             value={s.code}
                             style={!supported ? { color: '#9ca3af' } : undefined}
                           >
-                            {s.name} ({s.code}){!supported ? ' — Not in service area' : ''}
+                            {s.name} ({s.code}){!supported ? ' — Coming soon' : ''}
                           </option>
                         );
                       })}
