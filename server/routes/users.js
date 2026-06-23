@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const User = require('../models/User');
+const EmailSuppression = require('../models/EmailSuppression');
 const auth = require('../middleware/auth');
 const { sendEmailVerificationCode } = require('../utils/emailService');
 
@@ -22,6 +23,38 @@ router.get('/unsubscribe/:userId', async (req, res) => {
       <h2 style="color:#10b981;margin-bottom:8px">You've been unsubscribed</h2>
       <p style="margin:0 0 8px">You will no longer receive promotional emails from RentUFS.</p>
       <p style="color:#6b7280;font-size:14px;margin:0">You'll still receive important emails about your bookings and account.</p>
+    </body></html>`);
+});
+
+// Public one-click unsubscribe for recipients without an account (prospects the
+// sales team emailed). The email is base64url-encoded in the link. Adds the
+// address to the EmailSuppression list so it is never emailed again.
+router.get('/unsubscribe-email/:token', async (req, res) => {
+  try {
+    let email = '';
+    try {
+      email = Buffer.from(req.params.token, 'base64url').toString('utf8').toLowerCase().trim();
+    } catch (e) {
+      email = '';
+    }
+    if (email && email.includes('@')) {
+      await EmailSuppression.updateOne(
+        { email },
+        { $set: { email, unsubscribedAt: new Date() } },
+        { upsert: true }
+      );
+      // If they also happen to have an account, honor it there too.
+      await User.updateOne({ email }, { emailOptOut: true });
+    }
+  } catch (e) {
+    // Ignore — always show a friendly confirmation.
+  }
+  res.set('Content-Type', 'text/html');
+  res.send(`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+    <body style="font-family:Arial,Helvetica,sans-serif;text-align:center;padding:48px 24px;color:#111827;background:#f9fafb">
+      <h2 style="color:#10b981;margin-bottom:8px">You've been unsubscribed</h2>
+      <p style="margin:0 0 8px">You will no longer receive promotional emails from RentUFS.</p>
+      <p style="color:#6b7280;font-size:14px;margin:0">Sorry for the inconvenience.</p>
     </body></html>`);
 });
 

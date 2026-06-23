@@ -32,6 +32,7 @@ const {
 const { sendSMS } = require('../utils/smsService');
 const BroadcastTemplate = require('../models/BroadcastTemplate');
 const SmsSubscriber = require('../models/SmsSubscriber');
+const EmailSuppression = require('../models/EmailSuppression');
 const { isSuperAdmin } = require('../utils/superAdmin');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
 
@@ -1028,9 +1029,15 @@ router.post('/broadcast', adminAuth, async (req, res) => {
       ? subject.trim()
       : (isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗' : 'A message from RentUFS');
 
+    // Public base URL — used to build unsubscribe links for both prospects
+    // (no account) and registered users.
+    const proto = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const base = `${proto}://${host}`;
+
     // "Specific people" — send only to the exact emails / phone numbers entered
-    // (also used to test to yourself). Not pulled from the user list, so no
-    // per-user unsubscribe link is added.
+    // (also used to test to yourself). These recipients have no account, so the
+    // unsubscribe link is email-based (CAN-SPAM requires every send to have one).
     if (audience === 'specific') {
       const raw = String(req.body.recipients || '');
       const tokens = raw.split(/[\s,;]+/).map(t => t.trim()).filter(Boolean);
@@ -1039,13 +1046,18 @@ router.post('/broadcast', adminAuth, async (req, res) => {
       const r = { audience: tokens.length, emailSent: 0, emailFailed: 0, emailSkipped: 0, smsSent: 0, smsFailed: 0, smsSkipped: 0 };
       if (doEmail) {
         for (const email of emails) {
+          const lower = email.toLowerCase();
+          // Skip anyone who has already unsubscribed.
+          const suppressed = await EmailSuppression.findOne({ email: lower }).lean();
+          if (suppressed) { r.emailSkipped++; continue; }
           try {
+            const unsubscribeUrl = `${base}/api/users/unsubscribe-email/${Buffer.from(lower).toString('base64url')}`;
             await sendEmail({
               to: email,
               subject: emailSubject,
               html: isHostPitch
-                ? becomeHostEmailHtml('', null)
-                : broadcastEmailHtml(personalizeBroadcast(message, {}), null)
+                ? becomeHostEmailHtml('', unsubscribeUrl)
+                : broadcastEmailHtml(personalizeBroadcast(message, {}), unsubscribeUrl)
             });
             r.emailSent++;
           } catch (e) { r.emailFailed++; }
@@ -1079,10 +1091,6 @@ router.post('/broadcast', adminAuth, async (req, res) => {
       console.log(`📣 Broadcast (sms-subscribers) by ${req.user.email}:`, r);
       return res.json({ ok: true, results: r });
     }
-
-    const proto = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const base = `${proto}://${host}`;
 
     const query = { ...broadcastAudienceQuery(audience), accountStatus: { $ne: 'deactivated' } };
     const users = await User.find(query)
