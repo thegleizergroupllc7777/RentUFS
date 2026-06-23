@@ -123,11 +123,10 @@ const AdminInsurance = () => {
       </div>
 
       <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: '10px 14px', margin: '0 0 1rem', fontSize: '0.85rem', color: '#bbb' }}>
-        💰 <strong>Coverage days for {monthLabel}.</strong> Use the big total below to match the insurance provider's invoice.
-        A reservation appears here if its car actually went on rent with coverage selected — <strong>cancelled reservations are excluded</strong> because they never cost insurance.
+        💰 <strong>Coverage days for {monthLabel}.</strong> This is exactly what you owe the insurance provider — the big total below should match their invoice.
+        Only reservations where coverage was <strong>actually activated</strong> appear here. Cancelled, refunded-but-never-activated, and test bookings are excluded because the provider never turned coverage on for them.
         <br />
         <strong>No prices are shown on purpose</strong> — rates can change, days don't. You and the provider agree on the <strong>days</strong>; the dollars are settled on your call.
-        “Coverage activated” shows which reservations the provider actually turned coverage on for.
       </div>
 
       {/* Summary — the big numbers you match against the invoice */}

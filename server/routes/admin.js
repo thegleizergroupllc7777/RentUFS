@@ -185,10 +185,15 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
     // Reservations that (a) started this month, (b) weren't cancelled / abandoned
     // at checkout, and (c) actually had insurance coverage selected. A cancelled
     // reservation never went on rent, so it never costs insurance — excluded.
+    // Only count reservations where coverage was ACTUALLY activated through
+    // TeqMobility (a coverage record exists). That makes the total equal exactly
+    // what the provider can bill — test/refunded/never-activated reservations,
+    // where coverage was selected but never turned on, are excluded.
     const bookings = await Booking.find({
       startDate: { $gte: start, $lte: end },
       status: { $nin: ['cancelled', 'awaiting_payment'] },
-      'insurance.type': { $nin: ['none', null] }
+      'insurance.type': { $nin: ['none', null] },
+      'teqMobility.coverageId': { $exists: true, $ne: null }
     })
       .populate('vehicle', 'make model year location')
       .select('reservationId vehicle startDate endDate totalDays insurance teqMobility status')
