@@ -8,12 +8,24 @@ import axios from 'axios';
 import API_URL from '../../config/api';
 import './HostRegistration.css';
 
+// Insurance agreement gate. OFF by default — the three checkboxes + signature
+// only appear when REACT_APP_HOST_AGREEMENT_ENABLED is 'true'. Flip it on the
+// day insurance goes live; until then the page behaves exactly as before.
+const HOST_AGREEMENT_ENABLED = process.env.REACT_APP_HOST_AGREEMENT_ENABLED === 'true';
+
 const HostRegistration = () => {
   const { user, updateUserType, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [profileImage, setProfileImage] = useState(user?.profileImage || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Host insurance agreement state (only used when the gate is enabled).
+  const [ackPrimary, setAckPrimary] = useState(false);
+  const [ackLimits, setAckLimits] = useState(false);
+  const [ackCap, setAckCap] = useState(false);
+  const [signature, setSignature] = useState('');
+  const agreementComplete = ackPrimary && ackLimits && ackCap && signature.trim().length >= 2;
 
   // If user is already a host, redirect to dashboard
   if (user && (user.userType === 'host' || user.userType === 'both')) {
@@ -26,11 +38,31 @@ const HostRegistration = () => {
     setError('');
     setLoading(true);
 
+    // When the agreement gate is on, all three boxes + a signature are required.
+    if (HOST_AGREEMENT_ENABLED && !agreementComplete) {
+      setError('Please check all three insurance acknowledgments and type your full legal name to sign.');
+      setLoading(false);
+      return;
+    }
+
     try {
+      const token = localStorage.getItem('token');
+
       // Update profile image if changed
       if (profileImage && profileImage !== user?.profileImage) {
-        const token = localStorage.getItem('token');
         await axios.put(`${API_URL}/api/users/profile`, { profileImage }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
+      // Save the signed insurance agreement before upgrading to host.
+      if (HOST_AGREEMENT_ENABLED) {
+        await axios.put(`${API_URL}/api/users/host-agreement`, {
+          signature: signature.trim(),
+          acknowledgedPrimaryInsurance: ackPrimary,
+          acknowledgedCoverageLimits: ackLimits,
+          acknowledgedCatastrophicCap: ackCap
+        }, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -100,10 +132,51 @@ const HostRegistration = () => {
                 />
               </div>
 
+              {HOST_AGREEMENT_ENABLED && (
+                <div className="host-reg-agreement" style={{ marginTop: '1.5rem', padding: '1rem', border: '1px solid #2a2a2a', borderRadius: '8px', background: '#0d0d0d' }}>
+                  <h3 style={{ marginTop: 0 }}>Insurance Acknowledgment</h3>
+                  <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                    Please read and acknowledge the following before listing your vehicle. See the full{' '}
+                    <a href="https://rentufs.com/owner-agreement" target="_blank" rel="noopener noreferrer" style={{ color: '#10b981' }}>Owner Agreement</a>.
+                  </p>
+
+                  <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', margin: '0.9rem 0', cursor: 'pointer', fontSize: '0.9rem' }}>
+                    <input type="checkbox" checked={ackPrimary} onChange={(e) => setAckPrimary(e.target.checked)} style={{ marginTop: '0.2rem' }} />
+                    <span><strong>Primary Insurance Requirement.</strong> I understand I must maintain my own personal or commercial auto insurance policy at all times. RentUFS's insurance is not a replacement for my primary insurance. If I fail to maintain it, RentUFS will not provide coverage and any claim will be denied.</span>
+                  </label>
+
+                  <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', margin: '0.9rem 0', cursor: 'pointer', fontSize: '0.9rem' }}>
+                    <input type="checkbox" checked={ackLimits} onChange={(e) => setAckLimits(e.target.checked)} style={{ marginTop: '0.2rem' }} />
+                    <span><strong>Coverage Limitations.</strong> I understand RentUFS's auto liability coverage applies only during the rental period and provides the minimum limits required by state law. No PIP, MedPay, UM, or UIM coverage is included unless required by law.</span>
+                  </label>
+
+                  <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', margin: '0.9rem 0', cursor: 'pointer', fontSize: '0.9rem' }}>
+                    <input type="checkbox" checked={ackCap} onChange={(e) => setAckCap(e.target.checked)} style={{ marginTop: '0.2rem' }} />
+                    <span><strong>Catastrophic Loss Cap.</strong> I understand that if a major event damages multiple vehicles stored at a single location, the total payout for that location is capped at $300,000. Storing vehicles at different locations can reduce this risk.</span>
+                  </label>
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <label className="form-label" htmlFor="host-signature">Sign by typing your full legal name *</label>
+                    <input
+                      id="host-signature"
+                      type="text"
+                      value={signature}
+                      onChange={(e) => setSignature(e.target.value)}
+                      placeholder="Your full legal name"
+                      maxLength={100}
+                      style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1px solid #2a2a2a', background: '#000', color: '#fff', fontFamily: 'cursive', fontSize: '1.1rem' }}
+                    />
+                    <p style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '0.4rem' }}>
+                      By typing your name you electronically sign this acknowledgment, dated today.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
                 className="btn btn-primary host-reg-submit"
-                disabled={loading}
+                disabled={loading || (HOST_AGREEMENT_ENABLED && !agreementComplete)}
               >
                 {loading ? 'Setting up your host account...' : 'Register as Host'}
               </button>

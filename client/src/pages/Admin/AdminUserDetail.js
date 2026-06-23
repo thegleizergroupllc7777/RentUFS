@@ -252,6 +252,32 @@ const AdminUserDetail = () => {
             </div>
           </div>
 
+          {/* Host insurance agreement — proof the host signed the acknowledgment */}
+          {(user.userType === 'host' || user.userType === 'both') && (
+            <>
+              <h3 style={{ color: '#374151' }}>Host insurance agreement</h3>
+              <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+                {user.hostAgreement?.signed ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                      <ProfileRow label="Status" value={<span className="badge active-acct">signed</span>} />
+                      <ProfileRow label="Signed on" value={formatDate(user.hostAgreement.signedAt)} />
+                      <ProfileRow label="Signature" value={<span style={{ fontFamily: 'cursive', fontSize: '1.15rem', color: '#111827' }}>{user.hostAgreement.signature || '—'}</span>} />
+                      <ProfileRow label="Version" value={user.hostAgreement.version || '—'} />
+                    </div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#374151' }}>
+                      <div>✅ Primary Insurance Requirement {user.hostAgreement.acknowledgedPrimaryInsurance ? 'acknowledged' : '—'}</div>
+                      <div>✅ Coverage Limitations {user.hostAgreement.acknowledgedCoverageLimits ? 'acknowledged' : '—'}</div>
+                      <div>✅ Catastrophic $300k Cap {user.hostAgreement.acknowledgedCatastrophicCap ? 'acknowledged' : '—'}</div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="admin-empty">Not signed yet.</div>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Stats */}
           {stats && (
             <>
