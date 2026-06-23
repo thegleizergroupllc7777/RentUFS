@@ -267,6 +267,21 @@ const userSchema = new mongoose.Schema({
     // the disclosure ever materially changes.
     version: { type: String, default: null }
   },
+  // Host insurance acknowledgment + e-signature captured on the "Become a Host"
+  // page when the agreement gate is enabled. Stored as proof that a host accepted
+  // the insurance terms (primary-insurance requirement, coverage limits,
+  // catastrophic cap) and signed before listing — viewable by an admin.
+  hostAgreement: {
+    signed: { type: Boolean, default: false },
+    signedAt: { type: Date, default: null },
+    signature: { type: String, default: '' }, // typed full legal name
+    acknowledgedPrimaryInsurance: { type: Boolean, default: false },
+    acknowledgedCoverageLimits: { type: Boolean, default: false },
+    acknowledgedCatastrophicCap: { type: Boolean, default: false },
+    ipAddress: { type: String, default: null },
+    // Version of the agreement the host signed, so we can re-prompt if it changes.
+    version: { type: String, default: null }
+  },
   paymentMethods: [{
     nickname: { type: String, trim: true },
     cardBrand: { type: String, trim: true },

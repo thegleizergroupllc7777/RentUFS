@@ -176,6 +176,48 @@ router.put('/profile', auth, async (req, res) => {
   }
 });
 
+// Save a host's insurance acknowledgment + e-signature (the "Become a Host"
+// agreement gate). Requires all three acknowledgments and a typed signature.
+// Stored on the user so an admin can later view proof it was accepted.
+const HOST_AGREEMENT_VERSION = 'June 2026';
+router.put('/host-agreement', auth, async (req, res) => {
+  try {
+    const {
+      signature,
+      acknowledgedPrimaryInsurance,
+      acknowledgedCoverageLimits,
+      acknowledgedCatastrophicCap
+    } = req.body;
+
+    if (!acknowledgedPrimaryInsurance || !acknowledgedCoverageLimits || !acknowledgedCatastrophicCap) {
+      return res.status(400).json({ message: 'All three insurance acknowledgments are required.' });
+    }
+    const typed = (signature || '').trim();
+    if (typed.length < 2) {
+      return res.status(400).json({ message: 'Please type your full legal name to sign.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.hostAgreement = {
+      signed: true,
+      signedAt: new Date(),
+      signature: typed.slice(0, 100),
+      acknowledgedPrimaryInsurance: true,
+      acknowledgedCoverageLimits: true,
+      acknowledgedCatastrophicCap: true,
+      ipAddress: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || null,
+      version: HOST_AGREEMENT_VERSION
+    };
+    await user.save();
+
+    res.json({ success: true, hostAgreement: user.hostAgreement });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update profile image only
 router.put('/profile-image', auth, async (req, res) => {
   try {
