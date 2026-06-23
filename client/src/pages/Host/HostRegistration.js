@@ -8,10 +8,10 @@ import axios from 'axios';
 import API_URL from '../../config/api';
 import './HostRegistration.css';
 
-// Insurance agreement gate. OFF by default — the three checkboxes + signature
-// only appear when REACT_APP_HOST_AGREEMENT_ENABLED is 'true'. Flip it on the
-// day insurance goes live; until then the page behaves exactly as before.
-const HOST_AGREEMENT_ENABLED = process.env.REACT_APP_HOST_AGREEMENT_ENABLED === 'true';
+// Insurance agreement gate. ON by default — insurance is live, so new hosts
+// must check the three acknowledgments + sign before listing. Can be switched
+// OFF by setting REACT_APP_HOST_AGREEMENT_ENABLED to 'false' (safety override).
+const HOST_AGREEMENT_ENABLED = process.env.REACT_APP_HOST_AGREEMENT_ENABLED !== 'false';
 
 const HostRegistration = () => {
   const { user, updateUserType, refreshUser } = useAuth();
