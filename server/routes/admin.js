@@ -153,6 +153,97 @@ router.get('/tax-export', adminAuth, async (req, res) => {
   }
 });
 
+// ── Insurance Billing (OWNER-ONLY) ──────────────────────────────────────────
+// Read-only monthly reconciliation against the TeqMobility insurance invoice.
+// For a given month it lists every reservation that had coverage and rolls up
+// the total COVERAGE DAYS (split Basic vs Premium) so the owner can match Nick's
+// bill line-by-line. Deliberately stores/returns NO rates or dollar amounts —
+// rates change, days don't. This endpoint only READS existing bookings; it never
+// touches Stripe, TeqMobility, payouts, or any booking record.
+router.get('/insurance-billing', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+
+    // Month range in EST, same convention as the tax export. Defaults to the
+    // current month if the param is missing/invalid.
+    const EST_OFFSET = 5;
+    let year, month;
+    if (/^\d{4}-\d{2}$/.test(req.query.month || '')) {
+      const parts = req.query.month.split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+    } else {
+      const now = new Date();
+      year = now.getFullYear();
+      month = now.getMonth() + 1;
+    }
+    const start = new Date(Date.UTC(year, month - 1, 1, EST_OFFSET, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month, 1, EST_OFFSET, 0, 0, 0) - 1);
+
+    // Reservations that (a) started this month, (b) weren't cancelled / abandoned
+    // at checkout, and (c) actually had insurance coverage selected. A cancelled
+    // reservation never went on rent, so it never costs insurance — excluded.
+    const bookings = await Booking.find({
+      startDate: { $gte: start, $lte: end },
+      status: { $nin: ['cancelled', 'awaiting_payment'] },
+      'insurance.type': { $nin: ['none', null] }
+    })
+      .populate('vehicle', 'make model year location')
+      .select('reservationId vehicle startDate endDate totalDays insurance teqMobility status')
+      .lean();
+
+    // Split into the two TeqMobility tiers by what the coverage actually included:
+    //   Premium = physical-damage coverage (collision/comprehensive) on file
+    //   Basic   = liability-only
+    const tally = { Basic: { rentals: 0, days: 0 }, Premium: { rentals: 0, days: 0 } };
+    const rows = bookings.map((b) => {
+      const cov = b.insurance?.coverage || {};
+      const physical = !!(cov.collision || cov.comprehensive);
+      const tier = physical ? 'Premium' : 'Basic';
+      const days = b.totalDays || 0;
+      tally[tier].rentals += 1;
+      tally[tier].days += days;
+      const v = b.vehicle || {};
+      return {
+        id: String(b._id),
+        reservationId: b.reservationId || '—',
+        vehicle: [v.year, v.make, v.model].filter(Boolean).join(' ') || '—',
+        state: v.location?.state || '',
+        tier,
+        days,
+        startDate: b.startDate,
+        endDate: b.endDate,
+        status: b.status,
+        // Whether coverage was actually activated through TeqMobility (a coverage
+        // record exists). Lets the owner see which rows the provider truly turned on.
+        activated: !!(b.teqMobility && b.teqMobility.coverageId)
+      };
+    });
+
+    rows.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+    const summary = [
+      { tier: 'Basic', rentals: tally.Basic.rentals, days: tally.Basic.days },
+      { tier: 'Premium', rentals: tally.Premium.rentals, days: tally.Premium.days }
+    ];
+    const totalDays = tally.Basic.days + tally.Premium.days;
+    const totalRentals = tally.Basic.rentals + tally.Premium.rentals;
+
+    res.json({
+      month: `${year}-${String(month).padStart(2, '0')}`,
+      summary,
+      totalDays,
+      totalRentals,
+      rows
+    });
+  } catch (error) {
+    console.error('Insurance billing error:', error);
+    res.status(500).json({ message: 'Failed to build insurance billing report', error: error.message });
+  }
+});
+
 // Dashboard stats — counts and totals for the admin landing page.
 router.get('/stats', adminAuth, async (req, res) => {
   try {

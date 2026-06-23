@@ -52,6 +52,7 @@ import AdminUserDetail from './pages/Admin/AdminUserDetail';
 import AdminVehicles from './pages/Admin/AdminVehicles';
 import AdminBroadcast from './pages/Admin/AdminBroadcast';
 import AdminTax from './pages/Admin/AdminTax';
+import AdminInsurance from './pages/Admin/AdminInsurance';
 
 import './App.css';
 
@@ -247,6 +248,10 @@ function App() {
             <Route
               path="/admin/tax"
               element={<AdminRoute><AdminTax /></AdminRoute>}
+            />
+            <Route
+              path="/admin/insurance"
+              element={<AdminRoute><AdminInsurance /></AdminRoute>}
             />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />
