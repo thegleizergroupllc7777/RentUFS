@@ -252,6 +252,42 @@ const AdminUserDetail = () => {
             </div>
           </div>
 
+          {/* Stripe payouts — whether the host can actually receive money */}
+          {(user.userType === 'host' || user.userType === 'both') && (
+            <>
+              <h3 style={{ color: '#374151' }}>Stripe payouts</h3>
+              <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                  <ProfileRow label="Payout account" value={
+                    <span className={`badge ${user.stripeConnectAccountId ? 'active-acct' : 'deactivated'}`}>
+                      {user.stripeConnectAccountId ? 'connected' : 'not connected'}
+                    </span>
+                  } />
+                  <ProfileRow label="Onboarding" value={
+                    <span className={`badge ${user.stripeConnectOnboardingComplete ? 'active-acct' : 'deactivated'}`}>
+                      {user.stripeConnectOnboardingComplete ? 'complete' : 'incomplete'}
+                    </span>
+                  } />
+                  <ProfileRow label="Payouts enabled" value={
+                    <span className={`badge ${user.stripeConnectPayoutsEnabled ? 'active-acct' : 'deactivated'}`}>
+                      {user.stripeConnectPayoutsEnabled ? 'yes' : 'no'}
+                    </span>
+                  } />
+                  <ProfileRow label="Charges enabled" value={
+                    <span className={`badge ${user.stripeConnectChargesEnabled ? 'active-acct' : 'deactivated'}`}>
+                      {user.stripeConnectChargesEnabled ? 'yes' : 'no'}
+                    </span>
+                  } />
+                </div>
+                {!user.stripeConnectPayoutsEnabled && (
+                  <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#b45309' }}>
+                    ⚠️ This host can't receive payouts yet — they still need to finish their Stripe payout setup.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Host insurance agreement — proof the host signed the acknowledgment */}
           {(user.userType === 'host' || user.userType === 'both') && (
             <>
