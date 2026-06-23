@@ -3,22 +3,31 @@ import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 
-// RentUFS launched in 2026 — never offer months before there was any activity.
-const LAUNCH_YEAR = 2026;
-const LAUNCH_MONTH = 1; // January 2026
+// Insurance billing only starts when the TeqMobility contract is signed —
+// there is nothing to bill before coverage existed, so never offer earlier
+// months. Change these two numbers if the contract effective date changes.
+const INSURANCE_START_YEAR = 2026;  // contract effective year
+const INSURANCE_START_MONTH = 6;    // contract effective month (6 = June)
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-// Build the list of selectable months from launch up to the current month.
+// Build the list of selectable months from the contract start up to the current
+// month. If the contract start is in the future, show just that start month.
 const buildMonths = () => {
   const now = new Date();
   const list = [];
   let y = now.getFullYear();
   let m = now.getMonth() + 1;
-  while (y > LAUNCH_YEAR || (y === LAUNCH_YEAR && m >= LAUNCH_MONTH)) {
+  // If we're still before the contract starts, anchor on the start month itself
+  // so the dropdown is never empty.
+  if (y < INSURANCE_START_YEAR || (y === INSURANCE_START_YEAR && m < INSURANCE_START_MONTH)) {
+    y = INSURANCE_START_YEAR;
+    m = INSURANCE_START_MONTH;
+  }
+  while (y > INSURANCE_START_YEAR || (y === INSURANCE_START_YEAR && m >= INSURANCE_START_MONTH)) {
     list.push({
       value: `${y}-${String(m).padStart(2, '0')}`,
       label: `${MONTH_NAMES[m - 1]} ${y}`
