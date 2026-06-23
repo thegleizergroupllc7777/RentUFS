@@ -22,8 +22,9 @@ const AdminLayout = ({ title, subtitle, children }) => {
           <NavLink to="/admin/users">Users</NavLink>
           <NavLink to="/admin/vehicles">Vehicles</NavLink>
           <NavLink to="/admin/broadcast">Broadcast</NavLink>
-          {/* Owner-only: tax/1099 data is sensitive, hidden from regular admins. */}
+          {/* Owner-only finance/reconciliation tools, hidden from regular admins. */}
           {me?.isSuperAdmin && <NavLink to="/admin/tax">Tax / 1099</NavLink>}
+          {me?.isSuperAdmin && <NavLink to="/admin/insurance">Insurance</NavLink>}
         </nav>
         {children}
       </div>
