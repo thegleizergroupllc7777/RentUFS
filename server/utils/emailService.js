@@ -2366,8 +2366,56 @@ Contact support: support@rentufs.com
   }
 };
 
+// Notify the driver when an admin changes their reservation dates/time from the
+// "Edit dates" tool, so they always know the new pickup/return schedule. Sent
+// best-effort — never throws, so a failed send can never block the date change.
+const sendReservationDatesUpdatedEmail = async (driver, booking, vehicle) => {
+  try {
+    if (!driver?.email) return { success: false };
+    const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const pickupTime = formatTime12h(booking.pickupTime || '10:00');
+    const dropoffTime = formatTime12h(booking.dropoffTime || booking.pickupTime || '10:00');
+    const vehicleName = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your vehicle';
+
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Reservation dates updated email to: ${driver.email}`);
+      return { success: true, dev: true };
+    }
+
+    await sendEmail({
+      to: driver.email,
+      subject: `Your RentUFS reservation has been updated${booking.reservationId ? ` - ${booking.reservationId}` : ''}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #111827;">Your reservation has been updated</h2>
+            <p>Hi ${driver.firstName || 'there'},</p>
+            <p>The schedule for your ${vehicleName} rental${booking.reservationId ? ` (${booking.reservationId})` : ''} has been updated. Here are your new details:</p>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
+              <p style="margin:0 0 6px;"><strong>Pick-up:</strong> ${startDate} at ${pickupTime}</p>
+              <p style="margin:0;"><strong>Return:</strong> ${endDate} at ${dropoffTime}</p>
+            </div>
+            <p>If anything looks off, please contact us at <a href="mailto:support@rentufs.com">support@rentufs.com</a>.</p>
+            <p>Thank you,<br>The RentUFS Team</p>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Your reservation has been updated.\n\nPick-up: ${startDate} at ${pickupTime}\nReturn: ${endDate} at ${dropoffTime}\n\nQuestions? Contact support@rentufs.com\n\n- RentUFS`
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send reservation dates updated email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendEmail,
+  sendReservationDatesUpdatedEmail,
   sendWelcomeEmail,
   sendVehicleListedEmail,
   sendBookingConfirmationToDriver,

@@ -455,6 +455,7 @@ const ChargeModal = ({ booking, onClose, onSaved }) => {
 const DatesModal = ({ booking, onClose, onSaved }) => {
   const [startDate, setStartDate] = useState(toDateInput(booking.startDate));
   const [endDate, setEndDate] = useState(toDateInput(booking.endDate));
+  const [pickupTime, setPickupTime] = useState(booking.pickupTime || '10:00');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState('');
@@ -463,7 +464,7 @@ const DatesModal = ({ booking, onClose, onSaved }) => {
     setBusy(true);
     setLocalError('');
     try {
-      await axios.patch(`/api/admin/bookings/${booking._id}/dates`, { startDate, endDate, note: note || undefined });
+      await axios.patch(`/api/admin/bookings/${booking._id}/dates`, { startDate, endDate, pickupTime, note: note || undefined });
       onSaved('Dates updated.');
     } catch (err) {
       setLocalError(err.response?.data?.message || 'Failed to update dates');
@@ -477,7 +478,7 @@ const DatesModal = ({ booking, onClose, onSaved }) => {
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Edit booking dates</h2>
         <p className="muted" style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-          Changes the start/end dates without charging. Use Extend if you want to charge for added days.
+          Changes the start/end dates &amp; time without charging. Use Extend if you want to charge for added days. The driver is emailed the update.
         </p>
         {localError && <div className="admin-error">{localError}</div>}
         <div className="field">
@@ -487,6 +488,13 @@ const DatesModal = ({ booking, onClose, onSaved }) => {
         <div className="field">
           <label>End date</label>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Pickup time</label>
+          <input type="time" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} />
+          <p className="muted" style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+            Return time matches pickup time (24-hour rentals).
+          </p>
         </div>
         <div className="field">
           <label>Note (optional)</label>

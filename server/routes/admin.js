@@ -11,6 +11,7 @@ const { validateVin } = require('../utils/vinValidation');
 const { calculateProcessingFee } = require('../utils/stripeFee');
 const {
   sendBookingExtensionEmail,
+  sendReservationDatesUpdatedEmail,
   sendEmail,
   sendBookingCancellationEmail,
   sendBookingConfirmationToDriver,
@@ -439,14 +440,22 @@ router.patch('/bookings/:id/status', adminAuth, async (req, res) => {
 // not adjust pricing automatically. For paid extensions use /extend below.
 router.patch('/bookings/:id/dates', adminAuth, async (req, res) => {
   try {
-    const { startDate, endDate, note } = req.body;
-    const booking = await Booking.findById(req.params.id);
+    const { startDate, endDate, pickupTime, note } = req.body;
+    const booking = await Booking.findById(req.params.id)
+      .populate('driver', 'firstName lastName email')
+      .populate('vehicle', 'make model year');
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
     const previousStart = booking.startDate;
     const previousEnd = booking.endDate;
+    const previousPickupTime = booking.pickupTime;
     if (startDate) booking.startDate = new Date(startDate);
     if (endDate) booking.endDate = new Date(endDate);
+    // 24-hour rentals: the return time always mirrors the pickup time.
+    if (pickupTime) {
+      booking.pickupTime = pickupTime;
+      booking.dropoffTime = pickupTime;
+    }
 
     const msPerDay = 24 * 60 * 60 * 1000;
     booking.totalDays = Math.max(1, Math.ceil((booking.endDate - booking.startDate) / msPerDay));
@@ -454,11 +463,20 @@ router.patch('/bookings/:id/dates', adminAuth, async (req, res) => {
     await logAdminAction(booking, req.user, 'dates_changed', {
       previousStart,
       previousEnd,
+      previousPickupTime,
       newStart: booking.startDate,
       newEnd: booking.endDate,
+      newPickupTime: booking.pickupTime,
       newTotalDays: booking.totalDays,
       note: note || null
     });
+
+    // Notify the driver of the new schedule — best-effort, never blocks the save.
+    try {
+      await sendReservationDatesUpdatedEmail(booking.driver, booking, booking.vehicle);
+    } catch (e) {
+      console.error('Dates-updated email failed (non-blocking):', e.message);
+    }
 
     res.json({ ok: true, booking });
   } catch (err) {
