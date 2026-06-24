@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../config/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 // Owner Agreement) is shown here.
 const HostAgreementGate = ({ children }) => {
   const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
 
   const [ackPrimary, setAckPrimary] = useState(false);
   const [ackLimits, setAckLimits] = useState(false);
@@ -53,8 +55,17 @@ const HostAgreementGate = ({ children }) => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.75)', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '2rem 1rem' }}>
-      <div style={{ background: '#fff', borderRadius: '12px', maxWidth: '720px', width: '100%', padding: '2rem', margin: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.4)' }}>
-        <h1 style={{ color: '#1e2a4a', marginTop: 0, fontSize: '1.8rem' }}>A New Owner Agreement is Available</h1>
+      <div style={{ position: 'relative', background: '#fff', borderRadius: '12px', maxWidth: '720px', width: '100%', padding: '2rem', margin: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.4)' }}>
+        {/* Escape hatch — leaves the host area for the marketplace so the host is
+            never stuck. The prompt returns whenever they re-enter a host page. */}
+        <button
+          onClick={() => navigate('/marketplace')}
+          aria-label="Close and go to marketplace"
+          style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', fontSize: '1.4rem', lineHeight: 1, color: '#6b7280', cursor: 'pointer' }}
+        >
+          ✕
+        </button>
+        <h1 style={{ color: '#1e2a4a', marginTop: 0, fontSize: '1.8rem', paddingRight: '1.5rem' }}>A New Owner Agreement is Available</h1>
         <p style={{ color: '#c79100', fontWeight: 700 }}>
           You must agree to the updated Owner Agreement to continue using RentUFS services.
         </p>
@@ -111,6 +122,16 @@ const HostAgreementGate = ({ children }) => {
         >
           {submitting ? 'Saving...' : 'I Agree & Sign'}
         </button>
+
+        <button
+          onClick={() => navigate('/marketplace')}
+          style={{ marginTop: '0.75rem', width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#6b7280', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+        >
+          Maybe later — back to Marketplace
+        </button>
+        <p style={{ marginTop: '0.6rem', marginBottom: 0, fontSize: '0.78rem', color: '#9ca3af', textAlign: 'center' }}>
+          You'll need to sign this before you can list or manage vehicles.
+        </p>
       </div>
     </div>
   );
