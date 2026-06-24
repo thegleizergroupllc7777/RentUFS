@@ -9,6 +9,20 @@ const ROLES = ['user', 'admin'];
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 
+// Build a one-line address for the Users list so admins can locate people by
+// area without opening each profile. Uses the home address, falling back to a
+// business/legal address (for business hosts). Returns '' when none on file.
+const formatAddress = (u) => {
+  const home = u.address || {};
+  const hi = u.hostInfo || {};
+  const addr = (home.street || home.city || home.state)
+    ? home
+    : (hi.businessAddress?.street ? hi.businessAddress
+      : (hi.legalAddress?.street ? hi.legalAddress : null));
+  if (!addr) return '';
+  return [addr.street, addr.apt, addr.city, addr.state, addr.zipCode].filter(Boolean).join(', ');
+};
+
 const AdminUsers = () => {
   const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
@@ -107,13 +121,18 @@ const AdminUsers = () => {
             {users.length === 0 && !loading && (
               <tr><td colSpan="8"><div className="admin-empty">No users found.</div></td></tr>
             )}
-            {users.map((u) => (
+            {users.map((u) => {
+              const address = formatAddress(u);
+              return (
               <tr key={u._id} style={{ cursor: 'pointer' }} onClick={(e) => {
                 if (e.target.closest('button')) return;
                 navigate(`/admin/users/${u._id}`);
               }}>
                 <td>
                   <strong>{u.firstName} {u.lastName}</strong>
+                  {address && (
+                    <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>{address}</div>
+                  )}
                 </td>
                 <td>{u.email}</td>
                 <td>{u.phone || '—'}</td>
@@ -141,7 +160,8 @@ const AdminUsers = () => {
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 
