@@ -24,7 +24,7 @@ const cleanupStaleBookings = async () => {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const result = await Booking.updateMany(
       { status: 'awaiting_payment', createdAt: { $lt: oneHourAgo } },
-      { status: 'cancelled', cancellationReason: 'Payment not completed within 1 hour', cancelledAt: new Date() }
+      { status: 'cancelled', paymentStatus: 'expired', cancellationReason: 'Payment not completed within 1 hour', cancelledAt: new Date() }
     );
     if (result.modifiedCount > 0) {
       console.log(`🧹 Auto-cancelled ${result.modifiedCount} stale awaiting_payment booking(s)`);
@@ -240,7 +240,7 @@ router.post('/', auth, async (req, res) => {
         startDate: { $lt: end },
         endDate: { $gt: start }
       },
-      { status: 'cancelled', cancellationReason: 'Superseded by new booking request', cancelledAt: new Date() }
+      { status: 'cancelled', paymentStatus: 'expired', cancellationReason: 'Superseded by new booking request', cancelledAt: new Date() }
     );
 
     // Check if driver already has an overlapping booking (security: prevent unauthorized multi-bookings)

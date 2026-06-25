@@ -4,7 +4,7 @@ import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
-const PAYMENT_OPTIONS = ['pending', 'paid', 'refunded', 'partial_refund', 'failed'];
+const PAYMENT_OPTIONS = ['pending', 'paid', 'refunded', 'partial_refund', 'failed', 'expired'];
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 const formatCurrency = (n) =>

@@ -404,7 +404,7 @@ router.patch('/bookings/:id/status', adminAuth, async (req, res) => {
     // Payment status is RECORD-ONLY here — it does NOT call Stripe. It's for
     // reflecting a refund already issued in Stripe, or correcting a record. To
     // actually move money, use the /refund route instead.
-    const allowedPayments = ['pending', 'paid', 'refunded', 'partial_refund', 'failed'];
+    const allowedPayments = ['pending', 'paid', 'refunded', 'partial_refund', 'failed', 'expired'];
     if (paymentStatus && !allowedPayments.includes(paymentStatus)) {
       return res.status(400).json({ message: `Invalid payment status. Must be one of: ${allowedPayments.join(', ')}` });
     }
