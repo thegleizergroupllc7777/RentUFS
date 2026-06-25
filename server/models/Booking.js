@@ -156,7 +156,10 @@ const bookingSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'refunded', 'partial_refund', 'failed'],
+    // 'expired' = the booking timed out without payment (driver never completed
+    // checkout). Distinct from 'failed', which is reserved for an actual payment
+    // problem (e.g. a declined card).
+    enum: ['pending', 'paid', 'refunded', 'partial_refund', 'failed', 'expired'],
     default: 'pending'
   },
   paymentSessionId: {
