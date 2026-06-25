@@ -355,7 +355,17 @@ router.get('/my-bookings', auth, async (req, res) => {
 // Get host's bookings
 router.get('/host-bookings', auth, async (req, res) => {
   try {
-    const bookings = await Booking.find({ host: req.user._id, status: { $ne: 'awaiting_payment' } })
+    const bookings = await Booking.find({
+      host: req.user._id,
+      status: { $ne: 'awaiting_payment' },
+      // Hide "ghost" reservations from the host — abandoned checkouts that were
+      // cancelled without ever being paid (driver started a booking but never
+      // completed payment). The host was never affected by these, so showing
+      // them just causes confusion and needless "is something broken?" support
+      // requests. A cancelled booking is shown only if it was actually paid at
+      // some point (a real reservation later cancelled/refunded).
+      $nor: [{ status: 'cancelled', paymentStatus: { $nin: ['paid', 'refunded', 'partial_refund'] } }]
+    })
       .select('-agreement.signatureImage -agreement.driverAddressAtSigning -pickupInspection.photos -returnInspection.photos')
       .populate('vehicle', 'nickname make model year images registrationImage pricePerDay vin')
       .populate('driver', 'firstName lastName email phone profileImage')
