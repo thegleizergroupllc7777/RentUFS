@@ -225,6 +225,25 @@ const ReservationDetail = () => {
       });
     }
 
+    // Refund — if the booking was cancelled and refunded, show the money returned
+    // so "Total Spent" reflects what the driver actually kept (e.g. just the $5
+    // late-cancellation fee for a within-24-hour cancel), not the full charge.
+    if (booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') {
+      const charged = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+      const fee = booking.cancellationFee || 0;
+      const refundAmount = Math.max(0, charged - fee);
+      if (refundAmount > 0) {
+        transactions.push({
+          date: booking.cancelledAt || booking.updatedAt || booking.createdAt,
+          type: 'Refund',
+          description: fee > 0
+            ? `Cancelled within 24 hrs — $${fee.toFixed(2)} cancellation fee kept`
+            : 'Booking cancelled — full refund',
+          amount: -refundAmount
+        });
+      }
+    }
+
     return transactions;
   };
 
@@ -551,12 +570,12 @@ const ReservationDetail = () => {
                             </div>
                           </div>
                           <div style={{
-                            color: txn.amount > 0 ? '#fff' : '#6b7280',
+                            color: txn.amount > 0 ? '#fff' : txn.amount < 0 ? '#10b981' : '#6b7280',
                             fontWeight: '600',
                             fontSize: '0.875rem',
                             whiteSpace: 'nowrap'
                           }}>
-                            {txn.amount > 0 ? `$${txn.amount.toFixed(2)}` : '-'}
+                            {txn.amount > 0 ? `$${txn.amount.toFixed(2)}` : txn.amount < 0 ? `-$${Math.abs(txn.amount).toFixed(2)}` : '-'}
                           </div>
 
                         </div>
