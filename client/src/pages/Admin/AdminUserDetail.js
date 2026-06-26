@@ -302,6 +302,7 @@ const AdminUserDetail = () => {
                       <ProfileRow label="Signed on" value={formatDateTime(user.hostAgreement.signedAt)} />
                       <ProfileRow label="Signature" value={<span style={{ fontFamily: 'cursive', fontSize: '1.15rem', color: '#111827' }}>{user.hostAgreement.signature || '—'}</span>} />
                       <ProfileRow label="Version" value={user.hostAgreement.version || '—'} />
+                      <ProfileRow label="Signed from (IP)" value={user.hostAgreement.ipAddress || '—'} />
                     </div>
                     <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#374151' }}>
                       <div>✅ Primary Insurance Requirement {user.hostAgreement.acknowledgedPrimaryInsurance ? 'acknowledged' : '—'}</div>
