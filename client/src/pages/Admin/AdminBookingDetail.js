@@ -146,17 +146,19 @@ const AdminBookingDetail = () => {
               <Field label="Platform fee" value={formatCurrency(booking.platformFee)} />
               <Field label="Insurance" value={formatCurrency(booking.insurance?.totalCost)} />
               <Field label="Processing fee" value={formatCurrency(booking.driverProcessingFee)} />
-              <Field label="Host earnings" value={formatCurrency(booking.hostEarnings)} />
-              <Field label="Platform revenue" value={formatCurrency(booking.platformRevenue)} />
+              {/* For a cancelled/refunded booking these show the ACTUAL outcome
+                  (host earned nothing, platform kept only the fee) instead of the
+                  projected trip amounts. Display-only — the stored values and all
+                  reports are unchanged. */}
+              <Field label="Host earnings" value={formatCurrency((booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') ? 0 : booking.hostEarnings)} />
+              <Field label="Platform revenue" value={formatCurrency((booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') ? (booking.cancellationFee || 0) : booking.platformRevenue)} />
             </div>
 
-            {/* Refund summary — shown only for cancelled/refunded bookings so the
-                actual outcome is clear (e.g. $91.05 refunded, $5 fee retained).
-                Read-only: derived from values already on the booking. */}
+            {/* Refund line — shown only for cancelled/refunded bookings: the amount
+                sent back to the driver. Read-only, derived from booking values. */}
             {(booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') && (
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
-                <Field label="Refunded" value={`-${formatCurrency(Math.max(0, (booking.totalPrice || 0) - (booking.cancellationFee || 0)))}`} />
-                <Field label="Net retained" value={formatCurrency(booking.cancellationFee || 0)} />
+                <Field label="Refunded to driver" value={`-${formatCurrency(Math.max(0, (booking.totalPrice || 0) - (booking.cancellationFee || 0)))}`} />
               </div>
             )}
           </div>
