@@ -1174,3 +1174,19 @@
   scrollbar-width: thin;
   scrollbar-color: #10b981 #1a1a1a;
 }
+
+/* On phones, stack the profile sidebar above the content so the content area
+   isn't crushed into a narrow column. The fixed 200px sidebar left only ~120px
+   for content on a phone, which squished the license/selfie upload. Desktop is
+   unaffected — this only applies under 640px wide. */
+@media (max-width: 640px) {
+  .profile-layout {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  .profile-sidebar {
+    width: 100% !important;
+    position: static !important;
+    top: auto !important;
+  }
+}

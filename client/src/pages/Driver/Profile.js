@@ -2488,9 +2488,9 @@ const DriverProfile = () => {
         <div className="container" style={{ maxWidth: '900px' }}>
           <h1 className="page-title" style={{ position: 'sticky', top: '60px', zIndex: 10, background: '#111111', paddingTop: '1rem', paddingBottom: '1rem', margin: 0 }}>My Profile</h1>
 
-          <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+          <div className="profile-layout" style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
             {/* Sidebar */}
-            <div style={{
+            <div className="profile-sidebar" style={{
               width: '200px',
               flexShrink: 0,
               background: '#000',
