@@ -149,6 +149,16 @@ const AdminBookingDetail = () => {
               <Field label="Host earnings" value={formatCurrency(booking.hostEarnings)} />
               <Field label="Platform revenue" value={formatCurrency(booking.platformRevenue)} />
             </div>
+
+            {/* Refund summary — shown only for cancelled/refunded bookings so the
+                actual outcome is clear (e.g. $91.05 refunded, $5 fee retained).
+                Read-only: derived from values already on the booking. */}
+            {(booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') && (
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                <Field label="Refunded" value={`-${formatCurrency(Math.max(0, (booking.totalPrice || 0) - (booking.cancellationFee || 0)))}`} />
+                <Field label="Net retained" value={formatCurrency(booking.cancellationFee || 0)} />
+              </div>
+            )}
           </div>
 
           {/* Inspection photos */}
