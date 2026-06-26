@@ -332,6 +332,14 @@ router.post('/', auth, async (req, res) => {
 
     res.status(201).json(booking);
   } catch (error) {
+    // Log full detail to Render so an intermittent "Server error" on booking
+    // creation can actually be diagnosed (who, which vehicle, and the stack).
+    console.error('❌ Booking creation error:', {
+      message: error.message,
+      driverId: req.user?._id?.toString(),
+      vehicleId: req.body?.vehicleId,
+      stack: error.stack
+    });
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
