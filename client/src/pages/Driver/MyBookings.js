@@ -212,6 +212,17 @@ const InsuranceCardModal = ({ booking, onClose, onBookingUpdate }) => {
           </div>
         )}
 
+        {cardReady && (
+          <a
+            href={`${cardSrc}&format=raw`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+            style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: '0.75rem', textDecoration: 'none', boxSizing: 'border-box' }}
+          >
+            📄 Open Card (full screen)
+          </a>
+        )}
         <button onClick={onClose} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }}>Close</button>
       </div>
     </div>
