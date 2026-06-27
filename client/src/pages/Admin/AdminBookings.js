@@ -7,6 +7,9 @@ const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'c
 const PAYMENT_OPTIONS = ['pending', 'paid', 'refunded', 'partial_refund', 'failed', 'expired'];
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+// Trip dates are stored as midnight UTC of the selected day — format in UTC so a
+// browser east of UTC doesn't show the previous day.
+const formatTripDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '—');
 const formatCurrency = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
 
@@ -108,7 +111,7 @@ const AdminBookings = () => {
                   <div className="muted">{b.host?.email}</div>
                 </td>
                 <td>
-                  {formatDate(b.startDate)} → {formatDate(b.endDate)}
+                  {formatTripDate(b.startDate)} → {formatTripDate(b.endDate)}
                   <div className="muted">{b.totalDays} day{b.totalDays !== 1 ? 's' : ''}</div>
                 </td>
                 <td>{formatCurrency(b.totalPrice)}</td>

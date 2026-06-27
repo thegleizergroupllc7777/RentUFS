@@ -8,7 +8,9 @@ import AdminLayout from './AdminLayout';
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
 
 const formatDate = (d) => (d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
-const formatDateOnly = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+// Trip dates (pickup/return) are stored as midnight UTC of the selected day, so
+// format them in UTC — otherwise a browser east of UTC shows the previous day.
+const formatDateOnly = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '—');
 const formatCurrency = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
 
 const toDateInput = (d) => (d ? new Date(d).toISOString().split('T')[0] : '');
