@@ -262,6 +262,27 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
+    // Vehicle-level conflict guard (the lock that prevents double-booking).
+    // Refuse if THIS vehicle is already reserved for overlapping dates by ANY
+    // driver. Previously a double-booking was only prevented by hiding rented
+    // cars from the marketplace; this guard enforces it at the source, so the
+    // car can safely stay visible with a "Rented" badge. Read-only: it only
+    // reads existing bookings to decide whether to block this new one — it never
+    // touches them. Statuses match the marketplace's availability filter
+    // (awaiting_payment carts are excluded so abandoned checkouts can't block).
+    const vehicleConflict = await Booking.findOne({
+      vehicle: vehicle._id,
+      status: { $in: ['pending', 'confirmed', 'active'] },
+      startDate: { $lt: end },
+      endDate: { $gt: start }
+    });
+
+    if (vehicleConflict) {
+      return res.status(400).json({
+        message: 'Sorry, this vehicle is already booked for the dates you selected. Please choose different dates.'
+      });
+    }
+
     // Calculate total price based on rental type
     let totalPrice;
     let pricePerDay = vehicle.pricePerDay;
