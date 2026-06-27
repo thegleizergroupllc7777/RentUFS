@@ -87,6 +87,16 @@ const Marketplace = () => {
   const [loadingSlow, setLoadingSlow] = useState(false);
   const [error, setError] = useState(null);
   const slowTimerRef = useRef(null);
+  // Ref to the Map-view card strip so the ‹ › arrows can slide it left/right.
+  const floatingScrollRef = useRef(null);
+
+  // Scroll the floating card strip by roughly two cards in either direction.
+  const scrollFloatingCards = (direction) => {
+    const el = floatingScrollRef.current;
+    if (!el) return;
+    const amount = 380; // ~two 170px cards + gaps
+    el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     fetchVehicles();
@@ -427,7 +437,17 @@ const Marketplace = () => {
             {/* Floating Vehicle Cards at Bottom */}
             {vehicles.length > 0 && (
               <div className="floating-cards-container">
-                <div className="floating-cards-scroll">
+                {vehicles.length > 1 && (
+                  <button
+                    type="button"
+                    className="floating-cards-arrow left"
+                    aria-label="Scroll cards left"
+                    onClick={() => scrollFloatingCards('left')}
+                  >
+                    ‹
+                  </button>
+                )}
+                <div className="floating-cards-scroll" ref={floatingScrollRef}>
                   {vehicles.slice(0, 12).map(vehicle => (
                     <Link
                       key={vehicle._id}
@@ -461,6 +481,16 @@ const Marketplace = () => {
                     </Link>
                   ))}
                 </div>
+                {vehicles.length > 1 && (
+                  <button
+                    type="button"
+                    className="floating-cards-arrow right"
+                    aria-label="Scroll cards right"
+                    onClick={() => scrollFloatingCards('right')}
+                  >
+                    ›
+                  </button>
+                )}
                 {vehicles.length > 12 && (
                   <button
                     className="load-more-btn"

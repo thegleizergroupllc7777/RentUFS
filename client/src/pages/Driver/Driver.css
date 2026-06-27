@@ -698,6 +698,45 @@
   scroll-behavior: smooth;
 }
 
+/* Left/right arrows to slide the Map-view card strip. Purely a navigation aid —
+   the strip still scrolls by drag/swipe as before. */
+.floating-cards-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.65);
+  color: #00FF66;
+  font-size: 1.6rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: background 0.2s, transform 0.1s;
+}
+
+.floating-cards-arrow:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.floating-cards-arrow:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.floating-cards-arrow.left {
+  left: 0.5rem;
+}
+
+.floating-cards-arrow.right {
+  right: 0.5rem;
+}
+
 .floating-cards-scroll::-webkit-scrollbar {
   height: 6px;
 }
