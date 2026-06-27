@@ -4,6 +4,7 @@ import axios from '../../config/axios';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
+import RentalAgreement from '../../components/RentalAgreement';
 
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
 
@@ -60,6 +61,7 @@ const AdminBookingDetail = () => {
   const [datesOpen, setDatesOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
+  const [agreementOpen, setAgreementOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -166,9 +168,18 @@ const AdminBookingDetail = () => {
           </div>
 
           {/* Rental agreement — the renter's signed trip contract (proof).
-              Read-only: the agreement data is already saved on the booking. */}
+              Read-only: the agreement data is already saved on the booking.
+              The "View" button expands the full living contract (same read-only
+              document the host sees) — admins can review every term, always current. */}
           <h3 style={{ color: '#374151' }}>Rental agreement</h3>
-          <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+          <div className="admin-table-wrap" style={{ marginBottom: agreementOpen ? '0.75rem' : '1.5rem', padding: '1.25rem', position: 'relative' }}>
+            <button
+              className="admin-btn"
+              onClick={() => setAgreementOpen((o) => !o)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem' }}
+            >
+              {agreementOpen ? 'Hide' : 'View'}
+            </button>
             {booking.agreement?.signed ? (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
@@ -193,6 +204,14 @@ const AdminBookingDetail = () => {
               <div className="admin-empty">Not signed yet.</div>
             )}
           </div>
+
+          {/* Full living contract — same read-only document the renter and host
+              see, rendered live from the booking. Only loads when expanded. */}
+          {agreementOpen && (
+            <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem', background: '#fff' }}>
+              <RentalAgreement bookingId={booking._id} readOnly={true} />
+            </div>
+          )}
 
           {/* Inspection photos */}
           <h3 style={{ color: '#374151' }}>Inspection photos</h3>
