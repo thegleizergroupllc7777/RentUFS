@@ -183,7 +183,11 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Please select a pick-up date' });
     }
 
-    const vehicle = await Vehicle.findById(vehicleId);
+    // Accept either a Mongo _id OR a SEO slug — vehicle links/pages use the slug
+    // (e.g. "2025-nissan-versa-..."), so resolve it the same way the vehicle page
+    // does. Using findById directly on a slug throws a CastError -> "Server error".
+    const isVehicleObjectId = /^[0-9a-fA-F]{24}$/.test(String(vehicleId || ''));
+    const vehicle = await Vehicle.findOne(isVehicleObjectId ? { _id: vehicleId } : { slug: vehicleId });
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' });
     }
