@@ -369,6 +369,38 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// Public: a vehicle's already-booked date ranges, so the booking calendar can
+// gray them out (Turo/Airbnb style). Read-only — only reads existing bookings.
+// Accepts a Mongo _id or a SEO slug. Statuses match the double-booking guard.
+router.get('/vehicle/:vehicleId/booked-dates', async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(String(vehicleId || ''));
+    const vehicle = await Vehicle.findOne(isObjectId ? { _id: vehicleId } : { slug: vehicleId }).select('_id');
+    if (!vehicle) {
+      return res.status(404).json({ message: 'Vehicle not found' });
+    }
+
+    const bookings = await Booking.find({
+      vehicle: vehicle._id,
+      status: { $in: ['pending', 'confirmed', 'active'] }
+    }).select('startDate endDate').lean();
+
+    // Trip dates are stored at midnight UTC of the chosen day, so the UTC date
+    // part (slice 0-10) is the intended calendar day.
+    const ranges = bookings
+      .filter((b) => b.startDate && b.endDate)
+      .map((b) => ({
+        start: new Date(b.startDate).toISOString().slice(0, 10),
+        end: new Date(b.endDate).toISOString().slice(0, 10)
+      }));
+
+    res.json({ ranges });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get user's bookings (as driver)
 router.get('/my-bookings', auth, async (req, res) => {
   try {

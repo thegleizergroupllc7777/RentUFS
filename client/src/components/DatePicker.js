@@ -9,7 +9,12 @@ const toLocalDateStr = (date) => {
   return `${y}-${m}-${d}`;
 };
 
-const DatePicker = ({ label, name, value, onChange, min, required = false }) => {
+// `bookedRanges` is optional and defaults to []. Each entry is
+// { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } and grays out the days a vehicle is
+// already reserved (start inclusive, end exclusive — the return day is free for a
+// new pickup, matching the booking conflict guard on the server). When omitted,
+// the picker behaves exactly as before, so every other usage is unaffected.
+const DatePicker = ({ label, name, value, onChange, min, required = false, bookedRanges = [] }) => {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => {
     if (value) return new Date(value + 'T00:00:00');
@@ -76,10 +81,18 @@ const DatePicker = ({ label, name, value, onChange, min, required = false }) => 
     return new Date(year, month, day.day);
   };
 
+  // True if this day falls inside an already-booked range (start inclusive,
+  // end exclusive). Uses YYYY-MM-DD string compare, which is safe and tz-proof.
+  const isBooked = (day) => {
+    if (!bookedRanges || bookedRanges.length === 0) return false;
+    const ds = toLocalDateStr(getDateForDay(day));
+    return bookedRanges.some((r) => r && r.start && r.end && ds >= r.start && ds < r.end);
+  };
+
   const isDisabled = (day) => {
     const date = getDateForDay(day);
     date.setHours(0, 0, 0, 0);
-    return date < minDate;
+    return date < minDate || isBooked(day);
   };
 
   const isSelected = (day) => {
