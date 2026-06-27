@@ -147,7 +147,8 @@ const AdminBookingDetail = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
               <Field label="Price/day" value={formatCurrency(booking.pricePerDay)} />
               <Field label="Rental subtotal" value={formatCurrency(booking.rentalSubtotal)} />
-              <Field label="Platform fee" value={formatCurrency(booking.platformFee)} />
+              <Field label="Platform fee (driver)" value={formatCurrency(booking.platformFee)} />
+              <Field label="Platform fee (host)" value={formatCurrency(booking.hostPlatformFee)} />
               <Field label="Insurance" value={formatCurrency(booking.insurance?.totalCost)} />
               <Field label="Processing fee" value={formatCurrency(booking.driverProcessingFee)} />
               {/* For a cancelled/refunded booking these show the ACTUAL outcome
@@ -157,6 +158,16 @@ const AdminBookingDetail = () => {
               <Field label="Host earnings" value={formatCurrency((booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') ? 0 : booking.hostEarnings)} />
               <Field label="Platform revenue" value={formatCurrency((booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') ? (booking.cancellationFee || 0) : booking.platformRevenue)} />
             </div>
+
+            {/* Spell out how platform revenue is composed, so both $1.50/day fees
+                (driver + host) and the insurance are visible at a glance. Shown for
+                normal paid/active bookings (not refunded ones, which display the
+                cancellation outcome above). Display-only — derived from stored values. */}
+            {!(booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') && (
+              <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                Platform revenue = Platform fee (driver) {formatCurrency(booking.platformFee)} + Platform fee (host) {formatCurrency(booking.hostPlatformFee)} + Insurance {formatCurrency(booking.insurance?.totalCost)}
+              </div>
+            )}
 
             {/* Refund line — shown only for cancelled/refunded bookings: the amount
                 sent back to the driver. Read-only, derived from booking values. */}
