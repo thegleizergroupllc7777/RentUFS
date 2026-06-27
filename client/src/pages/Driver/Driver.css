@@ -143,6 +143,18 @@
   color: #9ca3af;
 }
 
+/* Clickable host name -> opens that host's storefront (all their cars). */
+.host-link {
+  color: #00FF66;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.host-link:hover {
+  text-decoration: underline;
+}
+
 /* Vehicle Detail Styles */
 .vehicle-detail {
   display: grid;
