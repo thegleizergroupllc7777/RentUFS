@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
@@ -487,12 +487,18 @@ const VehicleDetail = () => {
               )}
 
               <div className="vehicle-section">
-                <h2>Hosted by {(() => {
-                  const h = vehicle.host?.hostInfo;
-                  if (h?.displayPreference === 'business' && h?.businessName) return h.businessName;
-                  if (h?.displayPreference === 'dba' && h?.dba) return h.dba;
-                  return `${vehicle.host?.firstName} ${vehicle.host?.lastName}`;
-                })()}</h2>
+                <h2>Hosted by{' '}
+                  {(() => {
+                    const h = vehicle.host?.hostInfo;
+                    let name;
+                    if (h?.displayPreference === 'business' && h?.businessName) name = h.businessName;
+                    else if (h?.displayPreference === 'dba' && h?.dba) name = h.dba;
+                    else name = `${vehicle.host?.firstName || ''} ${vehicle.host?.lastName || ''}`.trim();
+                    const hostId = vehicle.host?._id || vehicle.host;
+                    // Link the host's name to their storefront (all their cars).
+                    if (!hostId || typeof hostId !== 'string') return name;
+                    return <Link to={`/h/${hostId}`} className="host-link">{name}</Link>;
+                  })()}</h2>
                 {vehicle.host?.rating > 0 && (
                   <p>Host Rating: ⭐ {vehicle.host.rating.toFixed(1)} ({vehicle.host.reviewCount} reviews)</p>
                 )}

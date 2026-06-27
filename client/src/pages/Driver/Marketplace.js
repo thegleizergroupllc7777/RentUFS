@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Component } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
@@ -87,6 +87,7 @@ const Marketplace = () => {
   const [loadingSlow, setLoadingSlow] = useState(false);
   const [error, setError] = useState(null);
   const slowTimerRef = useRef(null);
+  const navigate = useNavigate();
   // Ref to the Map-view card strip so the ‹ › arrows can slide it left/right.
   const floatingScrollRef = useRef(null);
 
@@ -254,11 +255,24 @@ const Marketplace = () => {
                     <span>/day</span>
                   </div>
                   <div className="vehicle-host">
-                    Hosted by {(() => {
+                    Hosted by{' '}
+                    {(() => {
                       const h = vehicle.host?.hostInfo;
-                      if (h?.displayPreference === 'business' && h?.businessName) return h.businessName;
-                      if (h?.displayPreference === 'dba' && h?.dba) return h.dba;
-                      return vehicle.host?.firstName;
+                      let name;
+                      if (h?.displayPreference === 'business' && h?.businessName) name = h.businessName;
+                      else if (h?.displayPreference === 'dba' && h?.dba) name = h.dba;
+                      else name = vehicle.host?.firstName;
+                      // Link the name to the host's storefront. The card itself is a
+                      // link to the car, so stop the click from triggering it.
+                      if (!vehicle.host?._id) return name;
+                      return (
+                        <span
+                          className="host-link"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/h/${vehicle.host._id}`); }}
+                        >
+                          {name}
+                        </span>
+                      );
                     })()}
                   </div>
                 </div>
