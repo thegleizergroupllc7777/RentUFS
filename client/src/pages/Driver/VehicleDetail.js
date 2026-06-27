@@ -28,6 +28,8 @@ const VehicleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeBooking, setActiveBooking] = useState(null);
   const [isRented, setIsRented] = useState(false);
+  // Already-booked date ranges for this vehicle, used to gray out the calendar.
+  const [bookedRanges, setBookedRanges] = useState([]);
   const [bookingData, setBookingData] = useState({
     startDate: '',
     endDate: '',
@@ -67,6 +69,17 @@ const VehicleDetail = () => {
       }
     };
   }, [vehicle]);
+
+  // Fetch this vehicle's booked date ranges (read-only) to gray out the calendar.
+  // Independent of the main fetch so it can't affect anything else if it fails.
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${API_URL}/api/bookings/vehicle/${id}/booked-dates`)
+      .then((res) => { if (!cancelled) setBookedRanges(res.data?.ranges || []); })
+      .catch(() => { if (!cancelled) setBookedRanges([]); });
+    return () => { cancelled = true; };
+  }, [id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -801,6 +814,7 @@ const VehicleDetail = () => {
                       name="startDate"
                       value={bookingData.startDate}
                       onChange={handleBookingChange}
+                      bookedRanges={bookedRanges}
                       min={(() => {
                         // If no hours left today (11 PM or later), set min to tomorrow
                         if (currentHour >= 23) {
