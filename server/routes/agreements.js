@@ -17,9 +17,12 @@ router.get('/:bookingId', auth, async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    // Only driver or host can view agreement
+    // Only driver or host can view agreement — plus platform admins (read-only),
+    // so the admin booking page can pull up the full living contract. This does
+    // not affect signing, which remains locked to the renter below.
     const userId = req.user._id.toString();
-    if (booking.driver._id.toString() !== userId && booking.host._id.toString() !== userId) {
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && booking.driver._id.toString() !== userId && booking.host._id.toString() !== userId) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
