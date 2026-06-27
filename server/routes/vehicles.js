@@ -251,6 +251,31 @@ router.get('/', async (req, res) => {
     const { location, radius, startDate, endDate } = req.query;
     let vehicles;
 
+    // Currently-rented vehicles (a confirmed/active booking covering today) are
+    // shown on the marketplace ALONGSIDE available cars, so they appear with a
+    // "Rented" badge instead of vanishing while out — matching the Wheelbase
+    // cars. They remain availability:false, so they stay non-bookable while
+    // rented and the double-booking guard is the real lock. Host-PAUSED cars
+    // (availability:false with NO active booking) are NOT included, so anything
+    // a host intentionally took down stays hidden.
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
+    const rentedTodayBookings = await Booking.find({
+      status: { $in: ['confirmed', 'active'] },
+      startDate: { $lte: endOfToday },
+      endDate: { $gte: startOfToday }
+    }).select('vehicle').lean();
+    const rentedSeen = new Set();
+    const rentedVehicleIds = [];
+    for (const b of rentedTodayBookings) {
+      const k = String(b.vehicle);
+      if (!rentedSeen.has(k)) { rentedSeen.add(k); rentedVehicleIds.push(b.vehicle); }
+    }
+    // "Listed on the marketplace" = available OR currently rented.
+    const listedFilter = rentedVehicleIds.length > 0
+      ? { $or: [{ availability: true }, { _id: { $in: rentedVehicleIds } }] }
+      : { availability: true };
+
     // If location and radius are provided, use geospatial query
     if (location && radius) {
       // First geocode the search location
@@ -271,7 +296,7 @@ router.get('/', async (req, res) => {
               distanceField: 'distance',
               maxDistance: radiusInMeters,
               spherical: true,
-              query: { availability: true }
+              query: listedFilter
             }
           },
           {
@@ -304,7 +329,7 @@ router.get('/', async (req, res) => {
         }));
       } else {
         // Geocoding failed, fall back to text search
-        let query = { availability: true };
+        let query = { ...listedFilter };
         if (/^\d{5}$/.test(location.trim())) {
           query['location.zipCode'] = location.trim();
         } else {
@@ -317,7 +342,7 @@ router.get('/', async (req, res) => {
       }
     } else if (location) {
       // Location without radius - use text search
-      let query = { availability: true };
+      let query = { ...listedFilter };
       if (/^\d{5}$/.test(location.trim())) {
         query['location.zipCode'] = location.trim();
       } else {
@@ -328,8 +353,8 @@ router.get('/', async (req, res) => {
         .sort({ createdAt: -1 })
         .lean();
     } else {
-      // No location filter - return all available vehicles (limit to 100 for performance)
-      vehicles = await Vehicle.find({ availability: true })
+      // No location filter - return all listed vehicles (available or rented)
+      vehicles = await Vehicle.find(listedFilter)
         .populate('host', 'firstName lastName rating reviewCount address hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
         .sort({ createdAt: -1 })
         .limit(100)
