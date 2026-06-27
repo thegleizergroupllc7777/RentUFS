@@ -325,7 +325,9 @@ router.post('/', auth, async (req, res) => {
     const platformRevenue = platformFee + hostPlatformFee;
 
     const booking = new Booking({
-      vehicle: vehicleId,
+      // Use the resolved vehicle's real _id — vehicleId may be a SEO slug, which
+      // would fail to cast into this ObjectId ref and throw a validation error.
+      vehicle: vehicle._id,
       driver: req.user._id,
       host: vehicle.host,
       startDate: start,
