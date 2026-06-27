@@ -6,6 +6,9 @@ import AdminLayout from './AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+// Trip dates are stored as midnight UTC of the selected day — format in UTC so a
+// browser east of UTC doesn't show the previous day (matches the customer view).
+const formatTripDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '—');
 // Full timestamp (date + time) for audit/legal proof, e.g. the e-signature time.
 const formatDateTime = (d) => (d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
 const formatCurrency = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
@@ -429,7 +432,7 @@ const BookingList = ({ bookings, otherParty, navigate }) => {
               <td><strong>{b.reservationId || b._id.slice(-6)}</strong></td>
               <td>{b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : '—'}</td>
               <td>{b[otherParty] ? `${b[otherParty].firstName} ${b[otherParty].lastName}` : '—'}</td>
-              <td>{formatDate(b.startDate)} → {formatDate(b.endDate)}</td>
+              <td>{formatTripDate(b.startDate)} → {formatTripDate(b.endDate)}</td>
               <td>{formatCurrency(b.totalPrice)}</td>
               <td><span className={`badge ${b.status}`}>{b.status}</span></td>
               <td><span className={`badge ${b.paymentStatus}`}>{b.paymentStatus}</span></td>
