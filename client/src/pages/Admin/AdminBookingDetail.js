@@ -165,6 +165,35 @@ const AdminBookingDetail = () => {
             )}
           </div>
 
+          {/* Rental agreement — the renter's signed trip contract (proof).
+              Read-only: the agreement data is already saved on the booking. */}
+          <h3 style={{ color: '#374151' }}>Rental agreement</h3>
+          <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+            {booking.agreement?.signed ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                  <Field label="Status" value={<span className="badge active-acct">signed</span>} />
+                  <Field label="Signed by" value={booking.agreement.driverSignature || (booking.driver ? `${booking.driver.firstName} ${booking.driver.lastName}` : '—')} />
+                  <Field label="Signed on" value={formatDate(booking.agreement.signedAt)} />
+                </div>
+                {booking.agreement.driverAddressAtSigning && (booking.agreement.driverAddressAtSigning.street || booking.agreement.driverAddressAtSigning.city) && (
+                  <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#374151' }}>
+                    <span style={{ color: '#6b7280' }}>Address at signing: </span>
+                    {[booking.agreement.driverAddressAtSigning.street, booking.agreement.driverAddressAtSigning.apt, booking.agreement.driverAddressAtSigning.city, booking.agreement.driverAddressAtSigning.state, booking.agreement.driverAddressAtSigning.zipCode].filter(Boolean).join(', ')}
+                  </div>
+                )}
+                {booking.agreement.signatureImage && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.4rem' }}>Signature</div>
+                    <img src={booking.agreement.signatureImage} alt="Renter signature" style={{ maxWidth: '320px', maxHeight: '120px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px' }} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="admin-empty">Not signed yet.</div>
+            )}
+          </div>
+
           {/* Inspection photos */}
           <h3 style={{ color: '#374151' }}>Inspection photos</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
