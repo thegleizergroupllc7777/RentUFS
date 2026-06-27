@@ -44,7 +44,6 @@ const AdminDashboard = () => {
             <StatCard label="This Week" value={stats.bookings.thisWeek} />
             <StatCard label="This Month" value={stats.bookings.thisMonth} />
             <StatCard label="Currently Active" value={stats.bookings.active} sublabel="In progress now" />
-            <StatCard label="Pending" value={stats.bookings.pending} sublabel="Awaiting host approval" />
           </div>
 
           <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Revenue</h3>
