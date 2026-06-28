@@ -608,8 +608,8 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                     onClick={handleGalleryPick}
                     disabled={uploading}
                   >
-                    <span className="upload-btn-icon">🖥️</span>
-                    <span>Choose from Computer</span>
+                    <span className="upload-btn-icon">📁</span>
+                    <span>Take Photo or Choose File</span>
                   </button>
                 </div>
                 <button
@@ -622,12 +622,12 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
                   ) : (
                     <>
                       <span className="upload-btn-icon">📱</span>
-                      <span>Upload from Phone</span>
+                      <span>Scan QR — use another phone</span>
                     </>
                   )}
                 </button>
                 <p className="inspection-upload-hint">
-                  Use camera, select from computer, or scan QR code with your phone (Max 5MB, auto-compressed)
+                  Use your camera, take a photo or choose a file, or scan the QR code to upload from another phone (Max 5MB, auto-compressed)
                 </p>
               </div>
             )}
