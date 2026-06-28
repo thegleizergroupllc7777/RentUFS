@@ -44,7 +44,7 @@ const HostStorefront = () => {
             {host?.name ? `${host.name}'s Cars` : 'Available Cars'}
           </h1>
           <p style={{ color: '#9ca3af', marginTop: '-0.5rem' }}>
-            Browse and book directly. Every trip is backed by insurance and 24/7 support.
+            Browse and book directly — your next ride is just a tap away.
           </p>
 
           {error && <div className="admin-error" style={{ marginTop: '1rem' }}>{error}</div>}
