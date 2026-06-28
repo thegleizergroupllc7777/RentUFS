@@ -424,7 +424,29 @@ router.get('/host/my-vehicles', auth, async (req, res) => {
 // does not change the marketplace, bookings, payments, or insurance.
 router.get('/storefront/:hostId', async (req, res) => {
   try {
-    let vehicles = await Vehicle.find({ host: req.params.hostId, availability: true })
+    // Like the marketplace, show this host's currently-rented cars alongside
+    // their available ones (with a "Rented" badge) instead of hiding them — so
+    // a host whose cars are all out on trips doesn't get an empty storefront.
+    // Host-PAUSED cars (availability:false with no active booking) stay hidden.
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
+    const rentedTodayBookings = await Booking.find({
+      host: req.params.hostId,
+      status: { $in: ['confirmed', 'active'] },
+      startDate: { $lte: endOfToday },
+      endDate: { $gte: startOfToday }
+    }).select('vehicle').lean();
+    const rentedSeen = new Set();
+    const rentedVehicleIds = [];
+    for (const b of rentedTodayBookings) {
+      const k = String(b.vehicle);
+      if (!rentedSeen.has(k)) { rentedSeen.add(k); rentedVehicleIds.push(b.vehicle); }
+    }
+    const listedFilter = rentedVehicleIds.length > 0
+      ? { host: req.params.hostId, $or: [{ availability: true }, { _id: { $in: rentedVehicleIds } }] }
+      : { host: req.params.hostId, availability: true };
+
+    let vehicles = await Vehicle.find(listedFilter)
       .populate('host', 'firstName lastName rating reviewCount profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
       .sort({ createdAt: -1 })
       .lean();
@@ -432,6 +454,7 @@ router.get('/storefront/:hostId', async (req, res) => {
     // Only show cars whose host can actually be insured (same rule as the marketplace).
     vehicles = vehicles.filter(v => isHostInsuranceReady(v.host));
     vehicles = vehicles.map(v => resolveImageUrls(v, req));
+    await attachRentedNow(vehicles);
 
     // Resolve the host's display name from the populated host (business name
     // when the host presents as a business, otherwise first + last).

@@ -75,7 +75,16 @@ const HostStorefront = () => {
                     display: 'block'
                   }}
                 >
-                  <div style={{ height: '160px', background: '#111', overflow: 'hidden' }}>
+                  <div style={{ height: '160px', background: '#111', overflow: 'hidden', position: 'relative' }}>
+                    {v.rentedNow && (
+                      <div style={{
+                        position: 'absolute', top: '0.5rem', left: '0.5rem', zIndex: 2,
+                        background: '#f59e0b', color: '#000', fontWeight: 700,
+                        fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '0.4rem'
+                      }}>
+                        Rented
+                      </div>
+                    )}
                     {v.images?.[0] && (
                       <img
                         src={v.images[0]}
