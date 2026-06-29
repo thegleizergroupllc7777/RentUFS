@@ -72,7 +72,7 @@ const AdminBookings = () => {
       </div>
 
       <div className="admin-table-wrap">
-        <table className="admin-table">
+        <table className="admin-table admin-table--cards">
           <thead>
             <tr>
               <th>Reservation</th>
@@ -95,29 +95,29 @@ const AdminBookings = () => {
                 if (e.target.closest('button')) return;
                 navigate(`/admin/bookings/${b._id}`);
               }}>
-                <td>
+                <td data-label="Reservation">
                   <strong>{b.reservationId || b._id.slice(-6)}</strong>
                   <div className="muted">{formatDate(b.createdAt)}</div>
                 </td>
-                <td>
+                <td data-label="Vehicle">
                   {b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : '—'}
                 </td>
-                <td>
+                <td data-label="Driver">
                   {b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : '—'}
                   <div className="muted">{b.driver?.email}</div>
                 </td>
-                <td>
+                <td data-label="Host">
                   {b.host ? `${b.host.firstName} ${b.host.lastName}` : '—'}
                   <div className="muted">{b.host?.email}</div>
                 </td>
-                <td>
+                <td data-label="Dates">
                   {formatTripDate(b.startDate)} → {formatTripDate(b.endDate)}
                   <div className="muted">{b.totalDays} day{b.totalDays !== 1 ? 's' : ''}</div>
                 </td>
-                <td>{formatCurrency(b.totalPrice)}</td>
-                <td><span className={`badge ${b.status}`}>{b.status}</span></td>
-                <td><span className={`badge ${b.paymentStatus}`}>{b.paymentStatus}</span></td>
-                <td>
+                <td data-label="Total">{formatCurrency(b.totalPrice)}</td>
+                <td data-label="Status"><span className={`badge ${b.status}`}>{b.status}</span></td>
+                <td data-label="Payment"><span className={`badge ${b.paymentStatus}`}>{b.paymentStatus}</span></td>
+                <td data-label="Actions">
                   <button className="admin-btn" onClick={() => setEditBooking(b)}>Edit</button>
                   {b.paymentStatus === 'paid' && (
                     <button className="admin-btn danger" onClick={() => setRefundBooking(b)}>Refund</button>

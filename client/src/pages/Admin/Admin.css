@@ -159,6 +159,45 @@
   font-size: 0.8rem;
 }
 
+/* Phone-friendly card view for admin lists. On narrow (phone) screens each row
+   in an opted-in table (.admin-table--cards) becomes a stacked, labeled card —
+   no sideways scrolling. Desktop is unchanged (this only applies under 768px).
+   Display-only. */
+@media (max-width: 768px) {
+  .admin-table--cards thead { display: none; }
+  .admin-table--cards,
+  .admin-table--cards tbody,
+  .admin-table--cards tr,
+  .admin-table--cards td { display: block; width: 100%; }
+  .admin-table--cards { padding: 0.75rem; }
+  .admin-table--cards tr {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    margin: 0 0 0.75rem;
+    padding: 0.6rem 0.9rem;
+    background: #f9fafb;
+  }
+  .admin-table--cards tr:last-child { margin-bottom: 0; }
+  .admin-table--cards td {
+    border: none;
+    padding: 0.45rem 0;
+    text-align: left;
+  }
+  .admin-table--cards td + td { border-top: 1px solid #eef0f2; }
+  .admin-table--cards td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.15rem;
+  }
+  /* The empty-state row has no label — don't render an empty heading for it. */
+  .admin-table--cards td[colspan]::before { content: none; }
+}
+
 /* Status badges */
 .badge {
   display: inline-block;
