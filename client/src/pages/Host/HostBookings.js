@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import PullToRefresh from '../../components/PullToRefresh';
 import ChatBox from '../../components/ChatBox';
 import TollCharges from '../../components/TollCharges';
 import AddChargeModal from '../../components/AddChargeModal';
@@ -505,6 +506,7 @@ const HostBookings = () => {
   return (
     <div>
       <Navbar />
+      <PullToRefresh onRefresh={fetchBookings} />
       <div className="page">
         <div className="container">
           <div className="host-header">

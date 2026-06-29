@@ -50,7 +50,7 @@ const AdminVehicles = () => {
   };
 
   return (
-    <AdminLayout title="Vehicles" subtitle="All listings on the platform">
+    <AdminLayout title="Vehicles" subtitle="All listings on the platform" onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-toolbar">

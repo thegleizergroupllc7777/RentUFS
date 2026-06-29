@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
-import PullToRefresh from '../../components/PullToRefresh';
 
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
 const PAYMENT_OPTIONS = ['pending', 'paid', 'refunded', 'partial_refund', 'failed', 'expired'];
@@ -51,8 +50,7 @@ const AdminBookings = () => {
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <AdminLayout title="Bookings" subtitle="All reservations across the platform">
-      <PullToRefresh onRefresh={load} />
+    <AdminLayout title="Bookings" subtitle="All reservations across the platform" onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-toolbar">

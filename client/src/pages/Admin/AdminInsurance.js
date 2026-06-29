@@ -111,7 +111,7 @@ const AdminInsurance = () => {
   const monthLabel = MONTHS.find((x) => x.value === month)?.label || month;
 
   return (
-    <AdminLayout title="Insurance Billing" subtitle="Monthly coverage days to reconcile with the insurance provider — owner only">
+    <AdminLayout title="Insurance Billing" subtitle="Monthly coverage days to reconcile with the insurance provider — owner only" onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-toolbar">

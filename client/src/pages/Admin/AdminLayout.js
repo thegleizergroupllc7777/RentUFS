@@ -1,13 +1,15 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import PullToRefresh from '../../components/PullToRefresh';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
-const AdminLayout = ({ title, subtitle, children }) => {
+const AdminLayout = ({ title, subtitle, children, onRefresh }) => {
   const { user: me } = useAuth();
   return (
     <div className="admin-page">
+      {onRefresh && <PullToRefresh onRefresh={onRefresh} />}
       <Navbar />
       <div className="container">
         <div className="admin-header">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import PullToRefresh from '../../components/PullToRefresh';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import { useAuth } from '../../context/AuthContext';
@@ -280,6 +281,7 @@ const HostDashboard = () => {
   return (
     <div className="host-page">
       <Navbar />
+      <PullToRefresh onRefresh={fetchDashboardData} />
       <div className="page">
         <div className="container">
           <div className="host-header">
