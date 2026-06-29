@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
+import PullToRefresh from '../../components/PullToRefresh';
 import ChatBox from '../../components/ChatBox';
 import RentalAgreement from '../../components/RentalAgreement';
 import TollCharges from '../../components/TollCharges';
@@ -279,6 +280,7 @@ const ReservationDetail = () => {
   return (
     <div>
       <Navbar />
+      <PullToRefresh onRefresh={fetchBookingDetails} />
       <div className="page">
         <div className="container">
           <button

@@ -172,7 +172,7 @@ const AdminBroadcast = () => {
   };
 
   return (
-    <AdminLayout title="Broadcast" subtitle="Send an email or text to your hosts and drivers">
+    <AdminLayout title="Broadcast" subtitle="Send an email or text to your hosts and drivers" onRefresh={() => Promise.all([loadTemplates(), loadPreview(audience)])}>
       <div style={{ maxWidth: 720 }}>
 
         {/* Compose */}
