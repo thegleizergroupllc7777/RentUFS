@@ -9,7 +9,7 @@ const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../
 const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS, sendBookingCompletedSMS, sendBookingCancelledSMS, sendDriverCancelledNotificationSMS } = require('../utils/smsService');
 const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = require('../utils/teqmobility');
 const { isHostInsuranceReady } = require('../utils/hostReadiness');
-const { captureCardImage } = require('../utils/screenshotCard');
+const { captureCardImage, captureCardToCloudinary, uploadCardBufferToCloudinary } = require('../utils/screenshotCard');
 const { isConfigured: tollspotConfigured, monitorCharges } = require('../utils/tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('../utils/tollSettlement');
 
@@ -576,12 +576,13 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardImage': null });
     }
 
-    // Proxy the external card URL
-    let cardUrl = booking.teqMobility?.cardUrl;
+    // Proxy the card URL. Prefer the PERMANENT Cloudinary copy (survives redeploys),
+    // then fall back to the TeqMobility-provided URL.
+    let cardUrl = booking.teqMobility?.cardCloudinaryUrl || booking.teqMobility?.cardUrl;
 
     // Diagnostic: record exactly what insurance data we hold when serving the card.
     const coverageId = booking.teqMobility?.coverageId || null;
-    console.log(`🛡️ Insurance card request for booking ${booking._id}: coverageId=${coverageId || 'none'}, cardUrl=${cardUrl ? 'present' : 'none'}, cardImage=${booking.teqMobility?.cardImage || 'none'}, status=${booking.teqMobility?.status || 'none'}`);
+    console.log(`🛡️ Insurance card request for booking ${booking._id}: coverageId=${coverageId || 'none'}, cloudinary=${booking.teqMobility?.cardCloudinaryUrl ? 'present' : 'none'}, cardUrl=${booking.teqMobility?.cardUrl ? 'present' : 'none'}, cardImage=${booking.teqMobility?.cardImage || 'none'}, status=${booking.teqMobility?.status || 'none'}`);
 
     // No saved card URL (e.g. the cached file/URL was lost to an ephemeral-filesystem
     // redeploy). Before giving up, ask TeqMobility directly for a fresh card URL using
@@ -596,7 +597,14 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
           const freshUrl = await fetchCoverageCardUrl(coverageId, vin);
           if (freshUrl) {
             cardUrl = freshUrl;
-            await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': freshUrl });
+            const update = { 'teqMobility.cardUrl': freshUrl };
+            // Store a permanent copy on Cloudinary so it survives future redeploys.
+            const cloudUrl = await captureCardToCloudinary(freshUrl, booking._id.toString());
+            if (cloudUrl) {
+              update['teqMobility.cardCloudinaryUrl'] = cloudUrl;
+              cardUrl = cloudUrl;
+            }
+            await Booking.findByIdAndUpdate(booking._id, update);
             console.log(`🛡️ Insurance card URL re-fetched fresh from TeqMobility for booking ${booking._id}: ${freshUrl}`);
           } else {
             console.log(`🛡️ Insurance card: TeqMobility returned no card URL for booking ${booking._id}`);
@@ -728,6 +736,69 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
   }
 });
 
+// Admin manual upload of an insurance card — rescue path for when the automatic
+// fetch can't recover the card (e.g. an older booking whose link was lost).
+// Stores the file PERMANENTLY on Cloudinary so it shows in admin, host and driver views.
+const multer = require('multer');
+const cardUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const ok = /pdf|jpeg|jpg|png/i.test(file.mimetype) ||
+               /\.(pdf|jpe?g|png)$/i.test(file.originalname || '');
+    if (ok) return cb(null, true);
+    cb(new Error('Only PDF or image files (pdf, jpg, png) are allowed'));
+  }
+});
+
+router.post('/:id/insurance-card/upload', auth, (req, res) => {
+  cardUpload.single('card')(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    try {
+      // Admin-only rescue tool
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+      const booking = await Booking.findById(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: 'Booking not found' });
+      }
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const buf = req.file.buffer;
+      const isPdf = buf.slice(0, 5).toString('ascii') === '%PDF-';
+      const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+      const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8;
+      const ext = isPdf ? 'pdf' : isPng ? 'png' : isJpeg ? 'jpg' : 'pdf';
+
+      const cloudUrl = await uploadCardBufferToCloudinary(buf, booking._id.toString(), ext);
+      if (!cloudUrl) {
+        return res.status(502).json({ message: 'Failed to store the card. Please try again.' });
+      }
+
+      await Booking.findByIdAndUpdate(booking._id, {
+        'teqMobility.cardCloudinaryUrl': cloudUrl,
+        // Clear any stale local-file pointer so the permanent copy is served
+        'teqMobility.cardImage': null
+      });
+
+      console.log(`🛡️ Insurance card manually uploaded by admin for booking ${booking._id}: ${cloudUrl}`);
+      return res.json({
+        success: true,
+        message: 'Insurance card uploaded successfully',
+        cardCloudinaryUrl: cloudUrl
+      });
+    } catch (e) {
+      console.error('🛡️ Insurance card manual upload error:', e.message);
+      return res.status(500).json({ message: 'Server error', error: e.message });
+    }
+  });
+});
+
 // Retry TeqMobility insurance card fetch for an active booking
 router.post('/:id/retry-insurance', auth, async (req, res) => {
   try {
@@ -775,7 +846,16 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
         const stat = fs.existsSync(dlPath) ? fs.statSync(dlPath) : null;
         if (stat && stat.size > 100) {
           booking.teqMobility.cardImage = imagePath;
-          await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardImage': imagePath });
+          const update = { 'teqMobility.cardImage': imagePath };
+          // Also store a permanent Cloudinary copy if we don't already have one.
+          if (!booking.teqMobility.cardCloudinaryUrl) {
+            const cloudUrl = await captureCardToCloudinary(booking.teqMobility.cardUrl, booking._id.toString());
+            if (cloudUrl) {
+              update['teqMobility.cardCloudinaryUrl'] = cloudUrl;
+              booking.teqMobility.cardCloudinaryUrl = cloudUrl;
+            }
+          }
+          await Booking.findByIdAndUpdate(booking._id, update);
           return res.json({
             success: true,
             message: 'Insurance card retrieved successfully',
@@ -805,15 +885,22 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
       status: coverageResult.success ? coverageResult.status : (existingTeq.status || 'failed'),
       cardUrl: coverageResult.cardUrl || existingTeq.cardUrl || null,
       cardImage: existingTeq.cardImage || null,
+      cardCloudinaryUrl: existingTeq.cardCloudinaryUrl || null,
       startedAt: coverageResult.success ? new Date() : (existingTeq.startedAt || null),
       error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
     };
 
-    // Capture insurance card as a local file
+    // Capture insurance card as a local file + permanent Cloudinary copy
     if (coverageResult.success && teqData.cardUrl && !teqData.cardImage) {
       const imagePath = await captureCardImage(teqData.cardUrl, booking._id.toString());
       if (imagePath) {
         teqData.cardImage = imagePath;
+      }
+    }
+    if (coverageResult.success && teqData.cardUrl && !teqData.cardCloudinaryUrl) {
+      const cloudUrl = await captureCardToCloudinary(teqData.cardUrl, booking._id.toString());
+      if (cloudUrl) {
+        teqData.cardCloudinaryUrl = cloudUrl;
       }
     }
 
@@ -828,10 +915,16 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
         const cardUrl = await fetchCoverageCardUrl(teqData.coverageId, booking.vehicle?.vin);
         if (cardUrl) {
           teqData.cardUrl = cardUrl;
-          // Try to download/capture the card
+          // Try to download/capture the card (local + permanent Cloudinary copy)
           const imagePath = await captureCardImage(cardUrl, booking._id.toString());
           if (imagePath) {
             teqData.cardImage = imagePath;
+          }
+          if (!teqData.cardCloudinaryUrl) {
+            const cloudUrl = await captureCardToCloudinary(cardUrl, booking._id.toString());
+            if (cloudUrl) {
+              teqData.cardCloudinaryUrl = cloudUrl;
+            }
           }
           await Booking.findByIdAndUpdate(booking._id, { teqMobility: teqData });
         }
@@ -1258,15 +1351,22 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
             status: coverageResult.success ? coverageResult.status : 'failed',
             cardUrl: coverageResult.cardUrl || null,
             cardImage: null,
+            cardCloudinaryUrl: null,
             startedAt: coverageResult.success ? new Date() : null,
             error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
           };
 
-          // Capture insurance card as a screenshot image
+          // Capture insurance card: local copy (fast) AND permanent Cloudinary copy
+          // (survives redeploys). Best-effort — failures never affect the reservation,
+          // which has already started and responded to the host above.
           if (coverageResult.success && coverageResult.cardUrl) {
             const imagePath = await captureCardImage(coverageResult.cardUrl, booking._id.toString());
             if (imagePath) {
               teqData.cardImage = imagePath;
+            }
+            const cloudUrl = await captureCardToCloudinary(coverageResult.cardUrl, booking._id.toString());
+            if (cloudUrl) {
+              teqData.cardCloudinaryUrl = cloudUrl;
             }
           }
 

@@ -63,6 +63,7 @@ const AdminBookingDetail = () => {
   const [statusOpen, setStatusOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [agreementOpen, setAgreementOpen] = useState(false);
+  const [cardUploading, setCardUploading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,6 +92,31 @@ const AdminBookingDetail = () => {
   const flash = (msg) => {
     setInfo(msg);
     setTimeout(() => setInfo(''), 4000);
+  };
+
+  // Manual rescue: upload an insurance card PDF/image. Stored permanently on
+  // Cloudinary, then shows in admin, host and driver views.
+  const handleCardUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // reset so the same file can be re-selected later
+    if (!file) return;
+    setError('');
+    setCardUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('card', file);
+      // Override the instance's default JSON content-type; axios 1.x fills in the
+      // multipart boundary automatically when given a FormData body.
+      await axios.post(`/api/bookings/${booking._id}/insurance-card/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      flash('Insurance card uploaded successfully.');
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload insurance card');
+    } finally {
+      setCardUploading(false);
+    }
   };
 
   return (
@@ -256,7 +282,36 @@ const AdminBookingDetail = () => {
                   View insurance card →
                 </a>
                 <div style={{ marginTop: '0.6rem', fontSize: '0.85rem', color: '#6b7280' }}>
-                  Coverage status: {booking.teqMobility?.status || (booking.teqMobility?.coverageId ? 'active' : 'pending')} — pulls the card live from TeqMobility when opened.
+                  Coverage status: {booking.teqMobility?.status || (booking.teqMobility?.coverageId ? 'active' : 'pending')}
+                  {booking.teqMobility?.cardCloudinaryUrl
+                    ? ' — card saved permanently.'
+                    : ' — pulls the card live from TeqMobility when opened.'}
+                </div>
+
+                {/* Manual rescue: upload the card PDF (e.g. downloaded from TeqMobility)
+                    if the automatic copy was ever lost. Stored permanently. */}
+                <div style={{ marginTop: '0.9rem', paddingTop: '0.9rem', borderTop: '1px solid #e5e7eb' }}>
+                  <label
+                    htmlFor="card-upload-input"
+                    style={{
+                      display: 'inline-block', cursor: cardUploading ? 'default' : 'pointer',
+                      fontSize: '0.85rem', color: '#0ea5e9', fontWeight: 600,
+                      opacity: cardUploading ? 0.6 : 1
+                    }}
+                  >
+                    {cardUploading ? 'Uploading…' : '⬆ Upload insurance card (PDF or image)'}
+                  </label>
+                  <input
+                    id="card-upload-input"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    onChange={handleCardUpload}
+                    disabled={cardUploading}
+                    style={{ display: 'none' }}
+                  />
+                  <div style={{ marginTop: '0.35rem', fontSize: '0.78rem', color: '#9ca3af' }}>
+                    Use this to attach a card manually if the automatic one isn't showing.
+                  </div>
                 </div>
               </div>
             </>
