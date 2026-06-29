@@ -118,12 +118,19 @@
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  overflow: hidden;
+  /* Allow the wide tables to scroll sideways on narrow screens (phones, and
+     phones in landscape) so a row is never cut off — you can swipe to see all
+     columns. Desktop is unaffected since the table fits. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .admin-table {
   width: 100%;
+  /* Keep columns readable; if the table is wider than the screen the wrapper
+     scrolls horizontally instead of crushing/clipping the columns. */
+  min-width: 720px;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
