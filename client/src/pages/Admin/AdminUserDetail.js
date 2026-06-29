@@ -38,6 +38,10 @@ const AdminUserDetail = () => {
   const [savingCoverage, setSavingCoverage] = useState(false);
   const [coverageInfo, setCoverageInfo] = useState('');
   const [savingUserType, setSavingUserType] = useState(false);
+  const [payout, setPayout] = useState(null);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [payoutMsg, setPayoutMsg] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +70,46 @@ const AdminUserDetail = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Master-admin only: load what this host is currently owed (read-only preview).
+  const loadPayoutPreview = useCallback(async () => {
+    setPayoutLoading(true);
+    setPayoutMsg('');
+    try {
+      const { data } = await axios.get(`/api/admin/hosts/${id}/payout-preview`);
+      setPayout(data);
+    } catch (err) {
+      setPayout(null);
+    } finally {
+      setPayoutLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (me?.isSuperAdmin && user && (user.userType === 'host' || user.userType === 'both')) {
+      loadPayoutPreview();
+    }
+  }, [me, user, loadPayoutPreview]);
+
+  const handlePayNow = async () => {
+    if (!payout) return;
+    const amount = payout.net || 0;
+    if (amount <= 0) return;
+    if (!window.confirm(`Pay ${payout.hostName} ${formatCurrency(amount)} now?\n\nThis sends a REAL Stripe transfer and cannot be undone. Already-paid bookings are never paid twice.`)) return;
+    setPaying(true);
+    setPayoutMsg('');
+    setError('');
+    try {
+      const { data } = await axios.post(`/api/admin/hosts/${id}/pay-now`);
+      setPayoutMsg(data.message || 'Payout sent.');
+      await loadPayoutPreview();
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Payout failed');
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const performAction = async (endpoint) => {
     setError('');
@@ -287,6 +331,53 @@ const AdminUserDetail = () => {
                 {!user.stripeConnectPayoutsEnabled && (
                   <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#b45309' }}>
                     ⚠️ This host can't receive payouts yet — they still need to finish their Stripe payout setup.
+                  </div>
+                )}
+
+                {/* Owner-only "Pay host now" control. Hidden from regular admins;
+                    the backend also enforces super-admin, so it can't be triggered otherwise. */}
+                {me?.isSuperAdmin && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                      Owner payout control
+                    </div>
+                    {payoutLoading ? (
+                      <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Calculating what's owed…</div>
+                    ) : payout ? (
+                      <>
+                        <div style={{ fontSize: '0.9rem', color: '#111827', marginBottom: '0.5rem' }}>
+                          Currently owed: <strong>{formatCurrency(payout.net)}</strong>
+                          {payout.penaltyDeducted > 0 && (
+                            <span style={{ color: '#6b7280' }}> (gross {formatCurrency(payout.gross)} − {formatCurrency(payout.penaltyDeducted)} penalty)</span>
+                          )}
+                        </div>
+                        {payout.lineItems && payout.lineItems.length > 0 ? (
+                          <div style={{ fontSize: '0.82rem', color: '#374151', marginBottom: '0.75rem' }}>
+                            {payout.lineItems.map((li, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '440px', padding: '0.15rem 0' }}>
+                                <span>{li.reservationId} · {li.vehicle} <span style={{ color: '#9ca3af' }}>({li.note})</span></span>
+                                <span>{formatCurrency(li.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.82rem', color: '#9ca3af', marginBottom: '0.75rem' }}>No eligible earnings to pay right now.</div>
+                        )}
+                        <button
+                          className="admin-btn primary"
+                          onClick={handlePayNow}
+                          disabled={paying || !payout.payoutsEnabled || (payout.net || 0) <= 0}
+                        >
+                          {paying ? 'Sending…' : `Pay ${payout.hostName || 'host'} ${formatCurrency(payout.net)} now`}
+                        </button>
+                        <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                          Sends a real Stripe transfer immediately. Already-paid bookings are never paid twice. Funds must be settled to "available" in Stripe for the transfer to go through.
+                        </div>
+                        {payoutMsg && <div style={{ color: '#059669', fontSize: '0.85rem', marginTop: '0.4rem' }}>{payoutMsg}</div>}
+                      </>
+                    ) : (
+                      <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Payout preview unavailable.</div>
+                    )}
                   </div>
                 )}
               </div>

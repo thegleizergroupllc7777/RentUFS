@@ -346,16 +346,49 @@ const syncTollspotStatuses = async () => {
 
 // Segment-based earning calculations for bookings with mixed rental types
 const { getBookingSegments, getTotalSegmentEarnings, calculateEarningsForDayRange } = require('./earningSegments');
+const SystemState = require('../models/SystemState');
 
-// Automated weekly payout: transfer host earnings for both completed and active bookings
-const processWeeklyPayouts = async () => {
+// ── Payout schedule configuration ──
+const PAYOUT_DOW = 2;          // Day of week for payouts: 0=Sun, 1=Mon, 2=Tue
+const PAYOUT_HOUR_UTC = 11;    // 11:00 UTC = 6:00 AM EST
+
+// The most recent payout target (scheduled day at 6 AM EST) at or before `now`.
+const mostRecentPayoutTarget = (now) => {
+  const t = new Date(now);
+  t.setUTCHours(PAYOUT_HOUR_UTC, 0, 0, 0);
+  const diff = (t.getUTCDay() - PAYOUT_DOW + 7) % 7; // days since the payout weekday
+  t.setUTCDate(t.getUTCDate() - diff);
+  if (t.getTime() > now.getTime()) t.setUTCDate(t.getUTCDate() - 7); // not yet reached today → last week
+  return t;
+};
+
+// Persisted "last payout run" marker so restarts/redeploys can never skip a payout.
+const getLastPayoutRun = async () => {
+  const doc = await SystemState.findOne({ key: 'lastPayoutRun' });
+  return doc && doc.value ? new Date(doc.value) : null;
+};
+const setLastPayoutRun = async (date) => {
+  await SystemState.findOneAndUpdate(
+    { key: 'lastPayoutRun' },
+    { value: date.toISOString(), updatedAt: new Date() },
+    { upsert: true }
+  );
+};
+
+// Automated weekly payout: transfer host earnings for both completed and active bookings.
+// Pass { hostId } to pay a single host (used by the admin "Pay host now" button); the
+// double-pay protection (per-booking payoutStatus tracking) is identical either way.
+const processWeeklyPayouts = async (options = {}) => {
+  const { hostId = null } = options;
   try {
     // Find all hosts with Stripe Connect accounts and payouts enabled
-    const hosts = await User.find({
+    const hostQuery = {
       stripeConnectAccountId: { $exists: true, $ne: null },
       stripeConnectPayoutsEnabled: true,
       userType: { $in: ['host', 'both'] }
-    });
+    };
+    if (hostId) hostQuery._id = hostId; // single-host payout
+    const hosts = await User.find(hostQuery);
 
     if (hosts.length === 0) {
       console.log('💰 Weekly payouts: No eligible hosts found');
@@ -599,6 +632,88 @@ const processWeeklyPayouts = async () => {
   }
 };
 
+// Read-only preview of what a single host is currently owed. Uses the SAME
+// completed-remaining + active-days-served + penalty math as processWeeklyPayouts,
+// but performs NO Stripe transfer and NO database writes. Powers the admin
+// "Pay host now" preview so the amount shown equals the amount that would be paid.
+const previewHostPayout = async (hostId) => {
+  const host = await User.findById(hostId);
+  if (!host) return { error: 'Host not found' };
+
+  const now = new Date();
+  const lineItems = [];
+  let gross = 0;
+
+  // ── Completed bookings: remaining balance ──
+  const completedBookings = await Booking.find({
+    host: host._id,
+    status: 'completed',
+    paymentStatus: 'paid',
+    payoutStatus: { $in: ['pending', 'eligible', 'partial'] }
+  }).populate('vehicle', 'make model year');
+
+  for (const b of completedBookings) {
+    const totalEarnings = getTotalSegmentEarnings(b);
+    const alreadyPaid = b.partialPayoutTotal || 0;
+    const remaining = Math.max(0, totalEarnings - alreadyPaid);
+    if (remaining <= 0) continue;
+    gross += remaining;
+    const v = b.vehicle;
+    lineItems.push({
+      reservationId: b.reservationId,
+      vehicle: v ? `${v.year} ${v.make} ${v.model}` : 'Vehicle',
+      type: 'completed',
+      amount: parseFloat(remaining.toFixed(2)),
+      note: 'Final payout'
+    });
+  }
+
+  // ── Active bookings: days served since last partial payout ──
+  const activeBookings = await Booking.find({
+    host: host._id,
+    status: 'active',
+    paymentStatus: 'paid'
+  }).populate('vehicle', 'make model year');
+
+  for (const b of activeBookings) {
+    const startDate = new Date(b.startDate);
+    const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+    const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
+    const newDaysToPayFor = Math.max(0, daysSinceStart - daysAlreadyPaid);
+    if (newDaysToPayFor <= 0) continue;
+    const segments = getBookingSegments(b);
+    const { earnings: partialAmount } = calculateEarningsForDayRange(segments, daysAlreadyPaid + 1, daysSinceStart);
+    if (partialAmount <= 0) continue;
+    gross += partialAmount;
+    const v = b.vehicle;
+    lineItems.push({
+      reservationId: b.reservationId,
+      vehicle: v ? `${v.year} ${v.make} ${v.model}` : 'Vehicle',
+      type: 'active',
+      amount: parseFloat(partialAmount.toFixed(2)),
+      note: `${newDaysToPayFor} day(s) served`
+    });
+  }
+
+  let penaltyDeducted = 0;
+  let net = gross;
+  if (host.cancellationPenaltyBalance > 0 && gross > 0) {
+    penaltyDeducted = Math.min(host.cancellationPenaltyBalance, gross);
+    net = parseFloat((gross - penaltyDeducted).toFixed(2));
+  }
+
+  return {
+    hostId: host._id,
+    hostName: `${host.firstName || ''} ${host.lastName || ''}`.trim(),
+    hasConnectAccount: !!host.stripeConnectAccountId,
+    payoutsEnabled: !!host.stripeConnectPayoutsEnabled,
+    lineItems,
+    gross: parseFloat(gross.toFixed(2)),
+    penaltyDeducted: parseFloat(penaltyDeducted.toFixed(2)),
+    net
+  };
+};
+
 // Start the scheduler
 let schedulerInterval = null;
 let overdueInterval = null;
@@ -656,28 +771,40 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   }, 2 * 60 * 1000);
   console.log('⏱️  Post-trip toll settlement scheduler running every 6 hours');
 
-  // Weekly automated payouts: transfer eligible earnings to all hosts every Monday
-  // Calculate ms until next Monday at 6:00 AM EST
-  const scheduleWeeklyPayout = () => {
-    const now = new Date();
-    const nextMonday = new Date(now);
-    const currentDay = now.getUTCDay(); // 0=Sun, 1=Mon
-    const daysUntilMonday = currentDay === 0 ? 1 : currentDay === 1 ? 7 : 8 - currentDay;
-    nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday);
-    nextMonday.setUTCHours(11, 0, 0, 0); // 11:00 UTC = 6:00 AM EST
+  // Weekly automated payouts: every Tuesday at 6:00 AM EST — REDEPLOY-PROOF.
+  // Instead of a fragile in-memory countdown (which resets on every redeploy and
+  // could skip a day), we record the last run in the database and check hourly
+  // whether this week's payout is due but hasn't run yet. Because the marker lives
+  // in the DB, restarts/redeploys can never skip or double-run a payout.
+  const runWeeklyPayoutIfDue = async () => {
+    try {
+      const now = new Date();
+      const target = mostRecentPayoutTarget(now); // this week's Tuesday 6 AM EST (or earlier)
+      const lastRun = await getLastPayoutRun();
 
-    const msUntilMonday = nextMonday.getTime() - now.getTime();
-    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+      if (!lastRun) {
+        // First startup ever: seed the marker WITHOUT running, so we don't fire a
+        // payout for a past window we were never tracking. Normal schedule begins next cycle.
+        await setLastPayoutRun(now);
+        console.log(`💰 Weekly payout scheduler initialized — next payout target ${target.toISOString()} (no catch-up run)`);
+        return;
+      }
 
-    console.log(`🚀 Weekly payout scheduler: next run ${nextMonday.toISOString()}`);
-
-    setTimeout(() => {
-      processWeeklyPayouts();
-      weeklyPayoutInterval = setInterval(processWeeklyPayouts, oneWeekMs);
-    }, msUntilMonday);
+      if (lastRun.getTime() < target.getTime()) {
+        console.log(`💰 Weekly payout due (target ${target.toISOString()}, last run ${lastRun.toISOString()}) — running now`);
+        await processWeeklyPayouts();
+        await setLastPayoutRun(new Date());
+        console.log('💰 Weekly payout run complete; marker updated');
+      }
+    } catch (err) {
+      console.error('💰 Weekly payout scheduler check failed:', err.message);
+    }
   };
-  scheduleWeeklyPayout();
-  console.log('⏱️  Weekly payout scheduler running every Monday at 6:00 AM EST');
+
+  // Check shortly after startup (catch-up if a run was missed), then every hour.
+  setTimeout(runWeeklyPayoutIfDue, 60 * 1000);
+  weeklyPayoutInterval = setInterval(runWeeklyPayoutIfDue, 60 * 60 * 1000);
+  console.log('⏱️  Weekly payout scheduler running every Tuesday at 6:00 AM EST (redeploy-proof)');
 
   // Host-added charge settlement: scan every 30 minutes for charges past their
   // 3-day notice window or due for retry after a failed attempt.
@@ -736,6 +863,7 @@ module.exports = {
   checkAndSettlePostTripTolls,
   syncTollspotStatuses,
   processWeeklyPayouts,
+  previewHostPayout,
   startReturnReminderScheduler,
   stopReturnReminderScheduler
 };
