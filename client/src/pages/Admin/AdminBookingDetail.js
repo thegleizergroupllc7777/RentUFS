@@ -176,7 +176,10 @@ const AdminBookingDetail = () => {
           <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
               <Field label="Price/day" value={formatCurrency(booking.pricePerDay)} />
-              <Field label="Rental subtotal" value={formatCurrency(booking.rentalSubtotal)} />
+              {/* Show the FULL rental including any extensions (original subtotal +
+                  each extension's rental), so an extended trip's rental visibly ties
+                  out to host earnings. Display-only — stored values are unchanged. */}
+              <Field label="Rental subtotal" value={formatCurrency((booking.rentalSubtotal || 0) + (booking.extensions || []).reduce((sum, ext) => sum + (ext.rental || 0), 0))} />
               <Field label="Platform fee (driver)" value={formatCurrency(booking.platformFee)} />
               <Field label="Platform fee (host)" value={formatCurrency(booking.hostPlatformFee)} />
               <Field label="Insurance" value={formatCurrency(booking.insurance?.totalCost)} />
