@@ -36,6 +36,7 @@ const SmsSubscriber = require('../models/SmsSubscriber');
 const EmailSuppression = require('../models/EmailSuppression');
 const { isSuperAdmin } = require('../utils/superAdmin');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
+const { previewHostPayout, processWeeklyPayouts } = require('../utils/scheduler');
 
 // Append an admin action entry to a booking's audit log. Save before
 // returning so the entry is persisted even if a later step fails.
@@ -64,6 +65,61 @@ router.get('/ping', adminAuth, (req, res) => {
       isSuperAdmin: isSuperAdmin(req.user)
     }
   });
+});
+
+// ── Host payout preview (OWNER-ONLY) ────────────────────────────────────────
+// Read-only: shows exactly what a host is currently owed (completed remaining +
+// active days served, minus any penalty). NO money moves. Master admin only.
+router.get('/hosts/:id/payout-preview', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const preview = await previewHostPayout(req.params.id);
+    if (preview.error) {
+      return res.status(404).json({ message: preview.error });
+    }
+    res.json(preview);
+  } catch (error) {
+    console.error('Host payout preview error:', error.message);
+    res.status(500).json({ message: 'Failed to load payout preview', error: error.message });
+  }
+});
+
+// ── Pay a host now (OWNER-ONLY) ─────────────────────────────────────────────
+// Triggers the SAME payout engine as the weekly run, scoped to one host. The
+// per-booking payoutStatus tracking guarantees a booking can't be paid twice —
+// if the weekly run fires later, it finds nothing owed. Master admin only.
+router.post('/hosts/:id/pay-now', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const host = await User.findById(req.params.id);
+    if (!host) {
+      return res.status(404).json({ message: 'Host not found' });
+    }
+    if (!host.stripeConnectAccountId || !host.stripeConnectPayoutsEnabled) {
+      return res.status(400).json({ message: 'This host is not set up to receive payouts yet (Stripe Connect not enabled).' });
+    }
+    console.log(`💰 Manual payout triggered by ${req.user.email} for host ${host._id}`);
+    const result = await processWeeklyPayouts({ hostId: host._id });
+    if (!result.success) {
+      return res.status(502).json({ message: result.error || 'Payout failed' });
+    }
+    res.json({
+      success: true,
+      hostsProcessed: result.hostsProcessed,
+      totalTransferred: result.totalTransferred,
+      hostsFailed: result.hostsFailed,
+      message: result.hostsProcessed > 0
+        ? `Payout sent: $${(result.totalTransferred || 0).toFixed(2)}`
+        : 'No eligible earnings to pay right now.'
+    });
+  } catch (error) {
+    console.error('Manual host payout error:', error.message);
+    res.status(500).json({ message: 'Failed to run payout', error: error.message });
+  }
 });
 
 // ── Tax / 1099 export (OWNER-ONLY) ──────────────────────────────────────────
