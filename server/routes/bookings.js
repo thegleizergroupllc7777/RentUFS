@@ -579,18 +579,30 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     // Proxy the external card URL
     let cardUrl = booking.teqMobility?.cardUrl;
 
+    // Diagnostic: record exactly what insurance data we hold when serving the card.
+    const coverageId = booking.teqMobility?.coverageId || null;
+    console.log(`🛡️ Insurance card request for booking ${booking._id}: coverageId=${coverageId || 'none'}, cardUrl=${cardUrl ? 'present' : 'none'}, cardImage=${booking.teqMobility?.cardImage || 'none'}, status=${booking.teqMobility?.status || 'none'}`);
+
     // No saved card URL (e.g. the cached file/URL was lost to an ephemeral-filesystem
-    // redeploy). Before giving up, ask TeqMobility directly for a fresh card URL.
-    // This is read-only: it does NOT start, stop, or change coverage — it only retrieves
-    // the card document for an already-active policy.
-    if (!cardUrl && booking.teqMobility?.coverageId) {
+    // redeploy). Before giving up, ask TeqMobility directly for a fresh card URL using
+    // either the coverage ID or the vehicle VIN. This is read-only: it does NOT start,
+    // stop, or change coverage — it only retrieves the card document for an active policy.
+    if (!cardUrl) {
       try {
         const vehicleForCard = await Vehicle.findById(booking.vehicle).select('vin');
-        const freshUrl = await fetchCoverageCardUrl(booking.teqMobility.coverageId, vehicleForCard?.vin);
-        if (freshUrl) {
-          cardUrl = freshUrl;
-          await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': freshUrl });
-          console.log(`🛡️ Insurance card URL re-fetched fresh from TeqMobility for booking ${booking._id}`);
+        const vin = vehicleForCard?.vin || null;
+        console.log(`🛡️ Insurance card: re-fetching from TeqMobility (coverageId=${coverageId || 'none'}, vin=${vin || 'none'})`);
+        if (coverageId || vin) {
+          const freshUrl = await fetchCoverageCardUrl(coverageId, vin);
+          if (freshUrl) {
+            cardUrl = freshUrl;
+            await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': freshUrl });
+            console.log(`🛡️ Insurance card URL re-fetched fresh from TeqMobility for booking ${booking._id}: ${freshUrl}`);
+          } else {
+            console.log(`🛡️ Insurance card: TeqMobility returned no card URL for booking ${booking._id}`);
+          }
+        } else {
+          console.log(`🛡️ Insurance card: no coverageId and no VIN available for booking ${booking._id}, cannot re-fetch`);
         }
       } catch (refetchErr) {
         console.error(`🛡️ Insurance card re-fetch failed for booking ${booking._id}:`, refetchErr.message);
