@@ -240,7 +240,11 @@ const AdminBookingDetail = () => {
             <>
               <h3 style={{ color: '#374151' }}>Insurance card</h3>
               <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
-                {(booking.teqMobility?.cardUrl || booking.teqMobility?.cardImage) ? (
+                {/* Show the button whenever coverage is active (coverageId exists),
+                    not only when a card was already saved — clicking it runs the
+                    same live re-fetch from TeqMobility the driver side does, so
+                    admin can pull the card on demand. */}
+                {(booking.teqMobility?.cardUrl || booking.teqMobility?.cardImage || booking.teqMobility?.coverageId) ? (
                   <a
                     href={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${encodeURIComponent(localStorage.getItem('token') || '')}`}
                     target="_blank"
