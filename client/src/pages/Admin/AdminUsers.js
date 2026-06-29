@@ -77,7 +77,7 @@ const AdminUsers = () => {
   };
 
   return (
-    <AdminLayout title="Users" subtitle="All accounts on the platform">
+    <AdminLayout title="Users" subtitle="All accounts on the platform" onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-toolbar">

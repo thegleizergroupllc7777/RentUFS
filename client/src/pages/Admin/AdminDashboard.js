@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 
@@ -18,21 +18,21 @@ const AdminDashboard = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await axios.get('/api/admin/stats');
-        setStats(data);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load stats');
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const load = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/admin/stats');
+      setStats(data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load stats');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => { load(); }, [load]);
+
   return (
-    <AdminLayout title="Admin Dashboard" subtitle="Overview of platform activity">
+    <AdminLayout title="Admin Dashboard" subtitle="Overview of platform activity" onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
       {loading && <div className="admin-empty">Loading...</div>}
       {stats && (

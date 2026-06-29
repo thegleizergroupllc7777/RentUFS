@@ -6,6 +6,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { formatTime } from '../../utils/formatTime';
 import { formatPhone } from '../../utils/formatPhone';
 import Navbar from '../../components/Navbar';
+import PullToRefresh from '../../components/PullToRefresh';
 import VehicleInspection from '../../components/VehicleInspection';
 import ChatBox from '../../components/ChatBox';
 import TollCharges from '../../components/TollCharges';
@@ -680,6 +681,7 @@ const MyBookings = () => {
   return (
     <div>
       <Navbar />
+      <PullToRefresh onRefresh={fetchBookings} />
       <div className="page">
         <div className="container">
           <h1 className="page-title">My Reservations</h1>

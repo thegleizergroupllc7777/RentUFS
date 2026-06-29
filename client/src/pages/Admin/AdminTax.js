@@ -87,7 +87,7 @@ const AdminTax = () => {
   }
 
   return (
-    <AdminLayout title="Tax / 1099" subtitle="Host tax info & yearly earnings for 1099 filing — owner only">
+    <AdminLayout title="Tax / 1099" subtitle="Host tax info & yearly earnings for 1099 filing — owner only" onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-toolbar">
