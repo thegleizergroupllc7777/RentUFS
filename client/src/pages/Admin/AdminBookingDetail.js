@@ -240,23 +240,24 @@ const AdminBookingDetail = () => {
             <>
               <h3 style={{ color: '#374151' }}>Insurance card</h3>
               <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
-                {/* Show the button whenever coverage is active (coverageId exists),
-                    not only when a card was already saved — clicking it runs the
-                    same live re-fetch from TeqMobility the driver side does, so
-                    admin can pull the card on demand. */}
-                {(booking.teqMobility?.cardUrl || booking.teqMobility?.cardImage || booking.teqMobility?.coverageId) ? (
-                  <a
-                    href={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${encodeURIComponent(localStorage.getItem('token') || '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="admin-btn primary"
-                    style={{ textDecoration: 'none', display: 'inline-block' }}
-                  >
-                    View insurance card →
-                  </a>
-                ) : (
-                  <div className="muted">No insurance card on file yet (status: {booking.teqMobility?.status || 'none'}).</div>
-                )}
+                {/* Always show the button for insured bookings — clicking it pulls
+                    the card LIVE from TeqMobility (works via the coverage ID or the
+                    VIN), so admin can always retrieve it on demand. The status line
+                    below uses an explicit color so it's readable on the light admin
+                    background (the old "muted" text was white-on-white/invisible).
+                    Display-only — no insurance/TeqMobility logic touched. */}
+                <a
+                  href={`${API_URL}/api/bookings/${booking._id}/insurance-card?token=${encodeURIComponent(localStorage.getItem('token') || '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="admin-btn primary"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  View insurance card →
+                </a>
+                <div style={{ marginTop: '0.6rem', fontSize: '0.85rem', color: '#6b7280' }}>
+                  Coverage status: {booking.teqMobility?.status || (booking.teqMobility?.coverageId ? 'active' : 'pending')} — pulls the card live from TeqMobility when opened.
+                </div>
               </div>
             </>
           )}
