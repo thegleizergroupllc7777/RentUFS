@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
+import PullToRefresh from '../../components/PullToRefresh';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import './Host.css';
@@ -126,6 +127,7 @@ const HostReports = () => {
   return (
     <div>
       <Navbar />
+      <PullToRefresh onRefresh={fetchReports} />
       <div className="page">
         <div className="container" style={{ maxWidth: '900px', margin: '0 auto' }}>
           <div className="host-header">

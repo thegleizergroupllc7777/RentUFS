@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import MapView from '../../components/MapView';
+import PullToRefresh from '../../components/PullToRefresh';
 import DatePicker from '../../components/DatePicker';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
@@ -202,6 +203,9 @@ const Marketplace = () => {
 
   const renderVehicleList = () => (
     <div className="list-view-container">
+      {/* List view only — never rendered on the map view, so it can't interfere
+          with map dragging. */}
+      <PullToRefresh onRefresh={fetchVehicles} />
       <div className="vehicles-list-grid">
         {vehicles.length === 0 ? (
           <div className="no-results">
