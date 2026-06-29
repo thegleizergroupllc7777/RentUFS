@@ -584,10 +584,6 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     const coverageId = booking.teqMobility?.coverageId || null;
     console.log(`🛡️ Insurance card request for booking ${booking._id}: coverageId=${coverageId || 'none'}, cloudinary=${booking.teqMobility?.cardCloudinaryUrl ? 'present' : 'none'}, cardUrl=${booking.teqMobility?.cardUrl ? 'present' : 'none'}, cardImage=${booking.teqMobility?.cardImage || 'none'}, status=${booking.teqMobility?.status || 'none'}`);
 
-    // Diagnostic: record exactly what insurance data we hold when serving the card.
-    const coverageId = booking.teqMobility?.coverageId || null;
-    console.log(`🛡️ Insurance card request for booking ${booking._id}: coverageId=${coverageId || 'none'}, cardUrl=${cardUrl ? 'present' : 'none'}, cardImage=${booking.teqMobility?.cardImage || 'none'}, status=${booking.teqMobility?.status || 'none'}`);
-
     // No saved card URL (e.g. the cached file/URL was lost to an ephemeral-filesystem
     // redeploy). Before giving up, ask TeqMobility directly for a fresh card URL using
     // either the coverage ID or the vehicle VIN. This is read-only: it does NOT start,
