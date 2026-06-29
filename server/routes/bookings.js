@@ -577,7 +577,26 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
     }
 
     // Proxy the external card URL
-    const cardUrl = booking.teqMobility?.cardUrl;
+    let cardUrl = booking.teqMobility?.cardUrl;
+
+    // No saved card URL (e.g. the cached file/URL was lost to an ephemeral-filesystem
+    // redeploy). Before giving up, ask TeqMobility directly for a fresh card URL.
+    // This is read-only: it does NOT start, stop, or change coverage — it only retrieves
+    // the card document for an already-active policy.
+    if (!cardUrl && booking.teqMobility?.coverageId) {
+      try {
+        const vehicleForCard = await Vehicle.findById(booking.vehicle).select('vin');
+        const freshUrl = await fetchCoverageCardUrl(booking.teqMobility.coverageId, vehicleForCard?.vin);
+        if (freshUrl) {
+          cardUrl = freshUrl;
+          await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.cardUrl': freshUrl });
+          console.log(`🛡️ Insurance card URL re-fetched fresh from TeqMobility for booking ${booking._id}`);
+        }
+      } catch (refetchErr) {
+        console.error(`🛡️ Insurance card re-fetch failed for booking ${booking._id}:`, refetchErr.message);
+      }
+    }
+
     if (!cardUrl) {
       return res.status(404).json({ message: 'Insurance card not available' });
     }
