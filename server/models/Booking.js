@@ -266,6 +266,7 @@ const bookingSchema = new mongoose.Schema({
     status: { type: String, default: null },
     cardUrl: { type: String, default: null },
     cardImage: { type: String, default: null },
+    cardCloudinaryUrl: { type: String, default: null }, // Permanent card storage (survives redeploys)
     startedAt: { type: Date, default: null },
     stoppedAt: { type: Date, default: null },
     error: { type: String, default: null }
