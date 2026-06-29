@@ -447,7 +447,7 @@ router.get('/storefront/:hostId', async (req, res) => {
       : { host: req.params.hostId, availability: true };
 
     let vehicles = await Vehicle.find(listedFilter)
-      .populate('host', 'firstName lastName rating reviewCount profileImage hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
+      .populate('host', 'firstName lastName rating reviewCount profileImage address hostInfo.displayPreference hostInfo.businessName hostInfo.dba hostInfo.accountType hostInfo.legalAddress hostInfo.businessAddress')
       .sort({ createdAt: -1 })
       .lean();
 
