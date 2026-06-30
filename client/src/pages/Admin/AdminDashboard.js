@@ -21,9 +21,11 @@ const StatCard = ({ label, value, sublabel, to }) => {
       title={clickable ? 'View details' : undefined}
       style={clickable ? {
         cursor: 'pointer',
-        transition: 'transform 0.1s ease, box-shadow 0.1s ease',
-        transform: hover ? 'translateY(-2px)' : 'none',
-        boxShadow: hover ? '0 4px 14px rgba(0,0,0,0.12)' : undefined
+        transition: 'box-shadow 0.12s ease, transform 0.12s ease',
+        transform: hover ? 'translateY(-1px)' : 'none',
+        // Green outline ring on hover (matches the platform green). Uses box-shadow
+        // so there's no layout shift, and the ring sits just outside the card edge.
+        boxShadow: hover ? '0 0 0 2px #10b981, 0 4px 14px rgba(16,185,129,0.25)' : undefined
       } : undefined}
     >
       <div className="label">{label}</div>
