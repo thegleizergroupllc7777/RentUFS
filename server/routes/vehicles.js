@@ -550,6 +550,16 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: priceError });
     }
 
+    // Vehicle must be within 15 model years of the current year for coverage eligibility.
+    // Older vehicles aren't automatically eligible (require manual program review per the
+    // carrier agreement). Applies to NEW listings only — existing vehicles are unaffected.
+    const minModelYear = new Date().getFullYear() - 15;
+    if (req.body.year && Number(req.body.year) < minModelYear) {
+      return res.status(400).json({
+        message: `Vehicles must be a ${minModelYear} model year or newer to be eligible for coverage. Older vehicles require manual review — please contact support.`
+      });
+    }
+
     const vehicleData = cleanVehicleData({ ...req.body });
     vehicleData.host = req.user._id;
 
