@@ -34,6 +34,9 @@ const AdminUserDetail = () => {
   const [insuranceRate, setInsuranceRate] = useState('');
   const [savingRate, setSavingRate] = useState(false);
   const [rateInfo, setRateInfo] = useState('');
+  const [fullCovRate, setFullCovRate] = useState('');
+  const [savingFullCov, setSavingFullCov] = useState(false);
+  const [fullCovInfo, setFullCovInfo] = useState('');
   const [coverageType, setCoverageType] = useState('FULL_COVERAGE');
   const [savingCoverage, setSavingCoverage] = useState(false);
   const [coverageInfo, setCoverageInfo] = useState('');
@@ -62,6 +65,8 @@ const AdminUserDetail = () => {
       setStats(s.data);
       const rate = u.data?.hostInfo?.customInsuranceRate;
       setInsuranceRate(rate != null ? String(rate) : '');
+      const fc = u.data?.hostInfo?.customFullCoverageRate;
+      setFullCovRate(fc != null ? String(fc) : '');
       setCoverageType(u.data?.hostInfo?.coverageType || 'FULL_COVERAGE');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load user');
@@ -152,6 +157,27 @@ const AdminUserDetail = () => {
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Action failed');
+    }
+  };
+
+  const saveFullCoverageRate = async () => {
+    setSavingFullCov(true);
+    setError('');
+    setFullCovInfo('');
+    try {
+      await axios.patch(`/api/admin/users/${id}`, {
+        customFullCoverageRate: fullCovRate.trim() === '' ? null : fullCovRate.trim()
+      });
+      setFullCovInfo(
+        fullCovRate.trim() === ''
+          ? 'Custom Full Coverage rate cleared — host uses the standard $33/day.'
+          : `Custom Full Coverage rate set to $${Number(fullCovRate).toFixed(2)}/day.`
+      );
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save Full Coverage rate');
+    } finally {
+      setSavingFullCov(false);
     }
   };
 
@@ -262,7 +288,32 @@ const AdminUserDetail = () => {
               {/* Custom insurance rate (host override) — only relevant for hosts */}
               {(user.userType === 'host' || user.userType === 'both') && (
               <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e5e7eb' }}>
+                {/* Custom Full Coverage rate (host override) — sits on top of Liability. */}
                 <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                  Custom Full Coverage rate (per day)
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#6b7280' }}>$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={fullCovRate}
+                    onChange={(e) => setFullCovRate(e.target.value)}
+                    placeholder="Default 33"
+                    style={{ width: '120px', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                  />
+                  <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>/day</span>
+                  <button className="admin-btn" onClick={saveFullCoverageRate} disabled={savingFullCov}>
+                    {savingFullCov ? 'Saving...' : 'Save rate'}
+                  </button>
+                </div>
+                <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                  Negotiated Full Coverage rate for this host only. Leave blank for the standard $33/day. Applies to all of this host's Full Coverage rentals going forward.
+                </div>
+                {fullCovInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{fullCovInfo}</div>}
+
+                <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '1.25rem 0 0.5rem' }}>
                   Custom liability rate (per day)
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -282,7 +333,7 @@ const AdminUserDetail = () => {
                   </button>
                 </div>
                 <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
-                  Only applies when coverage type is Liability (VIP override). Leave blank for the standard $25 liability rate. Full Coverage is always $33 and ignores this box.
+                  Only applies when coverage type is Liability (VIP override). Leave blank for the standard $25 liability rate. (Full Coverage uses its own rate above.)
                 </div>
                 {rateInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{rateInfo}</div>}
 

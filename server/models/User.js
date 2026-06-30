@@ -181,6 +181,13 @@ const userSchema = new mongoose.Schema({
       type: Number,
       default: null
     },
+    // Optional per-host Full Coverage rate (per day). When null/undefined, the
+    // standard Full Coverage rate ($33) is used. Set by the owner to give a
+    // specific host a negotiated Full Coverage price; applies to that host only.
+    customFullCoverageRate: {
+      type: Number,
+      default: null
+    },
     // Insurance coverage type for this host's fleet, passed to TeqMobility's
     // coverage_type when starting on-rent coverage. Admin-only; applies to all
     // of the host's vehicles. Defaults to FULL_COVERAGE (TeqMobility's account
