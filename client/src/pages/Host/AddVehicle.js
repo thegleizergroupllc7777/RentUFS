@@ -245,6 +245,16 @@ const AddVehicle = () => {
     setError('');
     setLoading(true);
 
+    // Vehicle must be within 15 model years of the current year for coverage eligibility.
+    // Older vehicles aren't automatically eligible (require manual program review).
+    const minModelYear = new Date().getFullYear() - 15;
+    if (formData.year && Number(formData.year) < minModelYear) {
+      setError(`Vehicles must be a ${minModelYear} model year or newer to be eligible for coverage. Older vehicles require manual review — please contact support.`);
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     // Block submission if either state is outside our insurance coverage area
     if (formData.registrationState && !isSupportedState(formData.registrationState)) {
       setError("We don't currently provide service in the selected registration state. Please choose a supported state.");
