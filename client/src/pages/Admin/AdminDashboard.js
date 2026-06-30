@@ -80,8 +80,8 @@ const AdminDashboard = () => {
           <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Users & Fleet</h3>
           <div className="admin-stats-grid">
             <StatCard label="Total Users" value={stats.users.total} to="/admin/users" />
-            <StatCard label="Drivers" value={stats.users.drivers} to="/admin/users" />
-            <StatCard label="Hosts" value={stats.users.hosts} to="/admin/users" />
+            <StatCard label="Drivers" value={stats.users.drivers} to="/admin/users?type=driver" />
+            <StatCard label="Hosts" value={stats.users.hosts} to="/admin/users?type=host" />
             <StatCard label="Vehicles" value={stats.vehicles.total} sublabel={`${stats.vehicles.active} active`} to="/admin/vehicles" />
           </div>
         </>
