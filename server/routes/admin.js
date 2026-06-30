@@ -455,6 +455,32 @@ router.get('/bookings/:id/messages', adminAuth, async (req, res) => {
 });
 
 // Change booking status. Admins can override the normal flow.
+// ── Record a booking's TeqMobility Coverage ID (OWNER-ONLY) ─────────────────
+// Saves the real coverage ID (from TeqMobility's dashboard) onto a booking so it
+// reconciles in the insurance billing tab. Writes ONLY this one reference field —
+// does NOT call TeqMobility or change the actual policy.
+router.patch('/bookings/:id/coverage-id', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const coverageId = String(req.body.coverageId || '').trim();
+    if (!coverageId) {
+      return res.status(400).json({ message: 'Coverage ID is required.' });
+    }
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    await Booking.findByIdAndUpdate(booking._id, { 'teqMobility.coverageId': coverageId });
+    console.log(`🛡️ Coverage ID manually recorded by ${req.user.email} for booking ${booking._id}: ${coverageId}`);
+    res.json({ success: true, message: 'Coverage ID saved.', coverageId });
+  } catch (error) {
+    console.error('Set coverage ID error:', error.message);
+    res.status(500).json({ message: 'Failed to save coverage ID', error: error.message });
+  }
+});
+
 router.patch('/bookings/:id/status', adminAuth, async (req, res) => {
   try {
     const { status, paymentStatus, note } = req.body;
