@@ -306,6 +306,145 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
   }
 });
 
+// ── Salespeople list (OWNER-ONLY) ───────────────────────────────────────────
+// Returns admins who can be credited as the salesperson that referred a host.
+router.get('/salespeople', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const admins = await User.find({ role: 'admin' })
+      .select('firstName lastName email')
+      .sort({ firstName: 1 })
+      .lean();
+    res.json(admins.map((a) => ({
+      id: String(a._id),
+      name: `${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email,
+      email: a.email
+    })));
+  } catch (error) {
+    console.error('Salespeople list error:', error.message);
+    res.status(500).json({ message: 'Failed to load salespeople', error: error.message });
+  }
+});
+
+// ── Set a host's referring salesperson (OWNER-ONLY) ─────────────────────────
+// Owner-only on purpose: a salesperson must not be able to credit hosts to
+// themselves. Pass { referredBy: <adminUserId> } or { referredBy: null } to clear.
+router.patch('/users/:id/referred-by', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const { referredBy } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    // Validate the salesperson is a real admin (or null to clear).
+    if (referredBy) {
+      const sp = await User.findById(referredBy).select('role');
+      if (!sp || sp.role !== 'admin') {
+        return res.status(400).json({ message: 'Referring salesperson must be an admin.' });
+      }
+    }
+    user.referredBy = referredBy || null;
+    await user.save();
+    console.log(`📣 Referred-by set by ${req.user.email} for host ${user._id}: ${referredBy || 'cleared'}`);
+    res.json({ success: true, referredBy: user.referredBy });
+  } catch (error) {
+    console.error('Set referred-by error:', error.message);
+    res.status(500).json({ message: 'Failed to set referring salesperson', error: error.message });
+  }
+});
+
+// ── Commissions report (OWNER-ONLY) ─────────────────────────────────────────
+// For a month, totals booked DAYS of paid (non-cancelled, non-refunded) bookings,
+// grouped by the salesperson who referred each booking's host. Days only — the
+// owner settles the per-day rate with the salesperson directly.
+router.get('/commissions', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    // Month range in EST, same convention as the tax/insurance reports.
+    const EST_OFFSET = 5;
+    let year, month;
+    if (/^\d{4}-\d{2}$/.test(req.query.month || '')) {
+      const parts = req.query.month.split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+    } else {
+      const now = new Date();
+      year = now.getFullYear();
+      month = now.getMonth() + 1;
+    }
+    const start = new Date(Date.UTC(year, month - 1, 1, EST_OFFSET, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month, 1, EST_OFFSET, 0, 0, 0) - 1);
+
+    // Hosts that have a referring salesperson set.
+    const referredHosts = await User.find({ referredBy: { $ne: null } })
+      .select('firstName lastName referredBy')
+      .lean();
+    if (referredHosts.length === 0) {
+      return res.json({ month: `${year}-${String(month).padStart(2, '0')}`, salespeople: [], totalDays: 0 });
+    }
+    const hostMap = new Map(referredHosts.map((h) => [String(h._id), h]));
+    const hostIds = referredHosts.map((h) => h._id);
+
+    // Paid, non-cancelled, non-refunded bookings for those hosts that started this month.
+    const bookings = await Booking.find({
+      host: { $in: hostIds },
+      startDate: { $gte: start, $lte: end },
+      status: { $nin: ['cancelled', 'awaiting_payment'] },
+      paymentStatus: 'paid'
+    }).populate('vehicle', 'make model year').select('host vehicle totalDays reservationId startDate endDate status').lean();
+
+    // Salesperson names.
+    const salespersonIds = [...new Set(referredHosts.map((h) => String(h.referredBy)))];
+    const salespeople = await User.find({ _id: { $in: salespersonIds } }).select('firstName lastName email').lean();
+    const spMap = new Map(salespeople.map((s) => [String(s._id), `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.email]));
+
+    // Aggregate: salesperson -> { days, rentals, rows[] }
+    const tally = {};
+    let grandTotalDays = 0;
+    for (const b of bookings) {
+      const host = hostMap.get(String(b.host));
+      if (!host || !host.referredBy) continue;
+      const spId = String(host.referredBy);
+      if (!tally[spId]) {
+        tally[spId] = { salespersonId: spId, salesperson: spMap.get(spId) || 'Unknown', days: 0, rentals: 0, rows: [] };
+      }
+      const days = b.totalDays || 0;
+      tally[spId].days += days;
+      tally[spId].rentals += 1;
+      grandTotalDays += days;
+      const v = b.vehicle || {};
+      tally[spId].rows.push({
+        reservationId: b.reservationId || '—',
+        host: `${host.firstName || ''} ${host.lastName || ''}`.trim(),
+        vehicle: [v.year, v.make, v.model].filter(Boolean).join(' ') || '—',
+        days,
+        startDate: b.startDate,
+        endDate: b.endDate,
+        status: b.status
+      });
+    }
+
+    const salespeopleOut = Object.values(tally).sort((a, b) => b.days - a.days);
+    salespeopleOut.forEach((sp) => sp.rows.sort((a, b) => new Date(a.startDate) - new Date(b.startDate)));
+
+    res.json({
+      month: `${year}-${String(month).padStart(2, '0')}`,
+      salespeople: salespeopleOut,
+      totalDays: grandTotalDays
+    });
+  } catch (error) {
+    console.error('Commissions report error:', error.message);
+    res.status(500).json({ message: 'Failed to build commissions report', error: error.message });
+  }
+});
+
 // Dashboard stats — counts and totals for the admin landing page.
 router.get('/stats', adminAuth, async (req, res) => {
   try {

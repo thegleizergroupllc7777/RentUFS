@@ -65,6 +65,13 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  // Salesperson (admin) who referred/onboarded this host. Set by the owner only,
+  // used to total commission days in the owner-only Commissions report. Optional.
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   // Owner-level flag. A super admin cannot be demoted/deactivated by regular
   // admins, and only super admins can promote/demote admins. See utils/superAdmin.js.
   isSuperAdmin: {
