@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 import { useAuth } from '../../context/AuthContext';
@@ -29,7 +29,11 @@ const AdminUsers = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [userType, setUserType] = useState('');
+  // Pre-filter from the URL, e.g. /admin/users?type=driver (from the dashboard
+  // Drivers/Hosts cards). Only accept a known user type.
+  const [searchParams] = useSearchParams();
+  const initialType = USER_TYPES.includes(searchParams.get('type')) ? searchParams.get('type') : '';
+  const [userType, setUserType] = useState(initialType);
   const [role, setRole] = useState('');
   const [accountStatus, setAccountStatus] = useState('');
   const [loading, setLoading] = useState(false);

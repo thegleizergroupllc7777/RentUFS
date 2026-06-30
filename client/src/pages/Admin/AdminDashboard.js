@@ -21,9 +21,11 @@ const StatCard = ({ label, value, sublabel, to }) => {
       title={clickable ? 'View details' : undefined}
       style={clickable ? {
         cursor: 'pointer',
-        transition: 'transform 0.1s ease, box-shadow 0.1s ease',
-        transform: hover ? 'translateY(-2px)' : 'none',
-        boxShadow: hover ? '0 4px 14px rgba(0,0,0,0.12)' : undefined
+        transition: 'box-shadow 0.12s ease, transform 0.12s ease',
+        transform: hover ? 'translateY(-1px)' : 'none',
+        // Green outline ring on hover (matches the platform green). Uses box-shadow
+        // so there's no layout shift, and the ring sits just outside the card edge.
+        boxShadow: hover ? '0 0 0 2px #10b981, 0 4px 14px rgba(16,185,129,0.25)' : undefined
       } : undefined}
     >
       <div className="label">{label}</div>
@@ -66,7 +68,7 @@ const AdminDashboard = () => {
             <StatCard label="Today" value={stats.bookings.today} to="/admin/bookings" />
             <StatCard label="This Week" value={stats.bookings.thisWeek} to="/admin/bookings" />
             <StatCard label="This Month" value={stats.bookings.thisMonth} to="/admin/bookings" />
-            <StatCard label="Currently Active" value={stats.bookings.active} sublabel="In progress now" to="/admin/bookings" />
+            <StatCard label="Currently Active" value={stats.bookings.active} sublabel="In progress now" to="/admin/bookings?status=active" />
           </div>
 
           <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Revenue</h3>
@@ -78,8 +80,8 @@ const AdminDashboard = () => {
           <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Users & Fleet</h3>
           <div className="admin-stats-grid">
             <StatCard label="Total Users" value={stats.users.total} to="/admin/users" />
-            <StatCard label="Drivers" value={stats.users.drivers} to="/admin/users" />
-            <StatCard label="Hosts" value={stats.users.hosts} to="/admin/users" />
+            <StatCard label="Drivers" value={stats.users.drivers} to="/admin/users?type=driver" />
+            <StatCard label="Hosts" value={stats.users.hosts} to="/admin/users?type=host" />
             <StatCard label="Vehicles" value={stats.vehicles.total} sublabel={`${stats.vehicles.active} active`} to="/admin/vehicles" />
           </div>
         </>

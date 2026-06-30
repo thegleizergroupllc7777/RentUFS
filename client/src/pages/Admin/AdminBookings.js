@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 
@@ -18,7 +18,11 @@ const AdminBookings = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
+  // Pre-filter from the URL, e.g. /admin/bookings?status=active (from the dashboard
+  // "Currently Active" card). Only accept a known status value.
+  const [searchParams] = useSearchParams();
+  const initialStatus = STATUS_OPTIONS.includes(searchParams.get('status')) ? searchParams.get('status') : '';
+  const [status, setStatus] = useState(initialStatus);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
