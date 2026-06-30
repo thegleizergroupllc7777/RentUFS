@@ -68,7 +68,7 @@ const AdminDashboard = () => {
             <StatCard label="Today" value={stats.bookings.today} to="/admin/bookings" />
             <StatCard label="This Week" value={stats.bookings.thisWeek} to="/admin/bookings" />
             <StatCard label="This Month" value={stats.bookings.thisMonth} to="/admin/bookings" />
-            <StatCard label="Currently Active" value={stats.bookings.active} sublabel="In progress now" to="/admin/bookings" />
+            <StatCard label="Currently Active" value={stats.bookings.active} sublabel="In progress now" to="/admin/bookings?status=active" />
           </div>
 
           <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Revenue</h3>
