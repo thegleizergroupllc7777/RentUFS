@@ -324,7 +324,7 @@ const AdminUserDetail = () => {
                     step="0.01"
                     value={insuranceRate}
                     onChange={(e) => setInsuranceRate(e.target.value)}
-                    placeholder="Default"
+                    placeholder="Default 25"
                     style={{ width: '120px', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
                   />
                   <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>/day</span>
