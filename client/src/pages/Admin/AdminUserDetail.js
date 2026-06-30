@@ -42,6 +42,9 @@ const AdminUserDetail = () => {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payoutMsg, setPayoutMsg] = useState('');
+  const [salespeople, setSalespeople] = useState([]);
+  const [savingReferredBy, setSavingReferredBy] = useState(false);
+  const [referredByInfo, setReferredByInfo] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,6 +93,31 @@ const AdminUserDetail = () => {
       loadPayoutPreview();
     }
   }, [me, user, loadPayoutPreview]);
+
+  // Owner-only: load the list of salespeople (admins) for the "Referred by" dropdown.
+  useEffect(() => {
+    if (me?.isSuperAdmin && user && (user.userType === 'host' || user.userType === 'both')) {
+      axios.get('/api/admin/salespeople')
+        .then(({ data }) => setSalespeople(data || []))
+        .catch(() => setSalespeople([]));
+    }
+  }, [me, user]);
+
+  // Owner-only: set/clear which salesperson referred this host.
+  const handleSetReferredBy = async (value) => {
+    setSavingReferredBy(true);
+    setError('');
+    setReferredByInfo('');
+    try {
+      await axios.patch(`/api/admin/users/${id}/referred-by`, { referredBy: value || null });
+      setReferredByInfo(value ? 'Referring salesperson saved.' : 'Referring salesperson cleared.');
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to set referring salesperson');
+    } finally {
+      setSavingReferredBy(false);
+    }
+  };
 
   const handlePayNow = async () => {
     if (!payout) return;
@@ -277,6 +305,34 @@ const AdminUserDetail = () => {
                   Applies to all of this host's vehicles. Sent to the insurer when coverage starts. Default is Full Coverage.
                 </div>
                 {coverageInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{coverageInfo}</div>}
+
+                {/* Owner-only: which salesperson referred this host. Credits the host's
+                    booking days to that salesperson in the Commissions report. */}
+                {me?.isSuperAdmin && (
+                  <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                      Referred by (salesperson) — owner only
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select
+                        value={(user.referredBy?._id || user.referredBy) || ''}
+                        onChange={(e) => handleSetReferredBy(e.target.value)}
+                        disabled={savingReferredBy}
+                        style={{ padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', minWidth: '220px' }}
+                      >
+                        <option value="">— Not referred —</option>
+                        {salespeople.map((sp) => (
+                          <option key={sp.id} value={sp.id}>{sp.name}</option>
+                        ))}
+                      </select>
+                      {savingReferredBy && <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>Saving…</span>}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                      Credits this host's booking days to the selected salesperson in the Commissions report.
+                    </div>
+                    {referredByInfo && <div style={{ color: '#059669', fontSize: '0.8rem', marginTop: '0.4rem' }}>{referredByInfo}</div>}
+                  </div>
+                )}
               </div>
               )}
             </div>
