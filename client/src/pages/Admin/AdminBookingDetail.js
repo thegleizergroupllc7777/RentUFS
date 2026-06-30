@@ -6,6 +6,7 @@ import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
 import RentalAgreement from '../../components/RentalAgreement';
 import { formatTime } from '../../utils/formatTime';
+import { useAuth } from '../../context/AuthContext';
 
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
 
@@ -52,6 +53,7 @@ const describeAction = (a) => {
 const AdminBookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: me } = useAuth();
   const [booking, setBooking] = useState(null);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState('');
@@ -64,6 +66,8 @@ const AdminBookingDetail = () => {
   const [refundOpen, setRefundOpen] = useState(false);
   const [agreementOpen, setAgreementOpen] = useState(false);
   const [cardUploading, setCardUploading] = useState(false);
+  const [coverageIdInput, setCoverageIdInput] = useState('');
+  const [savingCoverageId, setSavingCoverageId] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,6 +120,25 @@ const AdminBookingDetail = () => {
       setError(err.response?.data?.message || 'Failed to upload insurance card');
     } finally {
       setCardUploading(false);
+    }
+  };
+
+  // Owner-only: record the real TeqMobility Coverage ID so this booking reconciles
+  // in the insurance billing tab. Writes only this one reference field.
+  const handleSaveCoverageId = async () => {
+    const coverageId = coverageIdInput.trim();
+    if (!coverageId) return;
+    setError('');
+    setSavingCoverageId(true);
+    try {
+      await axios.patch(`/api/admin/bookings/${id}/coverage-id`, { coverageId });
+      flash('Coverage ID saved — this booking will now reconcile in Insurance Billing.');
+      setCoverageIdInput('');
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save Coverage ID');
+    } finally {
+      setSavingCoverageId(false);
     }
   };
 
@@ -316,6 +339,41 @@ const AdminBookingDetail = () => {
                     Use this to attach a card manually if the automatic one isn't showing.
                   </div>
                 </div>
+
+                {/* Owner-only: record the real TeqMobility Coverage ID so this booking
+                    reconciles in Insurance Billing. Writes only the reference number —
+                    does not call TeqMobility or change the policy. */}
+                {me?.isSuperAdmin && (
+                  <div style={{ marginTop: '0.9rem', paddingTop: '0.9rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.4rem' }}>
+                      TeqMobility Coverage ID (owner only)
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#374151', marginBottom: '0.4rem' }}>
+                      Current: {booking.teqMobility?.coverageId
+                        ? <strong>{booking.teqMobility.coverageId}</strong>
+                        : <span style={{ color: '#9ca3af' }}>not recorded</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        value={coverageIdInput}
+                        onChange={(e) => setCoverageIdInput(e.target.value)}
+                        placeholder="Paste Coverage ID from TeqMobility"
+                        style={{ width: '260px', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                      />
+                      <button
+                        className="admin-btn"
+                        onClick={handleSaveCoverageId}
+                        disabled={savingCoverageId || !coverageIdInput.trim()}
+                      >
+                        {savingCoverageId ? 'Saving…' : 'Save Coverage ID'}
+                      </button>
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                      Records the real ID from TeqMobility so this booking reconciles in Insurance Billing. Does not change the policy.
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
