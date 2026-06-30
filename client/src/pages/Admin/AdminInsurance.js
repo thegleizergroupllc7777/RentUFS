@@ -38,7 +38,9 @@ const buildMonths = () => {
   return list;
 };
 
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—');
+// Trip dates are stored as midnight UTC of the selected day, so format them in UTC —
+// otherwise a browser east of UTC shows the previous day (matches the bookings view).
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—');
 
 // Owner-only page: monthly TeqMobility insurance reconciliation. Shows total
 // COVERAGE DAYS (split Basic vs Premium) plus the line-by-line list so the owner
