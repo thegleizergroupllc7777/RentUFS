@@ -1094,6 +1094,21 @@ router.patch('/users/:id', adminAuth, async (req, res) => {
       }
     }
 
+    // Custom per-host Full Coverage rate (per day). Empty/null clears it (host
+    // reverts to the standard $33). A positive number sets the negotiated override.
+    if (req.body.customFullCoverageRate !== undefined) {
+      const raw = req.body.customFullCoverageRate;
+      if (raw === '' || raw === null) {
+        updates['hostInfo.customFullCoverageRate'] = null;
+      } else {
+        const rate = Number(raw);
+        if (Number.isNaN(rate) || rate < 0) {
+          return res.status(400).json({ message: 'Custom Full Coverage rate must be a positive number' });
+        }
+        updates['hostInfo.customFullCoverageRate'] = rate;
+      }
+    }
+
     // Per-host insurance coverage type. Applies to all of the host's vehicles
     // and is passed to TeqMobility when starting coverage.
     if (req.body.coverageType !== undefined) {

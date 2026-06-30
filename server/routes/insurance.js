@@ -21,7 +21,10 @@ const resolveRateForHost = (host, defaultRate) => {
     if (typeof custom === 'number' && custom > 0) return custom;
     return LIABILITY_RATE_PER_DAY;
   }
-  // Full coverage (default): always the standard rate, custom box ignored.
+  // Full coverage: use the host's negotiated custom Full Coverage rate if one is
+  // set (owner override for a specific host), otherwise the standard rate ($33).
+  const customFull = host?.hostInfo?.customFullCoverageRate;
+  if (typeof customFull === 'number' && customFull > 0) return customFull;
   return defaultRate;
 };
 
