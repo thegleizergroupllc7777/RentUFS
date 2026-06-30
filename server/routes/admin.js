@@ -309,11 +309,16 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
 // Dashboard stats — counts and totals for the admin landing page.
 router.get('/stats', adminAuth, async (req, res) => {
   try {
+    // Compute day/week/month boundaries in Eastern time (EST), matching the
+    // EST_OFFSET convention already used in reports.js — otherwise the server's
+    // UTC clock makes "Today" roll over at 8 PM Eastern instead of midnight.
+    const EST_OFFSET = 5; // hours behind UTC
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfWeek = new Date(startOfDay);
-    startOfWeek.setDate(startOfWeek.getDate() - 7);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nowEST = new Date(now.getTime() - EST_OFFSET * 60 * 60 * 1000);
+    // Midnight Eastern today, expressed as a UTC instant (midnight EST = 05:00 UTC)
+    const startOfDay = new Date(Date.UTC(nowEST.getUTCFullYear(), nowEST.getUTCMonth(), nowEST.getUTCDate(), EST_OFFSET, 0, 0, 0));
+    const startOfWeek = new Date(startOfDay.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const startOfMonth = new Date(Date.UTC(nowEST.getUTCFullYear(), nowEST.getUTCMonth(), 1, EST_OFFSET, 0, 0, 0));
 
     const [
       totalUsers,
