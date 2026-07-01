@@ -345,6 +345,26 @@ const bookingSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // ── Automatic late-return fee tracking ──
+  // Only ever populated for bookings that agreed to the Automatic Late Return Fee
+  // clause (see server/utils/lateReturn.js isBookingEligible). Every field is
+  // additive with a default, so existing/current bookings are completely unaffected.
+  lateFee: {
+    daysCharged: { type: Number, default: 0 },        // real charges applied to renter
+    totalCharged: { type: Number, default: 0 },       // sum actually charged
+    shadowDaysReported: { type: Number, default: 0 }, // OFF/test mode: late-days emailed to owner, no charge
+    lastActionAt: { type: Date, default: null },
+    entries: [{
+      day: { type: Number },                          // late-day number (1, 2, 3, ...)
+      mode: { type: String, enum: ['shadow', 'charged', 'failed'], default: 'shadow' },
+      lateFee: { type: Number },                       // $5 late fee
+      insurance: { type: Number },                     // one insurance day at the booking's rate
+      stripeFee: { type: Number },                     // processing fee passed to renter
+      total: { type: Number },                         // total renter is/would be charged
+      chargeId: { type: String, default: null },       // Stripe payment intent (when charged)
+      at: { type: Date, default: Date.now }
+    }]
+  },
   // Audit log of admin actions taken on this booking (date edits, manual
   // extensions, charges, refunds, status overrides). Append-only — never
   // mutate existing entries.
