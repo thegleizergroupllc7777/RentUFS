@@ -7,6 +7,7 @@ const { sendOverdueReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
 const { checkAndSettleScheduledCharges } = require('./chargeSettlement');
+const { processLateReturns } = require('./lateFees');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
 const checkAndSendReturnReminders = async () => {
@@ -722,6 +723,7 @@ let tollSettlementInterval = null;
 let tollSyncInterval = null;
 let weeklyPayoutInterval = null;
 let chargeSettlementInterval = null;
+let lateReturnInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run email reminders immediately on startup
@@ -738,6 +740,15 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   checkAndSendOverdueSMS();
   overdueInterval = setInterval(checkAndSendOverdueSMS, intervalMs);
   console.log(`⏱️  Overdue SMS scheduler running every ${intervalMinutes} minutes`);
+
+  // Automatic late-return fee processor (SHADOW stage). Same 10-minute rhythm.
+  // Fully gated: acts only on bookings that agreed to the new late clause AND only
+  // charges when the owner's switch is ON — otherwise it just reports the math.
+  // With the policy start unset, this is a harmless no-op in production.
+  console.log('🚀 Starting late-return fee processor (shadow)...');
+  processLateReturns();
+  lateReturnInterval = setInterval(processLateReturns, intervalMs);
+  console.log(`⏱️  Late-return fee processor running every ${intervalMinutes} minutes`);
 
   // Also start the daily registration expiration check
   console.log('🚀 Starting registration expiration scheduler...');
@@ -853,6 +864,11 @@ const stopReturnReminderScheduler = () => {
     clearInterval(chargeSettlementInterval);
     chargeSettlementInterval = null;
     console.log('🛑 Charge settlement scheduler stopped');
+  }
+  if (lateReturnInterval) {
+    clearInterval(lateReturnInterval);
+    lateReturnInterval = null;
+    console.log('🛑 Late-return fee processor stopped');
   }
 };
 
