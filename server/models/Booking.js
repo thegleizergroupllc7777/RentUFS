@@ -356,6 +356,11 @@ const bookingSchema = new mongoose.Schema({
     retryCount: { type: Number, default: 0 },         // consecutive failed charge attempts
     nextRetryAt: { type: Date, default: null },       // don't retry a declined card before this time
     lastActionAt: { type: Date, default: null },
+    // One-time notification flags (so warnings/escalations never double-send)
+    warn0Sent: { type: Boolean, default: false },     // "you're now late" nudge (0 min)
+    warn30Sent: { type: Boolean, default: false },    // second nudge (30 min)
+    day2AlertSent: { type: Boolean, default: false }, // host recover email (48h)
+    day3AlertSent: { type: Boolean, default: false }, // company + host recover (72h)
     entries: [{
       day: { type: Number },                          // late-day number (1, 2, 3, ...)
       mode: { type: String, enum: ['shadow', 'charged', 'failed'], default: 'shadow' },
