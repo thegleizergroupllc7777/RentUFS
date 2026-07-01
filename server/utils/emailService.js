@@ -2556,11 +2556,150 @@ const sendLateFeeDeclineAlert = async ({ booking, vehicle, driver, host, dayNumb
   }
 };
 
+// Friendly WARNING to the renter that their rental is now overdue — sent before
+// the first charge (at 0 min and again at 30 min late). Nudges them to return or
+// extend to avoid the automatic late fee.
+const sendLateReturnWarningToRenter = async ({ driver, booking, vehicle, minutesLate }) => {
+  try {
+    if (!driver?.email) return { success: false, skipped: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Late warning to renter: ${driver.email} (${minutesLate} min late)`);
+      return { success: true, dev: true };
+    }
+    const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental vehicle';
+    const resId = booking?.reservationId || String(booking?._id || '');
+    const mailOptions = {
+      to: driver.email,
+      subject: `Your rental is overdue — please return or extend (${resId})`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background:#000; color:#e5e7eb; margin:0; padding:0;">
+          <div style="max-width:600px; margin:0 auto; padding:20px;">
+            <div style="background:#111; border:1px solid #f59e0b; border-radius:10px; overflow:hidden;">
+              <div style="background:#f59e0b; color:#1a1200; padding:14px 18px; font-weight:800;">⚠ YOUR RENTAL IS PAST ITS RETURN TIME</div>
+              <div style="padding:18px;">
+                <p style="margin:0 0 12px;">Hi ${driver.firstName || 'there'}, your rental of the <strong style="color:#fff;">${vLabel}</strong> (reservation ${resId}) is now past its scheduled return time.</p>
+                <p style="margin:0 0 12px; color:#9ca3af;">To avoid an automatic late fee ($5/day plus one day of insurance), please <strong style="color:#fff;">return the vehicle now</strong> or <strong style="color:#fff;">extend your trip</strong> in the RentUFS app.</p>
+                <p style="margin:0; color:#6b7280; font-size:0.82rem;">If you've already returned it, you can ignore this message.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+    await sendEmail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error('📧 Late-return warning failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+// URGENT "recover your vehicle" email to the HOST. Sent at 48h (Day 2) and again
+// at 72h (Day 3). Coverage stays ON — no "lapse" language. References the signed
+// agreement's remedies (which begin at 72 hours).
+const sendLateReturnRecoverToHost = async ({ booking, vehicle, driver, host, hoursLate, stage }) => {
+  try {
+    if (!host?.email) return { success: false, skipped: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Host recover email: ${host.email} (${stage}, ${hoursLate}h late)`);
+      return { success: true, dev: true };
+    }
+    const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your vehicle';
+    const dName = driver ? `${driver.firstName || ''} ${driver.lastName || ''}`.trim() || 'the renter' : 'the renter';
+    const dPhone = driver?.phone ? ` (${driver.phone})` : '';
+    const resId = booking?.reservationId || String(booking?._id || '');
+    const is72 = stage === '72h';
+    const mailOptions = {
+      to: host.email,
+      subject: `[URGENT] ${vLabel} is ${is72 ? '3+ days' : '2+ days'} overdue — action needed (${resId})`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background:#000; color:#e5e7eb; margin:0; padding:0;">
+          <div style="max-width:600px; margin:0 auto; padding:20px;">
+            <div style="background:#111; border:1px solid #dc2626; border-radius:10px; overflow:hidden;">
+              <div style="background:#dc2626; color:#fff; padding:14px 18px; font-weight:800;">🚨 VEHICLE SIGNIFICANTLY OVERDUE — PLEASE ACT</div>
+              <div style="padding:18px;">
+                <p style="margin:0 0 12px;">Your <strong style="color:#fff;">${vLabel}</strong> (reservation ${resId}) is now <strong style="color:#fff;">${is72 ? 'more than 3 days' : 'more than 2 days'}</strong> past its return time and has not been returned.</p>
+                <p style="margin:0 0 12px; color:#fca5a5;"><strong>Please contact your renter ${dName}${dPhone} immediately</strong> to arrange the vehicle's return.</p>
+                ${is72 ? `<p style="margin:0 0 12px; color:#9ca3af;">Per the rental agreement your renter signed, once a vehicle is more than 72 hours overdue and the rental has not been extended, you (the Owner) may take further action to recover the vehicle. RentUFS is also being notified.</p>` : `<p style="margin:0 0 12px; color:#9ca3af;">RentUFS is continuing to attempt collection of the late fees. Insurance coverage remains active while the vehicle is out.</p>`}
+                <p style="margin:0; color:#6b7280; font-size:0.82rem;">If the vehicle has already been returned, please disregard this message.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+    await sendEmail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error('📧 Host recover email failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+// Alert to the company inbox (SUPPORT_EMAIL) at 72 hours so the team can lean on
+// the host / consider the agreement's recovery remedies. Internal, FYI + action.
+const sendLateReturnCompanyAlert = async ({ booking, vehicle, driver, host, hoursLate }) => {
+  try {
+    const supportEmail = process.env.SUPPORT_EMAIL;
+    if (!supportEmail) return { success: false, skipped: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Company 72h alert to: ${supportEmail} (booking ${booking?.reservationId}, ${hoursLate}h late)`);
+      return { success: true, dev: true };
+    }
+    const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'Vehicle';
+    const dName = driver ? `${driver.firstName || ''} ${driver.lastName || ''}`.trim() || 'Renter' : 'Renter';
+    const dPhone = driver?.phone ? ` (${driver.phone})` : '';
+    const hName = host ? `${host.firstName || ''} ${host.lastName || ''}`.trim() || 'Host' : 'Host';
+    const hPhone = host?.phone ? ` (${host.phone})` : '';
+    const resId = booking?.reservationId || String(booking?._id || '');
+    const mailOptions = {
+      to: supportEmail,
+      subject: `[72h OVERDUE] ${resId} — lean on host / review recovery`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background:#000; color:#e5e7eb; margin:0; padding:0;">
+          <div style="max-width:600px; margin:0 auto; padding:20px;">
+            <div style="background:#111; border:1px solid #dc2626; border-radius:10px; overflow:hidden;">
+              <div style="background:#dc2626; color:#fff; padding:14px 18px; font-weight:800;">🚨 72+ HOURS OVERDUE — INTERNAL</div>
+              <div style="padding:18px;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                  <tr><td style="padding:6px 0; color:#9ca3af; width:150px;">Reservation</td><td style="padding:6px 0; color:#fff; font-family:monospace;">${resId}</td></tr>
+                  <tr><td style="padding:6px 0; color:#9ca3af;">Vehicle</td><td style="padding:6px 0; color:#fff;">${vLabel}</td></tr>
+                  <tr><td style="padding:6px 0; color:#9ca3af;">Renter</td><td style="padding:6px 0; color:#fff;">${dName}${dPhone}</td></tr>
+                  <tr><td style="padding:6px 0; color:#9ca3af;">Host</td><td style="padding:6px 0; color:#fff;">${hName}${hPhone}</td></tr>
+                  <tr><td style="padding:6px 0; color:#9ca3af;">Overdue</td><td style="padding:6px 0; color:#fff;">${Math.round(hoursLate)} hours</td></tr>
+                </table>
+                <p style="margin:14px 0 0; color:#9ca3af; font-size:0.85rem;">The host has been sent the urgent recover email. Per the signed agreement, remedies are available after 72 hours. Follow up with the host to apply pressure / assist recovery.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+    await sendEmail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error('📧 Company 72h alert failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
 module.exports = {
   sendEmail,
   sendLateFeeChargedToRenter,
   sendLateFeeOwnerCopy,
   sendLateFeeDeclineAlert,
+  sendLateReturnWarningToRenter,
+  sendLateReturnRecoverToHost,
+  sendLateReturnCompanyAlert,
   sendReservationDatesUpdatedEmail,
   sendWelcomeEmail,
   sendVehicleListedEmail,
