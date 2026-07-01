@@ -2413,63 +2413,42 @@ const sendReservationDatesUpdatedEmail = async (driver, booking, vehicle) => {
   }
 };
 
-// SHADOW-MODE late-fee report to the owner/company inbox (SUPPORT_EMAIL).
-// Sent ONLY while automatic charging is OFF, so the owner can verify the math
-// before any real money moves. NO charge occurs and no renter is contacted.
-const sendLateReturnShadowEmail = async ({ booking, vehicle, driver, host, dayNumber, charge, returnMoment, hoursLate }) => {
+// Shared little breakdown table used by the late-fee emails below.
+const lateFeeBreakdownHtml = (charge) => `
+  <div style="margin-top:14px; background:#0b0b0b; border:1px solid #333; border-radius:8px; padding:14px;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+      <tr><td style="padding:4px 0; color:#9ca3af;">Late fee</td><td style="padding:4px 0; color:#fff; text-align:right;">$${charge.lateFee.toFixed(2)}</td></tr>
+      <tr><td style="padding:4px 0; color:#9ca3af;">Insurance (1 day)</td><td style="padding:4px 0; color:#fff; text-align:right;">$${charge.insurance.toFixed(2)}</td></tr>
+      <tr><td style="padding:4px 0; color:#9ca3af;">Processing fee</td><td style="padding:4px 0; color:#fff; text-align:right;">$${charge.stripeFee.toFixed(2)}</td></tr>
+      <tr><td style="padding:8px 0 0; color:#10b981; font-weight:800; border-top:1px solid #333;">Total</td><td style="padding:8px 0 0; color:#10b981; font-weight:800; text-align:right; border-top:1px solid #333;">$${charge.total.toFixed(2)}</td></tr>
+    </table>
+  </div>`;
+
+// RECEIPT to the renter when an automatic late-return fee is successfully charged.
+const sendLateFeeChargedToRenter = async ({ driver, booking, vehicle, dayNumber, charge }) => {
   try {
-    const supportEmail = process.env.SUPPORT_EMAIL;
-    if (!supportEmail) {
-      console.warn('⚠️ SUPPORT_EMAIL not configured — skipping late-fee shadow email');
-      return { success: false, skipped: true };
-    }
+    if (!driver?.email) return { success: false, skipped: true };
     if (!isEmailConfigured()) {
-      console.log(`📧 [DEV] Late-fee SHADOW report to: ${supportEmail} (booking ${booking?.reservationId}, day ${dayNumber}, would charge $${charge?.total})`);
+      console.log(`📧 [DEV] Late-fee receipt to renter: ${driver.email} ($${charge?.total}, day ${dayNumber})`);
       return { success: true, dev: true };
     }
-
-    const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'Vehicle';
-    const dName = driver ? `${driver.firstName || ''} ${driver.lastName || ''}`.trim() || 'Renter' : 'Renter';
-    const hName = host ? `${host.firstName || ''} ${host.lastName || ''}`.trim() || 'Host' : 'Host';
-    const due = returnMoment ? new Date(returnMoment).toLocaleString('en-US', { timeZone: 'America/New_York' }) : 'N/A';
+    const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental vehicle';
     const resId = booking?.reservationId || String(booking?._id || '');
-
     const mailOptions = {
-      to: supportEmail,
-      subject: `[SHADOW · NO CHARGE] Late day ${dayNumber} — ${resId} would be charged $${charge.total.toFixed(2)}`,
+      to: driver.email,
+      subject: `Late return fee charged — ${resId} ($${charge.total.toFixed(2)})`,
       html: `
         <!DOCTYPE html>
         <html>
         <body style="font-family: Arial, sans-serif; background:#000; color:#e5e7eb; margin:0; padding:0;">
           <div style="max-width:600px; margin:0 auto; padding:20px;">
-            <div style="background:#111; border:1px solid #10b981; border-radius:10px; overflow:hidden;">
-              <div style="background:#10b981; color:#04331f; padding:14px 18px; font-weight:800; font-size:0.95rem; letter-spacing:0.3px;">
-                SHADOW MODE · NO MONEY MOVED · TEST/VERIFY ONLY
-              </div>
+            <div style="background:#111; border:1px solid #f59e0b; border-radius:10px; overflow:hidden;">
+              <div style="background:#f59e0b; color:#1a1200; padding:14px 18px; font-weight:800;">⚠ YOUR RENTAL IS OVERDUE</div>
               <div style="padding:18px;">
-                <p style="margin:0 0 12px; color:#9ca3af; font-size:0.9rem;">
-                  Automatic late-fee charging is currently <strong style="color:#fff;">OFF</strong>. This is what the system
-                  <strong style="color:#fff;"> would have</strong> charged the renter for this late day. <strong style="color:#fff;">Nobody was charged.</strong>
-                </p>
-                <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                  <tr><td style="padding:6px 0; color:#9ca3af; width:150px;">Reservation</td><td style="padding:6px 0; color:#fff; font-family:monospace;">${resId}</td></tr>
-                  <tr><td style="padding:6px 0; color:#9ca3af;">Vehicle</td><td style="padding:6px 0; color:#fff;">${vLabel}</td></tr>
-                  <tr><td style="padding:6px 0; color:#9ca3af;">Renter</td><td style="padding:6px 0; color:#fff;">${dName}</td></tr>
-                  <tr><td style="padding:6px 0; color:#9ca3af;">Host</td><td style="padding:6px 0; color:#fff;">${hName}</td></tr>
-                  <tr><td style="padding:6px 0; color:#9ca3af;">Was due back</td><td style="padding:6px 0; color:#fff;">${due} ET</td></tr>
-                  <tr><td style="padding:6px 0; color:#9ca3af;">Late day #</td><td style="padding:6px 0; color:#fff;">${dayNumber}${Number.isFinite(hoursLate) ? ` (~${hoursLate}h late)` : ''}</td></tr>
-                </table>
-                <div style="margin-top:14px; background:#0b0b0b; border:1px solid #333; border-radius:8px; padding:14px;">
-                  <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                    <tr><td style="padding:4px 0; color:#9ca3af;">Late fee</td><td style="padding:4px 0; color:#fff; text-align:right;">$${charge.lateFee.toFixed(2)}</td></tr>
-                    <tr><td style="padding:4px 0; color:#9ca3af;">Insurance (1 day)</td><td style="padding:4px 0; color:#fff; text-align:right;">$${charge.insurance.toFixed(2)}</td></tr>
-                    <tr><td style="padding:4px 0; color:#9ca3af;">Processing fee</td><td style="padding:4px 0; color:#fff; text-align:right;">$${charge.stripeFee.toFixed(2)}</td></tr>
-                    <tr><td style="padding:8px 0 0; color:#10b981; font-weight:800; border-top:1px solid #333;">Total (would charge)</td><td style="padding:8px 0 0; color:#10b981; font-weight:800; text-align:right; border-top:1px solid #333;">$${charge.total.toFixed(2)}</td></tr>
-                  </table>
-                </div>
-                <p style="margin:14px 0 0; color:#6b7280; font-size:0.8rem;">
-                  When you're satisfied the math is right, flip the Late-Fee Charging switch ON in Admin and real charges begin — for new reservations only.
-                </p>
+                <p style="margin:0 0 12px;">Hi ${driver.firstName || 'there'}, your rental of the <strong style="color:#fff;">${vLabel}</strong> (reservation ${resId}) is past its return time.</p>
+                <p style="margin:0 0 12px; color:#9ca3af;">As agreed in your rental agreement, an automatic late-return fee for <strong style="color:#fff;">day ${dayNumber}</strong> has been charged to your card on file:</p>
+                ${lateFeeBreakdownHtml(charge)}
+                <p style="margin:16px 0 0; color:#fca5a5;"><strong>This repeats every day until the vehicle is returned.</strong> To stop further charges, please <strong style="color:#fff;">return the vehicle now</strong> or <strong style="color:#fff;">extend your trip</strong> in the RentUFS app.</p>
               </div>
             </div>
           </div>
@@ -2477,19 +2456,111 @@ const sendLateReturnShadowEmail = async ({ booking, vehicle, driver, host, dayNu
         </html>
       `
     };
-
     await sendEmail(mailOptions);
-    console.log(`📧 Late-fee SHADOW report sent to ${supportEmail} (booking ${resId}, day ${dayNumber})`);
     return { success: true };
   } catch (err) {
-    console.error('📧 Late-fee shadow email failed:', err.message);
+    console.error('📧 Late-fee renter receipt failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+// CONFIRMATION copy to the company inbox (SUPPORT_EMAIL) for each real late charge,
+// so the owner can watch the first ones. FYI only — no action needed.
+const sendLateFeeOwnerCopy = async ({ booking, vehicle, driver, host, dayNumber, charge }) => {
+  try {
+    const supportEmail = process.env.SUPPORT_EMAIL;
+    if (!supportEmail) return { success: false, skipped: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Late-fee owner copy to: ${supportEmail} (booking ${booking?.reservationId}, day ${dayNumber}, charged $${charge?.total})`);
+      return { success: true, dev: true };
+    }
+    const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'Vehicle';
+    const dName = driver ? `${driver.firstName || ''} ${driver.lastName || ''}`.trim() || 'Renter' : 'Renter';
+    const resId = booking?.reservationId || String(booking?._id || '');
+    const mailOptions = {
+      to: supportEmail,
+      subject: `Late fee charged — ${resId} · day ${dayNumber} · $${charge.total.toFixed(2)}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background:#000; color:#e5e7eb; margin:0; padding:0;">
+          <div style="max-width:600px; margin:0 auto; padding:20px;">
+            <div style="background:#111; border:1px solid #10b981; border-radius:10px; overflow:hidden;">
+              <div style="background:#10b981; color:#04331f; padding:14px 18px; font-weight:800;">LATE FEE CHARGED · FYI</div>
+              <div style="padding:18px;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                  <tr><td style="padding:6px 0; color:#9ca3af; width:150px;">Reservation</td><td style="padding:6px 0; color:#fff; font-family:monospace;">${resId}</td></tr>
+                  <tr><td style="padding:6px 0; color:#9ca3af;">Vehicle</td><td style="padding:6px 0; color:#fff;">${vLabel}</td></tr>
+                  <tr><td style="padding:6px 0; color:#9ca3af;">Renter</td><td style="padding:6px 0; color:#fff;">${dName}</td></tr>
+                  <tr><td style="padding:6px 0; color:#9ca3af;">Late day #</td><td style="padding:6px 0; color:#fff;">${dayNumber}</td></tr>
+                </table>
+                ${lateFeeBreakdownHtml(charge)}
+                <p style="margin:14px 0 0; color:#6b7280; font-size:0.8rem;">Automatic — no action needed. Charged to the renter's card on file. If anything looks wrong, you can switch late-fee charging OFF in Admin.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+    await sendEmail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error('📧 Late-fee owner copy failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+// URGENT alert to the HOST + company inbox when a late-fee charge is DECLINED.
+// Coverage stays ON — no "lapse" language. Asks the host to help reach the renter.
+const sendLateFeeDeclineAlert = async ({ booking, vehicle, driver, host, dayNumber, charge, failureMessage }) => {
+  try {
+    const supportEmail = process.env.SUPPORT_EMAIL;
+    const recipients = [host?.email, supportEmail].filter(Boolean);
+    if (recipients.length === 0) return { success: false, skipped: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Late-fee DECLINE alert to: ${recipients.join(', ')} (booking ${booking?.reservationId}, day ${dayNumber})`);
+      return { success: true, dev: true };
+    }
+    const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'the vehicle';
+    const dName = driver ? `${driver.firstName || ''} ${driver.lastName || ''}`.trim() || 'the renter' : 'the renter';
+    const dPhone = driver?.phone ? ` (${driver.phone})` : '';
+    const resId = booking?.reservationId || String(booking?._id || '');
+    const mailOptions = {
+      to: recipients.join(', '),
+      subject: `[ACTION NEEDED] Overdue rental & payment failed — ${resId}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background:#000; color:#e5e7eb; margin:0; padding:0;">
+          <div style="max-width:600px; margin:0 auto; padding:20px;">
+            <div style="background:#111; border:1px solid #f59e0b; border-radius:10px; overflow:hidden;">
+              <div style="background:#f59e0b; color:#1a1200; padding:14px 18px; font-weight:800;">⚠ OVERDUE RENTAL · PAYMENT FAILED · TIME CRITICAL</div>
+              <div style="padding:18px;">
+                <p style="margin:0 0 12px;"><strong style="color:#fff;">${vLabel}</strong> (reservation ${resId}) is overdue, and the automatic late-return charge for day ${dayNumber} <strong style="color:#fff;">did not go through</strong>.</p>
+                <p style="margin:0 0 12px; color:#fca5a5;"><strong>Please contact your renter ${dName}${dPhone} immediately</strong> to get the vehicle returned or the payment resolved. Time is critical.</p>
+                <p style="margin:0 0 12px; color:#9ca3af;">We will automatically retry the card. Insurance coverage remains active while the vehicle is out. If it is not returned, RentUFS will keep you informed and, per the signed rental agreement, additional remedies apply after 72 hours.</p>
+                ${lateFeeBreakdownHtml(charge)}
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+    await sendEmail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error('📧 Late-fee decline alert failed:', err.message);
     return { success: false, error: err.message };
   }
 };
 
 module.exports = {
   sendEmail,
-  sendLateReturnShadowEmail,
+  sendLateFeeChargedToRenter,
+  sendLateFeeOwnerCopy,
+  sendLateFeeDeclineAlert,
   sendReservationDatesUpdatedEmail,
   sendWelcomeEmail,
   sendVehicleListedEmail,

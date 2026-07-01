@@ -352,7 +352,9 @@ const bookingSchema = new mongoose.Schema({
   lateFee: {
     daysCharged: { type: Number, default: 0 },        // real charges applied to renter
     totalCharged: { type: Number, default: 0 },       // sum actually charged
-    shadowDaysReported: { type: Number, default: 0 }, // OFF/test mode: late-days emailed to owner, no charge
+    shadowDaysReported: { type: Number, default: 0 }, // (legacy shadow field; unused once live)
+    retryCount: { type: Number, default: 0 },         // consecutive failed charge attempts
+    nextRetryAt: { type: Date, default: null },       // don't retry a declined card before this time
     lastActionAt: { type: Date, default: null },
     entries: [{
       day: { type: Number },                          // late-day number (1, 2, 3, ...)
