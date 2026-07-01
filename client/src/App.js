@@ -54,6 +54,7 @@ import AdminBroadcast from './pages/Admin/AdminBroadcast';
 import AdminTax from './pages/Admin/AdminTax';
 import AdminInsurance from './pages/Admin/AdminInsurance';
 import AdminCommissions from './pages/Admin/AdminCommissions';
+import AdminLateReturns from './pages/Admin/AdminLateReturns';
 
 import './App.css';
 
@@ -257,6 +258,10 @@ function App() {
             <Route
               path="/admin/commissions"
               element={<AdminRoute><AdminCommissions /></AdminRoute>}
+            />
+            <Route
+              path="/admin/late-returns"
+              element={<AdminRoute><AdminLateReturns /></AdminRoute>}
             />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />
