@@ -519,6 +519,7 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
                   <li>Bring a valid driver's license</li>
                   <li>Arrive on time for pick-up</li>
                   <li>Inspect the vehicle before driving</li>
+                  <li>Return or extend on time — late returns are charged automatically ($5/day plus one day of insurance)</li>
                 </ul>
               </div>
 
@@ -564,6 +565,7 @@ Important Reminders:
 - Bring a valid driver's license
 - Arrive on time for pick-up
 - Inspect the vehicle before driving
+- Return or extend on time — late returns are charged automatically ($5/day plus one day of insurance)
 
 Thank you for choosing RentUFS!
 
@@ -848,6 +850,12 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
                     Return Vehicle
                   </a>
                 </div>
+              </div>
+
+              <div style="background: #fff7ed; border: 1px solid #f59e0b; border-radius: 8px; padding: 14px 16px; margin: 20px 0;">
+                <p style="margin: 0; color: #b45309; font-size: 0.9rem;">
+                  ⏰ <strong>Please return or extend on time.</strong> If the vehicle isn't returned or extended by your return time, an automatic late fee of <strong>$5/day plus one day of insurance</strong> applies for each day it's late.
+                </p>
               </div>
 
               <div class="reminders">
