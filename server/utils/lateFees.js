@@ -21,7 +21,14 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const Booking = require('../models/Booking');
 const { getLateInfo, isBookingEligible, isChargingEnabled } = require('./lateReturn');
-const { sendLateFeeChargedToRenter, sendLateFeeOwnerCopy, sendLateFeeDeclineAlert } = require('./emailService');
+const {
+  sendLateFeeChargedToRenter,
+  sendLateFeeOwnerCopy,
+  sendLateFeeDeclineAlert,
+  sendLateReturnWarningToRenter,
+  sendLateReturnRecoverToHost,
+  sendLateReturnCompanyAlert
+} = require('./emailService');
 
 const LATE_FEE_PER_DAY = 5;                       // dollars, per the agreement's Automatic Late Return Fee
 const MIN_MINUTES_LATE = 60;                      // first charge fires one hour after the return time
@@ -116,47 +123,78 @@ const processLateReturns = async () => {
       if (!isBookingEligible(booking)) continue;
 
       const info = getLateInfo(booking, now);
-      const owed = chargesOwed(info);
-      if (owed <= 0) continue;
-
-      const daysCharged = booking.lateFee?.daysCharged || 0;
-      if (owed <= daysCharged) continue;         // every owed late day already paid
-
-      // Back off after a decline so we don't retry the card every pass.
-      if (booking.lateFee?.nextRetryAt && now < new Date(booking.lateFee.nextRetryAt)) continue;
-
-      const targetDay = daysCharged + 1;         // charge the next unpaid late day
-      const charge = computeLateDayCharge(booking, booking.host);
-      const result = await chargeLateDay(booking, booking.driver, charge, targetDay);
+      if (!info.isLate) continue;                // not overdue → nothing to do
 
       if (!booking.lateFee) booking.lateFee = {};
       booking.lateFee.entries = booking.lateFee.entries || [];
-      booking.lateFee.lastActionAt = now;
+      let dirty = false;                         // did we set a notification flag this pass?
 
-      if (result.success) {
-        booking.lateFee.daysCharged = targetDay;
-        booking.lateFee.totalCharged = round2((booking.lateFee.totalCharged || 0) + charge.total);
-        booking.lateFee.retryCount = 0;
-        booking.lateFee.nextRetryAt = null;
-        booking.lateFee.entries.push({ day: targetDay, mode: 'charged', ...charge, chargeId: result.paymentIntentId, at: now });
+      // ── Renter warnings (before the first charge at 60 min) ──
+      if (!booking.lateFee.warn0Sent) {
+        sendLateReturnWarningToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, minutesLate: info.minutesLate })
+          .catch(err => console.error('📧 Late warning (0m) error:', err.message));
+        booking.lateFee.warn0Sent = true; dirty = true;
+      }
+      if (info.minutesLate >= 30 && !booking.lateFee.warn30Sent) {
+        sendLateReturnWarningToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, minutesLate: info.minutesLate })
+          .catch(err => console.error('📧 Late warning (30m) error:', err.message));
+        booking.lateFee.warn30Sent = true; dirty = true;
+      }
+
+      // ── Host / company escalations ──
+      if (info.hoursLate >= 48 && !booking.lateFee.day2AlertSent) {
+        sendLateReturnRecoverToHost({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, hoursLate: info.hoursLate, stage: '48h' })
+          .catch(err => console.error('📧 Host recover (48h) error:', err.message));
+        booking.lateFee.day2AlertSent = true; dirty = true;
+      }
+      if (info.hoursLate >= 72 && !booking.lateFee.day3AlertSent) {
+        sendLateReturnRecoverToHost({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, hoursLate: info.hoursLate, stage: '72h' })
+          .catch(err => console.error('📧 Host recover (72h) error:', err.message));
+        sendLateReturnCompanyAlert({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, hoursLate: info.hoursLate })
+          .catch(err => console.error('📧 Company 72h alert error:', err.message));
+        booking.lateFee.day3AlertSent = true; dirty = true;
+      }
+
+      // ── Charging (first charge fires at 60 min; then one unpaid day per pass) ──
+      const owed = chargesOwed(info);
+      const daysCharged = booking.lateFee.daysCharged || 0;
+      const inBackoff = booking.lateFee.nextRetryAt && now < new Date(booking.lateFee.nextRetryAt);
+
+      if (owed > daysCharged && !inBackoff) {
+        const targetDay = daysCharged + 1;       // charge the next unpaid late day
+        const charge = computeLateDayCharge(booking, booking.host);
+        const result = await chargeLateDay(booking, booking.driver, charge, targetDay);
+        booking.lateFee.lastActionAt = now;
+
+        if (result.success) {
+          booking.lateFee.daysCharged = targetDay;
+          booking.lateFee.totalCharged = round2((booking.lateFee.totalCharged || 0) + charge.total);
+          booking.lateFee.retryCount = 0;
+          booking.lateFee.nextRetryAt = null;
+          booking.lateFee.entries.push({ day: targetDay, mode: 'charged', ...charge, chargeId: result.paymentIntentId, at: now });
+          await booking.save();
+          charged++;
+          console.log(`🕓 Late fee charged: ${booking.reservationId} day ${targetDay} $${charge.total} [${result.paymentIntentId}]`);
+
+          sendLateFeeChargedToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, dayNumber: targetDay, charge })
+            .catch(err => console.error('📧 Late-fee receipt error:', err.message));
+          sendLateFeeOwnerCopy({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge })
+            .catch(err => console.error('📧 Late-fee owner copy error:', err.message));
+        } else {
+          booking.lateFee.retryCount = (booking.lateFee.retryCount || 0) + 1;
+          booking.lateFee.nextRetryAt = new Date(now.getTime() + RETRY_BACKOFF_MS);
+          booking.lateFee.entries.push({ day: targetDay, mode: 'failed', ...charge, at: now });
+          await booking.save();
+          failed++;
+          console.error(`🕓 Late fee DECLINED: ${booking.reservationId} day ${targetDay} — ${result.error}`);
+
+          sendLateFeeDeclineAlert({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge, failureMessage: result.error })
+            .catch(err => console.error('📧 Late-fee decline alert error:', err.message));
+        }
+      } else if (dirty) {
+        // No charge this pass, but a warning/escalation was sent — persist the flags.
+        booking.lateFee.lastActionAt = now;
         await booking.save();
-        charged++;
-        console.log(`🕓 Late fee charged: ${booking.reservationId} day ${targetDay} $${charge.total} [${result.paymentIntentId}]`);
-
-        sendLateFeeChargedToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, dayNumber: targetDay, charge })
-          .catch(err => console.error('📧 Late-fee receipt error:', err.message));
-        sendLateFeeOwnerCopy({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge })
-          .catch(err => console.error('📧 Late-fee owner copy error:', err.message));
-      } else {
-        booking.lateFee.retryCount = (booking.lateFee.retryCount || 0) + 1;
-        booking.lateFee.nextRetryAt = new Date(now.getTime() + RETRY_BACKOFF_MS);
-        booking.lateFee.entries.push({ day: targetDay, mode: 'failed', ...charge, at: now });
-        await booking.save();
-        failed++;
-        console.error(`🕓 Late fee DECLINED: ${booking.reservationId} day ${targetDay} — ${result.error}`);
-
-        sendLateFeeDeclineAlert({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge, failureMessage: result.error })
-          .catch(err => console.error('📧 Late-fee decline alert error:', err.message));
       }
     }
 
