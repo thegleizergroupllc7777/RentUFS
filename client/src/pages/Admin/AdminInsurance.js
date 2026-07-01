@@ -73,7 +73,7 @@ const AdminInsurance = () => {
 
   const downloadCsv = () => {
     if (!data) return;
-    const headers = ['Reservation', 'Vehicle', 'State', 'Coverage', 'Days', 'Trip Start', 'Trip End', 'Status', 'Coverage Activated'];
+    const headers = ['Reservation', 'Vehicle', 'Driver', 'State', 'Coverage', 'Days', 'Trip Start', 'Trip End', 'Status', 'Coverage Activated'];
     const esc = (v) => {
       const s = String(v == null ? '' : v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -81,7 +81,7 @@ const AdminInsurance = () => {
     const lines = [headers.join(',')];
     (data.rows || []).forEach((r) => {
       lines.push([
-        r.reservationId, r.vehicle, r.state, r.tier, r.days,
+        r.reservationId, r.vehicle, r.driver, r.state, r.tier, r.days,
         fmtDate(r.startDate), fmtDate(r.endDate), r.status, r.activated ? 'Yes' : 'No'
       ].map(esc).join(','));
     });
@@ -154,6 +154,7 @@ const AdminInsurance = () => {
             <tr>
               <th>Reservation</th>
               <th>Vehicle</th>
+              <th>Driver</th>
               <th>State</th>
               <th>Coverage</th>
               <th>Days</th>
@@ -164,12 +165,13 @@ const AdminInsurance = () => {
           </thead>
           <tbody>
             {rows.length === 0 && !loading && (
-              <tr><td colSpan="8"><div className="admin-empty">No covered reservations for {monthLabel}.</div></td></tr>
+              <tr><td colSpan="9"><div className="admin-empty">No covered reservations for {monthLabel}.</div></td></tr>
             )}
             {rows.map((r) => (
               <tr key={r.id}>
                 <td><strong>{r.reservationId}</strong></td>
                 <td>{r.vehicle}</td>
+                <td>{r.driver || '—'}</td>
                 <td>{r.state || '—'}</td>
                 <td>{r.tier}</td>
                 <td><strong>{r.days}</strong></td>

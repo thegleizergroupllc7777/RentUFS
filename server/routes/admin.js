@@ -253,7 +253,8 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
       'teqMobility.coverageId': { $exists: true, $ne: null }
     })
       .populate('vehicle', 'make model year location')
-      .select('reservationId vehicle startDate endDate totalDays insurance teqMobility status')
+      .populate('driver', 'firstName lastName')
+      .select('reservationId vehicle driver startDate endDate totalDays insurance teqMobility status')
       .lean();
 
     // Split into the two TeqMobility tiers by what the coverage actually included:
@@ -268,10 +269,12 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
       tally[tier].rentals += 1;
       tally[tier].days += days;
       const v = b.vehicle || {};
+      const d = b.driver || {};
       return {
         id: String(b._id),
         reservationId: b.reservationId || '—',
         vehicle: [v.year, v.make, v.model].filter(Boolean).join(' ') || '—',
+        driver: [d.firstName, d.lastName].filter(Boolean).join(' ') || '—',
         state: v.location?.state || '',
         tier,
         days,
