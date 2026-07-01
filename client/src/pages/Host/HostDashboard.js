@@ -18,6 +18,7 @@ const HostDashboard = () => {
   const [tollspotSignedUp, setTollspotSignedUp] = useState(false);
   const [confirmingSignup, setConfirmingSignup] = useState(false);
   const [rentedVehicleIds, setRentedVehicleIds] = useState(new Set());
+  const [overdueVehicleIds, setOverdueVehicleIds] = useState(new Set());
   const [enrollingVehicleId, setEnrollingVehicleId] = useState(null);
   const [syncingTolls, setSyncingTolls] = useState(false);
   const [syncError, setSyncError] = useState(null);
@@ -92,6 +93,29 @@ const HostDashboard = () => {
         return String(id);
       }));
       setRentedVehicleIds(ids);
+
+      // Flag vehicles whose ACTIVE rental is past its return time (display only —
+      // this drives the red LATE badge and charges nothing). Uses the same precise
+      // timing as the server helper (server/utils/lateReturn.js): endDate is
+      // midnight UTC of the drop-off day, dropoffTime is Eastern, and we add a 5h
+      // Eastern offset — erring slightly later so a car is never flagged early.
+      const EST_OFFSET = 5;
+      const nowMs = Date.now();
+      const overdue = new Set();
+      bookingsRes.data.forEach(b => {
+        if (b.status !== 'active') return;
+        const base = new Date(b.endDate).getTime();
+        if (Number.isNaN(base)) return;
+        const [h, m] = String(b.dropoffTime || '10:00').split(':').map(Number);
+        const returnMs = base
+          + ((Number.isFinite(h) ? h : 10) + EST_OFFSET) * 3600000
+          + (Number.isFinite(m) ? m : 0) * 60000;
+        if (nowMs > returnMs) {
+          const id = typeof b.vehicle === 'object' ? b.vehicle._id : b.vehicle;
+          overdue.add(String(id));
+        }
+      });
+      setOverdueVehicleIds(overdue);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -559,6 +583,17 @@ const HostDashboard = () => {
                     <div className={`availability-badge ${(rentedVehicleIds.has(String(vehicle._id)) || vehicle.rentedNow) ? 'rented' : vehicle.availability ? 'available' : 'unavailable'}`}>
                       {(rentedVehicleIds.has(String(vehicle._id)) || vehicle.rentedNow) ? 'Rented' : vehicle.availability ? 'Available' : 'Unavailable'}
                     </div>
+                    {overdueVehicleIds.has(String(vehicle._id)) && (
+                      <div style={{
+                        position: 'absolute', top: '8px', left: '8px', zIndex: 2,
+                        background: '#dc2626', color: '#fff', fontWeight: 800,
+                        fontSize: '0.72rem', letterSpacing: '0.5px',
+                        padding: '0.2rem 0.55rem', borderRadius: '0.375rem',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
+                      }}>
+                        ⚠ LATE
+                      </div>
+                    )}
                   </div>
 
                   <div className="host-vehicle-info">
@@ -670,6 +705,17 @@ const HostDashboard = () => {
                         <div className={`availability-badge ${isRented ? 'rented' : vehicle.availability ? 'available' : 'unavailable'}`}>
                           {isRented ? 'Rented' : vehicle.availability ? 'Available' : 'Unavailable'}
                         </div>
+                        {overdueVehicleIds.has(String(vehicle._id)) && (
+                          <div style={{
+                            position: 'absolute', top: '8px', left: '8px', zIndex: 2,
+                            background: '#dc2626', color: '#fff', fontWeight: 800,
+                            fontSize: '0.72rem', letterSpacing: '0.5px',
+                            padding: '0.2rem 0.55rem', borderRadius: '0.375rem',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
+                          }}>
+                            ⚠ LATE
+                          </div>
+                        )}
                       </div>
 
                       <div className="list-vehicle-content">
