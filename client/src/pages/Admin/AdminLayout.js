@@ -28,6 +28,7 @@ const AdminLayout = ({ title, subtitle, children, onRefresh }) => {
           {me?.isSuperAdmin && <NavLink to="/admin/tax">Tax / 1099</NavLink>}
           {me?.isSuperAdmin && <NavLink to="/admin/insurance">Insurance</NavLink>}
           {me?.isSuperAdmin && <NavLink to="/admin/commissions">Commissions</NavLink>}
+          {me?.isSuperAdmin && <NavLink to="/admin/late-returns">Late Returns</NavLink>}
         </nav>
         {children}
       </div>
