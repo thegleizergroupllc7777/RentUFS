@@ -34,6 +34,7 @@ const { sendSMS } = require('../utils/smsService');
 const BroadcastTemplate = require('../models/BroadcastTemplate');
 const SmsSubscriber = require('../models/SmsSubscriber');
 const EmailSuppression = require('../models/EmailSuppression');
+const SystemState = require('../models/SystemState');
 const { isSuperAdmin } = require('../utils/superAdmin');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
 const { previewHostPayout, processWeeklyPayouts } = require('../utils/scheduler');
@@ -119,6 +120,42 @@ router.post('/hosts/:id/pay-now', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Manual host payout error:', error.message);
     res.status(500).json({ message: 'Failed to run payout', error: error.message });
+  }
+});
+
+// ── Automatic late-fee charging switch (OWNER-ONLY) ─────────────────────────
+// The master kill switch for automatic late-return charging. Stored in
+// SystemState so it flips instantly with no redeploy. Default OFF (safe).
+router.get('/late-fee-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const doc = await SystemState.findOne({ key: 'lateFeeCharging' });
+    const charging = doc && String(doc.value).toLowerCase() === 'on' ? 'on' : 'off';
+    res.json({ charging });
+  } catch (error) {
+    console.error('Late-fee setting read error:', error.message);
+    res.status(500).json({ message: 'Failed to load setting', error: error.message });
+  }
+});
+
+router.put('/late-fee-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const value = String(req.body.charging).toLowerCase() === 'on' ? 'on' : 'off';
+    await SystemState.findOneAndUpdate(
+      { key: 'lateFeeCharging' },
+      { value, updatedAt: new Date() },
+      { upsert: true }
+    );
+    console.log(`🕓 Automatic late-fee charging switched ${value.toUpperCase()} by ${req.user.email}`);
+    res.json({ success: true, charging: value });
+  } catch (error) {
+    console.error('Late-fee setting update error:', error.message);
+    res.status(500).json({ message: 'Failed to update setting', error: error.message });
   }
 });
 
