@@ -1,26 +1,31 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Automatic late-return fee processor — SHADOW STAGE
+// Automatic late-return fee processor
 //
-// This module finds active rentals that are past their return time and, for each
-// new late day, works out what the renter owes ($5 + one insurance day + the
-// processing fee). Right now it runs in SHADOW mode only: it emails the owner the
-// math and records it on the booking, but contains NO card-charging code — nobody
-// is charged. Live charging plugs into the clearly-marked spot below in a later step.
+// Finds active rentals past their return time and, for each new unpaid late day,
+// charges the renter $5 + one insurance day + the processing fee (all to the
+// platform — no host transfer). On success it emails the renter a receipt and the
+// owner a confirmation copy; on a decline it backs off 6h and alerts the host+owner.
 //
-// Two hard safety gates, both from server/utils/lateReturn.js:
-//   1. isBookingEligible(booking) — only bookings whose renter agreed to the new
-//      Automatic Late Return Fee clause. While the policy start is unset, this is
-//      false for EVERY booking, so this whole pass is a no-op in production.
-//   2. isChargingEnabled() — the owner's ON/OFF switch. While OFF (the default),
-//      we only shadow-report; we never charge.
+// TWO HARD SAFETY GATES keep this inert until we deliberately go live, both from
+// server/utils/lateReturn.js:
+//   1. isChargingEnabled() — the owner's ON/OFF kill switch (default OFF). While
+//      OFF, this does absolutely nothing: no charges, no emails.
+//   2. isBookingEligible(booking) — only bookings whose renter agreed to the new
+//      Automatic Late Return Fee clause. While LATE_FEE_POLICY_START is unset, this
+//      is false for EVERY booking, so even with the switch ON nothing is charged.
+//
+// It does NOT touch booking creation, checkout, the reservation payment flow, or
+// insurance coverage start/stop — all of that keeps running unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
 
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const Booking = require('../models/Booking');
 const { getLateInfo, isBookingEligible, isChargingEnabled } = require('./lateReturn');
-const { sendLateReturnShadowEmail } = require('./emailService');
+const { sendLateFeeChargedToRenter, sendLateFeeOwnerCopy, sendLateFeeDeclineAlert } = require('./emailService');
 
-const LATE_FEE_PER_DAY = 5;      // dollars, per the agreement's Automatic Late Return Fee
-const MIN_MINUTES_LATE = 60;     // first charge fires one hour after the return time
+const LATE_FEE_PER_DAY = 5;                       // dollars, per the agreement's Automatic Late Return Fee
+const MIN_MINUTES_LATE = 60;                      // first charge fires one hour after the return time
+const RETRY_BACKOFF_MS = 6 * 60 * 60 * 1000;      // after a decline, wait 6h before retrying the card
 const round2 = (n) => Math.round(n * 100) / 100;
 
 // The insurance-day rate for this booking. Prefer what the renter actually agreed
@@ -54,64 +59,109 @@ const chargesOwed = (info) => {
   return 1 + info.daysLate;
 };
 
-// Scheduled pass. Safe to run every few minutes: it only acts on a booking when a
-// NEW late day is owed that hasn't already been handled (no double-charging).
+// Charge the renter off-session for one late day. The full amount goes to the
+// PLATFORM (RentUFS) — there is NO host transfer, because the $5 + insurance day
+// are platform revenue (the host earns their normal rental only when the renter
+// properly extends). Mirrors the off_session pattern used by chargeSettlement.
+const chargeLateDay = async (booking, driver, charge, dayNumber) => {
+  const defaultPM = driver?.paymentMethods?.find(pm => pm.isDefault && pm.stripePaymentMethodId);
+  if (!driver?.stripeCustomerId || !defaultPM) {
+    return { success: false, error: 'No saved payment method on file' };
+  }
+  try {
+    const pi = await stripe.paymentIntents.create({
+      amount: Math.round(charge.total * 100),
+      currency: 'usd',
+      customer: driver.stripeCustomerId,
+      payment_method: defaultPM.stripePaymentMethodId,
+      off_session: true,
+      confirm: true,
+      automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+      metadata: {
+        type: 'late_return_fee',
+        bookingId: booking._id.toString(),
+        reservationId: booking.reservationId || '',
+        lateDay: String(dayNumber)
+      },
+      description: `Late return fee (day ${dayNumber}) for ${booking.reservationId || booking._id}`
+    });
+    if (pi.status !== 'succeeded') {
+      return { success: false, error: `Payment status: ${pi.status}`, paymentIntentId: pi.id };
+    }
+    return { success: true, paymentIntentId: pi.id };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// Scheduled pass. Safe to run every few minutes: acts on a booking only when a NEW
+// unpaid late day is owed (no double-charging), and backs off 6h after a decline.
 const processLateReturns = async () => {
   try {
     const now = new Date();
     const chargingOn = await isChargingEnabled();
 
+    // KILL SWITCH: while OFF, do absolutely nothing (no charges, no emails).
+    if (!chargingOn) return { success: true, charged: 0, skipped: 'charging_off' };
+
     const activeBookings = await Booking.find({ status: 'active', paymentStatus: 'paid' })
       .populate('vehicle', 'make model year')
-      .populate('driver', 'firstName lastName email')
+      .populate('driver', 'firstName lastName email phone stripeCustomerId paymentMethods')
       .populate('host', 'firstName lastName email hostInfo');
 
-    let reported = 0;
+    let charged = 0;
+    let failed = 0;
     for (const booking of activeBookings) {
-      // GATE 1: new-reservations-only. No-op for everything until policy start is set.
+      // GATE: new-reservations-only. No-op for everything until the policy start is set.
       if (!isBookingEligible(booking)) continue;
 
       const info = getLateInfo(booking, now);
       const owed = chargesOwed(info);
       if (owed <= 0) continue;
 
-      // No double-action: count late days already handled (shadow or charged).
-      const handled = (booking.lateFee?.shadowDaysReported || 0) + (booking.lateFee?.daysCharged || 0);
-      if (owed <= handled) continue;
+      const daysCharged = booking.lateFee?.daysCharged || 0;
+      if (owed <= daysCharged) continue;         // every owed late day already paid
 
-      const dayNumber = owed;
+      // Back off after a decline so we don't retry the card every pass.
+      if (booking.lateFee?.nextRetryAt && now < new Date(booking.lateFee.nextRetryAt)) continue;
+
+      const targetDay = daysCharged + 1;         // charge the next unpaid late day
       const charge = computeLateDayCharge(booking, booking.host);
+      const result = await chargeLateDay(booking, booking.driver, charge, targetDay);
 
-      if (!chargingOn) {
-        // ── SHADOW MODE ── no charge. Email the owner the math and record it.
-        await sendLateReturnShadowEmail({
-          booking,
-          vehicle: booking.vehicle,
-          driver: booking.driver,
-          host: booking.host,
-          dayNumber,
-          charge,
-          returnMoment: info.returnMoment,
-          hoursLate: info.hoursLate
-        }).catch(err => console.error('📧 Late-fee shadow email error:', err.message));
+      if (!booking.lateFee) booking.lateFee = {};
+      booking.lateFee.entries = booking.lateFee.entries || [];
+      booking.lateFee.lastActionAt = now;
 
-        if (!booking.lateFee) booking.lateFee = {};
-        booking.lateFee.shadowDaysReported = owed;
-        booking.lateFee.lastActionAt = now;
-        booking.lateFee.entries = booking.lateFee.entries || [];
-        booking.lateFee.entries.push({ day: dayNumber, mode: 'shadow', ...charge, at: now });
+      if (result.success) {
+        booking.lateFee.daysCharged = targetDay;
+        booking.lateFee.totalCharged = round2((booking.lateFee.totalCharged || 0) + charge.total);
+        booking.lateFee.retryCount = 0;
+        booking.lateFee.nextRetryAt = null;
+        booking.lateFee.entries.push({ day: targetDay, mode: 'charged', ...charge, chargeId: result.paymentIntentId, at: now });
         await booking.save();
-        reported++;
-        console.log(`🕓 [SHADOW] Late day ${dayNumber} on ${booking.reservationId}: would charge $${charge.total} (no charge made)`);
+        charged++;
+        console.log(`🕓 Late fee charged: ${booking.reservationId} day ${targetDay} $${charge.total} [${result.paymentIntentId}]`);
+
+        sendLateFeeChargedToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, dayNumber: targetDay, charge })
+          .catch(err => console.error('📧 Late-fee receipt error:', err.message));
+        sendLateFeeOwnerCopy({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge })
+          .catch(err => console.error('📧 Late-fee owner copy error:', err.message));
       } else {
-        // ── LIVE CHARGING ── intentionally NOT implemented in this step. Nothing
-        // is charged here yet; real card-charging is added in the next increment.
-        console.log(`🕓 Late day ${dayNumber} on ${booking.reservationId}: live charging not yet implemented — skipping (no charge)`);
+        booking.lateFee.retryCount = (booking.lateFee.retryCount || 0) + 1;
+        booking.lateFee.nextRetryAt = new Date(now.getTime() + RETRY_BACKOFF_MS);
+        booking.lateFee.entries.push({ day: targetDay, mode: 'failed', ...charge, at: now });
+        await booking.save();
+        failed++;
+        console.error(`🕓 Late fee DECLINED: ${booking.reservationId} day ${targetDay} — ${result.error}`);
+
+        sendLateFeeDeclineAlert({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge, failureMessage: result.error })
+          .catch(err => console.error('📧 Late-fee decline alert error:', err.message));
       }
     }
 
-    if (reported > 0) console.log(`🕓 Late-return shadow pass complete: reported ${reported} late day(s)`);
-    return { success: true, reported };
+    if (charged || failed) console.log(`🕓 Late-return pass complete: ${charged} charged, ${failed} declined`);
+    return { success: true, charged, failed };
   } catch (err) {
     console.error('🕓 Error in processLateReturns:', err);
     return { success: false, error: err.message };
@@ -123,5 +173,6 @@ module.exports = {
   resolveInsuranceDay,
   computeLateDayCharge,
   chargesOwed,
+  chargeLateDay,
   processLateReturns
 };

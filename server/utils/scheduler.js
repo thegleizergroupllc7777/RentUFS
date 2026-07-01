@@ -741,11 +741,11 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   overdueInterval = setInterval(checkAndSendOverdueSMS, intervalMs);
   console.log(`⏱️  Overdue SMS scheduler running every ${intervalMinutes} minutes`);
 
-  // Automatic late-return fee processor (SHADOW stage). Same 10-minute rhythm.
-  // Fully gated: acts only on bookings that agreed to the new late clause AND only
-  // charges when the owner's switch is ON — otherwise it just reports the math.
-  // With the policy start unset, this is a harmless no-op in production.
-  console.log('🚀 Starting late-return fee processor (shadow)...');
+  // Automatic late-return fee processor. Same 10-minute rhythm. Fully gated:
+  // acts only on bookings that agreed to the new late clause (isBookingEligible)
+  // AND only charges when the owner's switch is ON (isChargingEnabled). While the
+  // switch is OFF or the policy start is unset, this is a harmless no-op.
+  console.log('🚀 Starting late-return fee processor...');
   processLateReturns();
   lateReturnInterval = setInterval(processLateReturns, intervalMs);
   console.log(`⏱️  Late-return fee processor running every ${intervalMinutes} minutes`);
