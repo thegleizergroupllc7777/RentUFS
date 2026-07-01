@@ -159,6 +159,52 @@ router.put('/late-fee-setting', adminAuth, async (req, res) => {
   }
 });
 
+// ── Live late-returns list (OWNER-ONLY) ─────────────────────────────────────
+// Every currently-overdue active rental across the platform, for the owner's
+// Late Returns command center. Read-only. Uses the same lateness math as the
+// charging engine so the list and any charge always agree.
+router.get('/late-returns', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const { getLateInfo, isBookingEligible } = require('../utils/lateReturn');
+    const now = new Date();
+    const bookings = await Booking.find({ status: 'active', paymentStatus: 'paid' })
+      .populate('vehicle', 'make model year')
+      .populate('driver', 'firstName lastName phone')
+      .populate('host', 'firstName lastName phone');
+
+    const rows = [];
+    for (const b of bookings) {
+      const info = getLateInfo(b, now);
+      if (!info.isLate) continue;
+      rows.push({
+        id: b._id,
+        reservationId: b.reservationId,
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
+        driver: b.driver ? `${b.driver.firstName || ''} ${b.driver.lastName || ''}`.trim() : '',
+        driverPhone: b.driver?.phone || '',
+        host: b.host ? `${b.host.firstName || ''} ${b.host.lastName || ''}`.trim() : '',
+        hostPhone: b.host?.phone || '',
+        returnMoment: info.returnMoment,
+        hoursLate: info.hoursLate,
+        daysLate: info.daysLate,
+        eligible: isBookingEligible(b),                  // subject to automatic charging?
+        daysCharged: b.lateFee?.daysCharged || 0,
+        totalCharged: b.lateFee?.totalCharged || 0,
+        retryCount: b.lateFee?.retryCount || 0,
+        nextRetryAt: b.lateFee?.nextRetryAt || null
+      });
+    }
+    rows.sort((a, b) => b.hoursLate - a.hoursLate);
+    res.json({ rows, count: rows.length });
+  } catch (error) {
+    console.error('Late returns list error:', error.message);
+    res.status(500).json({ message: 'Failed to load late returns', error: error.message });
+  }
+});
+
 // ── Tax / 1099 export (OWNER-ONLY) ──────────────────────────────────────────
 // Returns every host's tax info + yearly NET earnings for 1099 filing.
 // Restricted to super admins (the platform owner) — enforced here on the server
