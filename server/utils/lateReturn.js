@@ -71,11 +71,11 @@ const getLateInfo = (booking, now = new Date()) => {
 // renters who actually agreed to those terms. Every current/existing booking was
 // created before this line and is therefore permanently invisible to the charger.
 //
-// This is deliberately null until we are ready to go live. While it is null,
-// isBookingEligible() returns false for EVERYTHING — a hard fail-safe. When we
-// flip charging on, set this to the exact moment the new agreement went live
-// (ISO string), e.g. new Date('2026-07-15T00:00:00Z').
-const LATE_FEE_POLICY_START = null;
+// GO-LIVE: set to the moment the new agreement + late-fee policy went live.
+// Only bookings created on/after this instant can ever be charged, so every
+// reservation that existed before this line is permanently protected. Setting
+// this back to null instantly makes the whole system inert again.
+const LATE_FEE_POLICY_START = '2026-07-01T21:04:16Z';
 
 // True only if this booking was created on/after the policy start — meaning its
 // renter signed the agreement that authorizes the late fee. Fails safe: if no
