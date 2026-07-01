@@ -65,6 +65,27 @@ const getLateInfo = (booking, now = new Date()) => {
   };
 };
 
+// ── New-reservations-only guardrail ──
+// Late fees may ONLY ever apply to bookings created AFTER the updated rental
+// agreement (with the Automatic Late Return Fee clause) went live — i.e. only
+// renters who actually agreed to those terms. Every current/existing booking was
+// created before this line and is therefore permanently invisible to the charger.
+//
+// This is deliberately null until we are ready to go live. While it is null,
+// isBookingEligible() returns false for EVERYTHING — a hard fail-safe. When we
+// flip charging on, set this to the exact moment the new agreement went live
+// (ISO string), e.g. new Date('2026-07-15T00:00:00Z').
+const LATE_FEE_POLICY_START = null;
+
+// True only if this booking was created on/after the policy start — meaning its
+// renter signed the agreement that authorizes the late fee. Fails safe: if no
+// start date is configured, or the booking has no createdAt, returns false.
+const isBookingEligible = (booking) => {
+  if (!LATE_FEE_POLICY_START) return false;           // not live yet → nobody eligible
+  if (!booking || !booking.createdAt) return false;   // can't prove it's new → exclude
+  return new Date(booking.createdAt).getTime() >= new Date(LATE_FEE_POLICY_START).getTime();
+};
+
 // The master ON/OFF switch for AUTOMATIC LATE-FEE CHARGING.
 //
 // Read from the SystemState key/value store so the owner can flip it without a
@@ -90,7 +111,9 @@ const isChargingEnabled = async () => {
 
 module.exports = {
   EST_OFFSET,
+  LATE_FEE_POLICY_START,
   getReturnMoment,
   getLateInfo,
+  isBookingEligible,
   isChargingEnabled
 };

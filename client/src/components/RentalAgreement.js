@@ -494,11 +494,15 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
               both parties.
             </li>
             <li>
-              <strong>Automatic Late Extension.</strong> If the rental Vehicle is not returned within
-              24 hours of the original or extended End Date & Time, an Automatic Late Extension shall be applied.
-              The Renter's payment method on file will be charged at the current day's rental fee
-              plus any applicable fees. If the payment attempt fails for any reason, the Renter must
-              extend the rental through the RentUFS.com website or return the vehicle immediately.
+              <strong>Automatic Late Return Fee.</strong> If the Vehicle is not returned by the
+              End Date &amp; Time (including any agreed extensions), the Renter authorizes RentUFS.com to
+              automatically charge the Renter's payment method on file — beginning one (1) hour after the
+              End Date &amp; Time, and again for each calendar day the Vehicle remains unreturned — a late
+              fee of five dollars ($5.00) per day plus one (1) day of insurance coverage at the applicable
+              daily rate, plus any applicable processing fees. To stop these daily charges, the Renter must
+              either return the Vehicle or extend the rental through the RentUFS.com website. If a charge
+              attempt fails, the Renter must extend or return the Vehicle immediately; insurance coverage
+              and the daily charges continue until the Vehicle is returned.
             </li>
             <li>
               <strong>Vehicles Not Returned.</strong> If the Vehicle is not returned within 72 hours
