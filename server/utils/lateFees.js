@@ -200,16 +200,19 @@ const processLateReturns = async () => {
 
           if (attempts >= MAX_RETRY_ATTEMPTS) {
             // Renter's card can't be collected after the retries — move this day's
-            // amount to the HOST's debt (deducted from their next payout, shown
-            // quietly in their earnings). Marks the day handled so we stop retrying.
-            await User.findByIdAndUpdate(booking.host._id || booking.host, { $inc: { lateReturnDebtBalance: charge.total } });
+            // insurance day (at the host's own plan rate) to the HOST's debt —
+            // NOT the $5 late fee (renter penalty) and NOT the card fee (nothing
+            // was charged). This is exactly the host's insurance cost to cover.
+            // Deducted from their next payout, shown quietly in their earnings.
+            // Marks the day handled so we stop retrying.
+            await User.findByIdAndUpdate(booking.host._id || booking.host, { $inc: { lateReturnDebtBalance: charge.insurance } });
             booking.lateFee.daysCharged = targetDay;
-            booking.lateFee.hostBackstopTotal = round2((booking.lateFee.hostBackstopTotal || 0) + charge.total);
+            booking.lateFee.hostBackstopTotal = round2((booking.lateFee.hostBackstopTotal || 0) + charge.insurance);
             booking.lateFee.retryCount = 0;
             booking.lateFee.nextRetryAt = null;
             booking.lateFee.entries.push({ day: targetDay, mode: 'host_backstop', ...charge, at: now });
             await booking.save();
-            console.log(`🕓 Host backstop: $${charge.total} moved to host for ${booking.reservationId} day ${targetDay} (renter uncollectible)`);
+            console.log(`🕓 Host backstop: $${charge.insurance} insurance day moved to host for ${booking.reservationId} day ${targetDay} (renter uncollectible)`);
           } else {
             booking.lateFee.nextRetryAt = new Date(now.getTime() + RETRY_BACKOFF_MS);
             booking.lateFee.entries.push({ day: targetDay, mode: 'failed', ...charge, at: now });
