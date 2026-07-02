@@ -29,6 +29,7 @@ const {
   sendLateReturnRecoverToHost,
   sendLateReturnCompanyAlert
 } = require('./emailService');
+const { sendLateReturnWarningSMS } = require('./smsService');
 
 const LATE_FEE_PER_DAY = 5;                       // dollars, per the agreement's Automatic Late Return Fee
 const MIN_MINUTES_LATE = 0;                       // ZERO grace — charge the second they're late (matches TeqMobility)
@@ -113,7 +114,7 @@ const processLateReturns = async () => {
 
     const activeBookings = await Booking.find({ status: 'active', paymentStatus: 'paid' })
       .populate('vehicle', 'make model year')
-      .populate('driver', 'firstName lastName email phone stripeCustomerId paymentMethods')
+      .populate('driver', 'firstName lastName email phone stripeCustomerId paymentMethods smsConsent')
       .populate('host', 'firstName lastName email hostInfo');
 
     let charged = 0;
@@ -123,22 +124,31 @@ const processLateReturns = async () => {
       if (!isBookingEligible(booking)) continue;
 
       const info = getLateInfo(booking, now);
-      if (!info.isLate) continue;                // not overdue → nothing to do
 
       if (!booking.lateFee) booking.lateFee = {};
       booking.lateFee.entries = booking.lateFee.entries || [];
       let dirty = false;                         // did we set a notification flag this pass?
 
-      // ── Renter warnings (before the first charge at 60 min) ──
-      if (!booking.lateFee.warn0Sent) {
-        sendLateReturnWarningToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, minutesLate: info.minutesLate })
-          .catch(err => console.error('📧 Late warning (0m) error:', err.message));
-        booking.lateFee.warn0Sent = true; dirty = true;
-      }
-      if (info.minutesLate >= 30 && !booking.lateFee.warn30Sent) {
-        sendLateReturnWarningToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, minutesLate: info.minutesLate })
-          .catch(err => console.error('📧 Late warning (30m) error:', err.message));
-        booking.lateFee.warn30Sent = true; dirty = true;
+      // ── Advance warnings BEFORE the deadline (email + text) ──
+      // Each stage fires once, in its own window, so a booking first seen close to
+      // the deadline gets the right (later) warning rather than all three at once.
+      if (!info.isLate) {
+        const minsUntil = Math.floor((info.returnMoment.getTime() - now.getTime()) / 60000);
+        const smsOk = !!(booking.driver?.smsConsent?.granted && booking.driver?.phone);
+        const warn = (stage) => {
+          sendLateReturnWarningToRenter({ driver: booking.driver, booking, vehicle: booking.vehicle, stage })
+            .catch(err => console.error(`📧 Late warning (${stage}) error:`, err.message));
+          if (smsOk) {
+            sendLateReturnWarningSMS(booking.driver, booking, booking.vehicle, stage)
+              .catch(err => console.error(`📱 Late warning SMS (${stage}) error:`, err.message));
+          }
+        };
+        if (minsUntil <= 120 && minsUntil > 60 && !booking.lateFee.warn2hSent) { warn('2h'); booking.lateFee.warn2hSent = true; dirty = true; }
+        else if (minsUntil <= 60 && minsUntil > 30 && !booking.lateFee.warn1hSent) { warn('1h'); booking.lateFee.warn1hSent = true; dirty = true; }
+        else if (minsUntil <= 30 && minsUntil >= 0 && !booking.lateFee.warn30mSent) { warn('30m'); booking.lateFee.warn30mSent = true; dirty = true; }
+
+        if (dirty) { booking.lateFee.lastActionAt = now; await booking.save(); }
+        continue;                                // not late yet → no charge/escalation this pass
       }
 
       // ── Host / company escalations ──

@@ -8,6 +8,7 @@ const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = r
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
 const { checkAndSettleScheduledCharges } = require('./chargeSettlement');
 const { processLateReturns } = require('./lateFees');
+const { isBookingEligible } = require('./lateReturn');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
 const checkAndSendReturnReminders = async () => {
@@ -26,6 +27,11 @@ const checkAndSendReturnReminders = async () => {
     let remindersSent = 0;
 
     for (const booking of activeBookings) {
+      // Late-fee-eligible bookings get the newer, more urgent late-fee reminders
+      // (2h/1h/30m, email + text) instead of this generic one — skip to avoid a
+      // duplicate 1-hour email. Every other booking still gets this reminder.
+      if (isBookingEligible(booking)) continue;
+
       // Calculate the exact end time based on endDate and dropoffTime
       const endDate = new Date(booking.endDate);
       const dropoffTime = booking.dropoffTime || '10:00';

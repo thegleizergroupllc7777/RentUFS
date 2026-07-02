@@ -152,6 +152,20 @@ const sendOverdueReminderSMS = async (driver, booking, vehicle, overdueInfo) => 
   return sendSMS(driver.phone, body);
 };
 
+// Advance late-return warning text (2h / 1h / 30m before the return time).
+// Short and escalating; caller checks SMS consent before sending.
+const sendLateReturnWarningSMS = async (driver, booking, vehicle, stage) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental';
+  const lead = stage === '2h' ? 'ends in about 2 hours'
+    : stage === '30m' ? 'ends in 30 minutes' : 'ends in about 1 hour';
+  const urgency = stage === '30m'
+    ? 'Charges begin the moment you are late.'
+    : 'Avoid an automatic late fee ($5 + 1 insurance day).';
+  const body = `RentUFS: Hi ${driver.firstName || 'there'}, your ${vLabel} rental ${lead}. ${urgency} Return or extend: ${clientUrl}/my-bookings`;
+  return sendSMS(driver.phone, body);
+};
+
 module.exports = {
   isSmsConfigured,
   sendSMS,
@@ -163,5 +177,6 @@ module.exports = {
   sendBookingCompletedSMS,
   sendBookingCancelledSMS,
   sendDriverCancelledNotificationSMS,
-  sendOverdueReminderSMS
+  sendOverdueReminderSMS,
+  sendLateReturnWarningSMS
 };

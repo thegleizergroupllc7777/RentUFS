@@ -2564,31 +2564,40 @@ const sendLateFeeDeclineAlert = async ({ booking, vehicle, driver, host, dayNumb
   }
 };
 
-// Friendly WARNING to the renter that their rental is now overdue — sent before
-// the first charge (at 0 min and again at 30 min late). Nudges them to return or
-// extend to avoid the automatic late fee.
-const sendLateReturnWarningToRenter = async ({ driver, booking, vehicle, minutesLate }) => {
+// Advance WARNING to the renter BEFORE their rental ends, nudging them to return
+// or extend so they avoid the automatic late fee. Three escalating stages:
+//   '2h'  → ~2 hours before (friendly, green)
+//   '1h'  → ~1 hour before  (firmer, amber)
+//   '30m' → ~30 min before  (urgent, red)
+const LATE_WARN_STAGES = {
+  '2h':  { color: '#10b981', ink: '#04331f', banner: 'YOUR RENTAL ENDS SOON',        lead: 'ends in about 2 hours',   tone: 'Please plan to return the vehicle on time, or extend your trip in the RentUFS app if you need longer.' },
+  '1h':  { color: '#f59e0b', ink: '#1a1200', banner: '1 HOUR LEFT ON YOUR RENTAL',    lead: 'ends in about 1 hour',    tone: 'To avoid an automatic late fee ($5 plus one day of insurance), please return the vehicle or extend now.' },
+  '30m': { color: '#dc2626', ink: '#ffffff', banner: 'FINAL REMINDER — 30 MINUTES',   lead: 'ends in about 30 minutes',tone: 'Charges begin the moment you are late. Please return the vehicle now, or extend immediately, to avoid the fee.' }
+};
+
+const sendLateReturnWarningToRenter = async ({ driver, booking, vehicle, stage }) => {
   try {
     if (!driver?.email) return { success: false, skipped: true };
+    const cfg = LATE_WARN_STAGES[stage] || LATE_WARN_STAGES['1h'];
     if (!isEmailConfigured()) {
-      console.log(`📧 [DEV] Late warning to renter: ${driver.email} (${minutesLate} min late)`);
+      console.log(`📧 [DEV] Late warning (${stage}) to renter: ${driver.email}`);
       return { success: true, dev: true };
     }
     const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental vehicle';
     const resId = booking?.reservationId || String(booking?._id || '');
     const mailOptions = {
       to: driver.email,
-      subject: `Your rental is overdue — please return or extend (${resId})`,
+      subject: `${stage === '30m' ? 'Final reminder' : 'Reminder'}: your rental ${cfg.lead} — return or extend (${resId})`,
       html: `
         <!DOCTYPE html>
         <html>
         <body style="font-family: Arial, sans-serif; background:#000; color:#e5e7eb; margin:0; padding:0;">
           <div style="max-width:600px; margin:0 auto; padding:20px;">
-            <div style="background:#111; border:1px solid #f59e0b; border-radius:10px; overflow:hidden;">
-              <div style="background:#f59e0b; color:#1a1200; padding:14px 18px; font-weight:800;">⚠ YOUR RENTAL IS PAST ITS RETURN TIME</div>
+            <div style="background:#111; border:1px solid ${cfg.color}; border-radius:10px; overflow:hidden;">
+              <div style="background:${cfg.color}; color:${cfg.ink}; padding:14px 18px; font-weight:800;">${cfg.banner}</div>
               <div style="padding:18px;">
-                <p style="margin:0 0 12px;">Hi ${driver.firstName || 'there'}, your rental of the <strong style="color:#fff;">${vLabel}</strong> (reservation ${resId}) is now past its scheduled return time.</p>
-                <p style="margin:0 0 12px; color:#9ca3af;">To avoid an automatic late fee ($5/day plus one day of insurance), please <strong style="color:#fff;">return the vehicle now</strong> or <strong style="color:#fff;">extend your trip</strong> in the RentUFS app.</p>
+                <p style="margin:0 0 12px;">Hi ${driver.firstName || 'there'}, your rental of the <strong style="color:#fff;">${vLabel}</strong> (reservation ${resId}) ${cfg.lead}.</p>
+                <p style="margin:0 0 12px; color:#9ca3af;">${cfg.tone}</p>
                 <p style="margin:0; color:#6b7280; font-size:0.82rem;">If you've already returned it, you can ignore this message.</p>
               </div>
             </div>
