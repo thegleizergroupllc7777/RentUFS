@@ -222,6 +222,12 @@ const HostReports = () => {
                       </div>
                     </div>
 
+                    {(reportData.summary.lateReturnDebtBalance || 0) > 0 && (
+                      <p style={{ margin: '0.75rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>
+                        Late-return charge owed: {formatCurrency(reportData.summary.lateReturnDebtBalance)} — an uncollected late-return charge that will be deducted from an upcoming payout.
+                      </p>
+                    )}
+
                     {/* Revenue Chart - only show on Today tab */}
                     {period === 'today' && reportData.dailyRevenue && reportData.dailyRevenue.length > 0 && (
                       <div className="report-chart-section">
