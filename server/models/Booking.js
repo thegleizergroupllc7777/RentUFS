@@ -362,9 +362,10 @@ const bookingSchema = new mongoose.Schema({
     warn30mSent: { type: Boolean, default: false },   // final reminder 30 min before return
     day2AlertSent: { type: Boolean, default: false }, // host recover email (48h)
     day3AlertSent: { type: Boolean, default: false }, // company + host recover (72h)
+    hostBackstopTotal: { type: Number, default: 0 },  // amount moved to the host after the renter couldn't be charged
     entries: [{
       day: { type: Number },                          // late-day number (1, 2, 3, ...)
-      mode: { type: String, enum: ['shadow', 'charged', 'failed'], default: 'shadow' },
+      mode: { type: String, enum: ['shadow', 'charged', 'failed', 'host_backstop'], default: 'shadow' },
       lateFee: { type: Number },                       // $5 late fee
       insurance: { type: Number },                     // one insurance day at the booking's rate
       stripeFee: { type: Number },                     // processing fee passed to renter

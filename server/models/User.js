@@ -263,6 +263,13 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Uncollected late-return charges (insurance overage a renter's card couldn't
+  // cover). Deducted from the host's payouts, separately from the cancellation
+  // penalty above so the two never get confused in reports.
+  lateReturnDebtBalance: {
+    type: Number,
+    default: 0
+  },
   integrations: {
     tollspot: {
       active: { type: Boolean, default: false },
