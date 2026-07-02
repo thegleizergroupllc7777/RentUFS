@@ -13,26 +13,43 @@
 
 const SystemState = require('../models/SystemState');
 
-// Trip dates are stored as midnight UTC of the selected calendar day, and the
-// drop-off clock time ("10:00") is meant in Eastern time — the same convention
-// used by reports.js and the insurance-billing view. We add the Eastern offset
-// so the return moment lands at the real wall-clock time the renter agreed to.
-//
-// EST_OFFSET = 5 (winter). In summer the true offset is 4 (EDT), so using 5
-// makes the computed return moment up to an hour LATER than the clock time —
-// i.e. it gives the renter a touch MORE grace before they're ever counted late.
-// Erring later is deliberate: we never want to flag someone early.
+// Legacy fixed Eastern offset (kept for backward-compatible export only). The
+// return-moment math below no longer uses it — it computes the true Eastern time
+// (DST-aware) so a charge fires at the renter's real clock deadline year-round.
 const EST_OFFSET = 5;
 
+// How many minutes America/New_York is offset from UTC at a given instant.
+// Uses the runtime's timezone database, so it's automatically correct for
+// daylight saving (EDT = -240 in summer, EST = -300 in winter).
+const ET_TZ = 'America/New_York';
+const easternOffsetMinutes = (instant) => {
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: ET_TZ, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  }).formatToParts(instant).reduce((a, x) => (a[x.type] = x.value, a), {});
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return (asUtc - instant.getTime()) / 60000; // ET is behind UTC → negative
+};
+
 // The exact instant a rental is due back, as a real UTC Date.
-//   endDate    = midnight UTC of the drop-off day
+//   endDate     = midnight UTC of the drop-off day
 //   dropoffTime = "HH:MM" Eastern (defaults to 10:00, same default as the model)
+// The drop-off clock time is the renter's REAL Eastern time, so we resolve it to
+// UTC using the actual Eastern offset for that date (daylight-saving accurate) —
+// no fixed 5-hour assumption, so summer returns aren't given a hidden extra hour.
 const getReturnMoment = (booking) => {
   const base = new Date(booking.endDate);
   const [h, m] = String(booking.dropoffTime || '10:00').split(':').map(Number);
   const hours = Number.isFinite(h) ? h : 10;
   const mins = Number.isFinite(m) ? m : 0;
-  return new Date(base.getTime() + (hours + EST_OFFSET) * 3600000 + mins * 60000);
+  const y = base.getUTCFullYear(), mo = base.getUTCMonth(), d = base.getUTCDate();
+  // Treat the wall-clock as UTC first, then shift by the true Eastern offset.
+  const guess = Date.UTC(y, mo, d, hours, mins, 0);
+  let result = guess - easternOffsetMinutes(new Date(guess)) * 60000;
+  // One re-check pins it down across the rare DST-transition boundary.
+  result = guess - easternOffsetMinutes(new Date(result)) * 60000;
+  return new Date(result);
 };
 
 // Given a booking, return how late it is right now. Only 'active' bookings can
