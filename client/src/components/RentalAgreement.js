@@ -646,34 +646,58 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
         {/* Signature Section */}
         {isSigned ? (
           <div className="agreement-signed-section">
-            <h2 className="agreement-section-title">AGREEMENT SIGNATURE</h2>
-            <div className="agreement-signed-info">
-              {agreementData.signatureImage && (
-                <div className="agreement-signature-image-display">
-                  <span className="field-label">Signature:</span>
-                  <img
-                    src={agreementData.signatureImage}
-                    alt="Driver Signature"
-                    className="signature-image"
-                  />
+            <h2 className="agreement-section-title">AGREEMENT SIGNATURES</h2>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              {/* OWNER (Host) — left. Name comes from the Owner's onboarding
+                  agreement; the date is this reservation's date, since the booking
+                  is governed by the Owner's standing agreement (originally signed at
+                  sign-up, with the fixed date + IP recorded on the admin side). */}
+              <div className="agreement-signed-info" style={{ flex: '1 1 240px' }}>
+                <div style={{ fontWeight: 700, color: '#10b981', letterSpacing: '0.5px', marginBottom: '0.5rem' }}>OWNER (HOST)</div>
+                <div className="agreement-field">
+                  <span className="field-label">Full Legal Name:</span>
+                  <span className="field-value signature-display">
+                    {host?.hostAgreement?.signature || `${host?.firstName || ''} ${host?.lastName || ''}`.trim() || '—'}
+                  </span>
                 </div>
-              )}
-              <div className="agreement-field">
-                <span className="field-label">Full Legal Name:</span>
-                <span className="field-value signature-display">
-                  {agreementData.driverSignature}
-                </span>
+                <div className="agreement-field">
+                  <span className="field-label">Date:</span>
+                  <span className="field-value">
+                    {new Date(agreementData.signedAt).toLocaleString('en-US')}
+                  </span>
+                </div>
               </div>
-              <div className="agreement-field">
-                <span className="field-label">Date Signed:</span>
-                <span className="field-value">
-                  {new Date(agreementData.signedAt).toLocaleString('en-US')}
-                </span>
+
+              {/* RENTER (Driver) — right. Unchanged from before. */}
+              <div className="agreement-signed-info" style={{ flex: '1 1 240px' }}>
+                <div style={{ fontWeight: 700, color: '#10b981', letterSpacing: '0.5px', marginBottom: '0.5rem' }}>RENTER (DRIVER)</div>
+                {agreementData.signatureImage && (
+                  <div className="agreement-signature-image-display">
+                    <span className="field-label">Signature:</span>
+                    <img
+                      src={agreementData.signatureImage}
+                      alt="Driver Signature"
+                      className="signature-image"
+                    />
+                  </div>
+                )}
+                <div className="agreement-field">
+                  <span className="field-label">Full Legal Name:</span>
+                  <span className="field-value signature-display">
+                    {agreementData.driverSignature}
+                  </span>
+                </div>
+                <div className="agreement-field">
+                  <span className="field-label">Date Signed:</span>
+                  <span className="field-value">
+                    {new Date(agreementData.signedAt).toLocaleString('en-US')}
+                  </span>
+                </div>
               </div>
-              <p className="agreement-electronic-disclaimer">
-                Agreeing to the terms and conditions electronically is the same effect as signing this agreement in person.
-              </p>
             </div>
+            <p className="agreement-electronic-disclaimer">
+              Agreeing to the terms and conditions electronically is the same effect as signing this agreement in person.
+            </p>
           </div>
         ) : !readOnly && (
           <div className="agreement-sign-section">

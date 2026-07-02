@@ -11,7 +11,7 @@ router.get('/:bookingId', auth, async (req, res) => {
     const booking = await Booking.findById(req.params.bookingId)
       .populate('vehicle')
       .populate('driver', 'firstName lastName email phone dateOfBirth address driverLicense')
-      .populate('host', 'firstName lastName email phone hostInfo.accountType hostInfo.businessName hostInfo.dba hostInfo.displayPreference');
+      .populate('host', 'firstName lastName email phone hostInfo.accountType hostInfo.businessName hostInfo.dba hostInfo.displayPreference hostAgreement.signature hostAgreement.signedAt');
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
