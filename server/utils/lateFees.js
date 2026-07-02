@@ -31,7 +31,7 @@ const {
 } = require('./emailService');
 
 const LATE_FEE_PER_DAY = 5;                       // dollars, per the agreement's Automatic Late Return Fee
-const MIN_MINUTES_LATE = 60;                      // first charge fires one hour after the return time
+const MIN_MINUTES_LATE = 0;                       // ZERO grace — charge the second they're late (matches TeqMobility)
 const RETRY_BACKOFF_MS = 6 * 60 * 60 * 1000;      // after a decline, wait 6h before retrying the card
 const round2 = (n) => Math.round(n * 100) / 100;
 

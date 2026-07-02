@@ -494,15 +494,17 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
               both parties.
             </li>
             <li>
-              <strong>Automatic Late Return Fee.</strong> If the Vehicle is not returned by the
-              End Date &amp; Time (including any agreed extensions), the Renter authorizes RentUFS.com to
-              automatically charge the Renter's payment method on file — beginning one (1) hour after the
-              End Date &amp; Time, and again for each calendar day the Vehicle remains unreturned — a late
-              fee of five dollars ($5.00) per day plus one (1) day of insurance coverage at the applicable
-              daily rate, plus any applicable processing fees. To stop these daily charges, the Renter must
-              either return the Vehicle or extend the rental through the RentUFS.com website. If a charge
-              attempt fails, the Renter must extend or return the Vehicle immediately; insurance coverage
-              and the daily charges continue until the Vehicle is returned.
+              <strong>Automatic Late Return Fee.</strong> The Renter must return the Vehicle by the
+              End Date &amp; Time (including any agreed extensions). RentUFS.com will send the Renter advance
+              reminders by email and text before the End Date &amp; Time. If the Vehicle is not returned — or
+              the rental extended — by the End Date &amp; Time, the Renter authorizes RentUFS.com to
+              automatically charge the Renter's payment method on file, beginning immediately at the
+              End Date &amp; Time and again for each additional calendar day the Vehicle remains unreturned,
+              a late fee of five dollars ($5.00) per day plus one (1) day of insurance coverage at the
+              applicable daily rate, plus any applicable processing fees. Insurance coverage remains active,
+              and these daily charges continue, until the Vehicle is returned or the rental is extended
+              through the RentUFS.com website. If a charge attempt fails, the Renter remains fully
+              responsible for all amounts owed and must return or extend the Vehicle immediately.
             </li>
             <li>
               <strong>Vehicles Not Returned.</strong> If the Vehicle is not returned within 72 hours
