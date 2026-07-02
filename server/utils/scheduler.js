@@ -492,6 +492,19 @@ const processWeeklyPayouts = async (options = {}) => {
           console.log(`💰 Deducted $${penaltyDeducted.toFixed(2)} cancellation penalty from host ${host.firstName} ${host.lastName}'s payout`);
         }
 
+        // Deduct any outstanding late-return debt (insurance overage the renter's
+        // card couldn't cover) from the remaining payout. Same pattern as the
+        // cancellation penalty above, but a SEPARATE balance so the two never mix.
+        let lateDebtDeducted = 0;
+        if (host.lateReturnDebtBalance > 0 && hostPayoutAmount > 0) {
+          lateDebtDeducted = Math.min(host.lateReturnDebtBalance, hostPayoutAmount);
+          hostPayoutAmount = parseFloat((hostPayoutAmount - lateDebtDeducted).toFixed(2));
+          await User.findByIdAndUpdate(host._id, {
+            $inc: { lateReturnDebtBalance: -lateDebtDeducted }
+          });
+          console.log(`💰 Deducted $${lateDebtDeducted.toFixed(2)} late-return debt from host ${host.firstName} ${host.lastName}'s payout`);
+        }
+
         if (hostPayoutAmount <= 0) {
           // Entire payout consumed by penalty — mark bookings as paid with $0 transfer
           for (const p of payoutBookings) {
@@ -709,6 +722,13 @@ const previewHostPayout = async (hostId) => {
     net = parseFloat((gross - penaltyDeducted).toFixed(2));
   }
 
+  // Mirror the live payout: also subtract any uncollected late-return debt.
+  let lateDebtDeducted = 0;
+  if (host.lateReturnDebtBalance > 0 && net > 0) {
+    lateDebtDeducted = Math.min(host.lateReturnDebtBalance, net);
+    net = parseFloat((net - lateDebtDeducted).toFixed(2));
+  }
+
   return {
     hostId: host._id,
     hostName: `${host.firstName || ''} ${host.lastName || ''}`.trim(),
@@ -717,6 +737,7 @@ const previewHostPayout = async (hostId) => {
     lineItems,
     gross: parseFloat(gross.toFixed(2)),
     penaltyDeducted: parseFloat(penaltyDeducted.toFixed(2)),
+    lateDebtDeducted: parseFloat(lateDebtDeducted.toFixed(2)),
     net
   };
 };

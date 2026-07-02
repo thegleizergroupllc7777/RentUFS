@@ -20,6 +20,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 const { getLateInfo, isBookingEligible, isChargingEnabled } = require('./lateReturn');
 const {
   sendLateFeeChargedToRenter,
@@ -34,6 +35,7 @@ const { sendLateReturnWarningSMS } = require('./smsService');
 const LATE_FEE_PER_DAY = 5;                       // dollars, per the agreement's Automatic Late Return Fee
 const MIN_MINUTES_LATE = 0;                       // ZERO grace — charge the second they're late (matches TeqMobility)
 const RETRY_BACKOFF_MS = 6 * 60 * 60 * 1000;      // after a decline, wait 6h before retrying the card
+const MAX_RETRY_ATTEMPTS = 4;                     // after this many failed attempts, the host backstops the amount
 const round2 = (n) => Math.round(n * 100) / 100;
 
 // The insurance-day rate for this booking. Prefer what the renter actually agreed
@@ -191,15 +193,30 @@ const processLateReturns = async () => {
           sendLateFeeOwnerCopy({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge })
             .catch(err => console.error('📧 Late-fee owner copy error:', err.message));
         } else {
-          booking.lateFee.retryCount = (booking.lateFee.retryCount || 0) + 1;
-          booking.lateFee.nextRetryAt = new Date(now.getTime() + RETRY_BACKOFF_MS);
-          booking.lateFee.entries.push({ day: targetDay, mode: 'failed', ...charge, at: now });
-          await booking.save();
+          const attempts = (booking.lateFee.retryCount || 0) + 1;
+          booking.lateFee.retryCount = attempts;
           failed++;
-          console.error(`🕓 Late fee DECLINED: ${booking.reservationId} day ${targetDay} — ${result.error}`);
+          console.error(`🕓 Late fee DECLINED (attempt ${attempts}/${MAX_RETRY_ATTEMPTS}): ${booking.reservationId} day ${targetDay} — ${result.error}`);
 
-          sendLateFeeDeclineAlert({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge, failureMessage: result.error })
-            .catch(err => console.error('📧 Late-fee decline alert error:', err.message));
+          if (attempts >= MAX_RETRY_ATTEMPTS) {
+            // Renter's card can't be collected after the retries — move this day's
+            // amount to the HOST's debt (deducted from their next payout, shown
+            // quietly in their earnings). Marks the day handled so we stop retrying.
+            await User.findByIdAndUpdate(booking.host._id || booking.host, { $inc: { lateReturnDebtBalance: charge.total } });
+            booking.lateFee.daysCharged = targetDay;
+            booking.lateFee.hostBackstopTotal = round2((booking.lateFee.hostBackstopTotal || 0) + charge.total);
+            booking.lateFee.retryCount = 0;
+            booking.lateFee.nextRetryAt = null;
+            booking.lateFee.entries.push({ day: targetDay, mode: 'host_backstop', ...charge, at: now });
+            await booking.save();
+            console.log(`🕓 Host backstop: $${charge.total} moved to host for ${booking.reservationId} day ${targetDay} (renter uncollectible)`);
+          } else {
+            booking.lateFee.nextRetryAt = new Date(now.getTime() + RETRY_BACKOFF_MS);
+            booking.lateFee.entries.push({ day: targetDay, mode: 'failed', ...charge, at: now });
+            await booking.save();
+            sendLateFeeDeclineAlert({ booking, vehicle: booking.vehicle, driver: booking.driver, host: booking.host, dayNumber: targetDay, charge, failureMessage: result.error })
+              .catch(err => console.error('📧 Late-fee decline alert error:', err.message));
+          }
         }
       } else if (dirty) {
         // No charge this pass, but a warning/escalation was sent — persist the flags.
