@@ -1431,6 +1431,50 @@ function becomeHostEmailHtml(firstName, unsubscribeUrl) {
   </body></html>`;
 }
 
+// Pre-designed "List Your Car" reminder for hosts who signed up but haven't
+// listed a vehicle yet. Branded green/black, upbeat, drives to Add New Vehicle.
+function listYourCarEmailHtml(firstName, unsubscribeUrl) {
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
+  const unsub = unsubscribeUrl
+    ? `<br><a href="${unsubscribeUrl}" style="color:#064e3b;text-decoration:underline">Unsubscribe</a>`
+    : '';
+  const clientUrl = process.env.CLIENT_URL || 'https://app.rentufs.com';
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
+        <div style="background:#000000;padding:26px 20px 10px;text-align:center;">
+          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+        </div>
+        <div style="background:#000000;padding:0 20px 22px;text-align:center;">
+          <span style="display:inline-block;background:#00FF66;color:#000000;font-weight:bold;font-size:13px;letter-spacing:1px;padding:6px 16px;border-radius:20px;">🚗 YOUR CAR IS READY TO EARN</span>
+        </div>
+        <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
+          <p style="margin:0 0 14px;font-size:1.35rem;font-weight:bold;color:#111827;">Get your car out of the driveway and earning 💸</p>
+          <p style="margin:0 0 14px;">${greeting}</p>
+          <p style="margin:0 0 16px;">Your car could be <strong>making you money</strong> instead of sitting in the driveway! You've already signed up as a RentUFS host — the last step is getting it <strong>listed and rolling</strong>.</p>
+          <p style="margin:0 0 8px;font-weight:bold;color:#111827;">A few reasons hosts love it:</p>
+          <ul style="margin:0 0 18px;padding-left:20px;">
+            <li style="margin-bottom:6px;">🛡️ Every rental is <strong>backed by RentUFS insurance protection</strong></li>
+            <li style="margin-bottom:6px;">🛣️ <strong>Tolls are handled automatically</strong> — renters pay their own, and you're reimbursed</li>
+            <li style="margin-bottom:6px;">📱 <strong>Manage everything</strong> from your Host Dashboard</li>
+          </ul>
+          <p style="margin:0 0 6px;">Listing takes just a few minutes — add your car's details and a few photos, and you're open for bookings.</p>
+          <p style="text-align:center;margin:24px 0;">
+            <a href="${clientUrl}/host/add-vehicle" style="display:inline-block;background:#10b981;color:#ffffff;padding:14px 34px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">List Your Car &rarr;</a>
+          </p>
+          <p style="margin:0;">Questions or need a hand? Just reply to this email, or call/text us at <a href="tel:+13187368837" style="color:#10b981;font-weight:bold;">318-RENT-UFS</a> — we've got you.</p>
+          <p style="margin:16px 0 0;">Let's get you rolling,<br>The RentUFS Team</p>
+        </div>
+        <div style="background:#00FF66;text-align:center;color:#000000;padding:20px;font-size:12px;line-height:1.6;">
+          &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>
+          597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
 // Preview how many people a target audience would reach on each channel.
 router.get('/broadcast/preview', adminAuth, async (req, res) => {
   try {
@@ -1455,7 +1499,10 @@ router.post('/broadcast', adminAuth, async (req, res) => {
   try {
     const { channel, audience, subject, message, design } = req.body;
     const isHostPitch = design === 'become_host';
-    if (!isHostPitch && (!message || !message.trim())) {
+    const isListCar = design === 'list_car';
+    const isPreDesigned = isHostPitch || isListCar;
+    const preDesignedHtml = (fn, unsub) => isListCar ? listYourCarEmailHtml(fn, unsub) : becomeHostEmailHtml(fn, unsub);
+    if (!isPreDesigned && (!message || !message.trim())) {
       return res.status(400).json({ message: 'Message is required.' });
     }
     if (!['email', 'sms', 'both'].includes(channel)) {
@@ -1463,12 +1510,14 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     }
 
     const doEmail = channel === 'email' || channel === 'both';
-    // The host-pitch design is an email-only template, so never send it by SMS.
-    const doSms = (channel === 'sms' || channel === 'both') && !isHostPitch;
+    // The pre-designed HTML templates are email-only, so never send them by SMS.
+    const doSms = (channel === 'sms' || channel === 'both') && !isPreDesigned;
 
     const emailSubject = (subject && subject.trim())
       ? subject.trim()
-      : (isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗' : 'A message from RentUFS');
+      : (isListCar ? 'Get your car out of the driveway and earning 🚗💸'
+        : isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗'
+        : 'A message from RentUFS');
 
     // Public base URL — used to build unsubscribe links for both prospects
     // (no account) and registered users.
@@ -1496,8 +1545,8 @@ router.post('/broadcast', adminAuth, async (req, res) => {
             await sendEmail({
               to: email,
               subject: emailSubject,
-              html: isHostPitch
-                ? becomeHostEmailHtml('', unsubscribeUrl)
+              html: isPreDesigned
+                ? preDesignedHtml('', unsubscribeUrl)
                 : broadcastEmailHtml(personalizeBroadcast(message, {}), unsubscribeUrl)
             });
             r.emailSent++;
@@ -1554,8 +1603,8 @@ router.post('/broadcast', adminAuth, async (req, res) => {
             await sendEmail({
               to: u.email,
               subject: emailSubject,
-              html: isHostPitch
-                ? becomeHostEmailHtml(u.firstName, unsubscribeUrl)
+              html: isPreDesigned
+                ? preDesignedHtml(u.firstName, unsubscribeUrl)
                 : broadcastEmailHtml(personalizeBroadcast(message, u), unsubscribeUrl)
             });
             results.emailSent++;
@@ -1697,6 +1746,13 @@ router.post('/email-test', adminAuth, async (req, res) => {
           to,
           subject: 'List your car on RentUFS — keep 100% of your earnings 🚗',
           html: becomeHostEmailHtml('', null)
+        });
+        break;
+      case 'list_car':
+        result = await sendEmail({
+          to,
+          subject: 'Get your car out of the driveway and earning 🚗💸',
+          html: listYourCarEmailHtml('', null)
         });
         break;
       default:
