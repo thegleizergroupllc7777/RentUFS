@@ -107,11 +107,13 @@ const AdminBroadcast = () => {
   const doSms = channel === 'sms' || channel === 'both';
 
   const isHostPitch = design === 'become_host';
+  const isListCar = design === 'list_car';
+  const isPreDesigned = isHostPitch || isListCar;
 
   const handleSend = async () => {
     setError('');
     setResult(null);
-    if (!isHostPitch && !message.trim()) { setError('Please write a message first.'); return; }
+    if (!isPreDesigned && !message.trim()) { setError('Please write a message first.'); return; }
 
     let confirmMsg;
     if (audience === 'specific') {
@@ -221,10 +223,16 @@ const AdminBroadcast = () => {
               <select style={input} value={design} onChange={(e) => setDesign(e.target.value)}>
                 <option value="">Standard message (write your own)</option>
                 <option value="become_host">Become a Host — pitch email (pre-designed)</option>
+                <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
               </select>
               {isHostPitch && (
                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
                   A polished, ready-made pitch (RentUFS intro, 0% commission, Host Guide button + contact info). Just pick who to send it to below — no message needed. <strong>Email only.</strong>
+                </div>
+              )}
+              {isListCar && (
+                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                  A branded green/black nudge for hosts who signed up but haven't listed a car yet (insurance + tolls perks, "List Your Car" button). Pick who to send it to below — no message needed. <strong>Email only.</strong> Best paired with the "Hosts" audience.
                 </div>
               )}
             </div>
@@ -237,12 +245,12 @@ const AdminBroadcast = () => {
                 style={input}
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder={isHostPitch ? 'Leave blank for the default host-pitch subject' : 'e.g., A special offer just for you 🎉'}
+                placeholder={isPreDesigned ? 'Leave blank for the default subject' : 'e.g., A special offer just for you 🎉'}
               />
             </div>
           )}
 
-          {!isHostPitch && (
+          {!isPreDesigned && (
             <div style={{ marginBottom: 8 }}>
               <label style={label}>Message</label>
               <textarea
@@ -362,6 +370,7 @@ const AdminBroadcast = () => {
                 <option value="otp">Registration OTP</option>
                 <option value="password_reset">Password Reset</option>
                 <option value="become_host">Become a Host (sales pitch)</option>
+                <option value="list_car">List Your Car (host reminder)</option>
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
