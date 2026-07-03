@@ -356,10 +356,10 @@ const { getBookingSegments, getTotalSegmentEarnings, calculateEarningsForDayRang
 const SystemState = require('../models/SystemState');
 
 // ── Payout schedule configuration ──
-const PAYOUT_DOW = 3;          // Day of week for payouts: 0=Sun, 1=Mon, 2=Tue, 3=Wed
-const PAYOUT_HOUR_UTC = 13;    // 13:00 UTC = 9:00 AM ET (EDT). Drifts to 8 AM in winter (EST).
+const PAYOUT_DOW = 1;          // Day of week for payouts: 0=Sun, 1=Mon, 2=Tue, 3=Wed
+const PAYOUT_HOUR_UTC = 16;    // 16:00 UTC = 12:00 PM ET (EDT). Drifts to 11 AM in winter (EST).
 
-// The most recent payout target (scheduled day at 9 AM ET) at or before `now`.
+// The most recent payout target (scheduled day at 12 PM ET) at or before `now`.
 const mostRecentPayoutTarget = (now) => {
   const t = new Date(now);
   t.setUTCHours(PAYOUT_HOUR_UTC, 0, 0, 0);
@@ -809,7 +809,7 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   }, 2 * 60 * 1000);
   console.log('⏱️  Post-trip toll settlement scheduler running every 6 hours');
 
-  // Weekly automated payouts: every Wednesday at 9:00 AM ET — REDEPLOY-PROOF.
+  // Weekly automated payouts: every Monday at 12:00 PM ET — REDEPLOY-PROOF.
   // Instead of a fragile in-memory countdown (which resets on every redeploy and
   // could skip a day), we record the last run in the database and check hourly
   // whether this week's payout is due but hasn't run yet. Because the marker lives
@@ -817,7 +817,7 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   const runWeeklyPayoutIfDue = async () => {
     try {
       const now = new Date();
-      const target = mostRecentPayoutTarget(now); // this week's Tuesday 6 AM EST (or earlier)
+      const target = mostRecentPayoutTarget(now); // this week's Monday 12 PM ET (or earlier)
       const lastRun = await getLastPayoutRun();
 
       if (!lastRun) {
@@ -842,7 +842,7 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Check shortly after startup (catch-up if a run was missed), then every hour.
   setTimeout(runWeeklyPayoutIfDue, 60 * 1000);
   weeklyPayoutInterval = setInterval(runWeeklyPayoutIfDue, 60 * 60 * 1000);
-  console.log('⏱️  Weekly payout scheduler running every Wednesday at 9:00 AM ET (redeploy-proof)');
+  console.log('⏱️  Weekly payout scheduler running every Monday at 12:00 PM ET (redeploy-proof)');
 
   // Host-added charge settlement: scan every 30 minutes for charges past their
   // 3-day notice window or due for retry after a failed attempt.
