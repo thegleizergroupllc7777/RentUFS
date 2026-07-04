@@ -337,7 +337,7 @@ const Marketplace = () => {
           <div className="results-text">
             <strong>{getLocationText()}</strong>
             <span className="results-count">
-              {loading ? 'Loading...' : `Showing ${resultsInfo.showing} vehicle${resultsInfo.showing === 1 ? '' : 's'}`}
+              {loading ? 'Loading...' : ''}
             </span>
           </div>
           <button
