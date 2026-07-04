@@ -1475,6 +1475,45 @@ function listYourCarEmailHtml(firstName, unsubscribeUrl) {
   </body></html>`;
 }
 
+// Pre-designed holiday greeting — Fourth of July. Warm, festive (red/white/blue),
+// no hard sell; goes to everyone (hosts + drivers).
+function julyFourthEmailHtml(firstName, unsubscribeUrl) {
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
+  const unsub = unsubscribeUrl
+    ? `<br><a href="${unsubscribeUrl}" style="color:#ffffff;text-decoration:underline;opacity:0.85">Unsubscribe</a>`
+    : '';
+  const clientUrl = process.env.CLIENT_URL || 'https://app.rentufs.com';
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="border-radius:10px;overflow:hidden;border:1px solid #d1d5db;">
+        <div style="background:#000000;padding:22px 20px;text-align:center;">
+          <span style="font-size:28px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+        </div>
+        <div style="background:#3C3B6E;padding:30px 20px;text-align:center;">
+          <div style="font-size:40px;line-height:1;margin-bottom:8px;">🇺🇸 🎆</div>
+          <div style="color:#ffffff;font-size:1.7rem;font-weight:bold;">Happy 4th of July!</div>
+        </div>
+        <div style="height:6px;background:#B22234;"></div>
+        <div style="background:#ffffff;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
+          <p style="margin:0 0 14px;">${greeting}</p>
+          <p style="margin:0 0 14px;">From all of us at <strong>RentUFS</strong>, we're wishing you a happy, safe, and fun Fourth of July! 🎉</p>
+          <p style="margin:0 0 14px;">The Fourth is one of the busiest travel weekends of the year — so many of us hitting the road to see family and friends. Wherever the holiday takes you, <strong>RentUFS is here for the journey.</strong> 🚗</p>
+          <p style="margin:0 0 20px;">Thank you for being part of the RentUFS community. Have a safe and happy holiday! 🇺🇸</p>
+          <p style="text-align:center;margin:4px 0 22px;">
+            <a href="${clientUrl}/marketplace" style="display:inline-block;background:#B22234;color:#ffffff;padding:13px 32px;text-decoration:none;border-radius:6px;font-weight:bold;">Find Your Ride &rarr;</a>
+          </p>
+          <p style="margin:0;">Have a wonderful holiday,<br><strong>The RentUFS Team</strong></p>
+        </div>
+        <div style="background:#3C3B6E;text-align:center;color:#ffffff;padding:18px;font-size:12px;line-height:1.6;">
+          &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>
+          597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
 // Preview how many people a target audience would reach on each channel.
 router.get('/broadcast/preview', adminAuth, async (req, res) => {
   try {
@@ -1500,8 +1539,12 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     const { channel, audience, subject, message, design } = req.body;
     const isHostPitch = design === 'become_host';
     const isListCar = design === 'list_car';
-    const isPreDesigned = isHostPitch || isListCar;
-    const preDesignedHtml = (fn, unsub) => isListCar ? listYourCarEmailHtml(fn, unsub) : becomeHostEmailHtml(fn, unsub);
+    const isJulyFourth = design === 'july_fourth';
+    const isPreDesigned = isHostPitch || isListCar || isJulyFourth;
+    const preDesignedHtml = (fn, unsub) =>
+      isJulyFourth ? julyFourthEmailHtml(fn, unsub)
+      : isListCar ? listYourCarEmailHtml(fn, unsub)
+      : becomeHostEmailHtml(fn, unsub);
     if (!isPreDesigned && (!message || !message.trim())) {
       return res.status(400).json({ message: 'Message is required.' });
     }
@@ -1515,7 +1558,8 @@ router.post('/broadcast', adminAuth, async (req, res) => {
 
     const emailSubject = (subject && subject.trim())
       ? subject.trim()
-      : (isListCar ? 'Get your car out of the driveway and earning 🚗💸'
+      : (isJulyFourth ? 'Happy 4th of July from RentUFS! 🇺🇸'
+        : isListCar ? 'Get your car out of the driveway and earning 🚗💸'
         : isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗'
         : 'A message from RentUFS');
 
@@ -1753,6 +1797,13 @@ router.post('/email-test', adminAuth, async (req, res) => {
           to,
           subject: 'Get your car out of the driveway and earning 🚗💸',
           html: listYourCarEmailHtml('', null)
+        });
+        break;
+      case 'july_fourth':
+        result = await sendEmail({
+          to,
+          subject: 'Happy 4th of July from RentUFS! 🇺🇸',
+          html: julyFourthEmailHtml('', null)
         });
         break;
       default:

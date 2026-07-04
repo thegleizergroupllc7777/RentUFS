@@ -108,7 +108,8 @@ const AdminBroadcast = () => {
 
   const isHostPitch = design === 'become_host';
   const isListCar = design === 'list_car';
-  const isPreDesigned = isHostPitch || isListCar;
+  const isJulyFourth = design === 'july_fourth';
+  const isPreDesigned = isHostPitch || isListCar || isJulyFourth;
 
   const handleSend = async () => {
     setError('');
@@ -224,6 +225,7 @@ const AdminBroadcast = () => {
                 <option value="">Standard message (write your own)</option>
                 <option value="become_host">Become a Host — pitch email (pre-designed)</option>
                 <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
+                <option value="july_fourth">4th of July — holiday greeting (pre-designed)</option>
               </select>
               {isHostPitch && (
                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
@@ -233,6 +235,11 @@ const AdminBroadcast = () => {
               {isListCar && (
                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
                   A branded green/black nudge for hosts who signed up but haven't listed a car yet (insurance + tolls perks, "List Your Car" button). Pick who to send it to below — no message needed. <strong>Email only.</strong> Best paired with the "Hosts" audience.
+                </div>
+              )}
+              {isJulyFourth && (
+                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                  A festive red/white/blue holiday greeting from RentUFS (flag + fireworks) — generic for both hosts and drivers. Pick who to send it to below — no message needed. <strong>Email only.</strong> Best paired with the "Everyone" audience.
                 </div>
               )}
             </div>
@@ -371,6 +378,7 @@ const AdminBroadcast = () => {
                 <option value="password_reset">Password Reset</option>
                 <option value="become_host">Become a Host (sales pitch)</option>
                 <option value="list_car">List Your Car (host reminder)</option>
+                <option value="july_fourth">4th of July (holiday greeting)</option>
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
