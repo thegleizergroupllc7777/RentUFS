@@ -180,6 +180,29 @@ const AdminBookingDetail = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             <PartyCard label="Driver" person={booking.driver} navigate={navigate} />
             <PartyCard label="Host" person={booking.host} navigate={navigate} />
+            {/* Cancellation card — read-only, sits beside the Driver/Host cards.
+                Red outline so it stands out as an alert. Shows WHO cancelled
+                (host/driver/admin), when, the fee charged, the reason, and — for
+                host cancellations — the host's total outstanding penalty balance
+                (deducted from their future payouts). All values already live on
+                the booking/host record; this only displays them. */}
+            {booking.status === 'cancelled' && (
+              <div className="admin-table-wrap" style={{ padding: '1.25rem', border: '2px solid #dc2626', background: '#fef2f2' }}>
+                <div style={{ color: '#dc2626', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem', fontWeight: 700 }}>Cancellation</div>
+                <div style={{ display: 'grid', gap: '0.65rem' }}>
+                  <Field label="Cancelled by" value={booking.cancelledBy ? booking.cancelledBy.charAt(0).toUpperCase() + booking.cancelledBy.slice(1) : 'Unknown'} />
+                  <Field label="When" value={formatDate(booking.cancelledAt)} />
+                  <Field label="Fee charged" value={formatCurrency(booking.cancellationFee)} />
+                  <Field label="Reason" value={booking.cancellationReason || '—'} />
+                  {booking.cancelledBy === 'host' && (
+                    <>
+                      <Field label="Penalty (this cancellation)" value={formatCurrency(1.50 * (booking.totalDays || 1))} />
+                      <Field label="Host's total penalty owed" value={formatCurrency(booking.host?.cancellationPenaltyBalance)} />
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
