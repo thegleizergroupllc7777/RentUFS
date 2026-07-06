@@ -123,6 +123,53 @@ router.post('/hosts/:id/pay-now', adminAuth, async (req, res) => {
   }
 });
 
+// ── Waive a host's cancellation penalty (OWNER-ONLY) ────────────────────────
+// Forgives some or all of a host's outstanding cancellation-penalty balance.
+// Reads/writes ONLY the host's cancellationPenaltyBalance — it does NOT touch
+// bookings, payments, Stripe charges, insurance, or tolls. Never goes below $0,
+// and never waives more than is actually owed. Leaving `amount` blank waives
+// the entire balance. Master admin only. NO money is transferred here.
+router.post('/hosts/:id/waive-penalty', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const host = await User.findById(req.params.id);
+    if (!host) return res.status(404).json({ message: 'Host not found' });
+
+    const current = host.cancellationPenaltyBalance || 0;
+    if (current <= 0) {
+      return res.status(400).json({ message: 'This host has no outstanding penalty to waive.' });
+    }
+
+    // No amount given → waive everything. Otherwise waive exactly what's asked,
+    // capped so it can never exceed what's owed or drive the balance negative.
+    const raw = req.body.amount;
+    let waive = (raw === undefined || raw === null || raw === '') ? current : Number(raw);
+    if (isNaN(waive) || waive <= 0) {
+      return res.status(400).json({ message: 'Enter a valid dollar amount to waive (or leave blank to waive all).' });
+    }
+    waive = Math.min(Math.round(waive * 100) / 100, current);
+    const newBalance = Math.round((current - waive) * 100) / 100;
+
+    host.cancellationPenaltyBalance = newBalance;
+    await host.save();
+
+    console.log(`💚 Penalty waived by ${req.user.email} for host ${host._id}: -$${waive.toFixed(2)} (was $${current.toFixed(2)}, now $${newBalance.toFixed(2)})`);
+
+    res.json({
+      success: true,
+      waived: waive,
+      previousBalance: current,
+      newBalance,
+      message: `Waived $${waive.toFixed(2)}. Remaining penalty: $${newBalance.toFixed(2)}.`
+    });
+  } catch (error) {
+    console.error('Waive penalty error:', error.message);
+    res.status(500).json({ message: 'Failed to waive penalty', error: error.message });
+  }
+});
+
 // ── Automatic late-fee charging switch (OWNER-ONLY) ─────────────────────────
 // The master kill switch for automatic late-return charging. Stored in
 // SystemState so it flips instantly with no redeploy. Default OFF (safe).
