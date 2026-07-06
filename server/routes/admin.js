@@ -170,49 +170,6 @@ router.post('/hosts/:id/waive-penalty', adminAuth, async (req, res) => {
   }
 });
 
-// ── Set ALL existing hosts to DAILY bank deposits (OWNER-ONLY) ──────────────
-// One-time migration: every host's Stripe account was created with a WEEKLY
-// bank-payout schedule, so their money sat in their Stripe balance up to a week
-// before reaching their bank. This flips every existing host to DAILY so funds
-// flow to their bank ~1-2 business days after landing (new hosts already default
-// to daily). Only changes the Stripe payout SCHEDULE — moves no money, touches
-// no bookings/insurance/tolls, and does NOT affect the weekly RentUFS scheduler.
-router.post('/payouts/set-all-daily', adminAuth, async (req, res) => {
-  try {
-    if (!isSuperAdmin(req.user)) {
-      return res.status(403).json({ message: 'Owner access required.' });
-    }
-    const hosts = await User.find({ stripeConnectAccountId: { $ne: null } })
-      .select('firstName lastName email stripeConnectAccountId');
-
-    let updated = 0;
-    const failures = [];
-    for (const h of hosts) {
-      try {
-        await stripe.accounts.update(h.stripeConnectAccountId, {
-          settings: { payouts: { schedule: { interval: 'daily' } } }
-        });
-        updated++;
-      } catch (err) {
-        failures.push({ host: `${h.firstName || ''} ${h.lastName || ''}`.trim() || h.email, error: err.message });
-        console.error(`💸 Set-daily failed for ${h.email}:`, err.message);
-      }
-    }
-    console.log(`💸 Payout schedule → DAILY by ${req.user.email}: ${updated}/${hosts.length} hosts updated, ${failures.length} failed`);
-    res.json({
-      success: true,
-      total: hosts.length,
-      updated,
-      failed: failures.length,
-      failures,
-      message: `Set ${updated} of ${hosts.length} host(s) to daily bank deposits.${failures.length ? ` ${failures.length} failed.` : ''}`
-    });
-  } catch (error) {
-    console.error('Set-all-daily error:', error.message);
-    res.status(500).json({ message: 'Failed to update payout schedules', error: error.message });
-  }
-});
-
 // ── Automatic late-fee charging switch (OWNER-ONLY) ─────────────────────────
 // The master kill switch for automatic late-return charging. Stored in
 // SystemState so it flips instantly with no redeploy. Default OFF (safe).

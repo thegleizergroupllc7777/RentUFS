@@ -47,8 +47,6 @@ const AdminUserDetail = () => {
   const [payoutMsg, setPayoutMsg] = useState('');
   const [waiveAmount, setWaiveAmount] = useState('');
   const [waiving, setWaiving] = useState(false);
-  const [settingDaily, setSettingDaily] = useState(false);
-  const [dailyMsg, setDailyMsg] = useState('');
   const [salespeople, setSalespeople] = useState([]);
   const [savingReferredBy, setSavingReferredBy] = useState(false);
   const [referredByInfo, setReferredByInfo] = useState('');
@@ -175,24 +173,6 @@ const AdminUserDetail = () => {
       setError(err.response?.data?.message || 'Failed to waive penalty');
     } finally {
       setWaiving(false);
-    }
-  };
-
-  // Owner-only, one-time: flip EVERY existing host's Stripe account to daily bank
-  // deposits (new hosts already default to daily). Only changes the payout
-  // schedule — moves no money. Safe to re-run.
-  const handleSetAllDaily = async () => {
-    if (!window.confirm('Set ALL hosts to DAILY bank deposits?\n\nThis speeds up how fast every host\'s money reaches their bank (weekly → daily). It changes only the payout schedule — no money moves, and it does not affect the weekly RentUFS payout run.')) return;
-    setSettingDaily(true);
-    setDailyMsg('');
-    setError('');
-    try {
-      const { data } = await axios.post('/api/admin/payouts/set-all-daily');
-      setDailyMsg(data.message || 'Done.');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update payout schedules');
-    } finally {
-      setSettingDaily(false);
     }
   };
 
@@ -499,16 +479,6 @@ const AdminUserDetail = () => {
                   <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                     <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
                       Owner payout control
-                    </div>
-                    {/* Global one-time action: switch every host to daily bank deposits. */}
-                    <div style={{ marginBottom: '0.9rem', paddingBottom: '0.9rem', borderBottom: '1px dashed #e5e7eb' }}>
-                      <button className="admin-btn" onClick={handleSetAllDaily} disabled={settingDaily}>
-                        {settingDaily ? 'Updating all hosts…' : '⚡ Set ALL hosts to daily bank deposits'}
-                      </button>
-                      <div style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: '0.3rem' }}>
-                        One-time: speeds up every host's bank deposits (weekly → daily). Changes only the Stripe schedule — no money moves.
-                      </div>
-                      {dailyMsg && <div style={{ color: '#059669', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 600 }}>{dailyMsg}</div>}
                     </div>
                     {payoutLoading ? (
                       <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Calculating what's owed…</div>

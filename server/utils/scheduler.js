@@ -382,6 +382,62 @@ const setLastPayoutRun = async (date) => {
   );
 };
 
+// ── One-time automatic migration: flip EXISTING hosts to DAILY bank deposits ──
+// New hosts already default to daily (see routes/connect.js). This brings every
+// host who signed up BEFORE that change onto the same fast schedule, so their
+// money reaches their real bank ~1-2 business days after the weekly RentUFS
+// payout — instead of waiting an extra weekly bank-payout window.
+//
+// SAFETY:
+//   • Runs ONCE, ever. A SystemState flag ('hostPayoutsDailyMigrated') records
+//     completion, so redeploys/restarts never repeat it.
+//   • Only the payout *schedule* is changed. No money moves here.
+//   • The Monday RentUFS payout run (RentUFS → host Stripe wallet) is untouched.
+//   • Each host is isolated in try/catch — one bad account never stops the rest,
+//     and nothing here can crash server startup.
+const migrateHostPayoutsToDaily = async () => {
+  try {
+    const FLAG = 'hostPayoutsDailyMigrated';
+    const done = await SystemState.findOne({ key: FLAG });
+    if (done && done.value) {
+      return; // already completed — never run again
+    }
+
+    const hosts = await User.find({ stripeConnectAccountId: { $ne: null } })
+      .select('_id email stripeConnectAccountId');
+    console.log(`🏦 Daily-payout migration starting for ${hosts.length} existing host account(s)...`);
+
+    let updated = 0;
+    let skipped = 0;
+    for (const host of hosts) {
+      try {
+        await stripe.accounts.update(host.stripeConnectAccountId, {
+          settings: { payouts: { schedule: { interval: 'daily' } } }
+        });
+        updated++;
+        console.log(`🏦   ✅ ${host.email || host._id} → daily bank deposits`);
+      } catch (err) {
+        skipped++;
+        console.error(`🏦   ⚠️  ${host.email || host._id} skipped: ${err.message}`);
+      }
+    }
+
+    // Mark complete even if a few accounts were skipped (e.g. restricted/incomplete
+    // Stripe accounts), so we don't re-loop every deploy. Any skipped account will
+    // still pick up the daily default the next time its Stripe settings change.
+    await SystemState.findOneAndUpdate(
+      { key: FLAG },
+      { value: new Date().toISOString(), updatedAt: new Date() },
+      { upsert: true }
+    );
+    console.log(`🏦 Daily-payout migration complete — ${updated} updated, ${skipped} skipped. Flag set; will not run again.`);
+  } catch (err) {
+    // Never let this crash startup. If the whole run fails (e.g. DB hiccup) the
+    // flag is NOT set, so it simply tries again on the next deploy.
+    console.error('🏦 Daily-payout migration failed (will retry next deploy):', err.message);
+  }
+};
+
 // Automated weekly payout: transfer host earnings for both completed and active bookings.
 // Pass { hostId } to pay a single host (used by the admin "Pay host now" button); the
 // double-pay protection (per-booking payoutStatus tracking) is identical either way.
@@ -843,6 +899,13 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   setTimeout(runWeeklyPayoutIfDue, 60 * 1000);
   weeklyPayoutInterval = setInterval(runWeeklyPayoutIfDue, 60 * 60 * 1000);
   console.log('⏱️  Weekly payout scheduler running every Monday at 12:00 PM ET (redeploy-proof)');
+
+  // One-time automatic flip of EXISTING hosts to daily bank deposits (see
+  // migrateHostPayoutsToDaily above). Delayed 90s so the server & DB are fully
+  // up; self-gated by a DB flag so it runs only once, ever. No button, no money
+  // movement, and the Monday payout run above is untouched.
+  console.log('🚀 Scheduling one-time daily-payout migration (runs 90s after startup, once ever)...');
+  setTimeout(migrateHostPayoutsToDaily, 90 * 1000);
 
   // Host-added charge settlement: scan every 30 minutes for charges past their
   // 3-day notice window or due for retry after a failed attempt.
