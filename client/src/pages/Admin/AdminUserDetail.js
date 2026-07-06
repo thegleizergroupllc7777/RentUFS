@@ -45,6 +45,8 @@ const AdminUserDetail = () => {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payoutMsg, setPayoutMsg] = useState('');
+  const [waiveAmount, setWaiveAmount] = useState('');
+  const [waiving, setWaiving] = useState(false);
   const [salespeople, setSalespeople] = useState([]);
   const [savingReferredBy, setSavingReferredBy] = useState(false);
   const [referredByInfo, setReferredByInfo] = useState('');
@@ -141,6 +143,36 @@ const AdminUserDetail = () => {
       setError(err.response?.data?.message || 'Payout failed');
     } finally {
       setPaying(false);
+    }
+  };
+
+  // Owner-only: forgive some or all of a host's cancellation penalty. Sends the
+  // typed amount, or nothing (= waive all). Only changes the penalty balance —
+  // no money moves. Refreshes the payout preview so the new "owed" shows at once.
+  const handleWaivePenalty = async () => {
+    if (!payout) return;
+    const raw = (waiveAmount || '').trim();
+    const amt = raw === '' ? null : Number(raw);
+    if (raw !== '' && (isNaN(amt) || amt <= 0)) {
+      setError('Enter a valid amount to waive, or leave it blank to waive the full penalty.');
+      return;
+    }
+    const confirmText = raw === ''
+      ? `Waive the ENTIRE ${formatCurrency(payout.penaltyDeducted)} penalty for ${payout.hostName || 'this host'}?\n\nThis only forgives the penalty — no money is transferred.`
+      : `Waive ${formatCurrency(amt)} of ${payout.hostName || 'this host'}'s penalty?\n\nThis only forgives the penalty — no money is transferred.`;
+    if (!window.confirm(confirmText)) return;
+    setWaiving(true);
+    setPayoutMsg('');
+    setError('');
+    try {
+      const { data } = await axios.post(`/api/admin/hosts/${id}/waive-penalty`, raw === '' ? {} : { amount: amt });
+      setPayoutMsg(data.message || 'Penalty waived.');
+      setWaiveAmount('');
+      await loadPayoutPreview();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to waive penalty');
+    } finally {
+      setWaiving(false);
     }
   };
 
@@ -458,6 +490,29 @@ const AdminUserDetail = () => {
                             <span style={{ color: '#6b7280' }}> (gross {formatCurrency(payout.gross)} − {formatCurrency(payout.penaltyDeducted)} penalty)</span>
                           )}
                         </div>
+                        {/* Waive-penalty control — forgive some/all of the host's
+                            cancellation penalty. Only shows when a penalty exists.
+                            Blank = waive all; type an amount to waive part. */}
+                        {payout.penaltyDeducted > 0 && (
+                          <div style={{ margin: '0 0 0.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.82rem', color: '#374151' }}>Waive&nbsp;$</span>
+                              <input
+                                type="number" step="0.01" min="0"
+                                placeholder={`all (${(payout.penaltyDeducted || 0).toFixed(2)})`}
+                                value={waiveAmount}
+                                onChange={(e) => setWaiveAmount(e.target.value)}
+                                style={{ width: '120px', padding: '0.35rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.85rem' }}
+                              />
+                              <button className="admin-btn" onClick={handleWaivePenalty} disabled={waiving}>
+                                {waiving ? 'Waiving…' : 'Waive penalty'}
+                              </button>
+                            </div>
+                            <div style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: '0.3rem' }}>
+                              Leave blank to waive the full penalty, or enter an amount (e.g. 1.50) to waive part. Forgives the penalty only — no money moves.
+                            </div>
+                          </div>
+                        )}
                         {payout.lineItems && payout.lineItems.length > 0 ? (
                           <div style={{ fontSize: '0.82rem', color: '#374151', marginBottom: '0.75rem' }}>
                             {payout.lineItems.map((li, i) => (
