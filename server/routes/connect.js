@@ -116,9 +116,12 @@ router.post('/create-account', auth, async (req, res) => {
       },
       settings: {
         payouts: {
+          // Daily bank deposits: once RentUFS transfers a host's earnings into
+          // their Stripe balance (weekly, via the payout scheduler), Stripe pays
+          // it out to their bank on the next daily cycle (~1-2 business days) —
+          // instead of making them wait for a weekly bank-payout window.
           schedule: {
-            interval: 'weekly',
-            weekly_anchor: 'monday'
+            interval: 'daily'
           }
         }
       }
