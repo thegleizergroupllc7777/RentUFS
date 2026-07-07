@@ -208,9 +208,10 @@ const Marketplace = () => {
     if (!filters.location || vehicles.length === 0) return '';
     const n = vehicles.length;
     const rounded = Math.floor(n / 5) * 5;
-    return rounded >= 5
-      ? `${rounded}+ cars available`
-      : `${n} ${n === 1 ? 'car' : 'cars'} available`;
+    // Round down to the nearest 5 for larger counts; for small counts keep the
+    // real number — but always append "+" so it reads consistently (e.g. "3+").
+    const base = rounded >= 5 ? rounded : n;
+    return `${base}+ cars available`;
   };
 
   const renderVehicleList = () => (
