@@ -201,6 +201,18 @@ const Marketplace = () => {
     return 'All Locations';
   };
 
+  // Availability label shown only after a location search. Rounds DOWN to the
+  // nearest 5 and adds a "+" (e.g. 28 -> "25+") so renters see there's good
+  // supply while the exact inventory count stays hidden from competitors.
+  const getResultsCountText = () => {
+    if (!filters.location || vehicles.length === 0) return '';
+    const n = vehicles.length;
+    const rounded = Math.floor(n / 5) * 5;
+    return rounded >= 5
+      ? `${rounded}+ cars available`
+      : `${n} ${n === 1 ? 'car' : 'cars'} available`;
+  };
+
   const renderVehicleList = () => (
     <div className="list-view-container">
       {/* List view only — never rendered on the map view, so it can't interfere
@@ -337,11 +349,7 @@ const Marketplace = () => {
           <div className="results-text">
             <strong>{getLocationText()}</strong>
             <span className="results-count">
-              {loading
-                ? 'Loading...'
-                : (filters.location && vehicles.length > 0
-                    ? `${vehicles.length} ${vehicles.length === 1 ? 'car' : 'cars'} available`
-                    : '')}
+              {loading ? 'Loading...' : getResultsCountText()}
             </span>
           </div>
           <button
