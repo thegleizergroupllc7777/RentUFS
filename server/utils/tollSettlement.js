@@ -19,6 +19,11 @@ const getOutstandingTolls = async (booking, vehicle) => {
   };
   const result = await getTollCharges({
     license_plate: vehicle.licensePlate.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+    // Each host is registered with TollSpot under their unique RentUFS id (the
+    // same id used in the host's TollSpot signup link and at vehicle
+    // registration), so we must fetch that host's tolls with the same id.
+    // Without it TollSpot rejects the request with "Host ID is required".
+    host_id: booking.host ? (booking.host._id || booking.host).toString() : undefined,
     from_date: formatDate(booking.startDate),
     to_date: formatDate(booking.endDate),
     page: 0,
