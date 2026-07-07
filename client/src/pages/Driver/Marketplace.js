@@ -75,7 +75,7 @@ const Marketplace = () => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('map');
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [filters, setFilters] = useState({
     location: '',
     radius: '25',
@@ -337,7 +337,11 @@ const Marketplace = () => {
           <div className="results-text">
             <strong>{getLocationText()}</strong>
             <span className="results-count">
-              {loading ? 'Loading...' : ''}
+              {loading
+                ? 'Loading...'
+                : (filters.location && vehicles.length > 0
+                    ? `${vehicles.length} ${vehicles.length === 1 ? 'car' : 'cars'} available`
+                    : '')}
             </span>
           </div>
           <button
