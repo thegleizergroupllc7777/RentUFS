@@ -216,7 +216,8 @@ router.get('/holiday-autosend-setting', adminAuth, async (req, res) => {
       return res.status(403).json({ message: 'Owner access required.' });
     }
     const doc = await SystemState.findOne({ key: 'holidayAutoSend' });
-    const enabled = !!(doc && String(doc.value).toLowerCase() === 'on');
+    // ON by default — only an explicit 'off' disables it.
+    const enabled = !(doc && String(doc.value).toLowerCase() === 'off');
     res.json({ enabled });
   } catch (error) {
     console.error('Holiday auto-send setting read error:', error.message);

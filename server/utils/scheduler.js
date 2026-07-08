@@ -805,10 +805,11 @@ const previewHostPayout = async (hostId) => {
 // New Year's, Memorial Day, Labor Day). Weekday-based holidays are computed
 // each year (holidayForDate) so the date self-adjusts — no yearly maintenance.
 //
-// SAFETY — this is OFF by default and cannot send anything until an admin turns
-// it on:
-//   • Master switch: SystemState key 'holidayAutoSend' must be truthy. While it
-//     is unset/false this is a pure no-op — nothing is queried or sent.
+// SAFETY — ON by default (the owner enabled auto-send), but fully controllable
+// and it can never blast or double-send:
+//   • Master switch: SystemState key 'holidayAutoSend'. Only an explicit 'off'
+//     pauses it — the owner can flip it from the Broadcast switch anytime, no
+//     redeploy. While 'off', this is a pure no-op — nothing is queried or sent.
 //   • Only fires inside the 9 AM ET hour, and only on an actual holiday.
 //   • Once-per-year guard: a SystemState marker ('holidaySent:<key>:<year>') is
 //     CLAIMED before sending, so redeploys/restarts can never double-send.
@@ -822,10 +823,11 @@ const nowInET = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'A
 
 const checkAndSendHolidayBroadcasts = async () => {
   try {
-    // Master switch — OFF by default. Nothing runs until an admin flips it on.
-    // Stored as the string 'on'/'off', so compare explicitly (not just truthy).
+    // Master switch — ON by default (owner enabled auto-send). Only an explicit
+    // 'off' in SystemState pauses it; unset or 'on' both mean enabled, so the
+    // owner can pause it anytime from the Broadcast switch without a redeploy.
     const flag = await SystemState.findOne({ key: 'holidayAutoSend' });
-    if (!flag || String(flag.value).toLowerCase() !== 'on') return { success: true, sent: 0, reason: 'disabled' };
+    if (flag && String(flag.value).toLowerCase() === 'off') return { success: true, sent: 0, reason: 'disabled' };
 
     const et = nowInET();
     // Only fire inside the 9 AM ET hour (this checker runs hourly).
@@ -993,10 +995,10 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   console.log('⏱️  Charge settlement scheduler running every 30 minutes');
 
   // Holiday auto-send: check hourly, but only actually sends inside the 9 AM ET
-  // hour on a real holiday AND only when the master switch is ON. OFF by default,
-  // so this is a harmless no-op until an admin enables it from the Broadcast page.
+  // hour on a real holiday. ON by default; the owner can pause it anytime from
+  // the Broadcast switch (sets SystemState 'holidayAutoSend' to 'off').
   const oneHourMs = 60 * 60 * 1000;
-  console.log('🚀 Starting holiday auto-send scheduler (OFF until enabled)...');
+  console.log('🚀 Starting holiday auto-send scheduler (ON — pausable from Broadcast switch)...');
   setTimeout(() => {
     checkAndSendHolidayBroadcasts();
     holidayBroadcastInterval = setInterval(checkAndSendHolidayBroadcasts, oneHourMs);
