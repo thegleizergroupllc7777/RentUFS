@@ -1506,12 +1506,21 @@ function listYourCarEmailHtml(firstName, unsubscribeUrl) {
           <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
         </div>
         <div style="background:#000000;padding:0 20px 22px;text-align:center;">
-          <span style="display:inline-block;background:#00FF66;color:#000000;font-weight:bold;font-size:13px;letter-spacing:1px;padding:6px 16px;border-radius:20px;">🚗 YOUR CAR IS READY TO EARN</span>
+          <span style="display:inline-block;background:#00FF66;color:#000000;font-weight:800;font-size:17px;letter-spacing:1px;padding:12px 28px;border-radius:26px;">🚗 YOUR CAR IS READY TO EARN</span>
         </div>
         <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
           <p style="margin:0 0 14px;font-size:1.35rem;font-weight:bold;color:#111827;">Get your car out of the driveway and earning 💸</p>
           <p style="margin:0 0 14px;">${greeting}</p>
-          <p style="margin:0 0 16px;">Your car could be <strong>making you money</strong> instead of sitting in the driveway! You've already signed up as a RentUFS host — the last step is getting it <strong>listed and rolling</strong>.</p>
+          <p style="margin:0 0 16px;">Your car could be <strong>making you money</strong> instead of sitting in the driveway! You've already signed up as a RentUFS host — the last step is getting it <strong>listed and rolling</strong>. Here's a quick 2-minute walkthrough:</p>
+          <a href="https://youtu.be/E94Lx7iVxpo" style="text-decoration:none;display:block;margin:0 0 22px;">
+            <div style="position:relative;background:#000;border-radius:12px;overflow:hidden;border:2px solid #00FF66;">
+              <img src="https://img.youtube.com/vi/E94Lx7iVxpo/hqdefault.jpg" alt="How to Host Your Car on RentUFS" width="540" style="display:block;width:100%;height:auto;opacity:0.82;border:0;">
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;background:#00FF66;border-radius:50%;">
+                <div style="position:absolute;top:50%;left:55%;transform:translate(-50%,-50%);width:0;height:0;border-top:19px solid transparent;border-bottom:19px solid transparent;border-left:30px solid #000;"></div>
+              </div>
+              <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-weight:bold;font-size:14px;text-shadow:0 1px 5px rgba(0,0,0,0.9);">▶ How to Host Your Car — 2:29</div>
+            </div>
+          </a>
           <p style="margin:0 0 8px;font-weight:bold;color:#111827;">A few reasons hosts love it:</p>
           <ul style="margin:0 0 18px;padding-left:20px;">
             <li style="margin-bottom:6px;">🛡️ Every rental is <strong>backed by RentUFS insurance protection</strong></li>
