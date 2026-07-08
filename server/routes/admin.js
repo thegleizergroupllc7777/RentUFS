@@ -1648,6 +1648,41 @@ router.get('/broadcast/preview', adminAuth, async (req, res) => {
   }
 });
 
+// Pre-designed holiday emails — one branded template driven by a per-holiday
+// config. Each uses a hosted illustration PNG (rendered from our SVG so it shows
+// in every inbox) + a "Browse Cars" button + host line. Festive top-to-bottom.
+const HOLIDAY_TEMPLATES = {
+  happy_holidays: { subject: '✨ Happy Holidays from RentUFS! 🎄🕎', img: 'happy_holidays.png', badge: '🎄 HAPPY HOLIDAYS 🕎', badgeBg: 'linear-gradient(90deg,#e11d2a,#ca8a04,#0b8f4e)', panel: '#eef4ff', text: '#1e293b', accent: '#0b8f4e', headingColor: '#0b1836', heading: "Season's Greetings", body: "However you celebrate this season — <strong>Merry Christmas</strong>, <strong>Happy Hanukkah</strong>, and warm wishes to all — thank you for being part of the RentUFS family. Traveling to see loved ones? There's a car ready for every trip. 💚" },
+  thanksgiving: { subject: '🦃 Happy Thanksgiving from RentUFS!', img: 'thanksgiving.png', badge: '🦃 HAPPY THANKSGIVING 🍂', badgeBg: '#c2410c', panel: '#fdf2e3', text: '#5c2010', accent: '#b45309', headingColor: '#7c2d12', heading: 'Happy Thanksgiving', body: "We're grateful for every host and driver in the RentUFS family. Heading to see family this year? Grab a car for the trip. 🍂" },
+  new_years: { subject: '🎆 Happy New Year from RentUFS! 🥂', img: 'new_years.png', badge: '🎆 HAPPY NEW YEAR 🥂', badgeBg: '#ca8a04', panel: '#141024', text: '#e5e7eb', accent: '#ffd54a', headingColor: '#ffd54a', heading: 'Happy New Year', body: "Here's to a year full of new roads, new trips, and new earnings. Wherever the year takes you — we've got the ride. 🎉" },
+  memorial_day: { subject: '🇺🇸 Memorial Day from RentUFS', img: 'memorial_day.png', badge: '🇺🇸 MEMORIAL DAY 🇺🇸', badgeBg: '#b22234', panel: '#eef2ff', text: '#1e293b', accent: '#1e3a8a', headingColor: '#7f1d1d', heading: 'Happy Memorial Day', body: "Honoring those who served — and kicking off summer travel season. Ready to hit the road? 🚗" },
+  labor_day: { subject: '☀️ Happy Labor Day from RentUFS', img: 'labor_day.png', badge: '☀️ HAPPY LABOR DAY ☀️', badgeBg: '#0369a1', panel: '#ecfbff', text: '#0c4a6e', accent: '#0369a1', headingColor: '#0369a1', heading: 'Happy Labor Day', body: "Make the most of the long weekend — a car's ready whenever you are. 😎" }
+};
+
+function holidayEmailHtml(cfg, firstName, unsubscribeUrl) {
+  const greeting = firstName ? `${cfg.heading}, ${firstName}!` : `${cfg.heading}!`;
+  const unsub = unsubscribeUrl ? `<br><a href="${unsubscribeUrl}" style="color:#064e3b;text-decoration:underline">Unsubscribe</a>` : '';
+  const clientUrl = process.env.CLIENT_URL || 'https://app.rentufs.com';
+  const img = `${clientUrl}/holiday/${cfg.img}`;
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#dfe7f2;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="border:3px solid #00FF66;border-radius:10px;overflow:hidden;">
+        <div style="background:#000;padding:22px 20px 6px;text-align:center;"><span style="font-size:28px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span></div>
+        <div style="background:#000;padding:0 20px 16px;text-align:center;"><span style="display:inline-block;background:${cfg.badgeBg};color:#fff;font-weight:bold;font-size:13px;letter-spacing:1px;padding:6px 16px;border-radius:20px;">${cfg.badge}</span></div>
+        <img src="${img}" alt="${cfg.heading}" width="600" style="display:block;width:100%;height:auto;border:0;">
+        <div style="background:${cfg.panel};padding:26px 28px 24px;color:${cfg.text};font-size:15px;line-height:1.7;text-align:center;">
+          <p style="margin:0 0 12px;font-size:1.25rem;font-weight:bold;color:${cfg.headingColor};">${greeting}</p>
+          <p style="margin:0 0 18px;">${cfg.body}</p>
+          <p style="margin:0 0 10px;"><a href="${clientUrl}/marketplace" style="display:inline-block;background:#00FF66;color:#000;padding:14px 40px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">🚗 Browse Cars</a></p>
+          <p style="margin:0 0 4px;font-size:14px;"><a href="${clientUrl}/host/add-vehicle" style="color:${cfg.accent};font-weight:bold;text-decoration:none;">Own a car? List it and start earning &rarr;</a></p>
+        </div>
+        <div style="background:#00FF66;text-align:center;color:#000;padding:18px;font-size:12px;">&copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}</div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
 // Send a broadcast. channel: 'email' | 'sms' | 'both'; audience: 'hosts' | 'drivers' | 'both'.
 router.post('/broadcast', adminAuth, async (req, res) => {
   try {
@@ -1656,9 +1691,11 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     const isListCar = design === 'list_car';
     const isJulyFourth = design === 'july_fourth';
     const isHostVideo = design === 'host_video';
-    const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo;
+    const holiday = HOLIDAY_TEMPLATES[design] || null;
+    const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || !!holiday;
     const preDesignedHtml = (fn, unsub) =>
-      isJulyFourth ? julyFourthEmailHtml(fn, unsub)
+      holiday ? holidayEmailHtml(holiday, fn, unsub)
+      : isJulyFourth ? julyFourthEmailHtml(fn, unsub)
       : isListCar ? listYourCarEmailHtml(fn, unsub)
       : isHostVideo ? hostVideoEmailHtml(fn, unsub)
       : becomeHostEmailHtml(fn, unsub);
@@ -1682,6 +1719,7 @@ router.post('/broadcast', adminAuth, async (req, res) => {
       : (isJulyFourth ? 'Happy 4th of July from RentUFS! 🇺🇸'
         : isListCar ? 'Get your car out of the driveway and earning 🚗💸'
         : isHostVideo ? '🎥 How to host your car on RentUFS (2-min guide)'
+        : holiday ? holiday.subject
         : isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗'
         : 'A message from RentUFS');
 
@@ -1936,6 +1974,11 @@ router.post('/email-test', adminAuth, async (req, res) => {
         });
         break;
       default:
+        if (HOLIDAY_TEMPLATES[template]) {
+          const cfg = HOLIDAY_TEMPLATES[template];
+          result = await sendEmail({ to, subject: cfg.subject, html: holidayEmailHtml(cfg, '', null) });
+          break;
+        }
         return res.status(400).json({ message: 'Unknown template.' });
     }
     console.log(`📧 Test email (${template}) sent to ${to} by ${req.user.email}`);
