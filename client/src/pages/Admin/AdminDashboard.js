@@ -5,10 +5,17 @@ import AdminLayout from './AdminLayout';
 
 // A stat card. If `to` is provided, clicking it navigates to that admin tab
 // (with a hover lift so it reads as clickable). Cards without `to` stay static.
-const StatCard = ({ label, value, sublabel, to }) => {
+const StatCard = ({ label, value, sublabel, to, alert }) => {
   const navigate = useNavigate();
   const [hover, setHover] = useState(false);
   const clickable = !!to;
+  // Alert cards (e.g. overdue rentals) wear a persistent red ring; normal
+  // clickable cards get a green ring only on hover.
+  const ring = alert ? '#dc2626' : '#10b981';
+  const glow = alert ? 'rgba(220,38,38,0.28)' : 'rgba(16,185,129,0.25)';
+  const boxShadow = hover
+    ? `0 0 0 2px ${ring}, 0 4px 14px ${glow}`
+    : (alert ? `0 0 0 2px ${ring}` : undefined);
   return (
     <div
       className="admin-stat-card"
@@ -19,13 +26,11 @@ const StatCard = ({ label, value, sublabel, to }) => {
       tabIndex={clickable ? 0 : undefined}
       onKeyDown={clickable ? (e) => { if (e.key === 'Enter') navigate(to); } : undefined}
       title={clickable ? 'View details' : undefined}
-      style={clickable ? {
-        cursor: 'pointer',
+      style={(clickable || alert) ? {
+        cursor: clickable ? 'pointer' : 'default',
         transition: 'box-shadow 0.12s ease, transform 0.12s ease',
-        transform: hover ? 'translateY(-1px)' : 'none',
-        // Green outline ring on hover (matches the platform green). Uses box-shadow
-        // so there's no layout shift, and the ring sits just outside the card edge.
-        boxShadow: hover ? '0 0 0 2px #10b981, 0 4px 14px rgba(16,185,129,0.25)' : undefined
+        transform: (clickable && hover) ? 'translateY(-1px)' : 'none',
+        boxShadow
       } : undefined}
     >
       <div className="label">{label}</div>
@@ -75,6 +80,15 @@ const AdminDashboard = () => {
           <div className="admin-stats-grid">
             <StatCard label="Total Booked" value={formatCurrency(stats.revenue.total)} sublabel="All paid bookings" />
             <StatCard label="Platform Revenue" value={formatCurrency(stats.revenue.platform)} sublabel="Fees collected" />
+            {stats.bookings.overdue > 0 && (
+              <StatCard
+                label="Late Returns"
+                value={stats.bookings.overdue}
+                sublabel="Overdue now — tap to review"
+                to="/admin/late-returns"
+                alert
+              />
+            )}
           </div>
 
           <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Users & Fleet</h3>
