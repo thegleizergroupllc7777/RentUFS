@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Otp = require('../models/Otp');
 const auth = require('../middleware/auth');
 const { sendWelcomeEmail, sendPasswordResetEmail, sendRegistrationOtp } = require('../utils/emailService');
+const { sendHostWelcomeSMS } = require('../utils/smsService');
 const { isSuperAdmin } = require('../utils/superAdmin');
 
 const router = express.Router();
@@ -318,6 +319,9 @@ router.post('/register', async (req, res) => {
       userType: user.userType
     }).catch(err => console.error('Failed to send welcome email:', err));
 
+    // New hosts also get a welcome SMS with the "how to host" video (skips if no phone)
+    sendHostWelcomeSMS(user).catch(err => console.error('Failed to send host welcome SMS:', err));
+
     res.status(201).json({
       token,
       user: {
@@ -470,6 +474,8 @@ router.post('/google', async (req, res) => {
         firstName: user.firstName,
         userType: user.userType
       }).catch(err => console.error('Failed to send welcome email:', err));
+
+      sendHostWelcomeSMS(user).catch(err => console.error('Failed to send host welcome SMS:', err));
     }
 
     if (user.accountStatus === 'deactivated') {

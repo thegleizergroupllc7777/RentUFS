@@ -166,9 +166,19 @@ const sendLateReturnWarningSMS = async (driver, booking, vehicle, stage) => {
   return sendSMS(driver.phone, body);
 };
 
+// Welcome SMS for new HOSTS only, with the "how to host" video link.
+// Safely no-ops for non-hosts or anyone without a phone number on file.
+const sendHostWelcomeSMS = async (host) => {
+  if (!host || (host.userType !== 'host' && host.userType !== 'both')) return { skipped: true };
+  if (!host.phone) return { skipped: true };
+  const body = `Hey ${host.firstName || 'there'}, welcome to RentUFS! 🚗 Here are your next steps before putting 100% in your pocket (zero commission): https://youtu.be/E94Lx7iVxpo`;
+  return sendSMS(host.phone, body);
+};
+
 module.exports = {
   isSmsConfigured,
   sendSMS,
+  sendHostWelcomeSMS,
   formatToE164,
   sendExtensionReminderSMS,
   sendNewBookingNotificationSMS,
