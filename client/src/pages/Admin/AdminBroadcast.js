@@ -114,7 +114,8 @@ const AdminBroadcast = () => {
   const isListCar = design === 'list_car';
   const isJulyFourth = design === 'july_fourth';
   const isHostVideo = design === 'host_video';
-  const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo;
+  const isHoliday = ['happy_holidays', 'thanksgiving', 'new_years', 'memorial_day', 'labor_day'].includes(design);
+  const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isHoliday;
 
   const handleSend = async () => {
     setError('');
@@ -232,6 +233,11 @@ const AdminBroadcast = () => {
                 <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
                 <option value="host_video">🎥 How to Host — YouTube video included (email + SMS)</option>
                 <option value="july_fourth">4th of July — holiday greeting (pre-designed)</option>
+                <option value="happy_holidays">🎄 Happy Holidays — Christmas + Hanukkah (pre-designed)</option>
+                <option value="thanksgiving">🦃 Thanksgiving (pre-designed)</option>
+                <option value="new_years">🎆 New Year's (pre-designed)</option>
+                <option value="memorial_day">🇺🇸 Memorial Day (pre-designed)</option>
+                <option value="labor_day">☀️ Labor Day (pre-designed)</option>
               </select>
               {isHostPitch && (
                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
@@ -391,6 +397,11 @@ const AdminBroadcast = () => {
                 <option value="list_car">List Your Car (host reminder)</option>
                 <option value="host_video">🎥 How to Host — YouTube video included</option>
                 <option value="july_fourth">4th of July (holiday greeting)</option>
+                <option value="happy_holidays">🎄 Happy Holidays</option>
+                <option value="thanksgiving">🦃 Thanksgiving</option>
+                <option value="new_years">🎆 New Year's</option>
+                <option value="memorial_day">🇺🇸 Memorial Day</option>
+                <option value="labor_day">☀️ Labor Day</option>
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
