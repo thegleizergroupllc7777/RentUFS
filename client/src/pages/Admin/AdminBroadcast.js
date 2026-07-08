@@ -101,6 +101,10 @@ const AdminBroadcast = () => {
 
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
   useEffect(() => { loadPreview(audience); }, [audience, loadPreview]);
+  // Pre-designed layouts are email HTML. If the user switches to Text-only, drop
+  // the design so the plain message box is always available (avoids getting stuck
+  // with no message field and the design dropdown hidden).
+  useEffect(() => { if (channel === 'sms') setDesign(''); }, [channel]);
   useEffect(() => { if (me?.isSuperAdmin) loadInsVehicles(); }, [me, loadInsVehicles]);
 
   const doEmail = channel === 'email' || channel === 'both';
