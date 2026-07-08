@@ -274,6 +274,15 @@ const sendWelcomeEmail = async (user) => {
                 `}
               </div>
 
+              ${(user.userType === 'host' || user.userType === 'both') ? `
+              <center>
+                <a href="https://youtu.be/E94Lx7iVxpo" style="background:#000000;color:#00FF66;border:2px solid #00FF66;padding:12px 30px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
+                  ▶ Watch: How to Host Your Car
+                </a>
+                <p style="font-size:0.85rem;color:#6b7280;margin-top:8px;">A quick guide to start earning — zero commission, 100% yours.</p>
+              </center>
+              ` : ''}
+
               <p>We're excited to have you as part of our community. Whether you're looking to rent a car or earn money by listing yours, we've got you covered!</p>
 
               <center>
@@ -296,7 +305,7 @@ const sendWelcomeEmail = async (user) => {
         </body>
         </html>
       `,
-      text: `Hi ${user.firstName},\n\nWelcome to RentUFS!\n\nYour account has been successfully created.\n\nAccount Type: ${userTypeText}\n\n${user.userType === 'driver' ? 'You can now browse and rent vehicles from trusted hosts in your area.' : user.userType === 'host' ? 'You can now list your vehicles and start earning money!' : 'You can rent vehicles and list your own cars to earn money!'}\n\nGet Started:\n- Browse available vehicles\n- ${user.userType !== 'driver' ? 'List your vehicles' : 'Book your first ride'}\n- Complete your profile\n\nThank you for choosing RentUFS!\n\nBest regards,\nThe RentUFS Team`
+      text: `Hi ${user.firstName},\n\nWelcome to RentUFS!\n\nYour account has been successfully created.\n\nAccount Type: ${userTypeText}\n\n${user.userType === 'driver' ? 'You can now browse and rent vehicles from trusted hosts in your area.' : user.userType === 'host' ? 'You can now list your vehicles and start earning money!\n\n▶ Watch how to host your car (zero commission): https://youtu.be/E94Lx7iVxpo' : 'You can rent vehicles and list your own cars to earn money!\n\n▶ Watch how to host your car (zero commission): https://youtu.be/E94Lx7iVxpo'}\n\nGet Started:\n- Browse available vehicles\n- ${user.userType !== 'driver' ? 'List your vehicles' : 'Book your first ride'}\n- Complete your profile\n\nThank you for choosing RentUFS!\n\nBest regards,\nThe RentUFS Team`
     };
 
     const result = await sendEmail(mailOptions);
