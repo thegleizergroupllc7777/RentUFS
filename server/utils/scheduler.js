@@ -2,7 +2,8 @@ const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
-const { sendReturnReminderEmail, sendRegistrationExpirationReminder, sendVehiclePausedEmail, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
+const { sendEmail, sendReturnReminderEmail, sendRegistrationExpirationReminder, sendVehiclePausedEmail, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
+const { HOLIDAY_TEMPLATES, holidayEmailHtml, holidayForDate } = require('./holidayEmails');
 const { sendOverdueReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
@@ -798,6 +799,80 @@ const previewHostPayout = async (hostId) => {
   };
 };
 
+// ── Holiday auto-send ─────────────────────────────────────────────────────
+// Automatically emails the branded holiday template to every active host AND
+// driver on the correct day each year (Happy Holidays Dec 23, Thanksgiving,
+// New Year's, Memorial Day, Labor Day). Weekday-based holidays are computed
+// each year (holidayForDate) so the date self-adjusts — no yearly maintenance.
+//
+// SAFETY — this is OFF by default and cannot send anything until an admin turns
+// it on:
+//   • Master switch: SystemState key 'holidayAutoSend' must be truthy. While it
+//     is unset/false this is a pure no-op — nothing is queried or sent.
+//   • Only fires inside the 9 AM ET hour, and only on an actual holiday.
+//   • Once-per-year guard: a SystemState marker ('holidaySent:<key>:<year>') is
+//     CLAIMED before sending, so redeploys/restarts can never double-send.
+//   • Respects emailOptOut and skips deactivated accounts, exactly like the
+//     manual Broadcast tool. Each send is isolated in try/catch.
+const HOLIDAY_SEND_HOUR_ET = 9; // 9:00 AM Eastern
+
+// A Date whose wall-clock fields (getHours/getDate/getMonth/getFullYear) reflect
+// America/New_York, so DST is handled automatically.
+const nowInET = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+
+const checkAndSendHolidayBroadcasts = async () => {
+  try {
+    // Master switch — OFF by default. Nothing runs until an admin flips it on.
+    // Stored as the string 'on'/'off', so compare explicitly (not just truthy).
+    const flag = await SystemState.findOne({ key: 'holidayAutoSend' });
+    if (!flag || String(flag.value).toLowerCase() !== 'on') return { success: true, sent: 0, reason: 'disabled' };
+
+    const et = nowInET();
+    // Only fire inside the 9 AM ET hour (this checker runs hourly).
+    if (et.getHours() !== HOLIDAY_SEND_HOUR_ET) return { success: true, sent: 0, reason: 'off-hour' };
+
+    const key = holidayForDate(et);
+    if (!key) return { success: true, sent: 0, reason: 'no-holiday-today' };
+
+    const year = et.getFullYear();
+    const sentKey = `holidaySent:${key}:${year}`;
+
+    // Once-per-year guard (redeploy-proof). CLAIM it before sending so a restart
+    // mid-run can never re-send the same holiday.
+    const already = await SystemState.findOne({ key: sentKey });
+    if (already && already.value) return { success: true, sent: 0, reason: 'already-sent' };
+    await SystemState.findOneAndUpdate(
+      { key: sentKey },
+      { value: new Date().toISOString(), updatedAt: new Date() },
+      { upsert: true }
+    );
+
+    const cfg = HOLIDAY_TEMPLATES[key];
+    const apiBase = process.env.API_URL || process.env.CLIENT_URL?.replace(/:\d+$/, ':5000') || 'http://localhost:5000';
+
+    // All active hosts AND drivers who accept email.
+    const users = await User.find({ accountStatus: { $ne: 'deactivated' }, email: { $ne: null } })
+      .select('firstName email emailOptOut').lean();
+
+    let sent = 0, failed = 0, skipped = 0;
+    for (const u of users) {
+      if (!u.email || u.emailOptOut) { skipped++; continue; }
+      try {
+        const unsubscribeUrl = `${apiBase}/api/users/unsubscribe/${u._id}`;
+        await sendEmail({ to: u.email, subject: cfg.subject, html: holidayEmailHtml(cfg, u.firstName, unsubscribeUrl) });
+        sent++;
+      } catch (e) {
+        failed++;
+      }
+    }
+    console.log(`🎉 Holiday auto-send (${key} ${year}): sent ${sent}, failed ${failed}, skipped ${skipped}`);
+    return { success: true, key, sent, failed, skipped };
+  } catch (error) {
+    console.error('🎉 Holiday auto-send error:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 // Start the scheduler
 let schedulerInterval = null;
 let overdueInterval = null;
@@ -807,6 +882,7 @@ let tollSyncInterval = null;
 let weeklyPayoutInterval = null;
 let chargeSettlementInterval = null;
 let lateReturnInterval = null;
+let holidayBroadcastInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run email reminders immediately on startup
@@ -916,6 +992,17 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
   }, 3 * 60 * 1000); // delay first run by 3 minutes
   console.log('⏱️  Charge settlement scheduler running every 30 minutes');
 
+  // Holiday auto-send: check hourly, but only actually sends inside the 9 AM ET
+  // hour on a real holiday AND only when the master switch is ON. OFF by default,
+  // so this is a harmless no-op until an admin enables it from the Broadcast page.
+  const oneHourMs = 60 * 60 * 1000;
+  console.log('🚀 Starting holiday auto-send scheduler (OFF until enabled)...');
+  setTimeout(() => {
+    checkAndSendHolidayBroadcasts();
+    holidayBroadcastInterval = setInterval(checkAndSendHolidayBroadcasts, oneHourMs);
+  }, 4 * 60 * 1000); // delay first run by 4 minutes
+  console.log('⏱️  Holiday auto-send scheduler checking hourly');
+
   return schedulerInterval;
 };
 
@@ -960,6 +1047,11 @@ const stopReturnReminderScheduler = () => {
     lateReturnInterval = null;
     console.log('🛑 Late-return fee processor stopped');
   }
+  if (holidayBroadcastInterval) {
+    clearInterval(holidayBroadcastInterval);
+    holidayBroadcastInterval = null;
+    console.log('🛑 Holiday auto-send scheduler stopped');
+  }
 };
 
 module.exports = {
@@ -970,6 +1062,7 @@ module.exports = {
   syncTollspotStatuses,
   processWeeklyPayouts,
   previewHostPayout,
+  checkAndSendHolidayBroadcasts,
   startReturnReminderScheduler,
   stopReturnReminderScheduler
 };
