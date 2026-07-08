@@ -65,6 +65,32 @@ const AdminBroadcast = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
+  // Holiday auto-send master switch (owner only)
+  const [holidayAuto, setHolidayAuto] = useState(false);
+  const [holidayAutoLoaded, setHolidayAutoLoaded] = useState(false);
+  const [holidaySaving, setHolidaySaving] = useState(false);
+
+  const loadHolidayAuto = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/admin/holiday-autosend-setting');
+      setHolidayAuto(!!data.enabled);
+      setHolidayAutoLoaded(true);
+    } catch (e) { /* non-blocking */ }
+  }, []);
+
+  const toggleHolidayAuto = async () => {
+    const next = !holidayAuto;
+    if (next && !window.confirm(
+      'Turn ON automatic holiday emails?\n\nRentUFS will then email the branded holiday design to EVERY host and driver automatically on each holiday (Happy Holidays Dec 23, Thanksgiving, New Year\'s, Memorial Day, Labor Day) at 9 AM Eastern — once per year, dates auto-adjust.\n\nYou can turn this off anytime.'
+    )) return;
+    setHolidaySaving(true);
+    try {
+      const { data } = await axios.put('/api/admin/holiday-autosend-setting', { enabled: next });
+      setHolidayAuto(!!data.enabled);
+    } catch (e) { /* non-blocking */ }
+    finally { setHolidaySaving(false); }
+  };
+
   // Send-a-test-email tool
   const [testTemplate, setTestTemplate] = useState('cancellation');
   const [testEmail, setTestEmail] = useState('');
@@ -106,6 +132,7 @@ const AdminBroadcast = () => {
   // with no message field and the design dropdown hidden).
   useEffect(() => { if (channel === 'sms') setDesign(''); }, [channel]);
   useEffect(() => { if (me?.isSuperAdmin) loadInsVehicles(); }, [me, loadInsVehicles]);
+  useEffect(() => { if (me?.isSuperAdmin) loadHolidayAuto(); }, [me, loadHolidayAuto]);
 
   const doEmail = channel === 'email' || channel === 'both';
   const doSms = channel === 'sms' || channel === 'both';
@@ -328,6 +355,33 @@ const AdminBroadcast = () => {
             </button>
           </div>
         </div>
+
+        {/* Holiday auto-send switch — owner only */}
+        {me?.isSuperAdmin && (
+          <div style={{ ...card, borderColor: holidayAuto ? '#bbf7d0' : '#e5e7eb', background: holidayAuto ? '#f0fdf4' : '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>🎉 Automatic holiday emails</div>
+                <div style={{ color: '#6b7280', fontSize: '0.85rem', maxWidth: 520, lineHeight: 1.6 }}>
+                  When ON, RentUFS automatically emails the branded holiday design to <strong>every host and driver</strong> on each holiday — Happy Holidays (Dec 23), Thanksgiving, New Year's, Memorial Day, and Labor Day — at <strong>9 AM Eastern</strong>, once per year. Dates auto-adjust each year. When OFF (default), nothing is sent automatically; you can still send any holiday manually above.
+                </div>
+              </div>
+              <button
+                onClick={toggleHolidayAuto}
+                disabled={holidaySaving || !holidayAutoLoaded}
+                style={{
+                  ...pill(holidayAuto),
+                  padding: '10px 20px',
+                  whiteSpace: 'nowrap',
+                  opacity: (holidaySaving || !holidayAutoLoaded) ? 0.6 : 1,
+                  cursor: (holidaySaving || !holidayAutoLoaded) ? 'default' : 'pointer'
+                }}
+              >
+                {holidaySaving ? 'Saving…' : holidayAuto ? '✅ ON — auto-sending' : 'OFF — turn on'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Result */}
         {result && (
