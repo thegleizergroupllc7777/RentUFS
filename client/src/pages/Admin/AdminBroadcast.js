@@ -230,7 +230,7 @@ const AdminBroadcast = () => {
                 <option value="">Standard message (write your own)</option>
                 <option value="become_host">Become a Host — pitch email (pre-designed)</option>
                 <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
-                <option value="host_video">How to Host — video guide (email + SMS)</option>
+                <option value="host_video">🎥 How to Host — YouTube video included (email + SMS)</option>
                 <option value="july_fourth">4th of July — holiday greeting (pre-designed)</option>
               </select>
               {isHostPitch && (
@@ -389,7 +389,7 @@ const AdminBroadcast = () => {
                 <option value="password_reset">Password Reset</option>
                 <option value="become_host">Become a Host (sales pitch)</option>
                 <option value="list_car">List Your Car (host reminder)</option>
-                <option value="host_video">How to Host — video guide</option>
+                <option value="host_video">🎥 How to Host — YouTube video included</option>
                 <option value="july_fourth">4th of July (holiday greeting)</option>
               </select>
             </div>
