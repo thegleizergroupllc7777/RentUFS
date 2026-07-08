@@ -1522,6 +1522,62 @@ function listYourCarEmailHtml(firstName, unsubscribeUrl) {
   </body></html>`;
 }
 
+// Pre-designed "How to Host" video guide — branded email with a clickable video
+// thumbnail that opens YouTube. This is the one pre-designed template that also
+// has an SMS companion (a short text + the video link), handled in /broadcast.
+function hostVideoEmailHtml(firstName, unsubscribeUrl) {
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
+  const unsub = unsubscribeUrl
+    ? `<br><a href="${unsubscribeUrl}" style="color:#064e3b;text-decoration:underline">Unsubscribe</a>`
+    : '';
+  const clientUrl = process.env.CLIENT_URL || 'https://app.rentufs.com';
+  const videoUrl = 'https://youtu.be/E94Lx7iVxpo';
+  const thumb = 'https://img.youtube.com/vi/E94Lx7iVxpo/hqdefault.jpg';
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
+        <div style="background:#000000;padding:26px 20px 10px;text-align:center;">
+          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+        </div>
+        <div style="background:#000000;padding:0 20px 22px;text-align:center;">
+          <span style="display:inline-block;background:#00FF66;color:#000000;font-weight:bold;font-size:13px;letter-spacing:1px;padding:6px 16px;border-radius:20px;">🎥 WATCH: HOW TO HOST</span>
+        </div>
+        <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
+          <p style="margin:0 0 14px;font-size:1.35rem;font-weight:bold;color:#111827;">See how to start earning in under 3 minutes</p>
+          <p style="margin:0 0 14px;">${greeting}</p>
+          <p style="margin:0 0 18px;">New to hosting? We put together a quick video that walks you through exactly how to list your car and start earning on RentUFS — <strong>zero commission, 100% yours.</strong></p>
+          <a href="${videoUrl}" style="text-decoration:none;display:block;margin:0 0 22px;">
+            <div style="position:relative;background:#000;border-radius:10px;overflow:hidden;border:2px solid #00FF66;">
+              <img src="${thumb}" alt="How to Host Your Car on RentUFS" width="540" style="display:block;width:100%;height:auto;opacity:0.8;">
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:74px;height:74px;background:#00FF66;border-radius:50%;">
+                <div style="position:absolute;top:50%;left:54%;transform:translate(-50%,-50%);width:0;height:0;border-top:17px solid transparent;border-bottom:17px solid transparent;border-left:28px solid #000;"></div>
+              </div>
+            </div>
+          </a>
+          <p style="margin:0 0 8px;font-weight:bold;color:#111827;">A few reasons hosts love it:</p>
+          <ul style="margin:0 0 18px;padding-left:20px;">
+            <li style="margin-bottom:6px;">🛡️ Every rental <strong>backed by RentUFS insurance</strong></li>
+            <li style="margin-bottom:6px;">🛣️ <strong>Tolls handled automatically</strong> — renters pay their own, and you're reimbursed</li>
+            <li style="margin-bottom:6px;">📱 <strong>Manage everything</strong> from your Host Dashboard</li>
+          </ul>
+          <p style="text-align:center;margin:24px 0;">
+            <a href="${videoUrl}" style="display:inline-block;background:#000000;color:#00FF66;border:2px solid #00FF66;padding:13px 30px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px;">&#9654; Watch the Video</a>
+            <br><br>
+            <a href="${clientUrl}/host/add-vehicle" style="display:inline-block;background:#10b981;color:#ffffff;padding:13px 34px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px;">List Your Car &rarr;</a>
+          </p>
+          <p style="margin:0;">Questions or need a hand? Just reply, or call/text us at <a href="tel:+13187368837" style="color:#10b981;font-weight:bold;">318-RENT-UFS</a> — we've got you.</p>
+          <p style="margin:16px 0 0;">Let's get you rolling,<br>The RentUFS Team</p>
+        </div>
+        <div style="background:#00FF66;text-align:center;color:#000000;padding:20px;font-size:12px;line-height:1.6;">
+          &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>
+          597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
 // Pre-designed holiday greeting — Fourth of July. Warm, festive (red/white/blue),
 // no hard sell; goes to everyone (hosts + drivers).
 function julyFourthEmailHtml(firstName, unsubscribeUrl) {
@@ -1587,11 +1643,16 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     const isHostPitch = design === 'become_host';
     const isListCar = design === 'list_car';
     const isJulyFourth = design === 'july_fourth';
-    const isPreDesigned = isHostPitch || isListCar || isJulyFourth;
+    const isHostVideo = design === 'host_video';
+    const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo;
     const preDesignedHtml = (fn, unsub) =>
       isJulyFourth ? julyFourthEmailHtml(fn, unsub)
       : isListCar ? listYourCarEmailHtml(fn, unsub)
+      : isHostVideo ? hostVideoEmailHtml(fn, unsub)
       : becomeHostEmailHtml(fn, unsub);
+    // The "How to Host" video template is the only pre-designed email that also
+    // sends by SMS — a short text with the video link.
+    const videoSmsBody = (fn) => `Hey ${fn || 'there'}, here's how to start earning on RentUFS in under 3 min (zero commission): https://youtu.be/E94Lx7iVxpo`;
     if (!isPreDesigned && (!message || !message.trim())) {
       return res.status(400).json({ message: 'Message is required.' });
     }
@@ -1600,13 +1661,15 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     }
 
     const doEmail = channel === 'email' || channel === 'both';
-    // The pre-designed HTML templates are email-only, so never send them by SMS.
-    const doSms = (channel === 'sms' || channel === 'both') && !isPreDesigned;
+    // Pre-designed HTML templates are email-only (SMS can't render HTML) — EXCEPT
+    // the "How to Host" video template, which has a plain-text SMS companion.
+    const doSms = (channel === 'sms' || channel === 'both') && (!isPreDesigned || isHostVideo);
 
     const emailSubject = (subject && subject.trim())
       ? subject.trim()
       : (isJulyFourth ? 'Happy 4th of July from RentUFS! 🇺🇸'
         : isListCar ? 'Get your car out of the driveway and earning 🚗💸'
+        : isHostVideo ? '🎥 How to host your car on RentUFS (2-min guide)'
         : isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗'
         : 'A message from RentUFS');
 
@@ -1647,7 +1710,7 @@ router.post('/broadcast', adminAuth, async (req, res) => {
       if (doSms) {
         for (const phone of phones) {
           try {
-            await sendSMS(phone, personalizeBroadcast(message, {}));
+            await sendSMS(phone, isHostVideo ? videoSmsBody('') : personalizeBroadcast(message, {}));
             r.smsSent++;
           } catch (e) { r.smsFailed++; }
         }
@@ -1664,7 +1727,7 @@ router.post('/broadcast', adminAuth, async (req, res) => {
         for (const s of subs) {
           if (!s.phone) { r.smsSkipped++; continue; }
           try {
-            await sendSMS(s.phone, personalizeBroadcast(message, {}));
+            await sendSMS(s.phone, isHostVideo ? videoSmsBody('') : personalizeBroadcast(message, {}));
             r.smsSent++;
           } catch (e) { r.smsFailed++; }
         }
@@ -1709,7 +1772,7 @@ router.post('/broadcast', adminAuth, async (req, res) => {
           results.smsSkipped++;
         } else {
           try {
-            await sendSMS(u.phone, personalizeBroadcast(message, u));
+            await sendSMS(u.phone, isHostVideo ? videoSmsBody(u.firstName) : personalizeBroadcast(message, u));
             results.smsSent++;
           } catch (e) {
             results.smsFailed++;
@@ -1844,6 +1907,13 @@ router.post('/email-test', adminAuth, async (req, res) => {
           to,
           subject: 'Get your car out of the driveway and earning 🚗💸',
           html: listYourCarEmailHtml('', null)
+        });
+        break;
+      case 'host_video':
+        result = await sendEmail({
+          to,
+          subject: '🎥 How to host your car on RentUFS (2-min guide)',
+          html: hostVideoEmailHtml('', null)
         });
         break;
       case 'july_fourth':

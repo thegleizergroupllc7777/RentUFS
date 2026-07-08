@@ -109,7 +109,8 @@ const AdminBroadcast = () => {
   const isHostPitch = design === 'become_host';
   const isListCar = design === 'list_car';
   const isJulyFourth = design === 'july_fourth';
-  const isPreDesigned = isHostPitch || isListCar || isJulyFourth;
+  const isHostVideo = design === 'host_video';
+  const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo;
 
   const handleSend = async () => {
     setError('');
@@ -225,6 +226,7 @@ const AdminBroadcast = () => {
                 <option value="">Standard message (write your own)</option>
                 <option value="become_host">Become a Host — pitch email (pre-designed)</option>
                 <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
+                <option value="host_video">How to Host — video guide (email + SMS)</option>
                 <option value="july_fourth">4th of July — holiday greeting (pre-designed)</option>
               </select>
               {isHostPitch && (
@@ -235,6 +237,11 @@ const AdminBroadcast = () => {
               {isListCar && (
                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
                   A branded green/black nudge for hosts who signed up but haven't listed a car yet (insurance + tolls perks, "List Your Car" button). Pick who to send it to below — no message needed. <strong>Email only.</strong> Best paired with the "Hosts" audience.
+                </div>
+              )}
+              {isHostVideo && (
+                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                  A branded email with a clickable "How to Host" video (opens YouTube), insurance + tolls perks, and a "List Your Car" button. Unlike the other designs, this one is <strong>email + SMS</strong> — choose "Both" above to also text the video link. No message needed. Best paired with the "Hosts" audience.
                 </div>
               )}
               {isJulyFourth && (
@@ -378,6 +385,7 @@ const AdminBroadcast = () => {
                 <option value="password_reset">Password Reset</option>
                 <option value="become_host">Become a Host (sales pitch)</option>
                 <option value="list_car">List Your Car (host reminder)</option>
+                <option value="host_video">How to Host — video guide</option>
                 <option value="july_fourth">4th of July (holiday greeting)</option>
               </select>
             </div>
