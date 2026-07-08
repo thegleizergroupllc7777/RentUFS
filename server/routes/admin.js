@@ -628,6 +628,17 @@ router.get('/stats', adminAuth, async (req, res) => {
     const totalRevenue = revenueAgg[0]?.total || 0;
     const platformRevenue = revenueAgg[0]?.platformRev || 0;
 
+    // Count currently-overdue active rentals using the SAME lateness math as the
+    // Late Returns tab, so the dashboard can flag them at a glance. Read-only —
+    // this only counts, it never charges or changes anything.
+    let overdueCount = 0;
+    try {
+      const { getLateInfo } = require('../utils/lateReturn');
+      const activeForLate = await Booking.find({ status: 'active', paymentStatus: 'paid' });
+      const nowLate = new Date();
+      overdueCount = activeForLate.filter((b) => getLateInfo(b, nowLate).isLate).length;
+    } catch (e) { overdueCount = 0; }
+
     res.json({
       users: { total: totalUsers, drivers: totalDrivers, hosts: totalHosts },
       vehicles: { total: totalVehicles, active: activeVehicles },
@@ -637,7 +648,8 @@ router.get('/stats', adminAuth, async (req, res) => {
         thisWeek: bookingsThisWeek,
         thisMonth: bookingsThisMonth,
         active: activeBookings,
-        pending: pendingBookings
+        pending: pendingBookings,
+        overdue: overdueCount
       },
       revenue: { total: totalRevenue, platform: platformRevenue }
     });
