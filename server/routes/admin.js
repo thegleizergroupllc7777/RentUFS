@@ -250,9 +250,9 @@ router.put('/holiday-autosend-setting', adminAuth, async (req, res) => {
 // charging engine so the list and any charge always agree.
 router.get('/late-returns', adminAuth, async (req, res) => {
   try {
-    if (!isSuperAdmin(req.user)) {
-      return res.status(403).json({ message: 'Owner access required.' });
-    }
+    // Visible to any admin (staff help chase overdue renters). The list includes
+    // charged amounts, but the master auto-charge ON/OFF switch stays owner-only
+    // (its own /late-fee-setting endpoints are still gated to the owner).
     const { getLateInfo, isBookingEligible } = require('../utils/lateReturn');
     const now = new Date();
     const bookings = await Booking.find({ status: 'active', paymentStatus: 'paid' })

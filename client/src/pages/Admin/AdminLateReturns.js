@@ -40,25 +40,19 @@ const AdminLateReturns = () => {
   }, []);
 
   useEffect(() => {
-    if (me?.isSuperAdmin) load();
+    if (me) load();
   }, [load, me]);
 
-  // Belt-and-suspenders: the nav link and server both gate this, but guard the
-  // page too so a regular admin who guesses the URL sees nothing.
-  if (!me?.isSuperAdmin) {
-    return (
-      <AdminLayout title="Late Returns" subtitle="Owner only">
-        <div className="admin-error">This page is restricted to the platform owner.</div>
-      </AdminLayout>
-    );
-  }
+  // The auto-charge ON/OFF switch is owner-only; staff admins see the overdue
+  // list (and charged amounts) so they can chase renters, but can't flip charging.
+  const isOwner = !!me?.isSuperAdmin;
 
   return (
-    <AdminLayout title="Late Returns" subtitle="Every overdue rental, plus your automatic late-fee switch — owner only" onRefresh={load}>
+    <AdminLayout title="Late Returns" subtitle={isOwner ? 'Every overdue rental, plus your automatic late-fee switch' : 'Every overdue rental — reach out to get an extension'} onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
 
-      {/* Master ON/OFF kill switch */}
-      <LateFeeToggle />
+      {/* Master ON/OFF kill switch — OWNER ONLY */}
+      {isOwner && <LateFeeToggle />}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 0.75rem' }}>
         <h3 style={{ margin: 0, color: '#374151' }}>

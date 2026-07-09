@@ -90,9 +90,9 @@ const AdminDashboard = () => {
             </>
           )}
 
-          {/* Late Returns alert stays visible to all admins — it's operational,
-              not financial. Owner-only lands on the full Late Returns tab. */}
-          {me?.isSuperAdmin && stats.bookings.overdue > 0 && (
+          {/* Late Returns alert — operational, shown to all admins (staff help
+              chase overdue renters). Links to the shared Late Returns tab. */}
+          {stats.bookings.overdue > 0 && (
             <>
               <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Attention</h3>
               <div className="admin-stats-grid">

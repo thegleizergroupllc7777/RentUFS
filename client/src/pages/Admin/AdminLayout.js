@@ -24,13 +24,14 @@ const AdminLayout = ({ title, subtitle, children, onRefresh }) => {
           <NavLink to="/admin/users">Users</NavLink>
           <NavLink to="/admin/vehicles">Vehicles</NavLink>
           <NavLink to="/admin/broadcast">Broadcast</NavLink>
-          {/* Commissions is visible to every admin, but the data is scoped: staff
-              admins see only their OWN commission days, the owner sees everyone. */}
+          {/* Commissions & Late Returns are visible to every admin, but scoped:
+              staff see only their OWN commission days, and the Late Returns
+              auto-charge switch stays owner-only inside that page. */}
           <NavLink to="/admin/commissions">Commissions</NavLink>
+          <NavLink to="/admin/late-returns">Late Returns</NavLink>
           {/* Owner-only finance/reconciliation tools, hidden from regular admins. */}
           {me?.isSuperAdmin && <NavLink to="/admin/tax">Tax / 1099</NavLink>}
           {me?.isSuperAdmin && <NavLink to="/admin/insurance">Insurance</NavLink>}
-          {me?.isSuperAdmin && <NavLink to="/admin/late-returns">Late Returns</NavLink>}
         </nav>
         {children}
       </div>
