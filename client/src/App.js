@@ -12,6 +12,8 @@ import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ForgotPassword from './pages/Auth/ForgotPassword';
 import ResetPassword from './pages/Auth/ResetPassword';
+import DashboardRedirect from './pages/DashboardRedirect';
+import Logout from './pages/Logout';
 
 // Driver pages
 import Marketplace from './pages/Driver/Marketplace';
@@ -72,6 +74,9 @@ function App() {
             {/* Marketing/static pages live on Webflow at rentufs.com.
                 The React app subdomain (app.rentufs.com) only serves the marketplace. */}
             <Route path="/" element={<Navigate to="/marketplace" replace />} />
+            {/* Entry points for the marketing site's Dashboard / Logout buttons. */}
+            <Route path="/dashboard" element={<DashboardRedirect />} />
+            <Route path="/logout" element={<Logout />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
