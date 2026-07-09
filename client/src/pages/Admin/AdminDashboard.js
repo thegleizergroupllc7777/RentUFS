@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
+import { useAuth } from '../../context/AuthContext';
 
 // A stat card. If `to` is provided, clicking it navigates to that admin tab
 // (with a hover lift so it reads as clickable). Cards without `to` stay static.
@@ -44,6 +45,7 @@ const formatCurrency = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0);
 
 const AdminDashboard = () => {
+  const { user: me } = useAuth();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -76,20 +78,34 @@ const AdminDashboard = () => {
             <StatCard label="Currently Active" value={stats.bookings.active} sublabel="In progress now" to="/admin/bookings?status=active" />
           </div>
 
-          <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Revenue</h3>
-          <div className="admin-stats-grid">
-            <StatCard label="Total Booked" value={formatCurrency(stats.revenue.total)} sublabel="All paid bookings" />
-            <StatCard label="Platform Revenue" value={formatCurrency(stats.revenue.platform)} sublabel="Fees collected" />
-            {stats.bookings.overdue > 0 && (
-              <StatCard
-                label="Late Returns"
-                value={stats.bookings.overdue}
-                sublabel="Overdue now — tap to review"
-                to="/admin/late-returns"
-                alert
-              />
-            )}
-          </div>
+          {/* Revenue is OWNER-ONLY. The server only sends these numbers to the
+              owner (super admin), so staff admins never see the money figures. */}
+          {me?.isSuperAdmin && stats.revenue && (
+            <>
+              <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Revenue</h3>
+              <div className="admin-stats-grid">
+                <StatCard label="Total Booked" value={formatCurrency(stats.revenue.total)} sublabel="All paid bookings" />
+                <StatCard label="Platform Revenue" value={formatCurrency(stats.revenue.platform)} sublabel="Fees collected" />
+              </div>
+            </>
+          )}
+
+          {/* Late Returns alert stays visible to all admins — it's operational,
+              not financial. Owner-only lands on the full Late Returns tab. */}
+          {me?.isSuperAdmin && stats.bookings.overdue > 0 && (
+            <>
+              <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Attention</h3>
+              <div className="admin-stats-grid">
+                <StatCard
+                  label="Late Returns"
+                  value={stats.bookings.overdue}
+                  sublabel="Overdue now — tap to review"
+                  to="/admin/late-returns"
+                  alert
+                />
+              </div>
+            </>
+          )}
 
           <h3 style={{ margin: '1.5rem 0 0.75rem', color: '#374151' }}>Users & Fleet</h3>
           <div className="admin-stats-grid">
