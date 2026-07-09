@@ -535,9 +535,10 @@ router.patch('/users/:id/referred-by', adminAuth, async (req, res) => {
 // owner settles the per-day rate with the salesperson directly.
 router.get('/commissions', adminAuth, async (req, res) => {
   try {
-    if (!isSuperAdmin(req.user)) {
-      return res.status(403).json({ message: 'Owner access required.' });
-    }
+    // The owner sees EVERY salesperson. A regular (staff) admin sees ONLY their
+    // own commission days — scoped here on the server, so a salesperson can never
+    // see anyone else's numbers (and still never sees a dollar rate).
+    const ownOnly = !isSuperAdmin(req.user);
     // Month range in EST, same convention as the tax/insurance reports.
     const EST_OFFSET = 5;
     let year, month;
@@ -553,8 +554,12 @@ router.get('/commissions', adminAuth, async (req, res) => {
     const start = new Date(Date.UTC(year, month - 1, 1, EST_OFFSET, 0, 0, 0));
     const end = new Date(Date.UTC(year, month, 1, EST_OFFSET, 0, 0, 0) - 1);
 
-    // Hosts that have a referring salesperson set.
-    const referredHosts = await User.find({ referredBy: { $ne: null } })
+    // Hosts that have a referring salesperson set. A staff admin is scoped to
+    // only the hosts they personally referred.
+    const referredQuery = ownOnly
+      ? { referredBy: req.user._id }
+      : { referredBy: { $ne: null } };
+    const referredHosts = await User.find(referredQuery)
       .select('firstName lastName referredBy')
       .lean();
     if (referredHosts.length === 0) {

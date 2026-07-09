@@ -60,7 +60,7 @@ const AdminCommissions = () => {
   }, [month]);
 
   useEffect(() => {
-    if (me?.isSuperAdmin) load();
+    if (me) load();
   }, [load, me]);
 
   const downloadCsv = () => {
@@ -89,21 +89,14 @@ const AdminCommissions = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Belt-and-suspenders: nav link and server already gate this, but guard the
-  // page too so a regular admin who guesses the URL sees nothing.
-  if (!me?.isSuperAdmin) {
-    return (
-      <AdminLayout title="Commissions" subtitle="Owner only">
-        <div className="admin-error">This page is restricted to the platform owner.</div>
-      </AdminLayout>
-    );
-  }
-
   const salespeople = data?.salespeople || [];
   const monthLabel = MONTHS.find((x) => x.value === month)?.label || month;
+  // The owner sees every salesperson; a staff admin sees only their own days
+  // (the server scopes the data, so this only tweaks the wording).
+  const isOwner = !!me?.isSuperAdmin;
 
   return (
-    <AdminLayout title="Commissions" subtitle="Monthly salesperson commission days — owner only" onRefresh={load}>
+    <AdminLayout title="Commissions" subtitle={isOwner ? 'Monthly salesperson commission days — owner only' : 'Your commission days by month'} onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-toolbar">
@@ -115,9 +108,13 @@ const AdminCommissions = () => {
       </div>
 
       <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: '10px 14px', margin: '0 0 1rem', fontSize: '0.85rem', color: '#bbb' }}>
-        💼 <strong>Commission days for {monthLabel}.</strong> Booked days of paid bookings for each host, grouped by the salesperson who referred them. Cancelled and refunded bookings are excluded.
+        💼 <strong>{isOwner ? `Commission days for ${monthLabel}.` : `Your commission days for ${monthLabel}.`}</strong> {isOwner
+          ? 'Booked days of paid bookings for each host, grouped by the salesperson who referred them. Cancelled and refunded bookings are excluded.'
+          : 'Booked days of paid bookings from the hosts you referred. Cancelled and refunded bookings are excluded.'}
         <br />
-        <strong>No rate is shown on purpose</strong> — you and your salesperson agree on the per-day rate; multiply it by the days below when you pay.
+        <strong>No rate is shown on purpose</strong> — {isOwner
+          ? 'you and your salesperson agree on the per-day rate; multiply it by the days below when you pay.'
+          : 'your per-day rate is arranged with the owner. This just tracks your days so there are no surprises at month-end.'}
       </div>
 
       {/* Summary — total days per salesperson + grand total */}
