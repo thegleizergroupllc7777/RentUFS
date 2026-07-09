@@ -22,6 +22,13 @@
 const COOKIE_NAME = 'ufs_session';
 const COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days, matches JWT expiry
 
+// Plain "is someone logged in" flag the marketing homepage (rentufs.com) reads
+// to swap its Login/Sign Up buttons for Dashboard/Logout. Value is just `1` — no
+// name, no token, no personal data. Matches the cookie name/settings the Webflow
+// nav script expects.
+const AUTH_COOKIE_NAME = 'rentufs_auth';
+const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
 function getParentDomain() {
   if (typeof window === 'undefined') return null;
   const host = window.location.hostname || '';
@@ -48,10 +55,13 @@ export function setSessionCookie(user) {
   const name = (getDisplayName(user) || '').trim();
   const value = encodeURIComponent(name || '1');
   document.cookie = `${COOKIE_NAME}=${value}; domain=${domain}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; secure; samesite=lax`;
+  // Also drop the simple flag the homepage nav script checks for.
+  document.cookie = `${AUTH_COOKIE_NAME}=1; domain=${domain}; path=/; max-age=${AUTH_COOKIE_MAX_AGE_SECONDS}; secure; samesite=lax`;
 }
 
 export function clearSessionCookie() {
   const domain = getParentDomain();
   if (!domain) return;
   document.cookie = `${COOKIE_NAME}=; domain=${domain}; path=/; max-age=0; samesite=lax`;
+  document.cookie = `${AUTH_COOKIE_NAME}=; domain=${domain}; path=/; max-age=0; samesite=lax`;
 }
