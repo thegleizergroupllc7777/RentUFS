@@ -677,7 +677,7 @@ router.get('/stats', adminAuth, async (req, res) => {
       overdueCount = activeForLate.filter((b) => getLateInfo(b, nowLate).isLate).length;
     } catch (e) { overdueCount = 0; }
 
-    res.json({
+    const payload = {
       users: { total: totalUsers, drivers: totalDrivers, hosts: totalHosts },
       vehicles: { total: totalVehicles, active: activeVehicles },
       bookings: {
@@ -688,9 +688,16 @@ router.get('/stats', adminAuth, async (req, res) => {
         active: activeBookings,
         pending: pendingBookings,
         overdue: overdueCount
-      },
-      revenue: { total: totalRevenue, platform: platformRevenue }
-    });
+      }
+    };
+
+    // Revenue figures are OWNER-ONLY. Regular (staff) admins never receive these
+    // numbers from the server — they aren't just hidden on screen, they're never sent.
+    if (isSuperAdmin(req.user)) {
+      payload.revenue = { total: totalRevenue, platform: platformRevenue };
+    }
+
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ message: 'Failed to load stats', error: err.message });
   }
