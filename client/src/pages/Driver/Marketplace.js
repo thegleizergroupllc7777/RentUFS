@@ -75,7 +75,12 @@ const Marketplace = () => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('map');
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [showFilters, setShowFilters] = useState(true);
+  // Filters start OPEN on wider screens (desktop/tablet), but CLOSED on phones
+  // (≤768px) so the compact filter bar doesn't crowd the small screen. Renters
+  // on a phone just tap "More Filters ⚙️" to open it. Decided once on load.
+  const [showFilters, setShowFilters] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth > 768
+  );
   const [filters, setFilters] = useState({
     location: '',
     radius: '25',
