@@ -12,6 +12,41 @@ const PHOTO_POSITIONS = [
   { key: 'rightSide', label: 'Right Side', instruction: 'Take a photo of the right side of the vehicle' }
 ];
 
+// Shrink a picked image file down to a JPEG (max 1200px wide, 0.7 quality) in the
+// browser before upload — same as the in-app camera. This keeps big iPhone photos
+// under the server's 5MB limit AND converts Apple's HEIC format to JPEG, so a
+// renter can pick any photo from their camera roll and it uploads reliably.
+// Rejects if the browser can't decode the image (caller falls back to the original).
+const shrinkImageFile = (file) => new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    const MAX_WIDTH = 1200;
+    let width = img.naturalWidth || img.width;
+    let height = img.naturalHeight || img.height;
+    if (!width || !height) { reject(new Error('Could not read image dimensions')); return; }
+    if (width > MAX_WIDTH) {
+      height = Math.round((height * MAX_WIDTH) / width);
+      width = MAX_WIDTH;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Could not process image'))),
+      'image/jpeg',
+      0.7
+    );
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    reject(new Error('Could not read image'));
+  };
+  img.src = url;
+});
+
 const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
   const [photos, setPhotos] = useState({
     frontView: null,
@@ -257,12 +292,6 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
       return;
     }
 
-    // Validate file size (max 5MB to match server limit)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image size must be less than 5MB');
-      return;
-    }
-
     // Capture the step at the time the user clicked, before any async work
     const stepAtCapture = currentStepRef.current;
     const posKey = PHOTO_POSITIONS[stepAtCapture]?.key;
@@ -273,9 +302,25 @@ const VehicleInspection = ({ booking, type, onComplete, onCancel }) => {
     try {
       const token = localStorage.getItem('token');
 
+      // Shrink + convert to JPEG first so big or HEIC iPhone photos upload
+      // reliably. If the browser can't decode the file (rare), fall back to the
+      // original — and only then enforce the 5MB server limit.
+      let uploadBlob;
+      let uploadName = 'return-photo.jpg';
+      try {
+        uploadBlob = await shrinkImageFile(file);
+      } catch (shrinkErr) {
+        if (file.size > 5 * 1024 * 1024) {
+          setError('This photo couldn’t be resized. Please use the in-app camera, or pick a smaller photo.');
+          return;
+        }
+        uploadBlob = file;
+        uploadName = file.name || 'return-photo.jpg';
+      }
+
       // Create FormData for proper file upload
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', uploadBlob, uploadName);
 
       const response = await axios.post(
         `${API_URL}/api/upload/image`,
