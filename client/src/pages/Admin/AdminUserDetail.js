@@ -21,6 +21,58 @@ const StatTile = ({ label, value, sublabel }) => (
   </div>
 );
 
+// Read-only mirror of what a host sees as their weekly pending payout on their
+// OWN portal — shown beside the Owner Payout Control so the owner can compare
+// "what they see" vs. "what's owed." Fetches the admin mirror endpoint; no writes.
+const HostPortalMirror = ({ userId }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    let alive = true;
+    axios.get(`/api/admin/hosts/${userId}/portal-payout-view`)
+      .then(({ data }) => { if (alive) { setData(data); setLoading(false); } })
+      .catch(() => { if (alive) { setErr('Could not load the host view.'); setLoading(false); } });
+    return () => { alive = false; };
+  }, [userId]);
+  return (
+    <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+      <div style={{ color: '#7c3aed', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+        What this host sees
+      </div>
+      <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 10, padding: '12px 14px' }}>
+        <div style={{ display: 'inline-block', background: '#ede9fe', color: '#6d28d9', fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 6, marginBottom: 8 }}>🔎 Mirror of their portal</div>
+        {loading ? (
+          <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Loading their view…</div>
+        ) : err ? (
+          <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>{err}</div>
+        ) : (
+          <>
+            <div style={{ fontSize: '0.9rem', color: '#111827', marginBottom: '0.5rem' }}>
+              Their portal shows: <strong>{formatCurrency(data.total)}</strong>
+            </div>
+            {data.items && data.items.length > 0 ? (
+              <div style={{ fontSize: '0.82rem', color: '#374151' }}>
+                {data.items.map((it, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.15rem 0' }}>
+                    <span>{it.reservationId} · {it.vehicle} <span style={{ color: '#9ca3af' }}>({it.note})</span></span>
+                    <span>{formatCurrency(it.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.82rem', color: '#9ca3af' }}>Nothing pending on their view.</div>
+            )}
+          </>
+        )}
+        <div style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: 10, lineHeight: 1.5 }}>
+          Read-only mirror of the host's own weekly payout screen. Can differ from "owed" on the left — that's expected; this shows exactly what they see.
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdminUserDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -476,7 +528,8 @@ const AdminUserDetail = () => {
                 {/* Owner-only "Pay host now" control. Hidden from regular admins;
                     the backend also enforces super-admin, so it can't be triggered otherwise. */}
                 {me?.isSuperAdmin && (
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '1.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <div style={{ flex: '1 1 400px', minWidth: 0 }}>
                     <div style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
                       Owner payout control
                     </div>
@@ -540,6 +593,8 @@ const AdminUserDetail = () => {
                     ) : (
                       <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Payout preview unavailable.</div>
                     )}
+                    </div>
+                    <HostPortalMirror userId={user._id} />
                   </div>
                 )}
               </div>
