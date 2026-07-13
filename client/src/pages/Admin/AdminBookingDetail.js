@@ -172,6 +172,19 @@ const AdminBookingDetail = () => {
                   <span className={`badge ${booking.status}`}>{booking.status}</span>{' '}
                   <span className={`badge ${booking.paymentStatus}`}>{booking.paymentStatus}</span>
                 </div>
+                {booking.status === 'completed' && booking.completionInfo && (booking.completionInfo.byName || booking.completionInfo.role) && (
+                  <div style={{ marginTop: '0.45rem', fontSize: '0.78rem', color: '#6b7280' }}>
+                    Closed by <strong style={{ color: '#374151' }}>{booking.completionInfo.byName || 'System'}</strong>
+                    {' '}({{
+                      return_inspection: 'renter — photo return',
+                      host_portal: 'host portal',
+                      app: 'driver app',
+                      admin_panel: 'admin panel',
+                      auto_overdue: 'auto — overdue sweep'
+                    }[booking.completionInfo.method] || booking.completionInfo.role || 'unknown'})
+                    {booking.completionInfo.at ? ` · ${formatDate(booking.completionInfo.at)}` : ''}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -934,7 +934,7 @@ router.delete('/account/delete', auth, async (req, res) => {
         status: { $in: ['active', 'confirmed'] },
         endDate: { $lt: now }
       },
-      { status: 'completed' }
+      { status: 'completed', completionInfo: { role: 'system', method: 'auto_overdue', at: now } }
     );
 
     // Auto-cancel stale pending bookings whose start date has passed
