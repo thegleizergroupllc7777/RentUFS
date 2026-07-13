@@ -88,6 +88,72 @@ router.get('/hosts/:id/payout-preview', adminAuth, async (req, res) => {
   }
 });
 
+// Read-only MIRROR of what THIS host sees as their weekly pending payout on their
+// OWN portal — so the owner can compare it side-by-side with the authoritative
+// payout above. Replicates the host portal's pending calculation exactly (which,
+// unlike the owner control, does NOT subtract already-paid partials on completed
+// bookings, and only lists 'pending'/'eligible' ones). NO money moves — read-only.
+router.get('/hosts/:id/portal-payout-view', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const { getBookingSegments, calculateEarningsForDayRange } = require('../utils/earningSegments');
+    const host = await User.findById(req.params.id).select('_id');
+    if (!host) return res.status(404).json({ message: 'Host not found' });
+
+    const now = new Date();
+    const fields = 'reservationId startDate endDate totalDays rentalType pricePerDay hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
+    const [completedBookings, activeBookings] = await Promise.all([
+      Booking.find({ host: host._id, status: 'completed', paymentStatus: 'paid', payoutStatus: { $in: ['pending', 'eligible'] } })
+        .select(fields).populate('vehicle', 'make model year').lean(),
+      Booking.find({ host: host._id, status: 'active', paymentStatus: 'paid' })
+        .select(fields).populate('vehicle', 'make model year').lean()
+    ]);
+
+    const items = [];
+    let total = 0;
+
+    // Completed → full segment earnings (mirrors the host portal exactly:
+    // raw earnings are summed, the total is rounded once at the end).
+    for (const b of completedBookings) {
+      const segments = getBookingSegments(b);
+      const raw = segments.reduce((s, seg) => s + seg.earnings, 0);
+      total += raw;
+      items.push({
+        reservationId: b.reservationId || '—',
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
+        note: 'Full earnings',
+        amount: parseFloat(raw.toFixed(2))
+      });
+    }
+
+    // Active → unpaid days served so far.
+    for (const b of activeBookings) {
+      const startDate = new Date(b.startDate);
+      const daysSinceStart = Math.min(b.totalDays || Infinity, Math.floor((now - startDate) / (1000 * 60 * 60 * 24)) + 1);
+      const daysAlreadyPaid = b.partialPayoutDaysPaid || 0;
+      const unpaidDaysServed = Math.max(0, daysSinceStart - daysAlreadyPaid);
+      if (unpaidDaysServed <= 0) continue;
+      const segments = getBookingSegments(b);
+      const unpaid = calculateEarningsForDayRange(segments, daysAlreadyPaid + 1, daysSinceStart).earnings || 0;
+      if (unpaid <= 0) continue;
+      total += unpaid;
+      items.push({
+        reservationId: b.reservationId || '—',
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
+        note: `${unpaidDaysServed} day(s) served`,
+        amount: parseFloat(unpaid.toFixed(2))
+      });
+    }
+
+    res.json({ total: parseFloat(total.toFixed(2)), items });
+  } catch (error) {
+    console.error('Host portal payout view error:', error.message);
+    res.status(500).json({ message: 'Failed to load host portal payout view', error: error.message });
+  }
+});
+
 // ── Pay a host now (OWNER-ONLY) ─────────────────────────────────────────────
 // Triggers the SAME payout engine as the weekly run, scoped to one host. The
 // per-booking payoutStatus tracking guarantees a booking can't be paid twice —
