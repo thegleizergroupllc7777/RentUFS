@@ -835,6 +835,16 @@ router.patch('/bookings/:id/status', adminAuth, async (req, res) => {
     const previousStatus = booking.status;
     const previousPayment = booking.paymentStatus;
     if (status) booking.status = status;
+    // Stamp who closed it when an admin completes the booking from the panel.
+    if (status === 'completed') {
+      booking.completionInfo = {
+        by: req.user._id,
+        byName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email || '',
+        role: 'admin',
+        method: 'admin_panel',
+        at: new Date()
+      };
+    }
     if (status === 'cancelled') {
       booking.cancelledBy = 'admin';
       booking.cancelledAt = new Date();

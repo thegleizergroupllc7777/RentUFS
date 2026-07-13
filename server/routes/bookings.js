@@ -1430,6 +1430,14 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
       notes: notes || ''
     };
     booking.status = 'completed';
+    // Stamp who closed it: the driver, via the photo return-inspection.
+    booking.completionInfo = {
+      by: req.user._id,
+      byName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email || '',
+      role: 'driver',
+      method: 'return_inspection',
+      at: new Date()
+    };
 
     // Mark earnings as immediately eligible for next payout cycle
     booking.payoutStatus = 'eligible';
@@ -1965,6 +1973,19 @@ router.patch('/:id/status', auth, async (req, res) => {
     }
 
     booking.status = status;
+
+    // Stamp who closed it when this status change completes the booking. The
+    // actor is whoever is signed in — host (host portal) or driver (their app).
+    if (status === 'completed') {
+      const isHost = booking.host.toString() === req.user._id.toString();
+      booking.completionInfo = {
+        by: req.user._id,
+        byName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email || '',
+        role: isHost ? 'host' : 'driver',
+        method: isHost ? 'host_portal' : 'app',
+        at: new Date()
+      };
+    }
 
     // Mark earnings as eligible for payout when booking is completed (by host or driver)
     if (status === 'completed' && booking.payoutStatus === 'pending') {

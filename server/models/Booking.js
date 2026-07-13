@@ -384,6 +384,16 @@ const bookingSchema = new mongoose.Schema({
     details: { type: mongoose.Schema.Types.Mixed },
     timestamp: { type: Date, default: Date.now }
   }],
+  // Who marked this booking completed, and how — a plain audit stamp so we can
+  // always see who closed a reservation (driver photo return, host portal,
+  // admin panel, or an automatic overdue sweep).
+  completionInfo: {
+    by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    byName: { type: String },
+    role: { type: String },   // 'driver' | 'host' | 'admin' | 'system'
+    method: { type: String }, // 'return_inspection' | 'host_portal' | 'app' | 'admin_panel' | 'auto_overdue'
+    at: { type: Date }
+  },
   createdAt: {
     type: Date,
     default: Date.now
