@@ -27,7 +27,7 @@ const COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days, matches JWT expiry
 // name, no token, no personal data. Matches the cookie name/settings the Webflow
 // nav script expects.
 const AUTH_COOKIE_NAME = 'rentufs_auth';
-const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const AUTH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days, matches the JWT/session so the "logged-in" hint can't linger after the real session ends
 
 function getParentDomain() {
   if (typeof window === 'undefined') return null;
