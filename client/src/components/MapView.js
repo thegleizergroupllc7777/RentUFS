@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import { useGoogleMaps } from '../context/GoogleMapsContext';
 import { Link } from 'react-router-dom';
 import getImageUrl from '../config/imageUrl';
@@ -41,6 +41,28 @@ const MARKER_ICON_SELECTED = {
   strokeWeight: 2,
   scale: 2,
   anchor: { x: 12, y: 24 },
+};
+
+// When several cars bunch together at a zoomed-out view, they collapse into ONE
+// red circle showing the count (e.g. "5"). Zooming in / clicking the circle
+// breaks it back into individual pins. Red SVG (inline data-URI, no external
+// image) so it matches the pin theme; the clusterer overlays the number.
+const CLUSTER_RED_CIRCLE =
+  'data:image/svg+xml;base64,' +
+  (typeof btoa !== 'undefined'
+    ? btoa(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46">' +
+          '<circle cx="23" cy="23" r="20" fill="#dc2626" stroke="#ffffff" stroke-width="3"/></svg>'
+      )
+    : '');
+const CLUSTER_STYLES = [
+  { url: CLUSTER_RED_CIRCLE, height: 46, width: 46, textColor: '#ffffff', textSize: 14 },
+];
+const CLUSTER_OPTIONS = {
+  styles: CLUSTER_STYLES,
+  gridSize: 55,
+  maxZoom: 12,             // zoomed in past a city → pins un-cluster to individual cars
+  minimumClusterSize: 2,  // 2+ cars at the same spot form a numbered circle
 };
 
 const MapView = ({
@@ -110,6 +132,32 @@ const MapView = ({
     v.location.coordinates.length >= 2
   ), [vehicles]);
 
+  // Display position for each pin. Cars at DISTINCT addresses keep their real
+  // coordinates. Cars stacked at the EXACT same point (e.g. a host with several
+  // cars at one address) are fanned into a tiny ~15m ring so each is its own
+  // visible pin. Display only — stored coordinates are never changed.
+  const displayPositions = useMemo(() => {
+    const groups = new Map(); // "lat,lng" -> [vehicleId,...]
+    vehiclesWithCoords.forEach((v) => {
+      const [lng, lat] = v.location.coordinates;
+      const key = `${Number(lat).toFixed(5)},${Number(lng).toFixed(5)}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(v._id);
+    });
+    const positions = {};
+    groups.forEach((ids, key) => {
+      const [lat, lng] = key.split(',').map(Number);
+      if (ids.length === 1) { positions[ids[0]] = { lat, lng }; return; }
+      const R = 0.00015; // ~15 meters
+      const lngScale = Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+      ids.forEach((id, i) => {
+        const angle = (2 * Math.PI * i) / ids.length;
+        positions[id] = { lat: lat + R * Math.cos(angle), lng: lng + (R * Math.sin(angle)) / lngScale };
+      });
+    });
+    return positions;
+  }, [vehiclesWithCoords]);
+
   if (loadError) {
     return (
       <div style={{
@@ -152,75 +200,92 @@ const MapView = ({
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
-        {vehiclesWithCoords.map((vehicle) => {
-          const [lng, lat] = vehicle.location.coordinates;
-          const isSelected = selectedVehicle === vehicle._id || hoveredVehicle === vehicle._id;
+        <MarkerClusterer options={CLUSTER_OPTIONS}>
+          {(clusterer) =>
+            vehiclesWithCoords.map((vehicle) => {
+              const fallback = vehicle.location.coordinates;
+              const pos = displayPositions[vehicle._id] || { lat: fallback[1], lng: fallback[0] };
+              const isSelected = selectedVehicle === vehicle._id || hoveredVehicle === vehicle._id;
+              const isRented = !!vehicle.rentedNow;
 
-          return (
-            <Marker
-              key={vehicle._id}
-              position={{ lat, lng }}
-              icon={isSelected ? MARKER_ICON_SELECTED : MARKER_ICON_DEFAULT}
-              onClick={() => handleMarkerClick(vehicle)}
-              onMouseOver={() => setHoveredVehicle(vehicle._id)}
-              onMouseOut={() => setHoveredVehicle(null)}
-            >
-              {activeMarker === vehicle._id && (
-                <InfoWindow
-                  onCloseClick={() => setActiveMarker(null)}
+              return (
+                <Marker
+                  key={vehicle._id}
+                  clusterer={clusterer}
+                  position={pos}
+                  icon={isSelected ? MARKER_ICON_SELECTED : MARKER_ICON_DEFAULT}
+                  onClick={() => handleMarkerClick(vehicle)}
+                  onMouseOver={() => { setHoveredVehicle(vehicle._id); setActiveMarker(vehicle._id); }}
+                  onMouseOut={() => setHoveredVehicle(null)}
                 >
-                  <div style={{ minWidth: '200px', padding: '4px' }}>
-                    {vehicle.images && vehicle.images[0] && (
-                      <img
-                        src={getImageUrl(vehicle.images[0])}
-                        alt={`${vehicle.make} ${vehicle.model}`}
-                        style={{
-                          width: '100%',
-                          height: '120px',
-                          objectFit: 'cover',
-                          borderRadius: '8px',
-                          marginBottom: '8px'
-                        }}
-                      />
-                    )}
-                    <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600' }}>
-                      {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                    </h3>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
-                        ${vehicle.pricePerDay}/day
-                      </span>
-                      {vehicle.rating > 0 && (
-                        <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                          ⭐ {vehicle.rating.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
-                    <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6b7280' }}>
-                      📍 {vehicle.location.city}, {vehicle.location.state}
-                    </p>
-                    <Link
-                      to={`/vehicle/${vehicle._id}`}
-                      style={{
-                        display: 'block',
-                        textAlign: 'center',
-                        padding: '8px 12px',
-                        background: '#10b981',
-                        color: 'white',
-                        borderRadius: '6px',
-                        textDecoration: 'none',
-                        fontSize: '13px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      View Details
-                    </Link>
-                  </div>
-                </InfoWindow>
-              )}
-            </Marker>
-          );
-        })}
+                  {activeMarker === vehicle._id && (
+                    <InfoWindow onCloseClick={() => setActiveMarker(null)}>
+                      <div style={{ minWidth: '200px', padding: '4px' }}>
+                        {vehicle.images && vehicle.images[0] && (
+                          <img
+                            src={getImageUrl(vehicle.images[0])}
+                            alt={`${vehicle.make} ${vehicle.model}`}
+                            style={{
+                              width: '100%',
+                              height: '120px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                              marginBottom: '8px'
+                            }}
+                          />
+                        )}
+                        <div style={{
+                          display: 'inline-block',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          marginBottom: '6px',
+                          background: isRented ? '#fef3c7' : '#dcfce7',
+                          color: isRented ? '#92400e' : '#166534'
+                        }}>
+                          {isRented ? 'Rented' : 'Available'}
+                        </div>
+                        <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600' }}>
+                          {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                        </h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+                            ${vehicle.pricePerDay}/day
+                          </span>
+                          {vehicle.rating > 0 && (
+                            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                              ⭐ {vehicle.rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6b7280' }}>
+                          📍 {vehicle.location.city}, {vehicle.location.state}
+                        </p>
+                        <Link
+                          to={`/vehicle/${vehicle._id}`}
+                          style={{
+                            display: 'block',
+                            textAlign: 'center',
+                            padding: '8px 12px',
+                            background: '#10b981',
+                            color: 'white',
+                            borderRadius: '6px',
+                            textDecoration: 'none',
+                            fontSize: '13px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </InfoWindow>
+                  )}
+                </Marker>
+              );
+            })
+          }
+        </MarkerClusterer>
       </GoogleMap>
     </div>
   );
