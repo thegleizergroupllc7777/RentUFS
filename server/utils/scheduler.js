@@ -10,6 +10,7 @@ const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTo
 const { checkAndSettleScheduledCharges } = require('./chargeSettlement');
 const { processLateReturns } = require('./lateFees');
 const { isBookingEligible } = require('./lateReturn');
+const { returnMomentForBooking } = require('./vehicleTimezone');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
 const checkAndSendReturnReminders = async () => {
@@ -33,11 +34,9 @@ const checkAndSendReturnReminders = async () => {
       // duplicate 1-hour email. Every other booking still gets this reminder.
       if (isBookingEligible(booking)) continue;
 
-      // Calculate the exact end time based on endDate and dropoffTime
-      const endDate = new Date(booking.endDate);
-      const dropoffTime = booking.dropoffTime || '10:00';
-      const [hours, minutes] = dropoffTime.split(':').map(Number);
-      endDate.setHours(hours, minutes, 0, 0);
+      // The real return moment, resolved in the VEHICLE's local timezone — so a
+      // Pacific drop-off isn't read on the server clock and fired hours early.
+      const endDate = returnMomentForBooking(booking);
 
       // Calculate time until end (in milliseconds)
       const timeUntilEnd = endDate.getTime() - now.getTime();
@@ -95,11 +94,9 @@ const checkAndSendOverdueSMS = async () => {
     let smsSent = 0;
 
     for (const booking of activeBookings) {
-      // Calculate the exact end time based on endDate and dropoffTime
-      const endDate = new Date(booking.endDate);
-      const dropoffTime = booking.dropoffTime || '10:00';
-      const [hours, minutes] = dropoffTime.split(':').map(Number);
-      endDate.setHours(hours, minutes, 0, 0);
+      // The real return moment, resolved in the VEHICLE's local timezone — so a
+      // Pacific drop-off isn't read on the server clock and fired hours early.
+      const endDate = returnMomentForBooking(booking);
 
       // Check if booking is overdue (past return time)
       if (now > endDate) {
