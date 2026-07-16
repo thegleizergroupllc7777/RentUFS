@@ -6,6 +6,7 @@ import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
 import RentalAgreement from '../../components/RentalAgreement';
 import { formatTime } from '../../utils/formatTime';
+import { formatTimeWithZone } from '../../utils/timezones';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
@@ -163,7 +164,7 @@ const AdminBookingDetail = () => {
                   {formatDateOnly(booking.startDate)} → {formatDateOnly(booking.endDate)} · {booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}
                 </div>
                 <div style={{ color: '#6b7280', marginTop: '0.15rem', fontSize: '0.9rem' }}>
-                  Pick-up {formatTime(booking.pickupTime)} · Drop-off {formatTime(booking.dropoffTime || booking.pickupTime)}
+                  Pick-up {formatTimeWithZone(booking.pickupTime, booking.vehicle?.location?.state)} · Drop-off {formatTimeWithZone(booking.dropoffTime || booking.pickupTime, booking.vehicle?.location?.state)}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
