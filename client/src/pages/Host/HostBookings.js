@@ -8,6 +8,7 @@ import TollCharges from '../../components/TollCharges';
 import AddChargeModal from '../../components/AddChargeModal';
 import { useAuth } from '../../context/AuthContext';
 import { formatTime } from '../../utils/formatTime';
+import { formatTimeWithZone } from '../../utils/timezones';
 import { formatPhone } from '../../utils/formatPhone';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
@@ -926,13 +927,13 @@ const HostBookings = () => {
                                 <div>
                                   <span style={{ color: '#9ca3af' }}>Pickup:</span>
                                   <div style={{ color: '#fff', fontWeight: '500' }}>
-                                    {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTime(booking.pickupTime)}
+                                    {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTimeWithZone(booking.pickupTime, booking.vehicle?.location?.state)}
                                   </div>
                                 </div>
                                 <div>
                                   <span style={{ color: '#9ca3af' }}>Return:</span>
                                   <div style={{ color: '#fff', fontWeight: '500' }}>
-                                    {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTime(booking.dropoffTime)}
+                                    {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTimeWithZone(booking.dropoffTime, booking.vehicle?.location?.state)}
                                   </div>
                                 </div>
                                 <div>
@@ -1285,11 +1286,11 @@ const HostBookings = () => {
                   <div className="booking-details">
                     <div className="booking-detail-item">
                       <strong>Pickup:</strong>{' '}
-                      {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTime(booking.pickupTime)}
+                      {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTimeWithZone(booking.pickupTime, booking.vehicle?.location?.state)}
                     </div>
                     <div className="booking-detail-item">
                       <strong>Return:</strong>{' '}
-                      {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTime(booking.dropoffTime)}
+                      {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTimeWithZone(booking.dropoffTime, booking.vehicle?.location?.state)}
                     </div>
                     <div className="booking-detail-item">
                       <strong>Duration:</strong> {booking.totalDays} days

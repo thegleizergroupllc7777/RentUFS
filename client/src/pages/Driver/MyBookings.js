@@ -4,6 +4,7 @@ import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { formatTime } from '../../utils/formatTime';
+import { formatTimeWithZone } from '../../utils/timezones';
 import { formatPhone } from '../../utils/formatPhone';
 import Navbar from '../../components/Navbar';
 import PullToRefresh from '../../components/PullToRefresh';
@@ -1050,11 +1051,11 @@ const MyBookings = () => {
                       <div className="booking-details">
                         <div className="booking-detail-item">
                           <strong>Pickup:</strong>{' '}
-                          {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTime(booking.pickupTime)}
+                          {toLocalDate(booking.startDate).toLocaleDateString()} at {formatTimeWithZone(booking.pickupTime, booking.vehicle?.location?.state)}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Return:</strong>{' '}
-                          {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTime(booking.dropoffTime)}
+                          {toLocalDate(booking.endDate).toLocaleDateString()} by {formatTimeWithZone(booking.dropoffTime, booking.vehicle?.location?.state)}
                         </div>
                         <div className="booking-detail-item">
                           <strong>Duration:</strong> {booking.totalDays} days

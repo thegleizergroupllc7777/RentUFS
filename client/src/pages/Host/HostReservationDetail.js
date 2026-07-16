@@ -10,6 +10,7 @@ import TollCharges from '../../components/TollCharges';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import { formatPhone } from '../../utils/formatPhone';
+import { formatTimeWithZone } from '../../utils/timezones';
 import './Host.css';
 
 const formatDate = (dateVal) => {
@@ -461,12 +462,12 @@ const HostReservationDetail = () => {
                   <div>
                     <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.25rem' }}>PICKUP</div>
                     <div style={{ color: '#fff', fontSize: '0.9375rem' }}>{formatDate(booking.startDate)}</div>
-                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>at {formatTime(booking.pickupTime)}</div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>at {formatTimeWithZone(booking.pickupTime, vehicleData?.location?.state)}</div>
                   </div>
                   <div>
                     <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.25rem' }}>RETURN</div>
                     <div style={{ color: '#fff', fontSize: '0.9375rem' }}>{formatDate(booking.endDate)}</div>
-                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>by {formatTime(booking.dropoffTime)}</div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>by {formatTimeWithZone(booking.dropoffTime, vehicleData?.location?.state)}</div>
                   </div>
                 </div>
 
