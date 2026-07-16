@@ -481,7 +481,11 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
     // what the provider can bill — test/refunded/never-activated reservations,
     // where coverage was selected but never turned on, are excluded.
     const bookings = await Booking.find({
-      startDate: { $gte: start, $lte: end },
+      // Any reservation whose trip OVERLAPS this month — not only ones that
+      // STARTED in it. A trip spanning two months is picked up by both months so
+      // each month can count just its own portion (see coverageDaysInMonth).
+      startDate: { $lte: end },
+      endDate: { $gte: start },
       status: { $nin: ['cancelled', 'awaiting_payment'] },
       'insurance.type': { $nin: ['none', null] },
       'teqMobility.coverageId': { $exists: true, $ne: null }
@@ -491,20 +495,39 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
       .select('reservationId vehicle driver startDate endDate totalDays insurance teqMobility status')
       .lean();
 
+    // How many of a booking's coverage days actually fall inside THIS month.
+    // Coverage runs one day per 24h from pickup — the dates [startDate, endDate).
+    // A trip that spans two months contributes only its in-month days to each
+    // month, so the months sum to the full trip length and each month lines up
+    // with the provider's per-month invoice. (Day counting is otherwise
+    // unchanged — the return day still isn't counted; that's a separate item.)
+    const coverageDaysInMonth = (b) => {
+      const s = new Date(b.startDate);
+      const e = new Date(b.endDate);
+      let count = 0;
+      let guard = 0; // hard stop against any corrupt/runaway date range
+      for (let d = new Date(s); d < e && guard < 400; d.setUTCDate(d.getUTCDate() + 1), guard++) {
+        if (d.getUTCFullYear() === year && d.getUTCMonth() + 1 === month) count++;
+      }
+      return count;
+    };
+
     // Split into the two TeqMobility tiers by what the coverage actually included:
     //   Premium = physical-damage coverage (collision/comprehensive) on file
     //   Basic   = liability-only
     const tally = { Basic: { rentals: 0, days: 0 }, Premium: { rentals: 0, days: 0 } };
-    const rows = bookings.map((b) => {
+    const rows = [];
+    for (const b of bookings) {
+      const days = coverageDaysInMonth(b);
+      if (days <= 0) continue; // trip touches the month's edge but has no days inside it
       const cov = b.insurance?.coverage || {};
       const physical = !!(cov.collision || cov.comprehensive);
       const tier = physical ? 'Premium' : 'Basic';
-      const days = b.totalDays || 0;
       tally[tier].rentals += 1;
       tally[tier].days += days;
       const v = b.vehicle || {};
       const d = b.driver || {};
-      return {
+      rows.push({
         id: String(b._id),
         reservationId: b.reservationId || '—',
         vehicle: [v.year, v.make, v.model].filter(Boolean).join(' ') || '—',
@@ -518,8 +541,8 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
         // Whether coverage was actually activated through TeqMobility (a coverage
         // record exists). Lets the owner see which rows the provider truly turned on.
         activated: !!(b.teqMobility && b.teqMobility.coverageId)
-      };
-    });
+      });
+    }
 
     rows.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
