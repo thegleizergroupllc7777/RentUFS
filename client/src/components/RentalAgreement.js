@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { resolveImageUrl } from './ImageUpload';
 import { formatTime } from '../utils/formatTime';
+import { formatTimeWithZone } from '../utils/timezones';
 import axios from 'axios';
 import API_URL from '../config/api';
 import './RentalAgreement.css';
@@ -173,7 +174,9 @@ const RentalAgreement = ({ bookingId, onAgreementSigned, readOnly = false }) => 
     const d = new Date(dateStr);
     const dateFormatted = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
       .toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' });
-    return time ? `${dateFormatted} at ${formatTime(time)}` : dateFormatted;
+    // Show the time in the vehicle's local timezone so the renter's signed
+    // agreement reflects their own clock (with Eastern shown alongside).
+    return time ? `${dateFormatted} at ${formatTimeWithZone(time, booking?.vehicle?.location?.state)}` : dateFormatted;
   };
 
   if (loading) {

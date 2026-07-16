@@ -4,6 +4,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
 import { formatTime } from '../../utils/formatTime';
+import { formatTimeWithZone } from '../../utils/timezones';
 import Navbar from '../../components/Navbar';
 import CheckoutForm from './CheckoutForm';
 import InsuranceSelection from '../../components/InsuranceSelection';
@@ -244,7 +245,7 @@ const Checkout = () => {
                         year: 'numeric'
                       });
                   })()}
-                  {booking.pickupTime ? ` at ${formatTime(booking.pickupTime)}` : ''}
+                  {booking.pickupTime ? ` at ${formatTimeWithZone(booking.pickupTime, booking.vehicle?.location?.state)}` : ''}
                 </span>
               </div>
 
@@ -261,7 +262,7 @@ const Checkout = () => {
                         year: 'numeric'
                       });
                   })()}
-                  {` by ${formatTime(booking.dropoffTime || booking.pickupTime)}`}
+                  {` by ${formatTimeWithZone(booking.dropoffTime || booking.pickupTime, booking.vehicle?.location?.state)}`}
                 </span>
               </div>
 
