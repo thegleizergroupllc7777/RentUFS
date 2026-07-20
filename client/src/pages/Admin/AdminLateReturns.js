@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 import LateFeeToggle from './LateFeeToggle';
@@ -22,6 +23,7 @@ const fmtLate = (hoursLate) => {
 // plus the master ON/OFF switch. Read-only list — no money moves from this page.
 const AdminLateReturns = () => {
   const { user: me } = useAuth();
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -80,7 +82,12 @@ const AdminLateReturns = () => {
               <tr><td colSpan="8"><div className="admin-empty">No overdue rentals right now. 🎉</div></td></tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id}>
+              <tr
+                key={r.id}
+                style={{ cursor: 'pointer' }}
+                title="Open this reservation"
+                onClick={() => navigate(`/admin/bookings/${r.id}`)}
+              >
                 <td><strong>{r.reservationId || '—'}</strong></td>
                 <td>{r.vehicle}</td>
                 <td>{r.driver || '—'}{r.driverPhone ? <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{r.driverPhone}</div> : null}</td>
