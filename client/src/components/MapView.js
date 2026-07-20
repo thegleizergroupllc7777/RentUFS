@@ -197,30 +197,51 @@ const MapView = ({
                     <InfoWindow onCloseClick={() => setActiveMarker(null)}>
                       <div style={{ minWidth: '200px', padding: '4px' }}>
                         {vehicle.images && vehicle.images[0] && (
-                          <img
-                            src={getImageUrl(vehicle.images[0])}
-                            alt={`${vehicle.make} ${vehicle.model}`}
-                            style={{
-                              width: '100%',
-                              height: '120px',
-                              objectFit: 'cover',
-                              borderRadius: '8px',
-                              marginBottom: '8px'
-                            }}
-                          />
+                          <div style={{ position: 'relative', marginBottom: '8px' }}>
+                            <img
+                              src={getImageUrl(vehicle.images[0])}
+                              alt={`${vehicle.make} ${vehicle.model}`}
+                              style={{
+                                width: '100%',
+                                height: '120px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                display: 'block'
+                              }}
+                            />
+                            {/* Rented cars get a stamp across the whole thumbnail,
+                                matching the marketplace scroll cards. */}
+                            {isRented && (
+                              <>
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', borderRadius: '8px' }} />
+                                <div style={{
+                                  position: 'absolute', top: '8px', left: '8px',
+                                  background: '#f59e0b', color: '#000000',
+                                  fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em',
+                                  padding: '4px 8px', borderRadius: '6px'
+                                }}>
+                                  Rented
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
-                        <div style={{
-                          display: 'inline-block',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: '999px',
-                          marginBottom: '6px',
-                          background: isRented ? '#fef3c7' : '#dcfce7',
-                          color: isRented ? '#92400e' : '#166534'
-                        }}>
-                          {isRented ? 'Rented' : 'Available'}
-                        </div>
+                        {/* Available cars keep the green pill; a rented car with no
+                            photo still gets a text badge as a fallback. */}
+                        {(!isRented || !(vehicle.images && vehicle.images[0])) && (
+                          <div style={{
+                            display: 'inline-block',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            marginBottom: '6px',
+                            background: isRented ? '#fef3c7' : '#dcfce7',
+                            color: isRented ? '#92400e' : '#166534'
+                          }}>
+                            {isRented ? 'Rented' : 'Available'}
+                          </div>
+                        )}
                         <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600' }}>
                           {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                         </h3>
