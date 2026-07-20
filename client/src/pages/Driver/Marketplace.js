@@ -532,7 +532,7 @@ const Marketplace = () => {
                     className="load-more-btn"
                     onClick={() => setViewMode('list')}
                   >
-                    View All {vehicles.length} Vehicles →
+                    View All Vehicles →
                   </button>
                 )}
               </div>
