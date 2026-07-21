@@ -183,6 +183,12 @@ const MapView = ({
               const pos = displayPositions[vehicle._id] || { lat: fallback[1], lng: fallback[0] };
               const isSelected = selectedVehicle === vehicle._id || hoveredVehicle === vehicle._id;
               const isRented = !!vehicle.rentedNow;
+              const isUnavailable = vehicle.availability === false;
+              // Prominent thumbnail banner (unavailable takes priority over rented).
+              // Available cars show no banner — just a small green tag below.
+              const statusLabel = isUnavailable ? 'Unavailable' : (isRented ? 'Rented' : null);
+              const bannerColor = isUnavailable ? '#6b7280' : '#f59e0b';
+              const bannerText = isUnavailable ? '#ffffff' : '#000000';
 
               return (
                 <Marker
@@ -209,26 +215,27 @@ const MapView = ({
                                 display: 'block'
                               }}
                             />
-                            {/* Rented cars get a stamp across the whole thumbnail,
-                                matching the marketplace scroll cards. */}
-                            {isRented && (
+                            {/* Rented / unavailable cars get a bold banner spanning the
+                                thumbnail, matching the marketplace scroll cards. */}
+                            {statusLabel && (
                               <>
-                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', borderRadius: '8px' }} />
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', borderRadius: '8px' }} />
                                 <div style={{
-                                  position: 'absolute', top: '8px', left: '8px',
-                                  background: '#f59e0b', color: '#000000',
-                                  fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em',
-                                  padding: '4px 8px', borderRadius: '6px'
+                                  position: 'absolute', top: '12px', left: '12px', right: '12px',
+                                  background: bannerColor, color: bannerText,
+                                  fontSize: '16px', fontWeight: 800, letterSpacing: '0.03em',
+                                  padding: '8px 14px', borderRadius: '8px',
+                                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
                                 }}>
-                                  Rented
+                                  {statusLabel}
                                 </div>
                               </>
                             )}
                           </div>
                         )}
-                        {/* Available cars keep the green pill; a rented car with no
-                            photo still gets a text badge as a fallback. */}
-                        {(!isRented || !(vehicle.images && vehicle.images[0])) && (
+                        {/* Available cars keep the small green pill; a rented/unavailable
+                            car with no photo still gets a text badge as a fallback. */}
+                        {(!statusLabel || !(vehicle.images && vehicle.images[0])) && (
                           <div style={{
                             display: 'inline-block',
                             fontSize: '11px',
@@ -236,10 +243,10 @@ const MapView = ({
                             padding: '2px 8px',
                             borderRadius: '999px',
                             marginBottom: '6px',
-                            background: isRented ? '#fef3c7' : '#dcfce7',
-                            color: isRented ? '#92400e' : '#166534'
+                            background: isUnavailable ? '#f3f4f6' : (isRented ? '#fef3c7' : '#dcfce7'),
+                            color: isUnavailable ? '#374151' : (isRented ? '#92400e' : '#166534')
                           }}>
-                            {isRented ? 'Rented' : 'Available'}
+                            {statusLabel || 'Available'}
                           </div>
                         )}
                         <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600' }}>
