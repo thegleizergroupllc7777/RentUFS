@@ -657,13 +657,33 @@ router.get('/commissions', adminAuth, async (req, res) => {
     const hostMap = new Map(referredHosts.map((h) => [String(h._id), h]));
     const hostIds = referredHosts.map((h) => h._id);
 
-    // Paid, non-cancelled, non-refunded bookings for those hosts that started this month.
+    // Paid, non-cancelled bookings for those hosts whose trip OVERLAPS this month —
+    // not only ones that STARTED in it. A trip spanning two months is picked up by
+    // both months so each month is credited just its own portion (see daysInMonth),
+    // exactly like the Insurance report. This keeps June days in June and July days
+    // in July instead of dumping a whole cross-month trip into its start month.
     const bookings = await Booking.find({
       host: { $in: hostIds },
-      startDate: { $gte: start, $lte: end },
+      startDate: { $lte: end },
+      endDate: { $gte: start },
       status: { $nin: ['cancelled', 'awaiting_payment'] },
       paymentStatus: 'paid'
     }).populate('vehicle', 'make model year').select('host vehicle totalDays reservationId startDate endDate status').lean();
+
+    // Commission days that fall inside THIS month for a trip. Mirrors the Insurance
+    // report's coverageDaysInMonth exactly: count each day in [startDate, endDate)
+    // that lands in the selected month, so a two-month trip splits cleanly and the
+    // months sum to the full trip length. Return day isn't counted (same as before).
+    const daysInMonth = (b) => {
+      const s = new Date(b.startDate);
+      const e = new Date(b.endDate);
+      let count = 0;
+      let guard = 0; // hard stop against any corrupt/runaway date range
+      for (let d = new Date(s); d < e && guard < 400; d.setUTCDate(d.getUTCDate() + 1), guard++) {
+        if (d.getUTCFullYear() === year && d.getUTCMonth() + 1 === month) count++;
+      }
+      return count;
+    };
 
     // Salesperson names.
     const salespersonIds = [...new Set(referredHosts.map((h) => String(h.referredBy)))];
@@ -677,10 +697,11 @@ router.get('/commissions', adminAuth, async (req, res) => {
       const host = hostMap.get(String(b.host));
       if (!host || !host.referredBy) continue;
       const spId = String(host.referredBy);
+      const days = daysInMonth(b);
+      if (days <= 0) continue; // trip touches the month's edge but has no days inside it
       if (!tally[spId]) {
         tally[spId] = { salespersonId: spId, salesperson: spMap.get(spId) || 'Unknown', days: 0, rentals: 0, rows: [] };
       }
-      const days = b.totalDays || 0;
       tally[spId].days += days;
       tally[spId].rentals += 1;
       grandTotalDays += days;
