@@ -195,14 +195,7 @@ const MapView = ({
                 >
                   {activeMarker === vehicle._id && (
                     <InfoWindow onCloseClick={() => setActiveMarker(null)}>
-                      {/* Rented popups go orange across the WHOLE card (not just the
-                          photo) so they read as taken at a glance. */}
-                      <div style={{
-                        minWidth: '200px',
-                        padding: isRented ? '10px' : '4px',
-                        borderRadius: isRented ? '10px' : undefined,
-                        background: isRented ? '#fdba74' : undefined
-                      }}>
+                      <div style={{ minWidth: '200px', padding: '4px' }}>
                         {vehicle.images && vehicle.images[0] && (
                           <div style={{ position: 'relative', marginBottom: '8px' }}>
                             <img
