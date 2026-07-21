@@ -209,19 +209,21 @@ const MapView = ({
                                 display: 'block'
                               }}
                             />
-                            {/* Rented cars get a bold banner spanning the thumbnail,
-                                matching the marketplace scroll cards. Host-paused
-                                ('unavailable') cars never reach the map — they're
-                                filtered out server-side — so Rented is the only banner. */}
+                            {/* Rented cars get an orange-tinted thumbnail with a bold,
+                                slanted "Rented" stamp so they clearly stand out on the
+                                map. Host-paused ('unavailable') cars never reach the map —
+                                they're filtered out server-side — so Rented is the only stamp. */}
                             {isRented && (
                               <>
-                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', borderRadius: '8px' }} />
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(234,88,12,0.42)', borderRadius: '8px' }} />
                                 <div style={{
-                                  position: 'absolute', top: '12px', left: '12px', right: '12px',
+                                  position: 'absolute', top: '50%', left: '50%',
+                                  transform: 'translate(-50%, -50%) rotate(-8deg)',
                                   background: '#f59e0b', color: '#000000',
-                                  fontSize: '16px', fontWeight: 800, letterSpacing: '0.03em',
-                                  padding: '8px 14px', borderRadius: '8px',
-                                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                                  fontSize: '20px', fontWeight: 800, letterSpacing: '0.06em',
+                                  padding: '8px 30px', borderRadius: '6px',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   Rented
                                 </div>
