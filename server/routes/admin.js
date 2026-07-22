@@ -114,17 +114,20 @@ router.get('/hosts/:id/portal-payout-view', adminAuth, async (req, res) => {
     const items = [];
     let total = 0;
 
-    // Completed → full segment earnings (mirrors the host portal exactly:
-    // raw earnings are summed, the total is rounded once at the end).
+    // Completed → REMAINING earnings (full segment earnings minus any partial
+    // already paid mid-trip), matching the host portal and what will actually be
+    // transferred. Trips with no partial are unchanged (already paid = 0).
     for (const b of completedBookings) {
       const segments = getBookingSegments(b);
-      const raw = segments.reduce((s, seg) => s + seg.earnings, 0);
-      total += raw;
+      const full = segments.reduce((s, seg) => s + seg.earnings, 0);
+      const alreadyPaid = b.partialPayoutTotal || 0;
+      const remaining = Math.max(0, full - alreadyPaid);
+      total += remaining;
       items.push({
         reservationId: b.reservationId || '—',
         vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
-        note: 'Full earnings',
-        amount: parseFloat(raw.toFixed(2))
+        note: alreadyPaid > 0 ? `Remaining ($${alreadyPaid.toFixed(2)} already paid)` : 'Full earnings',
+        amount: parseFloat(remaining.toFixed(2))
       });
     }
 

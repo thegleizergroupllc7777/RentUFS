@@ -29,7 +29,7 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
           {isActive && <span className="status-badge active-trip">Active Trip</span>}
         </div>
         <div className="reservation-card-right">
-          <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : booking.hostEarnings)}</span>
+          <span className="reservation-amount">{formatCurrency(isPaid ? booking.payoutAmount : (booking.amountRemaining != null ? booking.amountRemaining : booking.hostEarnings))}</span>
           {isPaid ? (
             <span className="status-badge paid">Paid</span>
           ) : (
@@ -134,6 +134,18 @@ const ReservationCard = ({ booking, formatCurrency, formatDate, isPaid }) => {
               <span className="detail-label">Your Earnings</span>
               <span className="detail-value">{formatCurrency(booking.hostEarnings)}</span>
             </div>
+            {booking.amountAlreadyPaid > 0 && (
+              <>
+                <div className="detail-row deduction">
+                  <span className="detail-label">Already Paid Out</span>
+                  <span className="detail-value" style={{ color: '#10b981' }}>-{formatCurrency(booking.amountAlreadyPaid)}</span>
+                </div>
+                <div className="detail-row total">
+                  <span className="detail-label">Remaining This Payout</span>
+                  <span className="detail-value">{formatCurrency(booking.amountRemaining)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {isActive && booking.totalExpectedEarnings > 0 && (
