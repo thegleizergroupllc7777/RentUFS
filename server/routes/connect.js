@@ -446,14 +446,21 @@ router.get('/pending-payouts', auth, async (req, res) => {
       });
     }
 
-    // Calculate totals — completed earnings + active unpaid served earnings
-    const totalCompletedPending = completedBookings.reduce((sum, b) => sum + completedSegmentsMap.get(b._id.toString()).correctEarnings, 0);
+    // Calculate totals — completed REMAINING earnings (full minus any partial
+    // already paid mid-trip) + active unpaid served earnings, so the pending
+    // total matches what will actually be transferred.
+    const totalCompletedPending = completedBookings.reduce((sum, b) => {
+      const ce = completedSegmentsMap.get(b._id.toString()).correctEarnings;
+      return sum + Math.max(0, ce - (b.partialPayoutTotal || 0));
+    }, 0);
     const totalActivePending = activeEntries.reduce((sum, e) => sum + e.unpaidAmount, 0);
     const totalPending = totalCompletedPending + totalActivePending;
 
     // Map completed bookings
     const completedEntries = completedBookings.map(b => {
       const { segments, correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = completedSegmentsMap.get(b._id.toString());
+      const amountAlreadyPaid = parseFloat((b.partialPayoutTotal || 0).toFixed(2));
+      const amountRemaining = parseFloat(Math.max(0, correctEarnings - amountAlreadyPaid).toFixed(2));
       return {
         id: b._id,
         reservationId: b.reservationId,
@@ -471,6 +478,8 @@ router.get('/pending-payouts', auth, async (req, res) => {
         hostPlatformFee: parseFloat(correctHostFee.toFixed(2)),
         hostProcessingFee: parseFloat(hostProcessingFee.toFixed(2)),
         hostEarnings: parseFloat(correctEarnings.toFixed(2)),
+        amountAlreadyPaid,
+        amountRemaining,
         payoutStatus: b.payoutStatus,
         payoutEligibleDate: b.payoutEligibleDate || b.endDate,
         bookingStatus: 'completed',
@@ -988,12 +997,20 @@ router.get('/payouts-summary', auth, async (req, res) => {
       });
     }
 
-    const totalCompletedPending = completedBookings.reduce((sum, b) => sum + completedSegmentsMap.get(b._id.toString()).correctEarnings, 0);
+    // Completed trips: subtract any partial already paid mid-trip so the pending
+    // total matches what will actually be transferred (the payout engine pays
+    // only the remainder). Trips with no partial are unchanged (paid = 0).
+    const totalCompletedPending = completedBookings.reduce((sum, b) => {
+      const ce = completedSegmentsMap.get(b._id.toString()).correctEarnings;
+      return sum + Math.max(0, ce - (b.partialPayoutTotal || 0));
+    }, 0);
     const totalActivePending = activeEntries.reduce((sum, e) => sum + e.unpaidAmount, 0);
     const totalPending = totalCompletedPending + totalActivePending;
 
     const completedEntries = completedBookings.map(b => {
       const { segments, correctHostFee, rentalSubtotal, hostProcessingFee, correctEarnings } = completedSegmentsMap.get(b._id.toString());
+      const amountAlreadyPaid = parseFloat((b.partialPayoutTotal || 0).toFixed(2));
+      const amountRemaining = parseFloat(Math.max(0, correctEarnings - amountAlreadyPaid).toFixed(2));
       return {
         id: b._id, reservationId: b.reservationId,
         vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Unknown',
@@ -1007,6 +1024,8 @@ router.get('/payouts-summary', auth, async (req, res) => {
         hostPlatformFee: parseFloat(correctHostFee.toFixed(2)),
         hostProcessingFee: parseFloat(hostProcessingFee.toFixed(2)),
         hostEarnings: parseFloat(correctEarnings.toFixed(2)),
+        amountAlreadyPaid,
+        amountRemaining,
         payoutStatus: b.payoutStatus,
         payoutEligibleDate: b.payoutEligibleDate || b.endDate,
         bookingStatus: 'completed',
