@@ -615,14 +615,42 @@ const AdminUserDetail = () => {
                       <ProfileRow label="Version" value={user.hostAgreement.version || '—'} />
                       <ProfileRow label="Signed from (IP)" value={user.hostAgreement.ipAddress || '—'} />
                     </div>
-                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#374151' }}>
-                      <div>✅ Primary Insurance Requirement {user.hostAgreement.acknowledgedPrimaryInsurance ? 'acknowledged' : '—'}</div>
-                      <div>✅ Coverage Limitations {user.hostAgreement.acknowledgedCoverageLimits ? 'acknowledged' : '—'}</div>
-                      <div>✅ Catastrophic $300k Cap {user.hostAgreement.acknowledgedCatastrophicCap ? 'acknowledged' : '—'}</div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#374151', display: 'grid', gap: '0.6rem' }}>
+                      <div>{user.hostAgreement.acknowledgedPrimaryInsurance ? '✅' : '—'} <strong>Primary Insurance Requirement:</strong> I understand that I must maintain my own personal or commercial auto insurance policy at all times. RentUFS's insurance is not a replacement for my primary insurance. If I fail to maintain my required insurance, RentUFS will not provide coverage and any claim will be denied.</div>
+                      <div>{user.hostAgreement.acknowledgedCoverageLimits ? '✅' : '—'} <strong>Coverage Limitations:</strong> I understand and agree that RentUFS's auto liability coverage applies only during the rental period and provides the minimum limits required by state law. No PIP, MedPay, UM, or UIM coverage is included unless required by law.</div>
+                      <div>{user.hostAgreement.acknowledgedCatastrophicCap ? '✅' : '—'} <strong>Catastrophic Loss Cap:</strong> I understand that if a major event damages multiple vehicles stored at a single location, the total payout for that location is capped at $300,000. Storing vehicles at different locations can reduce this risk.</div>
                     </div>
                   </>
                 ) : (
                   <div className="admin-empty">Not signed yet.</div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Liability-Only consent — proof the host accepted liability-only coverage.
+              Shown only when this host is set to LIABILITY. */}
+          {(user.userType === 'host' || user.userType === 'both') && coverageType === 'LIABILITY' && (
+            <>
+              <h3 style={{ color: '#374151' }}>Liability-Only consent</h3>
+              <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+                {user.liabilityConsent?.consented ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                      <ProfileRow label="Status" value={<span className="badge active-acct">consented</span>} />
+                      <ProfileRow label="Consented on" value={formatDateTime(user.liabilityConsent.consentedAt)} />
+                      <ProfileRow label="Signature" value={<span style={{ fontFamily: 'cursive', fontSize: '1.15rem', color: '#111827' }}>{user.liabilityConsent.signature || '—'}</span>} />
+                      <ProfileRow label="Version" value={user.liabilityConsent.version || '—'} />
+                      <ProfileRow label="Signed from (IP)" value={user.liabilityConsent.ipAddress || '—'} />
+                    </div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#374151', display: 'grid', gap: '0.6rem' }}>
+                      {(user.liabilityConsent.agreedText || []).map((t, i) => (
+                        <div key={i}>✅ {t}</div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="admin-empty" style={{ color: '#92400e' }}>⏳ Pending host consent — this host is set to Liability-Only, awaiting their signed consent.</div>
                 )}
               </div>
             </>
