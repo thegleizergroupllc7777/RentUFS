@@ -194,7 +194,7 @@ const MapView = ({
                   onMouseOut={() => setHoveredVehicle(null)}
                 >
                   {activeMarker === vehicle._id && (
-                    <InfoWindow onCloseClick={() => setActiveMarker(null)}>
+                    <InfoWindow onCloseClick={() => setActiveMarker(null)} options={{ disableAutoPan: true }}>
                       <div style={{ minWidth: '200px', padding: '4px' }}>
                         {vehicle.images && vehicle.images[0] && (
                           <div style={{ position: 'relative', marginBottom: '8px' }}>
