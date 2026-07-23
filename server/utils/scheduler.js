@@ -2,14 +2,14 @@ const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
-const { sendEmail, sendReturnReminderEmail, sendRegistrationExpirationReminder, sendVehiclePausedEmail, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
+const { sendEmail, sendReturnReminderEmail, sendOverdueReminderEmail, sendRegistrationExpirationReminder, sendVehiclePausedEmail, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
 const { HOLIDAY_TEMPLATES, holidayEmailHtml, holidayForDate } = require('./holidayEmails');
-const { sendOverdueReminderSMS } = require('./smsService');
+const { sendOverdueReminderSMS, sendReturnReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
 const { checkAndSettleScheduledCharges } = require('./chargeSettlement');
 const { processLateReturns } = require('./lateFees');
-const { isBookingEligible } = require('./lateReturn');
+const { isBookingEligible, isChargingEnabled } = require('./lateReturn');
 const { returnMomentForBooking } = require('./vehicleTimezone');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
@@ -17,7 +17,13 @@ const checkAndSendReturnReminders = async () => {
   try {
     const now = new Date();
 
-    // Find active bookings that haven't had a reminder email sent yet
+    // Only the late-fee system's 2h/1h/30m warnings should REPLACE this reminder,
+    // and those only fire when charging is actually ON. While charging is OFF
+    // (default), the late-fee system sends nothing — so this reminder must cover
+    // EVERY active booking, new or old, or newer bookings would get no warning.
+    const chargingOn = await isChargingEnabled();
+
+    // Find active bookings that haven't had a reminder sent yet
     const activeBookings = await Booking.find({
       status: 'active',
       returnReminderSent: { $ne: true }
@@ -29,10 +35,10 @@ const checkAndSendReturnReminders = async () => {
     let remindersSent = 0;
 
     for (const booking of activeBookings) {
-      // Late-fee-eligible bookings get the newer, more urgent late-fee reminders
-      // (2h/1h/30m, email + text) instead of this generic one — skip to avoid a
-      // duplicate 1-hour email. Every other booking still gets this reminder.
-      if (isBookingEligible(booking)) continue;
+      // Skip ONLY when charging is ON and this booking is late-fee-eligible —
+      // then the late-fee system's 2h/1h/30m warnings handle it and we'd double up.
+      // With charging OFF, nothing is skipped: every booking gets this reminder.
+      if (chargingOn && isBookingEligible(booking)) continue;
 
       // The real return moment, resolved in the VEHICLE's local timezone — so a
       // Pacific drop-off isn't read on the server clock and fired hours early.
@@ -45,23 +51,33 @@ const checkAndSendReturnReminders = async () => {
       // Send email reminder if booking ends within 30 minutes to 90 minutes (approximately 1 hour window)
       // This window ensures we catch bookings even if the scheduler runs every 10-15 minutes
       if (hoursUntilEnd > 0.5 && hoursUntilEnd <= 1.5) {
-        console.log(`⏰ Sending return reminder email for booking ${booking.reservationId} (ends in ${hoursUntilEnd.toFixed(1)} hours)`);
+        console.log(`⏰ Sending return reminder for booking ${booking.reservationId} (ends in ${hoursUntilEnd.toFixed(1)} hours)`);
 
-        const result = await sendReturnReminderEmail(
+        // Email the renter…
+        const emailResult = await sendReturnReminderEmail(
           booking.driver,
           booking,
           booking.vehicle,
           booking.host
         );
 
-        if (result.success) {
+        // …and text them too — people out driving check texts, not email.
+        let smsResult = { success: false };
+        if (booking.driver?.phone) {
+          smsResult = await sendReturnReminderSMS(booking.driver, booking, booking.vehicle, booking.host)
+            .catch(err => { console.error(`📱 Return reminder SMS error for ${booking.reservationId}:`, err.message); return { success: false }; });
+        }
+
+        // Mark sent if EITHER channel went out, so we never re-blast the one that
+        // did succeed just because the other failed.
+        if (emailResult.success || smsResult.success) {
           booking.returnReminderSent = true;
           booking.returnReminderSentAt = new Date();
           await booking.save();
           remindersSent++;
-          console.log(`✅ Return reminder email sent for booking ${booking.reservationId}`);
+          console.log(`✅ Return reminder sent for booking ${booking.reservationId} (email: ${emailResult.success ? 'ok' : 'fail'}, sms: ${smsResult.success ? 'ok' : (booking.driver?.phone ? 'fail' : 'no phone')})`);
         } else {
-          console.error(`❌ Failed to send return reminder email for booking ${booking.reservationId}`);
+          console.error(`❌ Failed to send return reminder for booking ${booking.reservationId}`);
         }
       }
     }
@@ -108,25 +124,43 @@ const checkAndSendOverdueSMS = async () => {
           ? `${diffDays} day${diffDays > 1 ? 's' : ''}`
           : `${Math.max(1, diffHours)} hour${diffHours !== 1 ? 's' : ''}`;
 
-        // Only send SMS if driver has a phone number
-        if (booking.driver?.phone) {
-          console.log(`🚨 Sending overdue SMS for booking ${booking.reservationId} (${overdueInfo} overdue)`);
+        console.log(`🚨 Sending overdue reminder for booking ${booking.reservationId} (${overdueInfo} overdue)`);
 
+        // Email the renter (works even with no phone on file)…
+        let emailOk = false;
+        try {
+          const emailResult = await sendOverdueReminderEmail(
+            booking.driver,
+            booking,
+            booking.vehicle,
+            overdueInfo,
+            booking.host
+          );
+          emailOk = !!emailResult?.success;
+        } catch (e) {
+          console.error(`📧 Overdue email error for ${booking.reservationId}:`, e.message);
+        }
+
+        // …and text them (only if we have a phone number).
+        let smsOk = false;
+        if (booking.driver?.phone) {
           const smsResult = await sendOverdueReminderSMS(
             booking.driver,
             booking,
             booking.vehicle,
             overdueInfo
           );
+          smsOk = !!smsResult?.success;
+          if (smsOk) console.log(`📱 Overdue SMS sent for booking ${booking.reservationId}`);
+          else console.error(`📱 Failed to send overdue SMS for booking ${booking.reservationId}: ${smsResult.error}`);
+        }
 
-          if (smsResult.success) {
-            booking.smsReturnReminderSent = true;
-            await booking.save();
-            smsSent++;
-            console.log(`📱 Overdue SMS sent for booking ${booking.reservationId}`);
-          } else {
-            console.error(`📱 Failed to send overdue SMS for booking ${booking.reservationId}: ${smsResult.error}`);
-          }
+        // Mark sent if EITHER channel went out, so we don't re-blast every 10 min.
+        if (emailOk || smsOk) {
+          booking.smsReturnReminderSent = true;
+          await booking.save();
+          smsSent++;
+          console.log(`✅ Overdue reminder sent for booking ${booking.reservationId} (email: ${emailOk ? 'ok' : 'fail'}, sms: ${smsOk ? 'ok' : (booking.driver?.phone ? 'fail' : 'no phone')})`);
         }
       }
     }

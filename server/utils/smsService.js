@@ -152,6 +152,17 @@ const sendOverdueReminderSMS = async (driver, booking, vehicle, overdueInfo) => 
   return sendSMS(driver.phone, body);
 };
 
+// "Ending soon" reminder text (~1 hour before the return time). The text
+// companion to the return-reminder email — people on the road check texts, not
+// email. REMINDER only: return or extend. Charges nothing.
+const sendReturnReminderSMS = async (driver, booking, vehicle, host) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  const dropoffTime = booking.dropoffTime || '10:00';
+  const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental';
+  const body = `RentUFS: Hi ${driver.firstName || 'there'}, your ${vLabel} rental ends soon (due back at ${dropoffTime}). Return on time or extend to keep your insurance active: ${clientUrl}/my-bookings`;
+  return sendSMS(driver.phone, body);
+};
+
 // Advance late-return warning text (2h / 1h / 30m before the return time).
 // Short and escalating; caller checks SMS consent before sending.
 const sendLateReturnWarningSMS = async (driver, booking, vehicle, stage) => {
@@ -187,6 +198,7 @@ module.exports = {
   sendBookingCompletedSMS,
   sendBookingCancelledSMS,
   sendDriverCancelledNotificationSMS,
+  sendReturnReminderSMS,
   sendOverdueReminderSMS,
   sendLateReturnWarningSMS
 };

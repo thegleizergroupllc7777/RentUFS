@@ -952,6 +952,150 @@ const getVehicleImageUrl = (vehicle) => {
   return `${apiUrl}${img}`;
 };
 
+// Urgent "your rental is past due" email — the email companion to the overdue
+// text. This is a REMINDER only (return or extend to keep insurance active). It
+// does NOT charge anyone and is completely separate from the late-fee system.
+// `host` is optional; when present we show the host's contact info.
+const sendOverdueReminderEmail = async (driver, booking, vehicle, overdueInfo, host) => {
+  try {
+    const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dropoffTime = formatTime12h(booking.dropoffTime || booking.pickupTime);
+    const vehicleImageUrl = getVehicleImageUrl(vehicle);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] Overdue Reminder Email to Driver: ${driver.email}`);
+      return { success: true, dev: true };
+    }
+
+    const mailOptions = {
+      to: driver.email,
+      subject: `⚠️ Action needed: Your ${vehicle.year} ${vehicle.make} ${vehicle.model} rental is ${overdueInfo} past due`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
+            .detail-row { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { color: #6b7280; }
+            .value { font-weight: bold; color: #111827; }
+            .host-info { background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .footer { background: #00FF66; text-align: center; color: #000000; padding: 20px; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div style="padding: 0; border: 3px solid #dc2626; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
+              <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
+                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+              </div>
+              <div style="background: #dc2626; padding: 18px 20px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">🚨 Rental Past Due</h1>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.95); font-size: 0.95rem;">Your reservation is ${overdueInfo} overdue</p>
+              </div>
+            </div>
+
+            <div class="content">
+              <h2>Hi ${driver.firstName},</h2>
+              <p>Our records show your rental is now <strong>${overdueInfo} past its return time</strong>. Please return the vehicle or extend your reservation as soon as possible.</p>
+
+              <div style="background: #fef2f2; border: 1px solid #dc2626; border-radius: 8px; padding: 14px 16px; margin: 20px 0;">
+                <p style="margin: 0; color: #991b1b; font-size: 0.95rem;">
+                  ⚠️ <strong>Your insurance coverage may no longer be active</strong> once the rental period ends. Extending your reservation keeps you covered.
+                </p>
+              </div>
+
+              <div class="booking-card">
+                <div style="background: #fee2e2; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                  <span style="color: #6b7280; font-size: 0.85rem;">Reservation ID</span><br>
+                  <span style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #dc2626;">${booking.reservationId || booking._id}</span>
+                </div>
+                ${vehicleImageUrl ? `
+                <div style="text-align: center; margin-bottom: 15px;">
+                  <img src="${vehicleImageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; object-fit: cover;" />
+                </div>
+                ` : ''}
+                <h3 style="margin-top: 0; color: #dc2626;">${vehicle.year} ${vehicle.make} ${vehicle.model}</h3>
+                <div class="detail-row">
+                  <span class="label">Was Due Back</span>
+                  <span class="value">${endDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Time</span>
+                  <span class="value" style="color: #dc2626;">${dropoffTime}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Location</span>
+                  <span class="value">
+                    ${vehicle.location?.address ? `${vehicle.location.address}<br>` : ''}${vehicle.location?.city || 'N/A'}, ${vehicle.location?.state || 'N/A'} ${vehicle.location?.zipCode || ''}
+                  </span>
+                </div>
+              </div>
+
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${clientUrl}/my-bookings" style="background:#dc2626;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
+                  Return or Extend Now
+                </a>
+              </div>
+
+              ${host ? `
+              <div class="host-info">
+                <h4 style="margin-top: 0; color: #1d4ed8;">Need Help? Contact Your Host</h4>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${host.firstName} ${host.lastName}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${host.email}</p>
+                ${host.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${host.phone}</p>` : ''}
+              </div>
+              ` : ''}
+            </div>
+
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} RentUFS. All rights reserved.</p>
+              <p>Booking ID: ${booking._id}</p>
+              <p style="margin: 5px 0 0 0; font-size: 0.8rem;">597 West Side Ave PMB 194, Jersey City, NJ 07304</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${driver.firstName},
+
+Our records show your rental is now ${overdueInfo} past its return time. Please return the vehicle or extend your reservation as soon as possible.
+
+IMPORTANT: Your insurance coverage may no longer be active once the rental period ends. Extending your reservation keeps you covered.
+
+Reservation ID: ${booking.reservationId || booking._id}
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+Was Due Back: ${endDate} at ${dropoffTime}
+
+Return or extend now: ${clientUrl}/my-bookings
+${host ? `
+Need help? Contact your host:
+- Name: ${host.firstName} ${host.lastName}
+- Email: ${host.email}
+- Phone: ${host.phone || 'Not provided'}
+` : ''}
+Thank you,
+The RentUFS Team
+      `
+    };
+
+    const result = await sendEmail(mailOptions);
+    if (result.success) {
+      console.log('✅ Overdue reminder email sent to driver:', driver.email);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending overdue reminder email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Send booking extension confirmation email to driver and host
 const sendBookingExtensionEmail = async (driver, host, booking, vehicle) => {
   try {
@@ -2732,6 +2876,7 @@ module.exports = {
   sendBookingConfirmationToDriver,
   sendBookingNotificationToHost,
   sendReturnReminderEmail,
+  sendOverdueReminderEmail,
   sendBookingExtensionEmail,
   sendBookingCancellationEmail,
   sendEmailVerificationCode,
