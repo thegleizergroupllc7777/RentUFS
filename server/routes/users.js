@@ -218,6 +218,92 @@ router.put('/host-agreement', auth, async (req, res) => {
   }
 });
 
+// ── Liability-Only coverage consent ─────────────────────────────────────────
+// Recorded proof that a host knowingly accepted Liability-Only coverage (no
+// physical-damage protection on their own vehicle). This is PURELY a record —
+// it does not create bookings, move money, or start/stop insurance or tolls.
+// The full wording lives here (server-side) so the snapshot we store always
+// matches exactly what the host was shown when they agreed.
+const LIABILITY_CONSENT_VERSION = 'July 2026';
+const LIABILITY_CONSENT_ACKS = [
+  {
+    key: 'elected',
+    label: 'Liability-Only Coverage Elected',
+    text: 'I understand and agree that I have elected Liability-Only coverage for my vehicle(s) on RentUFS. This coverage applies only during the rental period and covers liability claims to third parties up to the minimum limits required by state law.'
+  },
+  {
+    key: 'noPhysicalDamage',
+    label: 'No Physical Damage Coverage',
+    text: 'I understand that Liability-Only coverage does NOT cover physical damage to, theft of, or loss of my own vehicle during a rental — including collision, comprehensive, vandalism, and fire. I accept full responsibility for any such damage or loss to my vehicle.'
+  },
+  {
+    key: 'voluntary',
+    label: 'Voluntary Election & Risk Acceptance',
+    text: 'I am voluntarily choosing Liability-Only coverage instead of Full Coverage, I understand the difference, and I accept the associated risk. I understand I may request to switch to Full Coverage for future rentals.'
+  }
+];
+
+// GET: current wording + this host's coverage type + consent status. Read-only.
+// The host portal uses this to decide whether to show the consent prompt and to
+// render the exact same wording that will be snapshotted on submit.
+router.get('/liability-consent', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('hostInfo.coverageType liabilityConsent');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({
+      version: LIABILITY_CONSENT_VERSION,
+      acks: LIABILITY_CONSENT_ACKS,
+      coverageType: user.hostInfo?.coverageType || 'FULL_COVERAGE',
+      consent: user.liabilityConsent || null
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// PUT: host submits the Liability-Only consent (all 3 acknowledgments + typed
+// signature). Records it with a snapshot of the exact agreed wording. Does NOT
+// change coverageType (that stays admin-controlled) — it only records consent.
+router.put('/liability-consent', auth, async (req, res) => {
+  try {
+    const {
+      signature,
+      acknowledgedElected,
+      acknowledgedNoPhysicalDamage,
+      acknowledgedVoluntary
+    } = req.body;
+
+    if (!acknowledgedElected || !acknowledgedNoPhysicalDamage || !acknowledgedVoluntary) {
+      return res.status(400).json({ message: 'All three acknowledgments are required.' });
+    }
+    const typed = (signature || '').trim();
+    if (typed.length < 2) {
+      return res.status(400).json({ message: 'Please type your full legal name to sign.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.liabilityConsent = {
+      consented: true,
+      consentedAt: new Date(),
+      signature: typed.slice(0, 100),
+      acknowledgedElected: true,
+      acknowledgedNoPhysicalDamage: true,
+      acknowledgedVoluntary: true,
+      ipAddress: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || null,
+      version: LIABILITY_CONSENT_VERSION,
+      // Self-contained proof: store the exact full paragraphs agreed to.
+      agreedText: LIABILITY_CONSENT_ACKS.map((a) => `${a.label}: ${a.text}`)
+    };
+    await user.save();
+
+    res.json({ success: true, liabilityConsent: user.liabilityConsent });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update profile image only
 router.put('/profile-image', auth, async (req, res) => {
   try {

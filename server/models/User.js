@@ -303,6 +303,24 @@ const userSchema = new mongoose.Schema({
     // Version of the agreement the host signed, so we can re-prompt if it changes.
     version: { type: String, default: null }
   },
+  // Liability-Only coverage consent + e-signature. Captured ONLY for hosts whose
+  // hostInfo.coverageType is LIABILITY — recorded proof that the host knowingly
+  // accepted liability-only coverage (no physical-damage protection on their own
+  // vehicle). The exact agreed wording is snapshotted (agreedText) so each record
+  // is self-contained proof. This is PURELY a record: it does not affect bookings,
+  // payments, insurance coverage start/stop, or tolls.
+  liabilityConsent: {
+    consented: { type: Boolean, default: false },
+    consentedAt: { type: Date, default: null },
+    signature: { type: String, default: '' }, // typed full legal name
+    acknowledgedElected: { type: Boolean, default: false },
+    acknowledgedNoPhysicalDamage: { type: Boolean, default: false },
+    acknowledgedVoluntary: { type: Boolean, default: false },
+    ipAddress: { type: String, default: null },
+    version: { type: String, default: null },
+    // Snapshot of the exact full paragraphs the host agreed to, at signing time.
+    agreedText: { type: [String], default: undefined }
+  },
   paymentMethods: [{
     nickname: { type: String, trim: true },
     cardBrand: { type: String, trim: true },
