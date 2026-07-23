@@ -204,6 +204,45 @@ const DriverProfile = () => {
   // Refer tab state (host storefront share link)
   const [referCopied, setReferCopied] = useState(false);
 
+  // Coverage tab state (Liability-Only consent — shown only for LIABILITY hosts)
+  const [liabilityData, setLiabilityData] = useState(null);
+  const [covAck1, setCovAck1] = useState(false);
+  const [covAck2, setCovAck2] = useState(false);
+  const [covAck3, setCovAck3] = useState(false);
+  const [covSignature, setCovSignature] = useState('');
+  const [covSubmitting, setCovSubmitting] = useState(false);
+  const [covError, setCovError] = useState('');
+
+  // Load this host's Liability-Only consent status/wording (hosts only).
+  useEffect(() => {
+    if (!isHost) return;
+    const token = localStorage.getItem('token');
+    axios.get(`${API_URL}/api/users/liability-consent`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setLiabilityData(res.data))
+      .catch(() => {});
+  }, [isHost]);
+
+  // Submit the Liability-Only consent (3 acknowledgments + typed signature).
+  const submitLiabilityConsent = async () => {
+    if (!covAck1 || !covAck2 || !covAck3) { setCovError('Please check all three boxes to continue.'); return; }
+    if (covSignature.trim().length < 2) { setCovError('Please type your full legal name to sign.'); return; }
+    setCovSubmitting(true); setCovError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`${API_URL}/api/users/liability-consent`, {
+        signature: covSignature.trim(),
+        acknowledgedElected: covAck1,
+        acknowledgedNoPhysicalDamage: covAck2,
+        acknowledgedVoluntary: covAck3
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setLiabilityData((prev) => ({ ...(prev || {}), consent: res.data.liabilityConsent }));
+    } catch (err) {
+      setCovError(err.response?.data?.message || 'Failed to save consent. Please try again.');
+    } finally {
+      setCovSubmitting(false);
+    }
+  };
+
   // Integrations state
   const [tollspotActive, setTollspotActive] = useState(false);
   const [tollspotPending, setTollspotPending] = useState(false);
@@ -2467,6 +2506,65 @@ const DriverProfile = () => {
 
   const isDriver = user?.userType === 'driver' || user?.userType === 'both';
 
+  // Coverage tab (Liability-Only hosts only): consent prompt, or the signed record.
+  const renderCoverageTab = () => {
+    const consent = liabilityData?.consent;
+    const acks = liabilityData?.acks || [];
+    const kStyle = { fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' };
+    const vStyle = { fontSize: '0.9rem', color: '#e5e7eb', marginTop: '2px' };
+
+    if (consent?.consented) {
+      const lines = (consent.agreedText && consent.agreedText.length)
+        ? consent.agreedText
+        : acks.map((a) => `${a.label}: ${a.text}`);
+      return (
+        <div>
+          <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Coverage Consent</h3>
+          <div style={{ background: '#111214', border: '1px solid #2a2c2f', borderRadius: '12px', padding: '1.25rem' }}>
+            <span style={{ display: 'inline-block', background: '#0e3d22', color: '#22e06a', fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: '999px' }}>✅ Liability-Only — Consented</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
+              <div><div style={kStyle}>Consented on</div><div style={vStyle}>{new Date(consent.consentedAt).toLocaleString()}</div></div>
+              <div><div style={kStyle}>Signature</div><div style={{ ...vStyle, fontFamily: 'cursive', fontSize: '1.1rem' }}>{consent.signature}</div></div>
+              <div><div style={kStyle}>Version</div><div style={vStyle}>{consent.version}</div></div>
+            </div>
+            <div style={{ marginTop: '1rem', borderTop: '1px solid #2a2c2f', paddingTop: '0.85rem', display: 'grid', gap: '0.55rem' }}>
+              {lines.map((t, i) => (
+                <div key={i} style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5 }}><span style={{ color: '#22e06a', marginRight: '6px' }}>✔</span>{t}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <h3 style={{ marginBottom: '0.5rem', color: '#fff' }}>Confirm Your Coverage Choice</h3>
+        <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1rem' }}>
+          Your account is set to <span style={{ color: '#22e06a', fontWeight: 600 }}>Liability-Only</span> coverage. Please review and agree to continue.
+        </p>
+        {acks.map((a, idx) => {
+          const checked = idx === 0 ? covAck1 : idx === 1 ? covAck2 : covAck3;
+          const setter = idx === 0 ? setCovAck1 : idx === 1 ? setCovAck2 : setCovAck3;
+          return (
+            <label key={a.key} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#0f1011', border: '1px solid #2a2c2f', borderRadius: '10px', padding: '12px', marginBottom: '10px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={checked} onChange={(e) => setter(e.target.checked)} style={{ marginTop: '3px', width: '18px', height: '18px', accentColor: '#22e06a' }} />
+              <span style={{ fontSize: '0.85rem', lineHeight: 1.5, color: '#d1d5db' }}><strong style={{ color: '#fff' }}>{a.label}:</strong> {a.text}</span>
+            </label>
+          );
+        })}
+        <div style={{ margin: '14px 0 6px' }}>
+          <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Sign here (type your full legal name)</div>
+          <input type="text" value={covSignature} onChange={(e) => setCovSignature(e.target.value)} placeholder="Full legal name" style={{ width: '100%', background: '#0f1011', border: '1px solid #2a2c2f', borderRadius: '9px', padding: '11px 12px', color: '#fff', fontSize: '1rem', boxSizing: 'border-box' }} />
+        </div>
+        {covError && <div style={{ color: '#f87171', fontSize: '0.85rem', margin: '6px 0' }}>{covError}</div>}
+        <button onClick={submitLiabilityConsent} disabled={covSubmitting} style={{ width: '100%', marginTop: '10px', background: '#22e06a', color: '#04210f', fontWeight: 800, fontSize: '1rem', border: 'none', borderRadius: '10px', padding: '13px', cursor: covSubmitting ? 'default' : 'pointer', opacity: covSubmitting ? 0.7 : 1 }}>
+          {covSubmitting ? 'Saving…' : 'I Understand & Consent'}
+        </button>
+      </div>
+    );
+  };
+
   const tabs = [
     { id: 'profile', label: 'My Profile', alert: addressNeedsAttention },
     { id: 'license', label: "Driver's License" },
@@ -2476,7 +2574,12 @@ const DriverProfile = () => {
       { id: 'tax', label: 'Tax Settings', alert: taxNeedsAttention },
       { id: 'payouts', label: 'Payouts', alert: payoutsNeedAttention },
       { id: 'reports', label: 'Reports' },
-      { id: 'refer', label: 'Refer' }
+      { id: 'refer', label: 'Refer' },
+      // Coverage consent tab — appears only for Liability-Only hosts. Flags an
+      // alert until they've signed it.
+      ...(liabilityData?.coverageType === 'LIABILITY'
+        ? [{ id: 'coverage', label: 'Coverage', alert: !liabilityData?.consent?.consented }]
+        : [])
     ] : []),
     { id: 'settings', label: 'Settings' }
   ];
@@ -2664,6 +2767,7 @@ const DriverProfile = () => {
               {payoutsOpened && isHost && <div style={{ display: activeTab === 'payouts' ? 'block' : 'none' }}><PayoutsContent /></div>}
               {activeTab === 'reports' && isHost && renderReportsTab()}
               {activeTab === 'refer' && isHost && renderReferTab()}
+              {activeTab === 'coverage' && isHost && renderCoverageTab()}
               {activeTab === 'settings' && renderSettingsTab()}
             </div>
           </div>
