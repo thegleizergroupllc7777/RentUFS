@@ -103,26 +103,6 @@ const MapView = ({
     }
   };
 
-  // When a pin sits near the top of the map, gently drop the view as its popup
-  // opens so the popup (and its "View Details" button) clears the top controls
-  // bar. Only high pins move; pins already lower never budge. Display-only.
-  const ensurePopupVisible = useCallback((vehicle) => {
-    if (!map || !window.google) return;
-    const bounds = map.getBounds();
-    const div = map.getDiv();
-    const coords = vehicle?.location?.coordinates;
-    if (!bounds || !div || !coords) return;
-    const ne = bounds.getNorthEast();
-    const sw = bounds.getSouthWest();
-    const latSpan = ne.lat() - sw.lat();
-    if (latSpan <= 0) return;
-    const pinPixelY = ((ne.lat() - coords[1]) / latSpan) * div.offsetHeight;
-    const SAFE_TOP = 370; // clearance for the popup height + the top controls bar
-    if (pinPixelY < SAFE_TOP) {
-      map.panBy(0, pinPixelY - SAFE_TOP); // negative y shifts the map content DOWN
-    }
-  }, [map]);
-
   // Filter vehicles with valid coordinates (memoized, must be before early returns)
   const vehiclesWithCoords = useMemo(() => vehicles.filter(v =>
     v && v.location && v.location.coordinates &&
@@ -211,10 +191,11 @@ const MapView = ({
                   icon={isSelected ? MARKER_ICON_SELECTED : MARKER_ICON_DEFAULT}
                   onClick={() => handleMarkerClick(vehicle)}
                   onMouseOver={() => {
-                    const wasOpen = activeMarker === vehicle._id;
+                    // Highlight the pin and open its popup — but NEVER move the
+                    // map. disableAutoPan on the InfoWindow keeps the view still,
+                    // so hovering across pins no longer makes the map jump.
                     setHoveredVehicle(vehicle._id);
                     setActiveMarker(vehicle._id);
-                    if (!wasOpen) ensurePopupVisible(vehicle);
                   }}
                   onMouseOut={() => setHoveredVehicle(null)}
                 >
