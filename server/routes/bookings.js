@@ -1130,6 +1130,14 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
 
     // Update booking
     booking.endDate = newEndDate;
+    // Re-arm the return reminders for the NEW end time. They extended, so the
+    // earlier "ending soon / overdue" nudges shouldn't count against the new
+    // period — clearing these flags lets the same schedule run fresh for the new
+    // return time. Reminder flags only; nothing about money/insurance is touched.
+    booking.returnReminderSent = false;
+    booking.returnReminderSentAt = null;
+    booking.reminder30mSent = false;
+    booking.smsReturnReminderSent = false;
     booking.totalDays = booking.totalDays + extensionDays;
     booking.totalPrice = booking.totalPrice + extensionCost;
     booking.platformFee = (booking.platformFee || 0) + extensionPlatformFee;

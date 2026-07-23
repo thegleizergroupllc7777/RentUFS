@@ -345,6 +345,12 @@ const bookingSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Track if the 30-minutes-before "ending soon" text has been sent (the 1-hour
+  // stage uses returnReminderSent above). Both reset when a booking is extended.
+  reminder30mSent: {
+    type: Boolean,
+    default: false
+  },
   // ── Automatic late-return fee tracking ──
   // Only ever populated for bookings that agreed to the Automatic Late Return Fee
   // clause (see server/utils/lateReturn.js isBookingEligible). Every field is
