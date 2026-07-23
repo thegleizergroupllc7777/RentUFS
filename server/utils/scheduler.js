@@ -23,10 +23,14 @@ const checkAndSendReturnReminders = async () => {
     // EVERY active booking, new or old, or newer bookings would get no warning.
     const chargingOn = await isChargingEnabled();
 
-    // Find active bookings that haven't had a reminder sent yet
+    // A booking still needs a nudge if it's missing EITHER the 1-hour reminder
+    // or the 30-minute reminder. (Both flags reset when a booking is extended.)
     const activeBookings = await Booking.find({
       status: 'active',
-      returnReminderSent: { $ne: true }
+      $or: [
+        { returnReminderSent: { $ne: true } },
+        { reminder30mSent: { $ne: true } }
+      ]
     })
       .populate('vehicle')
       .populate('driver', 'firstName lastName email phone')
@@ -37,53 +41,66 @@ const checkAndSendReturnReminders = async () => {
     for (const booking of activeBookings) {
       // Skip ONLY when charging is ON and this booking is late-fee-eligible —
       // then the late-fee system's 2h/1h/30m warnings handle it and we'd double up.
-      // With charging OFF, nothing is skipped: every booking gets this reminder.
+      // With charging OFF, nothing is skipped: every booking gets these reminders.
       if (chargingOn && isBookingEligible(booking)) continue;
 
       // The real return moment, resolved in the VEHICLE's local timezone — so a
       // Pacific drop-off isn't read on the server clock and fired hours early.
       const endDate = returnMomentForBooking(booking);
+      const minsUntil = Math.floor((endDate.getTime() - now.getTime()) / 60000);
 
-      // Calculate time until end (in milliseconds)
-      const timeUntilEnd = endDate.getTime() - now.getTime();
-      const hoursUntilEnd = timeUntilEnd / (1000 * 60 * 60);
+      // Text the renter (people out driving check texts, not email). Safe no-op
+      // if no phone is on file.
+      const textRenter = async () => {
+        if (!booking.driver?.phone) return { success: false };
+        return sendReturnReminderSMS(booking.driver, booking, booking.vehicle, booking.host)
+          .catch(err => { console.error(`📱 Return reminder SMS error for ${booking.reservationId}:`, err.message); return { success: false }; });
+      };
+      // Email the renter.
+      const emailRenter = async () => {
+        try { return await sendReturnReminderEmail(booking.driver, booking, booking.vehicle, booking.host); }
+        catch (err) { console.error(`📧 Return reminder email error for ${booking.reservationId}:`, err.message); return { success: false }; }
+      };
 
-      // Send email reminder if booking ends within 30 minutes to 90 minutes (approximately 1 hour window)
-      // This window ensures we catch bookings even if the scheduler runs every 10-15 minutes
-      if (hoursUntilEnd > 0.5 && hoursUntilEnd <= 1.5) {
-        console.log(`⏰ Sending return reminder for booking ${booking.reservationId} (ends in ${hoursUntilEnd.toFixed(1)} hours)`);
-
-        // Email the renter…
-        const emailResult = await sendReturnReminderEmail(
-          booking.driver,
-          booking,
-          booking.vehicle,
-          booking.host
-        );
-
-        // …and text them too — people out driving check texts, not email.
-        let smsResult = { success: false };
-        if (booking.driver?.phone) {
-          smsResult = await sendReturnReminderSMS(booking.driver, booking, booking.vehicle, booking.host)
-            .catch(err => { console.error(`📱 Return reminder SMS error for ${booking.reservationId}:`, err.message); return { success: false }; });
-        }
-
-        // Mark sent if EITHER channel went out, so we never re-blast the one that
-        // did succeed just because the other failed.
+      // ── Stage 1: ~1 hour before → text + email (fires once). The 40–90 min
+      // window reliably catches it on the 10-minute cadence without overlapping
+      // Stage 2 below. ──
+      if (minsUntil <= 90 && minsUntil > 40 && !booking.returnReminderSent) {
+        console.log(`⏰ 1-hour return reminder for booking ${booking.reservationId} (${minsUntil} min left)`);
+        const emailResult = await emailRenter();
+        const smsResult = await textRenter();
         if (emailResult.success || smsResult.success) {
           booking.returnReminderSent = true;
           booking.returnReminderSentAt = new Date();
           await booking.save();
           remindersSent++;
-          console.log(`✅ Return reminder sent for booking ${booking.reservationId} (email: ${emailResult.success ? 'ok' : 'fail'}, sms: ${smsResult.success ? 'ok' : (booking.driver?.phone ? 'fail' : 'no phone')})`);
+          console.log(`✅ 1-hour reminder sent for ${booking.reservationId} (email: ${emailResult.success ? 'ok' : 'fail'}, sms: ${smsResult.success ? 'ok' : (booking.driver?.phone ? 'fail' : 'no phone')})`);
         } else {
-          console.error(`❌ Failed to send return reminder for booking ${booking.reservationId}`);
+          console.error(`❌ Failed to send 1-hour reminder for booking ${booking.reservationId}`);
         }
+      }
+      // ── Stage 2: ~30 min before → text (fires once). If the 1-hour email never
+      // went out (booking first seen inside this window), send the email here too
+      // so email still fires at least once. ──
+      else if (minsUntil <= 40 && minsUntil >= 0 && !booking.reminder30mSent) {
+        console.log(`⏰ 30-minute return reminder for booking ${booking.reservationId} (${minsUntil} min left)`);
+        const smsResult = await textRenter();
+        if (!booking.returnReminderSent) {
+          const emailResult = await emailRenter();
+          if (emailResult.success) {
+            booking.returnReminderSent = true;
+            booking.returnReminderSentAt = new Date();
+          }
+        }
+        booking.reminder30mSent = true;   // mark attempted so we never double-text
+        await booking.save();
+        remindersSent++;
+        console.log(`✅ 30-minute reminder handled for ${booking.reservationId} (sms: ${smsResult.success ? 'ok' : (booking.driver?.phone ? 'fail' : 'no phone')})`);
       }
     }
 
     if (remindersSent > 0) {
-      console.log(`📧 Sent ${remindersSent} return reminder email(s)`);
+      console.log(`📧 Sent ${remindersSent} return reminder(s)`);
     }
 
     return { success: true, remindersSent };

@@ -157,7 +157,12 @@ const sendOverdueReminderSMS = async (driver, booking, vehicle, overdueInfo) => 
 // email. REMINDER only: return or extend. Charges nothing.
 const sendReturnReminderSMS = async (driver, booking, vehicle, host) => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-  const dropoffTime = booking.dropoffTime || '10:00';
+  // Show the drop-off as a friendly 12-hour time (the renter's local wall clock,
+  // exactly as they set it) — e.g. "3:00 PM" instead of "15:00".
+  const [H, M] = String(booking.dropoffTime || '10:00').split(':').map(Number);
+  const hr12 = (Number.isFinite(H) ? H : 10) % 12 || 12;
+  const ampm = (Number.isFinite(H) ? H : 10) < 12 ? 'AM' : 'PM';
+  const dropoffTime = `${hr12}:${String(Number.isFinite(M) ? M : 0).padStart(2, '0')} ${ampm}`;
   const vLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental';
   const body = `RentUFS: Hi ${driver.firstName || 'there'}, your ${vLabel} rental ends soon (due back at ${dropoffTime}). Return on time or extend to keep your insurance active: ${clientUrl}/my-bookings`;
   return sendSMS(driver.phone, body);
