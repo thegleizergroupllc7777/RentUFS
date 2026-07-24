@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useGoogleMaps } from '../context/GoogleMapsContext';
 import { Link } from 'react-router-dom';
@@ -43,7 +43,7 @@ const MARKER_ICON_SELECTED = {
   anchor: { x: 12, y: 24 },
 };
 
-const CARD_WIDTH = 240; // px — the hover card width, used for clamping/centering
+const CARD_WIDTH = 250; // px — the hover card width, used for clamping/centering
 
 const MapView = ({
   vehicles = [],
@@ -151,6 +151,14 @@ const MapView = ({
     setActiveMarker(null);
     setPopup(null);
   }, []);
+
+  // Keep the card open while the mouse is over the pin OR the card, and close it
+  // a short moment after the mouse leaves BOTH. This lets you slide onto the card
+  // to click "View Details", but it no longer stays stuck when you move away.
+  const closeTimer = useRef(null);
+  const cancelClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; } };
+  const scheduleClose = () => { cancelClose(); closeTimer.current = setTimeout(closePopup, 180); };
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
   const handleMarkerClick = (vehicle, pos) => {
     openPopup(vehicle, pos);
@@ -260,10 +268,14 @@ const MapView = ({
                     // Highlight the pin and open our own card. The map NEVER
                     // moves on hover — the card is positioned in pixels and
                     // flips downward for high pins, so it's always fully visible.
+                    cancelClose();
                     setHoveredVehicle(vehicle._id);
                     openPopup(vehicle, pos);
                   }}
-                  onMouseOut={() => setHoveredVehicle(null)}
+                  onMouseOut={() => {
+                    setHoveredVehicle(null);
+                    scheduleClose(); // closes shortly unless the mouse lands on the card
+                  }}
                 />
               );
             })}
@@ -274,6 +286,8 @@ const MapView = ({
           search/filter bar (z-index 200 > the header's 100) so it stands out. */}
       {activeVehicle && popup && popup.vehicleId === activeVehicle._id && (
         <div
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
           style={{
             position: 'absolute',
             left: `${popup.left}px`,
@@ -281,23 +295,39 @@ const MapView = ({
             transform: popup.placement === 'above' ? 'translateY(-100%)' : 'none',
             width: `${CARD_WIDTH}px`,
             zIndex: 200,
+            // White popup styled like Google Maps' own: soft rounded corners,
+            // Google's lighter drop-shadow, and a pointer tail aiming at the pin.
             background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 10px 34px rgba(0,0,0,0.38)',
+            borderRadius: '8px',
+            boxShadow: '0 2px 10px 2px rgba(0,0,0,0.25)',
             padding: '12px',
             boxSizing: 'border-box'
           }}
         >
+          {/* Pointer tail aiming at the pin: points DOWN when the card sits above
+              the pin, UP when it flips below (top pins like New York). */}
+          <div
+            style={{
+              position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+              width: 0, height: 0,
+              borderLeft: '9px solid transparent',
+              borderRight: '9px solid transparent',
+              ...(popup.placement === 'above'
+                ? { bottom: '-9px', borderTop: '10px solid #ffffff', filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.12))' }
+                : { top: '-9px', borderBottom: '10px solid #ffffff', filter: 'drop-shadow(0 -2px 2px rgba(0,0,0,0.10))' })
+            }}
+          />
+
           <button
             onClick={closePopup}
             aria-label="Close"
             style={{
-              position: 'absolute', top: '6px', right: '6px',
-              width: '24px', height: '24px', lineHeight: '22px',
+              position: 'absolute', top: '4px', right: '4px',
+              width: '22px', height: '22px', lineHeight: '20px',
               borderRadius: '50%', border: 'none', cursor: 'pointer',
-              background: 'rgba(0,0,0,0.55)', color: '#fff',
-              fontSize: '16px', fontWeight: 700, textAlign: 'center', padding: 0,
-              zIndex: 1
+              background: 'rgba(255,255,255,0.9)', color: '#5f6368',
+              fontSize: '18px', fontWeight: 400, textAlign: 'center', padding: 0,
+              zIndex: 2
             }}
           >
             ×
