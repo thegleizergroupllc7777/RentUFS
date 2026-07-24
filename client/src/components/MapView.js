@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useGoogleMaps } from '../context/GoogleMapsContext';
 import { Link } from 'react-router-dom';
 import getImageUrl from '../config/imageUrl';
@@ -43,6 +43,8 @@ const MARKER_ICON_SELECTED = {
   anchor: { x: 12, y: 24 },
 };
 
+const CARD_WIDTH = 240; // px — the hover card width, used for clamping/centering
+
 const MapView = ({
   vehicles = [],
   selectedVehicle,
@@ -54,6 +56,12 @@ const MapView = ({
 }) => {
   const [hoveredVehicle, setHoveredVehicle] = useState(null);
   const [activeMarker, setActiveMarker] = useState(null);
+  // The hover card is OUR own element (not Google's InfoWindow, which Google
+  // clips to the map edge and chops off for pins near the top). We position it
+  // in screen pixels over the map so it can never be cut off, flips to open
+  // DOWNWARD for high pins (e.g. New York), and rides a high z-index so it
+  // stands out in front of the top search/filter bar.
+  const [popup, setPopup] = useState(null); // { vehicleId, left, top, placement }
   const [map, setMap] = useState(null);
   const [mapCenter, setMapCenter] = useState(center || defaultCenter);
 
@@ -96,8 +104,56 @@ const MapView = ({
     setMap(null);
   }, []);
 
-  const handleMarkerClick = (vehicle) => {
+  // Convert a pin's lat/lng to a pixel position inside the map div. Uses the
+  // true Web-Mercator transform for latitude so the card lands right on the pin
+  // even on a zoomed-out US-wide view (a plain linear guess drifts near the
+  // edges). Returns null until the map's bounds are ready.
+  const latLngToPixel = useCallback((latLng) => {
+    if (!map) return null;
+    const b = map.getBounds();
+    const div = map.getDiv();
+    if (!b || !div) return null;
+    const ne = b.getNorthEast();
+    const sw = b.getSouthWest();
+    const w = div.offsetWidth;
+    const h = div.offsetHeight;
+    if (!w || !h) return null;
+    const north = ne.lat(), south = sw.lat(), west = sw.lng(), east = ne.lng();
+    const merc = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
+    let lngSpan = east - west;
+    if (lngSpan <= 0) lngSpan += 360; // antimeridian safety
+    let dLng = latLng.lng - west;
+    if (dLng < 0) dLng += 360;
+    const x = (dLng / lngSpan) * w;
+    const y = ((merc(north) - merc(latLng.lat)) / (merc(north) - merc(south))) * h;
+    return { x, y, w, h };
+  }, [map]);
+
+  // Open the hover card for a vehicle, positioned at its pin.
+  const openPopup = useCallback((vehicle, pos) => {
     setActiveMarker(vehicle._id);
+    const px = latLngToPixel(pos);
+    if (!px) {
+      // Bounds not ready yet — fall back to a fully-visible top-left spot.
+      setPopup({ vehicleId: vehicle._id, left: 16, top: 16, placement: 'below' });
+      return;
+    }
+    const GAP = 18;
+    const left = Math.max(8, Math.min(px.x - CARD_WIDTH / 2, px.w - CARD_WIDTH - 8));
+    // If the pin sits in the top ~45% of the map, open the card DOWNWARD so it
+    // is always fully on screen; otherwise open it upward above the pin.
+    const placeBelow = px.y < px.h * 0.45;
+    const top = placeBelow ? px.y + GAP : px.y - GAP;
+    setPopup({ vehicleId: vehicle._id, left, top, placement: placeBelow ? 'below' : 'above' });
+  }, [latLngToPixel]);
+
+  const closePopup = useCallback(() => {
+    setActiveMarker(null);
+    setPopup(null);
+  }, []);
+
+  const handleMarkerClick = (vehicle, pos) => {
+    openPopup(vehicle, pos);
     if (onVehicleSelect) {
       onVehicleSelect(vehicle._id);
     }
@@ -136,6 +192,12 @@ const MapView = ({
     return positions;
   }, [vehiclesWithCoords]);
 
+  // The vehicle whose card is currently open (if any).
+  const activeVehicle = useMemo(
+    () => vehiclesWithCoords.find(v => v._id === activeMarker) || null,
+    [vehiclesWithCoords, activeMarker]
+  );
+
   if (loadError) {
     return (
       <div style={{
@@ -168,8 +230,11 @@ const MapView = ({
     );
   }
 
+  const activeIsRented = !!(activeVehicle && activeVehicle.rentedNow);
+  const activeImage = activeVehicle && activeVehicle.images && activeVehicle.images[0];
+
   return (
-    <div style={{ height, width: '100%' }}>
+    <div style={{ height, width: '100%', position: 'relative' }}>
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={mapCenter}
@@ -177,121 +242,140 @@ const MapView = ({
         options={mapOptions}
         onLoad={onLoad}
         onUnmount={onUnmount}
+        onClick={closePopup}
+        onDragStart={closePopup}
       >
         {vehiclesWithCoords.map((vehicle) => {
               const fallback = vehicle.location.coordinates;
               const pos = displayPositions[vehicle._id] || { lat: fallback[1], lng: fallback[0] };
               const isSelected = selectedVehicle === vehicle._id || hoveredVehicle === vehicle._id;
-              const isRented = !!vehicle.rentedNow;
 
               return (
                 <Marker
                   key={vehicle._id}
                   position={pos}
                   icon={isSelected ? MARKER_ICON_SELECTED : MARKER_ICON_DEFAULT}
-                  onClick={() => handleMarkerClick(vehicle)}
+                  onClick={() => handleMarkerClick(vehicle, pos)}
                   onMouseOver={() => {
-                    // Highlight the pin and open its popup — but NEVER move the
-                    // map. disableAutoPan on the InfoWindow keeps the view still,
-                    // so hovering across pins no longer makes the map jump.
+                    // Highlight the pin and open our own card. The map NEVER
+                    // moves on hover — the card is positioned in pixels and
+                    // flips downward for high pins, so it's always fully visible.
                     setHoveredVehicle(vehicle._id);
-                    setActiveMarker(vehicle._id);
+                    openPopup(vehicle, pos);
                   }}
                   onMouseOut={() => setHoveredVehicle(null)}
-                >
-                  {activeMarker === vehicle._id && (
-                    <InfoWindow onCloseClick={() => setActiveMarker(null)} options={{ disableAutoPan: true }}>
-                      <div style={{ minWidth: '200px', padding: '4px' }}>
-                        {vehicle.images && vehicle.images[0] && (
-                          <div style={{ position: 'relative', marginBottom: '8px' }}>
-                            <img
-                              src={getImageUrl(vehicle.images[0])}
-                              alt={`${vehicle.make} ${vehicle.model}`}
-                              style={{
-                                width: '100%',
-                                height: '120px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                display: 'block'
-                              }}
-                            />
-                            {/* Rented cars get an orange-tinted thumbnail with a bold,
-                                slanted "Rented" stamp so they clearly stand out on the
-                                map. Host-paused ('unavailable') cars never reach the map —
-                                they're filtered out server-side — so Rented is the only stamp. */}
-                            {isRented && (
-                              <>
-                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(234,88,12,0.42)', borderRadius: '8px' }} />
-                                <div style={{
-                                  position: 'absolute', top: '50%', left: '50%',
-                                  transform: 'translate(-50%, -50%) rotate(-8deg)',
-                                  background: '#f59e0b', color: '#000000',
-                                  fontSize: '20px', fontWeight: 800, letterSpacing: '0.06em',
-                                  padding: '8px 30px', borderRadius: '6px',
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  Rented
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                        {/* Available cars keep the small green pill; a rented car with
-                            no photo still gets a text badge as a fallback. */}
-                        {(!isRented || !(vehicle.images && vehicle.images[0])) && (
-                          <div style={{
-                            display: 'inline-block',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            marginBottom: '6px',
-                            background: isRented ? '#fef3c7' : '#dcfce7',
-                            color: isRented ? '#92400e' : '#166534'
-                          }}>
-                            {isRented ? 'Rented' : 'Available'}
-                          </div>
-                        )}
-                        <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600' }}>
-                          {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                        </h3>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
-                            ${vehicle.pricePerDay}/day
-                          </span>
-                          {vehicle.rating > 0 && (
-                            <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                              ⭐ {vehicle.rating.toFixed(1)}
-                            </span>
-                          )}
-                        </div>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6b7280' }}>
-                          📍 {vehicle.location.city}, {vehicle.location.state}
-                        </p>
-                        <Link
-                          to={`/vehicle/${vehicle._id}`}
-                          style={{
-                            display: 'block',
-                            textAlign: 'center',
-                            padding: '8px 12px',
-                            background: '#10b981',
-                            color: 'white',
-                            borderRadius: '6px',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            fontWeight: '500'
-                          }}
-                        >
-                          View Details
-                        </Link>
-                      </div>
-                    </InfoWindow>
-                  )}
-                </Marker>
+                />
               );
             })}
       </GoogleMap>
+
+      {/* Our own hover/click card — rendered OUTSIDE the Google map layer so it
+          can't be clipped, positioned over the pin, and lifted above the top
+          search/filter bar (z-index 200 > the header's 100) so it stands out. */}
+      {activeVehicle && popup && popup.vehicleId === activeVehicle._id && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${popup.left}px`,
+            top: `${popup.top}px`,
+            transform: popup.placement === 'above' ? 'translateY(-100%)' : 'none',
+            width: `${CARD_WIDTH}px`,
+            zIndex: 200,
+            background: '#ffffff',
+            borderRadius: '12px',
+            boxShadow: '0 10px 34px rgba(0,0,0,0.38)',
+            padding: '12px',
+            boxSizing: 'border-box'
+          }}
+        >
+          <button
+            onClick={closePopup}
+            aria-label="Close"
+            style={{
+              position: 'absolute', top: '6px', right: '6px',
+              width: '24px', height: '24px', lineHeight: '22px',
+              borderRadius: '50%', border: 'none', cursor: 'pointer',
+              background: 'rgba(0,0,0,0.55)', color: '#fff',
+              fontSize: '16px', fontWeight: 700, textAlign: 'center', padding: 0,
+              zIndex: 1
+            }}
+          >
+            ×
+          </button>
+
+          {activeImage && (
+            <div style={{ position: 'relative', marginBottom: '8px' }}>
+              <img
+                src={getImageUrl(activeImage)}
+                alt={`${activeVehicle.make} ${activeVehicle.model}`}
+                style={{
+                  width: '100%', height: '120px', objectFit: 'cover',
+                  borderRadius: '8px', display: 'block'
+                }}
+              />
+              {/* Rented cars get an orange-tinted thumbnail with a bold, slanted
+                  "Rented" stamp. Host-paused ('unavailable') cars never reach
+                  the map — filtered server-side — so Rented is the only stamp. */}
+              {activeIsRented && (
+                <>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(234,88,12,0.42)', borderRadius: '8px' }} />
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%) rotate(-8deg)',
+                    background: '#f59e0b', color: '#000000',
+                    fontSize: '20px', fontWeight: 800, letterSpacing: '0.06em',
+                    padding: '8px 30px', borderRadius: '6px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Rented
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Available cars keep the small green pill; a rented car with no
+              photo still gets a text badge as a fallback. */}
+          {(!activeIsRented || !activeImage) && (
+            <div style={{
+              display: 'inline-block', fontSize: '11px', fontWeight: 700,
+              padding: '2px 8px', borderRadius: '999px', marginBottom: '6px',
+              background: activeIsRented ? '#fef3c7' : '#dcfce7',
+              color: activeIsRented ? '#92400e' : '#166534'
+            }}>
+              {activeIsRented ? 'Rented' : 'Available'}
+            </div>
+          )}
+
+          <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+            {activeVehicle.nickname || `${activeVehicle.year} ${activeVehicle.make} ${activeVehicle.model}`}
+          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+              ${activeVehicle.pricePerDay}/day
+            </span>
+            {activeVehicle.rating > 0 && (
+              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                ⭐ {activeVehicle.rating.toFixed(1)}
+              </span>
+            )}
+          </div>
+          <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6b7280' }}>
+            📍 {activeVehicle.location.city}, {activeVehicle.location.state}
+          </p>
+          <Link
+            to={`/vehicle/${activeVehicle._id}`}
+            style={{
+              display: 'block', textAlign: 'center', padding: '8px 12px',
+              background: '#10b981', color: 'white', borderRadius: '6px',
+              textDecoration: 'none', fontSize: '13px', fontWeight: '500'
+            }}
+          >
+            View Details
+          </Link>
+        </div>
+      )}
     </div>
   );
 };
