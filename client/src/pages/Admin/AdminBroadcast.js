@@ -370,7 +370,7 @@ const AdminBroadcast = () => {
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, marginBottom: 4, color: '#065f46' }}>🎉 Automatic holiday emails</div>
                 <div style={{ color: '#6b7280', fontSize: '0.85rem', maxWidth: 520, lineHeight: 1.6 }}>
-                  When ON, RentUFS automatically emails the branded holiday design to <strong>every host and driver</strong> on each holiday — Happy Holidays (Dec 23), Thanksgiving, New Year's, Memorial Day, and Labor Day — at <strong>9 AM Eastern</strong>, once per year. Dates auto-adjust each year. This is <strong>ON</strong> — turn it OFF anytime to pause auto-sending (you can always still send any holiday manually above).
+                  When ON, RentUFS automatically emails a branded holiday greeting to <strong>every host and driver</strong> on each holiday — New Year's, Memorial Day, July 4th, Labor Day, Thanksgiving, and Happy Holidays (Dec 23) — at <strong>9 AM Eastern</strong>, once per year. <strong>Drivers get a fun driver-styled version; hosts get theirs</strong> — one email each, no doubles. Dates auto-adjust each year. This is <strong>ON</strong> — turn it OFF anytime to pause (you can always still send any holiday manually above).
                 </div>
               </div>
               <button
