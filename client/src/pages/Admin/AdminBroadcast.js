@@ -141,8 +141,9 @@ const AdminBroadcast = () => {
   const isListCar = design === 'list_car';
   const isJulyFourth = design === 'july_fourth';
   const isHostVideo = design === 'host_video';
+  const isGrabKeys = design === 'grab_keys';
   const isHoliday = ['happy_holidays', 'thanksgiving', 'new_years', 'memorial_day', 'labor_day'].includes(design);
-  const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isHoliday;
+  const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isGrabKeys || isHoliday;
 
   const handleSend = async () => {
     setError('');
@@ -256,6 +257,7 @@ const AdminBroadcast = () => {
               <label style={label}>Email design</label>
               <select style={input} value={design} onChange={(e) => setDesign(e.target.value)}>
                 <option value="">Standard message (write your own)</option>
+                <option value="grab_keys">🔑 Grab the Keys — invite drivers to book a car (pre-designed)</option>
                 <option value="become_host">Become a Host — pitch email (pre-designed)</option>
                 <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
                 <option value="host_video">🎥 How to Host — YouTube video included (email + SMS)</option>
@@ -266,6 +268,11 @@ const AdminBroadcast = () => {
                 <option value="memorial_day">🇺🇸 Memorial Day (pre-designed)</option>
                 <option value="labor_day">☀️ Labor Day (pre-designed)</option>
               </select>
+              {isGrabKeys && (
+                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
+                  A fun, branded invite for drivers to book a car (city skyline, "Grab the keys" headline, "Find My Ride" button to the marketplace). Each driver's first name fills in automatically. Pick who to send it to below — no message needed. <strong>Email only.</strong> Best paired with the "Drivers" audience.
+                </div>
+              )}
               {isHostPitch && (
                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
                   A polished, ready-made pitch (RentUFS intro, 0% commission, Host Guide button + contact info). Just pick who to send it to below — no message needed. <strong>Email only.</strong>

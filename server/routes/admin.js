@@ -1816,6 +1816,70 @@ function julyFourthEmailHtml(firstName, unsubscribeUrl) {
   </body></html>`;
 }
 
+// Pre-designed "Grab the Keys" driver email — the everyday, fun pitch dispatch
+// can send to drivers to get them booking a car. City-skyline banner (hosted
+// image so it renders in every inbox, incl. Gmail), 🚗 RENTUFS 🚗, warm intro,
+// feature tiles, and a "Find My Ride" button to the marketplace.
+function grabTheKeysEmailHtml(firstName, unsubscribeUrl) {
+  const greeting = firstName ? `Hey ${firstName}, 👋` : 'Hey there, 👋';
+  const unsub = unsubscribeUrl
+    ? `<br><a href="${unsubscribeUrl}" style="color:#064e3b;text-decoration:underline">Unsubscribe</a>`
+    : '';
+  const clientUrl = process.env.CLIENT_URL || 'https://app.rentufs.com';
+  const tile = (emoji, title, sub, bg, br) =>
+    `<td width="50%" style="background:${bg};border:1px solid ${br};border-radius:12px;padding:16px;text-align:center;color:#111827;">
+       <div style="font-size:1.8rem;line-height:1;margin-bottom:6px;">${emoji}</div>
+       <div style="font-weight:bold;font-size:.95rem;">${title}</div>
+       <div style="color:#6b7280;font-size:.8rem;margin-top:3px;">${sub}</div>
+     </td>`;
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
+        <!-- HERO -->
+        <div style="background:#050d09;text-align:center;">
+          <img src="${clientUrl}/holiday/grab-keys-skyline.png" width="600" alt="" style="display:block;width:100%;height:auto;border:0;">
+          <div style="padding:8px 24px 28px;background:#050d09;">
+            <div style="white-space:nowrap;">
+              <span style="font-size:26px;vertical-align:middle;">🚗</span>
+              <span style="font-size:30px;font-weight:bold;letter-spacing:5px;color:#00FF66;vertical-align:middle;">&nbsp;RENTUFS&nbsp;</span>
+              <span style="font-size:26px;vertical-align:middle;">🚗</span>
+            </div>
+            <div style="font-size:1.9rem;font-weight:900;color:#ffffff;line-height:1.15;margin-top:14px;">Grab the keys. <span style="color:#00FF66;">Go somewhere.</span> 🔑</div>
+            <div style="display:inline-block;background:rgba(0,255,102,.15);border:1px solid #00FF66;color:#00FF66;font-size:12px;font-weight:bold;letter-spacing:1px;padding:7px 16px;border-radius:999px;margin-top:14px;text-transform:uppercase;">Hundreds of cars near you</div>
+          </div>
+        </div>
+        <!-- BODY -->
+        <div style="background:#ffffff;padding:28px 26px 8px;color:#374151;font-size:15px;line-height:1.7;">
+          <p style="margin:0 0 14px;font-size:1.05rem;color:#111827;">${greeting}</p>
+          <p style="margin:0 0 22px;">Whether you're visiting family, meeting up with friends, running errands across town, or just taking a <strong style="color:#059669;">joyride to clear your head</strong> — RentUFS is here to help. There's a car waiting near you, ready whenever you are.</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:10px;">
+            <tr>
+              ${tile('🚙','Every ride imaginable','Sedans, SUVs, trucks, luxury &amp; electric','#f0fdf4','#bbf7d0')}
+              ${tile('⚡','Booked in minutes','Find one nearby &amp; roll out','#eff6ff','#bfdbfe')}
+            </tr>
+            <tr>
+              ${tile('🛡️','Always insured','Every trip covered — just drive','#fef2f2','#fecaca')}
+              ${tile('💸','Prices that win','Real local cars, real good rates','#fffbeb','#fde68a')}
+            </tr>
+          </table>
+          <p style="text-align:center;margin:28px 0 16px;">
+            <a href="${clientUrl}/marketplace" style="display:inline-block;background:#00FF66;color:#000000;padding:16px 44px;text-decoration:none;border-radius:999px;font-weight:900;font-size:18px;">🔑 Find My Ride &rarr;</a>
+          </p>
+          <p style="text-align:center;margin:0 0 22px;color:#6b7280;font-size:14px;">Life's short. The tank's full. <span style="color:#059669;font-weight:bold;">Let's go.</span> 🌎</p>
+        </div>
+        <div style="background:#ffffff;padding:0 26px 22px;color:#6b7280;font-size:13px;line-height:1.7;border-top:1px solid #f3f4f6;">
+          <p style="margin:16px 0 0;">Questions? Reply anytime or call/text <a href="tel:+13187368837" style="color:#059669;font-weight:bold;text-decoration:none;">318-RENT-UFS</a> — we've got you. See you on the road! 🏁</p>
+        </div>
+        <div style="background:#00FF66;text-align:center;color:#000000;padding:18px;font-size:12px;line-height:1.6;">
+          &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>
+          597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
 // Preview how many people a target audience would reach on each channel.
 router.get('/broadcast/preview', adminAuth, async (req, res) => {
   try {
@@ -1843,13 +1907,15 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     const isListCar = design === 'list_car';
     const isJulyFourth = design === 'july_fourth';
     const isHostVideo = design === 'host_video';
+    const isGrabKeys = design === 'grab_keys';
     const holiday = HOLIDAY_TEMPLATES[design] || null;
-    const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || !!holiday;
+    const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isGrabKeys || !!holiday;
     const preDesignedHtml = (fn, unsub) =>
       holiday ? holidayEmailHtml(holiday, fn, unsub)
       : isJulyFourth ? julyFourthEmailHtml(fn, unsub)
       : isListCar ? listYourCarEmailHtml(fn, unsub)
       : isHostVideo ? hostVideoEmailHtml(fn, unsub)
+      : isGrabKeys ? grabTheKeysEmailHtml(fn, unsub)
       : becomeHostEmailHtml(fn, unsub);
     // The "How to Host" video template is the only pre-designed email that also
     // sends by SMS — a short text with the video link.
@@ -1871,6 +1937,7 @@ router.post('/broadcast', adminAuth, async (req, res) => {
       : (isJulyFourth ? 'Happy 4th of July from RentUFS! 🇺🇸'
         : isListCar ? 'Get your car out of the driveway and earning 🚗💸'
         : isHostVideo ? '🎥 How to host your car on RentUFS (2-min guide)'
+        : isGrabKeys ? '🔑 Grab the keys — your next ride is waiting 🚗💨'
         : holiday ? holiday.subject
         : isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗'
         : 'A message from RentUFS');
