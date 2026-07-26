@@ -3,7 +3,7 @@ const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { sendEmail, sendReturnReminderEmail, sendOverdueReminderEmail, sendRegistrationExpirationReminder, sendVehiclePausedEmail, sendPayoutNotificationEmail, sendPayoutFailureAlert, sendPayoutRunSummaryEmail } = require('./emailService');
-const { HOLIDAY_TEMPLATES, holidayEmailHtml, holidayForDate } = require('./holidayEmails');
+const { HOLIDAY_TEMPLATES, DRIVER_HOLIDAY, holidayEmailHtml, driverHolidayEmailHtml, holidayForDate } = require('./holidayEmails');
 const { sendOverdueReminderSMS, sendReturnReminderSMS } = require('./smsService');
 const { isConfigured: tollspotConfigured, preRegisterVehicle, listVehicles } = require('./tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('./tollSettlement');
@@ -849,8 +849,9 @@ const previewHostPayout = async (hostId) => {
 
 // ── Holiday auto-send ─────────────────────────────────────────────────────
 // Automatically emails the branded holiday template to every active host AND
-// driver on the correct day each year (Happy Holidays Dec 23, Thanksgiving,
-// New Year's, Memorial Day, Labor Day). Weekday-based holidays are computed
+// driver on the correct day each year (New Year's, Memorial Day, July 4th,
+// Labor Day, Thanksgiving, Happy Holidays Dec 23). Drivers get a fun driver-
+// styled version; hosts get the original. Weekday-based holidays are computed
 // each year (holidayForDate) so the date self-adjusts — no yearly maintenance.
 //
 // SAFETY — ON by default (the owner enabled auto-send), but fully controllable
@@ -902,19 +903,29 @@ const checkAndSendHolidayBroadcasts = async () => {
 
     // All active hosts AND drivers who accept email.
     const users = await User.find({ accountStatus: { $ne: 'deactivated' }, email: { $ne: null } })
-      .select('firstName email emailOptOut').lean();
+      .select('firstName email emailOptOut userType').lean();
 
-    let sent = 0, failed = 0, skipped = 0;
+    // Drivers get the fun driver-styled holiday email; hosts (and 'both') keep the
+    // original host version. Everyone gets exactly ONE email — no double-sends.
+    const driverCopy = DRIVER_HOLIDAY[key] || null;
+    let sent = 0, failed = 0, skipped = 0, driverSent = 0;
     for (const u of users) {
       if (!u.email || u.emailOptOut) { skipped++; continue; }
       try {
         const unsubscribeUrl = `${apiBase}/api/users/unsubscribe/${u._id}`;
-        await sendEmail({ to: u.email, subject: cfg.subject, html: holidayEmailHtml(cfg, u.firstName, unsubscribeUrl) });
+        const isDriver = u.userType === 'driver' && driverCopy;
+        const subject = isDriver ? driverCopy.subject : cfg.subject;
+        const html = isDriver
+          ? driverHolidayEmailHtml(key, u.firstName, unsubscribeUrl)
+          : holidayEmailHtml(cfg, u.firstName, unsubscribeUrl);
+        await sendEmail({ to: u.email, subject, html });
         sent++;
+        if (isDriver) driverSent++;
       } catch (e) {
         failed++;
       }
     }
+    console.log(`🎉 Holiday auto-send (${key} ${year}): ${driverSent} driver-styled, ${sent - driverSent} host-styled`);
     console.log(`🎉 Holiday auto-send (${key} ${year}): sent ${sent}, failed ${failed}, skipped ${skipped}`);
     return { success: true, key, sent, failed, skipped };
   } catch (error) {
