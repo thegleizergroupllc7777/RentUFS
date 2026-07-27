@@ -25,10 +25,14 @@ const DEFAULT_FLOW = process.env.CLEARDRIVE_FLOW || 'PERSONAL';
 // so the module is harmless until the owner adds the key on Render.
 const isConfigured = () => !!API_KEY;
 
+// Send the key BOTH ways (Bearer + x-api-key) — the docs list both as valid
+// auth schemes, and this matches the working insurance integration (teqmobility.js)
+// which sends both for maximum compatibility.
 const client = () => axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
   headers: {
+    'Authorization': `Bearer ${API_KEY}`,
     'x-api-key': API_KEY,
     'content-type': 'application/json',
     'accept': 'application/json'
