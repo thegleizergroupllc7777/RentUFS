@@ -12,14 +12,15 @@
 // All configuration comes from environment variables — no secrets in code:
 //   CLEARDRIVE_API_KEY   — the `x-api-key` credential (sandbox key for now)
 //   CLEARDRIVE_BASE_URL  — API base; defaults to the SANDBOX, swap to prod later
-//   CLEARDRIVE_FLOW      — verification flow; defaults to PERSONAL (car rental)
+//   CLEARDRIVE_FLOW      — verification flow; defaults to RIDESHARE to match how
+//                          RentUFS is set up with TeqMobility (rideshare rental)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const axios = require('axios');
 
 const BASE_URL = process.env.CLEARDRIVE_BASE_URL || 'https://driver-vetting.sandbox.teqmobility.com/api';
 const API_KEY = process.env.CLEARDRIVE_API_KEY || '';
-const DEFAULT_FLOW = process.env.CLEARDRIVE_FLOW || 'PERSONAL';
+const DEFAULT_FLOW = process.env.CLEARDRIVE_FLOW || 'RIDESHARE';
 
 // True only when a key is present. Everything below no-ops safely when false,
 // so the module is harmless until the owner adds the key on Render.
