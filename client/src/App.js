@@ -57,6 +57,7 @@ import AdminTax from './pages/Admin/AdminTax';
 import AdminInsurance from './pages/Admin/AdminInsurance';
 import AdminCommissions from './pages/Admin/AdminCommissions';
 import AdminLateReturns from './pages/Admin/AdminLateReturns';
+import AdminClearDrive from './pages/Admin/AdminClearDrive';
 
 import './App.css';
 
@@ -267,6 +268,10 @@ function App() {
             <Route
               path="/admin/late-returns"
               element={<AdminRoute><AdminLateReturns /></AdminRoute>}
+            />
+            <Route
+              path="/admin/cleardrive"
+              element={<AdminRoute><AdminClearDrive /></AdminRoute>}
             />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />

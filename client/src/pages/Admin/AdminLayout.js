@@ -32,6 +32,7 @@ const AdminLayout = ({ title, subtitle, children, onRefresh }) => {
           {/* Owner-only finance/reconciliation tools, hidden from regular admins. */}
           {me?.isSuperAdmin && <NavLink to="/admin/tax">Tax / 1099</NavLink>}
           {me?.isSuperAdmin && <NavLink to="/admin/insurance">Insurance</NavLink>}
+          {me?.isSuperAdmin && <NavLink to="/admin/cleardrive">ClearDrive</NavLink>}
         </nav>
         {children}
       </div>

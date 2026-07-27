@@ -39,6 +39,7 @@ const SystemState = require('../models/SystemState');
 const { isSuperAdmin } = require('../utils/superAdmin');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
 const { previewHostPayout, processWeeklyPayouts } = require('../utils/scheduler');
+const clearDrive = require('../utils/clearDrive');
 
 // Append an admin action entry to a booking's audit log. Save before
 // returning so the entry is persisted even if a later step fails.
@@ -67,6 +68,55 @@ router.get('/ping', adminAuth, (req, res) => {
       isSuperAdmin: isSuperAdmin(req.user)
     }
   });
+});
+
+// ── ClearDrive (driver verification) — OWNER-ONLY SANDBOX TEST TOOLS ─────────
+// These three endpoints let the owner test the ClearDrive integration IN
+// ISOLATION — no booking, no payment, no real customer. They ONLY call the
+// standalone clearDrive helper (which itself no-ops unless a key is set), and
+// touch nothing in the booking/payment/insurance/toll flow.
+router.get('/cleardrive/status', adminAuth, (req, res) => {
+  if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+  res.json({ configured: clearDrive.isConfigured(), baseUrl: clearDrive.BASE_URL, flow: clearDrive.DEFAULT_FLOW });
+});
+
+// Start a test verification: register a throwaway test applicant, then generate
+// the verification URL the owner can open to try the license+selfie flow.
+router.post('/cleardrive/test-start', adminAuth, async (req, res) => {
+  if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+  if (!clearDrive.isConfigured()) {
+    return res.status(400).json({ message: 'ClearDrive key not set. Add CLEARDRIVE_API_KEY on Render first.' });
+  }
+  try {
+    const b = req.body || {};
+    const external_id = `test_${Date.now()}`; // unique so each test is its own applicant
+    const created = await clearDrive.createApplicant({
+      email: b.email || 'test.driver@rentufs.com',
+      firstname: b.firstname || 'Test',
+      lastname: b.lastname || 'Driver',
+      external_id
+    });
+    if (!created.success) return res.status(400).json({ message: created.error || 'Could not create test applicant', code: created.code });
+    const applicant_id = created.applicant?.id;
+    const urlRes = await clearDrive.createVerificationUrl({ applicant_id });
+    if (!urlRes.success) return res.status(400).json({ message: urlRes.error || 'Could not create verification URL', code: urlRes.code });
+    res.json({ success: true, url: urlRes.url, applicant_id, external_id });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Check the result of a test verification by its external_id.
+router.get('/cleardrive/test-result', adminAuth, async (req, res) => {
+  if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+  if (!clearDrive.isConfigured()) return res.status(400).json({ message: 'ClearDrive key not set.' });
+  try {
+    const result = await clearDrive.getLatestVerification({ external_id: req.query.external_id });
+    if (!result.success) return res.status(400).json({ message: result.error, code: result.code });
+    res.json({ success: true, status: result.status, verification: result.verification });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // ── Host payout preview (OWNER-ONLY) ────────────────────────────────────────
