@@ -181,6 +181,11 @@ const DriverProfile = () => {
   const [licenseFormData, setLicenseFormData] = useState({ licenseNumber: '', state: '', expirationDate: '', licenseImage: '', verificationSelfie: '' });
   const [licenseSaving, setLicenseSaving] = useState(false);
   const [licenseMessage, setLicenseMessage] = useState('');
+  // ClearDrive driver verification (only surfaces when the owner switch is ON)
+  const [cdConfig, setCdConfig] = useState(null);   // { enabled, configured }
+  const [cdStatus, setCdStatus] = useState(null);   // { status, verified }
+  const [cdBusy, setCdBusy] = useState(false);
+  const [cdError, setCdError] = useState('');
 
   // Payment methods state
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -277,6 +282,7 @@ const DriverProfile = () => {
       }
       fetchPaymentMethods();
       fetchLicenseData();
+      fetchClearDrive();
     }
   }, [user]);
 
@@ -779,6 +785,47 @@ const DriverProfile = () => {
     } catch (error) {
       console.error('Error fetching license data:', error);
     }
+  };
+
+  // ── ClearDrive driver verification — self-contained, fails silently so it can
+  // never disrupt the profile page if verification is unavailable. ──────────
+  const fetchClearDrive = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const cfg = await axios.get(`${API_URL}/api/verification/config`, { headers: { Authorization: `Bearer ${token}` } });
+      setCdConfig(cfg.data);
+      if (cfg.data?.enabled) {
+        try {
+          const st = await axios.get(`${API_URL}/api/verification/status`, { headers: { Authorization: `Bearer ${token}` } });
+          setCdStatus(st.data);
+        } catch (e) { /* status optional */ }
+      }
+    } catch (e) { /* verification unavailable — block stays hidden */ }
+  };
+
+  const startClearDrive = async () => {
+    setCdBusy(true); setCdError('');
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.post(`${API_URL}/api/verification/start`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      if (data.url) window.open(data.url, '_blank', 'noopener');
+    } catch (e) {
+      setCdError(e.response?.data?.message || 'Could not start verification. Please try again.');
+    } finally { setCdBusy(false); }
+  };
+
+  const checkClearDrive = async () => {
+    setCdBusy(true); setCdError('');
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`${API_URL}/api/verification/status`, { headers: { Authorization: `Bearer ${token}` } });
+      setCdStatus(data);
+      // If they just passed, refresh the auth context so the booking gate sees
+      // them as verified immediately — no page reload needed.
+      if (data?.verified && refreshUser) { try { await refreshUser(); } catch (e) { /* non-blocking */ } }
+    } catch (e) {
+      setCdError(e.response?.data?.message || 'Could not check status.');
+    } finally { setCdBusy(false); }
   };
 
   const handleSaveLicense = async (e) => {
@@ -1826,6 +1873,41 @@ const DriverProfile = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ClearDrive driver verification — only renders when the owner switch is ON */}
+      {cdConfig?.enabled && (
+        <div style={{ padding: '1.25rem', background: '#0b120e', borderRadius: '0.75rem', border: '1px solid #17663c', marginBottom: '1.25rem' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>🛡️ Driver Verification</span>
+          </div>
+          {cdError && <p style={{ fontSize: '0.8rem', color: '#ef4444', margin: '0 0 0.75rem' }}>{cdError}</p>}
+          {cdStatus?.verified ? (
+            <div>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#07130c', border: '1px solid #17663c', color: '#00FF66', fontWeight: 700, fontSize: '0.95rem', padding: '0.5rem 0.9rem', borderRadius: '999px' }}>✅ Approved by ClearDrive</span>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.6rem 0 0' }}>You're verified — you can book freely. No need to do this again.</p>
+            </div>
+          ) : String(cdStatus?.status).toUpperCase() === 'FAILED' ? (
+            <div>
+              <div style={{ background: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: '0.6rem', padding: '0.9rem', marginBottom: '0.8rem' }}>
+                <p style={{ margin: '0 0 0.3rem', color: '#f87171', fontWeight: 700 }}>❌ We couldn't verify your license</p>
+                <p style={{ margin: 0, color: '#fca5a5', fontSize: '0.85rem' }}>This can happen if the photo was blurry or the details didn't match. You can try again, or contact support and we'll help.</p>
+              </div>
+              <button onClick={startClearDrive} disabled={cdBusy} style={{ background: '#10b981', color: '#000', border: 'none', borderRadius: '8px', padding: '0.7rem 1.1rem', fontWeight: 700, cursor: cdBusy ? 'not-allowed' : 'pointer', opacity: cdBusy ? 0.6 : 1 }}>{cdBusy ? 'Starting…' : 'Try Verification Again →'}</button>
+              <button onClick={checkClearDrive} disabled={cdBusy} style={{ marginLeft: '0.6rem', background: 'transparent', color: '#9ca3af', border: '1px solid #4b5563', borderRadius: '8px', padding: '0.7rem 1.1rem', fontWeight: 600, cursor: 'pointer' }}>Check Status</button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', background: '#2a1608', border: '1px solid #7c4a12', borderRadius: '0.6rem', padding: '0.75rem 0.9rem', marginBottom: '0.85rem' }}>
+                <span style={{ fontSize: '1.1rem' }}>🔒</span>
+                <span style={{ fontSize: '0.85rem', color: '#fcd34d', fontWeight: 600 }}>Verify your license to complete a booking</span>
+              </div>
+              <button onClick={startClearDrive} disabled={cdBusy} style={{ background: '#10b981', color: '#000', border: 'none', borderRadius: '8px', padding: '0.7rem 1.1rem', fontWeight: 700, cursor: cdBusy ? 'not-allowed' : 'pointer', opacity: cdBusy ? 0.6 : 1 }}>{cdBusy ? 'Starting…' : 'Verify My License →'}</button>
+              <button onClick={checkClearDrive} disabled={cdBusy} style={{ marginLeft: '0.6rem', background: 'transparent', color: '#9ca3af', border: '1px solid #4b5563', borderRadius: '8px', padding: '0.7rem 1.1rem', fontWeight: 600, cursor: 'pointer' }}>I've completed it — Check Status</button>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0.7rem 0 0' }}>🛡️ Secured by ClearDrive — a quick license photo + live selfie check. Do it once; we'll remember it.</p>
+            </div>
+          )}
         </div>
       )}
 

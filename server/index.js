@@ -20,6 +20,7 @@ const tollRoutes = require('./routes/tolls');
 const chargeRoutes = require('./routes/charges');
 const adminRoutes = require('./routes/admin');
 const smsRoutes = require('./routes/sms');
+const verificationRoutes = require('./routes/verification');
 const { startReturnReminderScheduler } = require('./utils/scheduler');
 
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/tolls', tollRoutes);
 app.use('/api/charges', chargeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/sms', smsRoutes);
+app.use('/api/verification', verificationRoutes);
 
 // Validate critical environment variables
 if (!process.env.MONGODB_URI) {

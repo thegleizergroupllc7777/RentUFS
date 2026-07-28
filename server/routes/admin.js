@@ -366,6 +366,44 @@ router.put('/holiday-autosend-setting', adminAuth, async (req, res) => {
   }
 });
 
+// ── ClearDrive driver-verification requirement switch (OWNER-ONLY) ──────────
+// Master ON/OFF for "drivers must pass ClearDrive to complete a booking".
+// Defaults OFF — until the owner flips it on, nothing enforces verification and
+// the booking flow is unchanged.
+router.get('/cleardrive-verification-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const doc = await SystemState.findOne({ key: 'clearDriveVerification' });
+    // OFF by default — only an explicit 'on' enables it.
+    const enabled = !!(doc && String(doc.value).toLowerCase() === 'on');
+    res.json({ enabled });
+  } catch (error) {
+    console.error('ClearDrive verification setting read error:', error.message);
+    res.status(500).json({ message: 'Failed to load setting', error: error.message });
+  }
+});
+
+router.put('/cleardrive-verification-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const value = req.body.enabled === true || String(req.body.enabled).toLowerCase() === 'on' ? 'on' : 'off';
+    await SystemState.findOneAndUpdate(
+      { key: 'clearDriveVerification' },
+      { value, updatedAt: new Date() },
+      { upsert: true }
+    );
+    console.log(`🛡️ ClearDrive verification requirement switched ${value.toUpperCase()} by ${req.user.email}`);
+    res.json({ success: true, enabled: value === 'on' });
+  } catch (error) {
+    console.error('ClearDrive verification setting update error:', error.message);
+    res.status(500).json({ message: 'Failed to update setting', error: error.message });
+  }
+});
+
 // ── Live late-returns list (OWNER-ONLY) ─────────────────────────────────────
 // Every currently-overdue active rental across the platform, for the owner's
 // Late Returns command center. Read-only. Uses the same lateness math as the

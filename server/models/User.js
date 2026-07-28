@@ -121,6 +121,26 @@ const userSchema = new mongoose.Schema({
     licenseNumberMatched: {
       type: Boolean,
       default: false
+    },
+    // ── ClearDrive (TeqMobility driver vetting) — additive, independent of the
+    // fields above. Populated only when the owner turns the verification switch
+    // ON and a driver completes the ClearDrive check. Nothing reads these unless
+    // that switch is on, so adding them changes no existing behavior.
+    clearDriveVerified: {
+      type: Boolean,
+      default: false
+    },
+    clearDriveStatus: {
+      type: String,
+      default: null
+    },
+    clearDriveApplicantId: {
+      type: String,
+      default: null
+    },
+    clearDriveCheckedAt: {
+      type: Date,
+      default: null
     }
   },
   hostInfo: {
