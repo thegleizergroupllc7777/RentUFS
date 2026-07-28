@@ -28,6 +28,22 @@ const VehicleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeBooking, setActiveBooking] = useState(null);
   const [isRented, setIsRented] = useState(false);
+  // Whether the owner's "require driver verification to book" switch is ON.
+  // Defaults false and stays false if the fetch fails, so a hiccup here can
+  // never block booking. Only when ON (and driver not verified) do we gate.
+  const [verifRequired, setVerifRequired] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const { data } = await axios.get(`${API_URL}/api/verification/config`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!cancelled) setVerifRequired(!!data.enabled);
+      } catch (e) { /* stay false — never blocks booking */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   // Already-booked date ranges for this vehicle, used to gray out the calendar.
   const [bookedRanges, setBookedRanges] = useState([]);
   const [bookingData, setBookingData] = useState({
@@ -301,6 +317,14 @@ const VehicleDetail = () => {
     // Check if driver has a date of birth on file
     if (!user.dateOfBirth) {
       setError('DOB_REQUIRED');
+      return;
+    }
+
+    // Driver identity verification (ClearDrive) — ONLY enforced when the owner's
+    // switch is ON. When OFF (default) verifRequired is false, so this whole
+    // check is skipped and booking behaves exactly as it always has.
+    if (verifRequired && !user.driverLicense?.clearDriveVerified) {
+      setError('VERIFICATION_REQUIRED');
       return;
     }
 
@@ -747,7 +771,38 @@ const VehicleDetail = () => {
                   </div>
                 </div>
 
-                {error && (error === 'LICENSE_REQUIRED' || error === 'LICENSE_EXPIRED' || error === 'DOB_REQUIRED' || error === 'ADDRESS_REQUIRED') ? (
+                {error === 'VERIFICATION_REQUIRED' ? (
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid #ef4444',
+                    borderRadius: '0.5rem',
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <p style={{ color: '#ef4444', fontWeight: '600', margin: '0 0 0.5rem 0' }}>
+                      Driver verification required to book
+                    </p>
+                    <p style={{ color: '#9ca3af', margin: '0 0 0.75rem 0', fontSize: '0.875rem' }}>
+                      You need to verify your driver's license before completing a booking. It only takes a minute, and you'll never have to do it again.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/driver/profile?tab=license')}
+                      style={{
+                        background: '#10b981',
+                        color: '#000',
+                        border: 'none',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.375rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      Verify My License
+                    </button>
+                  </div>
+                ) : error && (error === 'LICENSE_REQUIRED' || error === 'LICENSE_EXPIRED' || error === 'DOB_REQUIRED' || error === 'ADDRESS_REQUIRED') ? (
                   <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
                     border: '1px solid #ef4444',

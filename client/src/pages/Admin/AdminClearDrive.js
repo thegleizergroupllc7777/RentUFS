@@ -17,6 +17,8 @@ const AdminClearDrive = () => {
   const [result, setResult] = useState(null);  // { status }
   const [error, setError] = useState('');
   const [flow, setFlow] = useState('PERSONAL'); // which verification flow to test; Personal finishes in sandbox (no gig login)
+  const [verifEnabled, setVerifEnabled] = useState(null); // the live "require verification to book" switch
+  const [verifSaving, setVerifSaving] = useState(false);
 
   const loadStatus = useCallback(async () => {
     setLoading(true); setError('');
@@ -28,7 +30,26 @@ const AdminClearDrive = () => {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (me) loadStatus(); }, [me, loadStatus]);
+  const loadVerifSetting = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/admin/cleardrive-verification-setting');
+      setVerifEnabled(!!data.enabled);
+    } catch (err) { /* non-blocking */ }
+  }, []);
+
+  useEffect(() => { if (me) { loadStatus(); loadVerifSetting(); } }, [me, loadStatus, loadVerifSetting]);
+
+  const toggleVerif = async () => {
+    const next = !verifEnabled;
+    if (next && !window.confirm('Turn ON the driver verification requirement?\n\nOnce ON, drivers must pass ClearDrive verification before they can COMPLETE a booking (browsing/searching stays open). Nothing else changes — booking, payment, insurance, and tolls are untouched.\n\nYou can switch this OFF anytime to instantly go back to normal.')) return;
+    setVerifSaving(true);
+    try {
+      const { data } = await axios.put('/api/admin/cleardrive-verification-setting', { enabled: next });
+      setVerifEnabled(!!data.enabled);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update setting');
+    } finally { setVerifSaving(false); }
+  };
 
   const runTest = async () => {
     setStarting(true); setError(''); setResult(null); setTest(null);
@@ -81,6 +102,26 @@ const AdminClearDrive = () => {
                 )}
               </>
             ) : <p>—</p>}
+          </div>
+
+          {/* Live ON/OFF switch */}
+          <div style={{ ...card, borderColor: verifEnabled ? '#a7f3d0' : '#e5e7eb' }}>
+            <h3 style={{ marginTop: 0 }}>Require driver verification to book</h3>
+            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+              When <strong>ON</strong>, drivers must pass ClearDrive verification before they can <strong>complete a booking</strong> (browsing and searching stay open). When <strong>OFF</strong> (default), nothing is enforced and booking works exactly as it does today. This is your kill switch — flip it OFF anytime to instantly return to normal. Booking, payment, insurance, and tolls are never affected.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontWeight: 700, color: verifEnabled ? '#059669' : '#b45309' }}>
+                {verifEnabled == null ? 'Loading…' : verifEnabled ? '🟢 ON — verification required' : '⚪ OFF — not required'}
+              </span>
+              <button
+                style={{ ...btn, background: verifEnabled ? '#dc2626' : '#10b981', opacity: (verifSaving || verifEnabled == null) ? 0.6 : 1 }}
+                onClick={toggleVerif}
+                disabled={verifSaving || verifEnabled == null}
+              >
+                {verifSaving ? 'Saving…' : verifEnabled ? 'Switch OFF' : 'Switch ON'}
+              </button>
+            </div>
           </div>
 
           {/* Run test */}
