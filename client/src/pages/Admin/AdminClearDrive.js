@@ -108,7 +108,7 @@ const AdminClearDrive = () => {
           <div style={{ ...card, borderColor: verifEnabled ? '#a7f3d0' : '#e5e7eb' }}>
             <h3 style={{ marginTop: 0 }}>Require driver verification to book</h3>
             <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-              When <strong>ON</strong>, drivers must pass ClearDrive verification before they can <strong>complete a booking</strong> (browsing and searching stay open). When <strong>OFF</strong> (default), nothing is enforced and booking works exactly as it does today. This is your kill switch — flip it OFF anytime to instantly return to normal. Booking, payment, insurance, and tolls are never affected.
+              <strong>ON</strong> = drivers must verify before they can book. <strong>OFF</strong> = everything works like normal (your kill switch). Booking, payment, insurance, and tolls are never affected.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <span style={{ fontWeight: 700, color: verifEnabled ? '#059669' : '#b45309' }}>
