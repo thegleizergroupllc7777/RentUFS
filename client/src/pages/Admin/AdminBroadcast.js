@@ -265,7 +265,7 @@ const AdminBroadcast = () => {
                 <option value="happy_holidays">🎄 Happy Holidays — Christmas + Hanukkah (pre-designed)</option>
                 <option value="thanksgiving">🦃 Thanksgiving (pre-designed)</option>
                 <option value="new_years">🎆 New Year's (pre-designed)</option>
-                <option value="memorial_day">U.S. Memorial Day (pre-designed)</option>
+                <option value="memorial_day">🎖️ Memorial Day (pre-designed)</option>
                 <option value="labor_day">☀️ Labor Day (pre-designed)</option>
               </select>
               {isGrabKeys && (
