@@ -98,7 +98,10 @@ router.post('/cleardrive/test-start', adminAuth, async (req, res) => {
     });
     if (!created.success) return res.status(400).json({ message: created.error || 'Could not create test applicant', code: created.code });
     const applicant_id = created.applicant?.id;
-    const urlRes = await clearDrive.createVerificationUrl({ applicant_id });
+    // Which flow to test — Personal finishes in the sandbox (no gig login); Ride
+    // Share reaches the gig-connect step. Default to the module default if unset.
+    const flow = (b.flow === 'PERSONAL' || b.flow === 'RIDESHARE') ? b.flow : undefined;
+    const urlRes = await clearDrive.createVerificationUrl({ applicant_id, flow });
     if (!urlRes.success) return res.status(400).json({ message: urlRes.error || 'Could not create verification URL', code: urlRes.code });
     res.json({ success: true, url: urlRes.url, applicant_id, external_id });
   } catch (err) {

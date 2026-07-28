@@ -16,6 +16,7 @@ const AdminClearDrive = () => {
   const [test, setTest] = useState(null);      // { url, external_id }
   const [result, setResult] = useState(null);  // { status }
   const [error, setError] = useState('');
+  const [flow, setFlow] = useState('PERSONAL'); // which verification flow to test; Personal finishes in sandbox (no gig login)
 
   const loadStatus = useCallback(async () => {
     setLoading(true); setError('');
@@ -32,7 +33,7 @@ const AdminClearDrive = () => {
   const runTest = async () => {
     setStarting(true); setError(''); setResult(null); setTest(null);
     try {
-      const { data } = await axios.post('/api/admin/cleardrive/test-start', {});
+      const { data } = await axios.post('/api/admin/cleardrive/test-start', { flow });
       setTest({ url: data.url, external_id: data.external_id });
     } catch (err) {
       setError(err.response?.data?.message || 'Could not start test');
@@ -86,6 +87,18 @@ const AdminClearDrive = () => {
           <div style={card}>
             <h3 style={{ marginTop: 0 }}>1. Run a test verification</h3>
             <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Creates a throwaway test driver and generates the verification link. No booking or payment is involved.</p>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: 6 }}>Test flow:</label>
+              <select value={flow} onChange={(e) => setFlow(e.target.value)} style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.95rem', minWidth: 240 }}>
+                <option value="PERSONAL">Personal — license + selfie (finishes in sandbox)</option>
+                <option value="RIDESHARE">Ride Share — also connects a gig account (Uber/Lyft)</option>
+              </select>
+              {flow === 'RIDESHARE' && (
+                <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#b45309' }}>
+                  Note: Ride Share asks you to connect a real Uber/Lyft account, which can't be completed in the sandbox. Use Personal to see a full pass.
+                </p>
+              )}
+            </div>
             <button style={{ ...btn, opacity: (status?.configured && !starting) ? 1 : 0.5 }} onClick={runTest} disabled={!status?.configured || starting}>
               {starting ? 'Starting…' : '▶ Run Test Verification'}
             </button>
