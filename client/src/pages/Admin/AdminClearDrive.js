@@ -17,10 +17,8 @@ const AdminClearDrive = () => {
   const [result, setResult] = useState(null);  // { status }
   const [error, setError] = useState('');
   const [flow, setFlow] = useState('PERSONAL'); // which verification flow to test; Personal finishes in sandbox (no gig login)
-  const [verifEnabled, setVerifEnabled] = useState(null); // the live "require verification to book" switch
-  const [verifSaving, setVerifSaving] = useState(false);
-  const [twoOptEnabled, setTwoOptEnabled] = useState(null); // the "two Trip Protection options" switch
-  const [twoOptSaving, setTwoOptSaving] = useState(false);
+  const [masterEnabled, setMasterEnabled] = useState(null); // ONE master switch: two options + verification together
+  const [masterSaving, setMasterSaving] = useState(false);
 
   const loadStatus = useCallback(async () => {
     setLoading(true); setError('');
@@ -32,44 +30,34 @@ const AdminClearDrive = () => {
     } finally { setLoading(false); }
   }, []);
 
-  const loadVerifSetting = useCallback(async () => {
+  const loadMaster = useCallback(async () => {
     try {
-      const { data } = await axios.get('/api/admin/cleardrive-verification-setting');
-      setVerifEnabled(!!data.enabled);
+      const [v, t] = await Promise.all([
+        axios.get('/api/admin/cleardrive-verification-setting'),
+        axios.get('/api/admin/two-option-insurance-setting')
+      ]);
+      // Master is ON only when BOTH are on. The master toggle always sets them
+      // together, so they stay in sync.
+      setMasterEnabled(!!v.data.enabled && !!t.data.enabled);
     } catch (err) { /* non-blocking */ }
   }, []);
 
-  const loadTwoOptSetting = useCallback(async () => {
-    try {
-      const { data } = await axios.get('/api/admin/two-option-insurance-setting');
-      setTwoOptEnabled(!!data.enabled);
-    } catch (err) { /* non-blocking */ }
-  }, []);
+  useEffect(() => { if (me) { loadStatus(); loadMaster(); } }, [me, loadStatus, loadMaster]);
 
-  useEffect(() => { if (me) { loadStatus(); loadVerifSetting(); loadTwoOptSetting(); } }, [me, loadStatus, loadVerifSetting, loadTwoOptSetting]);
-
-  const toggleTwoOpt = async () => {
-    const next = !twoOptEnabled;
-    if (next && !window.confirm('Turn ON the two Trip Protection options?\n\nRenters will then see BOTH Carshare and RideShare at checkout (instead of the single Full Coverage option). Carshare registers as PERSONAL, RideShare as RIDESHARE. Both are the same $33.\n\nBooking, payment, and tolls are untouched. Flip OFF anytime to go back to the single option.')) return;
-    setTwoOptSaving(true);
+  const toggleMaster = async () => {
+    const next = !masterEnabled;
+    if (next && !window.confirm('Turn ON RentUFS Driver Vetting + Trip Protection?\n\nThis ONE switch does two things together:\n  1. Renters see BOTH Carshare and RideShare at checkout (Carshare = PERSONAL, RideShare = RIDESHARE, both $33).\n  2. Drivers must pass ClearDrive verification before they can book.\n\nActive/current reservations are NOT affected. Booking, payment, and tolls are untouched.\n\nFlip OFF anytime to instantly return to the single RideShare option with no verification — exactly like today.')) return;
+    setMasterSaving(true);
     try {
-      const { data } = await axios.put('/api/admin/two-option-insurance-setting', { enabled: next });
-      setTwoOptEnabled(!!data.enabled);
+      await Promise.all([
+        axios.put('/api/admin/cleardrive-verification-setting', { enabled: next }),
+        axios.put('/api/admin/two-option-insurance-setting', { enabled: next })
+      ]);
+      setMasterEnabled(next);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update setting');
-    } finally { setTwoOptSaving(false); }
-  };
-
-  const toggleVerif = async () => {
-    const next = !verifEnabled;
-    if (next && !window.confirm('Turn ON the driver verification requirement?\n\nOnce ON, drivers must pass ClearDrive verification before they can COMPLETE a booking (browsing/searching stays open). Nothing else changes — booking, payment, insurance, and tolls are untouched.\n\nYou can switch this OFF anytime to instantly go back to normal.')) return;
-    setVerifSaving(true);
-    try {
-      const { data } = await axios.put('/api/admin/cleardrive-verification-setting', { enabled: next });
-      setVerifEnabled(!!data.enabled);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update setting');
-    } finally { setVerifSaving(false); }
+      loadMaster();
+    } finally { setMasterSaving(false); }
   };
 
   const runTest = async () => {
@@ -125,42 +113,22 @@ const AdminClearDrive = () => {
             ) : <p>—</p>}
           </div>
 
-          {/* Live ON/OFF switch */}
-          <div style={{ ...card, borderColor: verifEnabled ? '#a7f3d0' : '#e5e7eb' }}>
-            <h3 style={{ marginTop: 0 }}>Require driver verification to book</h3>
+          {/* ONE master switch — controls both the two options AND verification */}
+          <div style={{ ...card, borderColor: masterEnabled ? '#a7f3d0' : '#e5e7eb' }}>
+            <h3 style={{ marginTop: 0 }}>Master switch — Driver Vetting + Trip Protection</h3>
             <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-              <strong>ON</strong> = drivers must verify before they can book. <strong>OFF</strong> = everything works like normal (your kill switch). Booking, payment, insurance, and tolls are never affected.
+              <strong>ON</strong> does two things together: (1) renters see BOTH <strong>Carshare</strong> and <strong>RideShare</strong> at checkout (Carshare → PERSONAL, RideShare → RIDESHARE, both $33), and (2) drivers must pass <strong>ClearDrive verification</strong> before they can book. <strong>OFF</strong> = single RideShare option + no verification — exactly like today. This is your kill switch: flip OFF anytime to instantly revert. Active reservations, booking, payment, and tolls are never affected.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ fontWeight: 700, color: verifEnabled ? '#059669' : '#b45309' }}>
-                {verifEnabled == null ? 'Loading…' : verifEnabled ? '🟢 ON — verification required' : '⚪ OFF — not required'}
+              <span style={{ fontWeight: 700, color: masterEnabled ? '#059669' : '#b45309' }}>
+                {masterEnabled == null ? 'Loading…' : masterEnabled ? '🟢 ON — two options + verification' : '⚪ OFF — single option, no verification (today)'}
               </span>
               <button
-                style={{ ...btn, background: verifEnabled ? '#dc2626' : '#10b981', opacity: (verifSaving || verifEnabled == null) ? 0.6 : 1 }}
-                onClick={toggleVerif}
-                disabled={verifSaving || verifEnabled == null}
+                style={{ ...btn, background: masterEnabled ? '#dc2626' : '#10b981', opacity: (masterSaving || masterEnabled == null) ? 0.6 : 1 }}
+                onClick={toggleMaster}
+                disabled={masterSaving || masterEnabled == null}
               >
-                {verifSaving ? 'Saving…' : verifEnabled ? 'Switch OFF' : 'Switch ON'}
-              </button>
-            </div>
-          </div>
-
-          {/* Two-option Trip Protection switch */}
-          <div style={{ ...card, borderColor: twoOptEnabled ? '#a7f3d0' : '#e5e7eb' }}>
-            <h3 style={{ marginTop: 0 }}>Trip Protection — two options (Carshare + RideShare)</h3>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-              <strong>ON</strong> = renters see BOTH Carshare and RideShare at checkout (Carshare → PERSONAL, RideShare → RIDESHARE, both $33). <strong>OFF</strong> = single Full Coverage option, exactly like today. Booking, payment, and tolls are never affected.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ fontWeight: 700, color: twoOptEnabled ? '#059669' : '#b45309' }}>
-                {twoOptEnabled == null ? 'Loading…' : twoOptEnabled ? '🟢 ON — two options shown' : '⚪ OFF — single option (today)'}
-              </span>
-              <button
-                style={{ ...btn, background: twoOptEnabled ? '#dc2626' : '#10b981', opacity: (twoOptSaving || twoOptEnabled == null) ? 0.6 : 1 }}
-                onClick={toggleTwoOpt}
-                disabled={twoOptSaving || twoOptEnabled == null}
-              >
-                {twoOptSaving ? 'Saving…' : twoOptEnabled ? 'Switch OFF' : 'Switch ON'}
+                {masterSaving ? 'Saving…' : masterEnabled ? 'Switch OFF' : 'Switch ON'}
               </button>
             </div>
           </div>
