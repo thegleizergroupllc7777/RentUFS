@@ -15,6 +15,7 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
+  const [twoOptions, setTwoOptions] = useState(false); // owner switch: show Carshare + RideShare
 
   useEffect(() => {
     fetchInsurancePlans();
@@ -30,23 +31,41 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
       });
 
       setPlans(response.data.plans);
+      const two = !!response.data.twoOptions;
+      setTwoOptions(two);
 
-      // Auto-select Full Coverage if no valid plan is selected, and persist to booking
       const currentSelection = mapLegacyPlan(initialSelection) || 'rideshare';
-      if (currentSelection === 'none' || currentSelection === 'carshare') {
-        setSelectedPlan('rideshare');
-        // Persist auto-selection to the booking so it shows in the summary
-        try {
-          const addResponse = await axios.post(
-            `${API_URL}/api/insurance/add-to-booking`,
-            { bookingId, planId: 'rideshare' },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (onInsuranceChange) {
-            onInsuranceChange(addResponse.data.booking);
+
+      if (two) {
+        // Two-option mode: default to Carshare (recommended) if nothing valid is picked.
+        const valid = currentSelection === 'carshare' || currentSelection === 'rideshare';
+        setSelectedPlan(valid ? currentSelection : 'carshare');
+        if (!valid) {
+          try {
+            const addResponse = await axios.post(
+              `${API_URL}/api/insurance/add-to-booking`,
+              { bookingId, planId: 'carshare' },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (onInsuranceChange) onInsuranceChange(addResponse.data.booking);
+          } catch (addErr) {
+            console.error('Error auto-adding insurance to booking:', addErr);
           }
-        } catch (addErr) {
-          console.error('Error auto-adding insurance to booking:', addErr);
+        }
+      } else {
+        // Single-option mode — unchanged from today.
+        if (currentSelection === 'none' || currentSelection === 'carshare') {
+          setSelectedPlan('rideshare');
+          try {
+            const addResponse = await axios.post(
+              `${API_URL}/api/insurance/add-to-booking`,
+              { bookingId, planId: 'rideshare' },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (onInsuranceChange) onInsuranceChange(addResponse.data.booking);
+          } catch (addErr) {
+            console.error('Error auto-adding insurance to booking:', addErr);
+          }
         }
       }
     } catch (err) {
@@ -103,21 +122,39 @@ const InsuranceSelection = ({ bookingId, totalDays, onInsuranceChange, initialSe
   }
 
   const ridesharePlan = plans.find(p => p.id === 'rideshare');
+  const carsharePlan = plans.find(p => p.id === 'carshare');
+  const COVERAGE_BADGES = [
+    { label: 'Liability', included: true },
+    { label: 'Personal Injury', included: true },
+    { label: 'Collision', included: true },
+    { label: 'Comprehensive', included: true },
+  ];
 
-  // Build display list: Full Coverage only (Car Share + Ride Share)
+  // Two-option mode → Carshare (first, recommended) + RideShare.
+  // Single mode → the one "Full Coverage" card, exactly like today.
   const displayPlans = [];
-  if (ridesharePlan) {
+  if (twoOptions && carsharePlan && ridesharePlan) {
+    displayPlans.push({
+      ...carsharePlan,
+      displayName: 'Carshare',
+      displayDescription: 'Full Coverage — personal / everyday use (not a gig platform)',
+      recommended: true,
+      badges: COVERAGE_BADGES
+    });
+    displayPlans.push({
+      ...ridesharePlan,
+      displayName: 'RideShare',
+      displayDescription: 'Full Coverage — rideshare / gig use (Uber, Lyft, DoorDash, etc.)',
+      recommended: false,
+      badges: COVERAGE_BADGES
+    });
+  } else if (ridesharePlan) {
     displayPlans.push({
       ...ridesharePlan,
       displayName: 'Full Coverage',
       displayDescription: 'Car Share & Ride Share — Collision + Liability',
       recommended: true,
-      badges: [
-        { label: 'Liability', included: true },
-        { label: 'Personal Injury', included: true },
-        { label: 'Collision', included: true },
-        { label: 'Comprehensive', included: true },
-      ]
+      badges: COVERAGE_BADGES
     });
   }
 

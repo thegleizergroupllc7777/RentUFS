@@ -2,6 +2,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const SystemState = require('../models/SystemState');
 const { calculateProcessingFee } = require('../utils/stripeFee');
 
 const router = express.Router();
@@ -37,12 +38,41 @@ const getBookingHost = async (booking) => {
   return User.findById(hostId).select('hostInfo');
 };
 
-// Insurance plans — Full Coverage only (Car Share + Ride Share)
-// Pricing is placeholder — update to match carrier agreement
+// Insurance plans — Full Coverage.
+//   rideshare: the long-standing single option (RIDESHARE usage). UNCHANGED.
+//   carshare : PERSONAL usage. Only ever shown when the two-option switch is ON.
+// Both are the same $33 Full Coverage — only the name + usage differ. The
+// carshare → PERSONAL mapping already exists in teqmobility.js, so picking
+// Carshare automatically registers as PERSONAL coverage on TeqMobility's side.
 const INSURANCE_PLANS = {
+  carshare: {
+    id: 'carshare',
+    name: 'Full Coverage',
+    label: 'Carshare',
+    description: 'Personal / everyday use (not a gig platform)',
+    pricePerDay: 33,
+    category: 'carshare',
+    usage: 'PERSONAL',
+    coverage: {
+      liability: true,
+      collision: true,
+      comprehensive: false,
+      personalInjury: false,
+      roadsideAssistance: true
+    },
+    details: [
+      'Documentation Will Be Provided Upon Check-Out (Registration)',
+      '1M In Liability Coverage',
+      'Coverage In Your Name From Pickup To Return',
+      'Policy Covers State Minimum Required For Physical & Property',
+      '$2,500 Deductible For Vehicle Loss Or Damage',
+      'Accidental Injury/Death Or Theft'
+    ]
+  },
   rideshare: {
     id: 'rideshare',
     name: 'Full Coverage',
+    label: 'RideShare',
     description: 'Car Share & Ride Share — Full collision and liability protection',
     pricePerDay: 33,
     category: 'rideshare',
@@ -65,6 +95,18 @@ const INSURANCE_PLANS = {
   }
 };
 
+// Two-option Trip Protection switch (owner-controlled, defaults OFF).
+// OFF → renters see ONE "Full Coverage" option (RIDESHARE) — exactly like today.
+// ON  → renters see BOTH Carshare + RideShare. Flip OFF anytime to revert.
+const isTwoOptionInsurance = async () => {
+  try {
+    const doc = await SystemState.findOne({ key: 'twoOptionInsurance' });
+    return !!(doc && String(doc.value).toLowerCase() === 'on');
+  } catch (e) {
+    return false; // fail-safe: any error → single option (today's behavior)
+  }
+};
+
 // Get available insurance plans
 // Plan selection is static; actual coverage is activated via TeqMobility in bookings flow
 router.get('/plans', auth, async (req, res) => {
@@ -79,7 +121,14 @@ router.get('/plans', auth, async (req, res) => {
       if (booking) host = await getBookingHost(booking);
     }
 
-    const plans = Object.values(INSURANCE_PLANS).map(plan => {
+    // Only expose the Carshare option when the owner switch is ON. OFF (default)
+    // returns just the single RideShare plan — exactly like today.
+    const twoOptions = await isTwoOptionInsurance();
+    const activePlans = twoOptions
+      ? [INSURANCE_PLANS.carshare, INSURANCE_PLANS.rideshare]
+      : [INSURANCE_PLANS.rideshare];
+
+    const plans = activePlans.map(plan => {
       const rate = resolveRateForHost(host, plan.pricePerDay);
       return {
         ...plan,
@@ -90,6 +139,7 @@ router.get('/plans', auth, async (req, res) => {
 
     res.json({
       plans,
+      twoOptions,
       source: 'static'
     });
   } catch (error) {

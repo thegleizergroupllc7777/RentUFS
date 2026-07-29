@@ -19,6 +19,8 @@ const AdminClearDrive = () => {
   const [flow, setFlow] = useState('PERSONAL'); // which verification flow to test; Personal finishes in sandbox (no gig login)
   const [verifEnabled, setVerifEnabled] = useState(null); // the live "require verification to book" switch
   const [verifSaving, setVerifSaving] = useState(false);
+  const [twoOptEnabled, setTwoOptEnabled] = useState(null); // the "two Trip Protection options" switch
+  const [twoOptSaving, setTwoOptSaving] = useState(false);
 
   const loadStatus = useCallback(async () => {
     setLoading(true); setError('');
@@ -37,7 +39,26 @@ const AdminClearDrive = () => {
     } catch (err) { /* non-blocking */ }
   }, []);
 
-  useEffect(() => { if (me) { loadStatus(); loadVerifSetting(); } }, [me, loadStatus, loadVerifSetting]);
+  const loadTwoOptSetting = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/admin/two-option-insurance-setting');
+      setTwoOptEnabled(!!data.enabled);
+    } catch (err) { /* non-blocking */ }
+  }, []);
+
+  useEffect(() => { if (me) { loadStatus(); loadVerifSetting(); loadTwoOptSetting(); } }, [me, loadStatus, loadVerifSetting, loadTwoOptSetting]);
+
+  const toggleTwoOpt = async () => {
+    const next = !twoOptEnabled;
+    if (next && !window.confirm('Turn ON the two Trip Protection options?\n\nRenters will then see BOTH Carshare and RideShare at checkout (instead of the single Full Coverage option). Carshare registers as PERSONAL, RideShare as RIDESHARE. Both are the same $33.\n\nBooking, payment, and tolls are untouched. Flip OFF anytime to go back to the single option.')) return;
+    setTwoOptSaving(true);
+    try {
+      const { data } = await axios.put('/api/admin/two-option-insurance-setting', { enabled: next });
+      setTwoOptEnabled(!!data.enabled);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update setting');
+    } finally { setTwoOptSaving(false); }
+  };
 
   const toggleVerif = async () => {
     const next = !verifEnabled;
@@ -120,6 +141,26 @@ const AdminClearDrive = () => {
                 disabled={verifSaving || verifEnabled == null}
               >
                 {verifSaving ? 'Saving…' : verifEnabled ? 'Switch OFF' : 'Switch ON'}
+              </button>
+            </div>
+          </div>
+
+          {/* Two-option Trip Protection switch */}
+          <div style={{ ...card, borderColor: twoOptEnabled ? '#a7f3d0' : '#e5e7eb' }}>
+            <h3 style={{ marginTop: 0 }}>Trip Protection — two options (Carshare + RideShare)</h3>
+            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+              <strong>ON</strong> = renters see BOTH Carshare and RideShare at checkout (Carshare → PERSONAL, RideShare → RIDESHARE, both $33). <strong>OFF</strong> = single Full Coverage option, exactly like today. Booking, payment, and tolls are never affected.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontWeight: 700, color: twoOptEnabled ? '#059669' : '#b45309' }}>
+                {twoOptEnabled == null ? 'Loading…' : twoOptEnabled ? '🟢 ON — two options shown' : '⚪ OFF — single option (today)'}
+              </span>
+              <button
+                style={{ ...btn, background: twoOptEnabled ? '#dc2626' : '#10b981', opacity: (twoOptSaving || twoOptEnabled == null) ? 0.6 : 1 }}
+                onClick={toggleTwoOpt}
+                disabled={twoOptSaving || twoOptEnabled == null}
+              >
+                {twoOptSaving ? 'Saving…' : twoOptEnabled ? 'Switch OFF' : 'Switch ON'}
               </button>
             </div>
           </div>

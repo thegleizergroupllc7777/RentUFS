@@ -404,6 +404,43 @@ router.put('/cleardrive-verification-setting', adminAuth, async (req, res) => {
   }
 });
 
+// ── Two-option Trip Protection switch (OWNER-ONLY) ──────────────────────────
+// Master ON/OFF for showing renters BOTH Carshare + RideShare at checkout.
+// Defaults OFF — until the owner flips it on, renters see the single "Full
+// Coverage" (RideShare) option exactly like today.
+router.get('/two-option-insurance-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const doc = await SystemState.findOne({ key: 'twoOptionInsurance' });
+    const enabled = !!(doc && String(doc.value).toLowerCase() === 'on');
+    res.json({ enabled });
+  } catch (error) {
+    console.error('Two-option insurance setting read error:', error.message);
+    res.status(500).json({ message: 'Failed to load setting', error: error.message });
+  }
+});
+
+router.put('/two-option-insurance-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const value = req.body.enabled === true || String(req.body.enabled).toLowerCase() === 'on' ? 'on' : 'off';
+    await SystemState.findOneAndUpdate(
+      { key: 'twoOptionInsurance' },
+      { value, updatedAt: new Date() },
+      { upsert: true }
+    );
+    console.log(`🚗 Two-option Trip Protection switched ${value.toUpperCase()} by ${req.user.email}`);
+    res.json({ success: true, enabled: value === 'on' });
+  } catch (error) {
+    console.error('Two-option insurance setting update error:', error.message);
+    res.status(500).json({ message: 'Failed to update setting', error: error.message });
+  }
+});
+
 // ── Live late-returns list (OWNER-ONLY) ─────────────────────────────────────
 // Every currently-overdue active rental across the platform, for the owner's
 // Late Returns command center. Read-only. Uses the same lateness math as the
