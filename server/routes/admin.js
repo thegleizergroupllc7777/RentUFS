@@ -675,7 +675,15 @@ router.get('/insurance-billing', adminAuth, async (req, res) => {
       });
     }
 
-    rows.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    // Active (still-running) rentals on top, completed ones at the bottom, so the
+    // owner sees what's live first. Within each group, keep chronological order by
+    // trip start date. Display order only — does not affect day counts or totals.
+    rows.sort((a, b) => {
+      const aDone = a.status === 'completed' ? 1 : 0;
+      const bDone = b.status === 'completed' ? 1 : 0;
+      if (aDone !== bDone) return aDone - bDone;
+      return new Date(a.startDate) - new Date(b.startDate);
+    });
 
     const summary = [
       { tier: 'Basic', rentals: tally.Basic.rentals, days: tally.Basic.days },
