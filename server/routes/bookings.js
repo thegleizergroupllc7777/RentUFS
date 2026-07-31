@@ -1245,10 +1245,10 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
       return res.status(400).json({ message: 'Payment must be completed before starting' });
     }
 
-    // Time guard: drivers may start no earlier than 30 minutes before the booked
+    // Time guard: drivers may start no earlier than 15 minutes before the booked
     // pickup date + time. Prevents starting hours early (unpaid time + early
     // insurance coverage burn). Enforced server-side so the UI cannot be bypassed.
-    const START_GRACE_MS = 30 * 60 * 1000; // 30 minutes
+    const START_GRACE_MS = 15 * 60 * 1000; // 15 minutes
     const pickupDateTime = new Date(booking.startDate);
     const [pickupHour, pickupMinute] = (booking.pickupTime || '10:00').split(':').map(Number);
     pickupDateTime.setHours(pickupHour || 0, pickupMinute || 0, 0, 0);
@@ -1258,7 +1258,7 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
       });
       return res.status(400).json({
-        message: `Too early to start. You can begin your reservation at ${startTimeLabel} (30 minutes before your pickup time).`
+        message: `Too early to start. You can begin your reservation at ${startTimeLabel} (15 minutes before your pickup time).`
       });
     }
 

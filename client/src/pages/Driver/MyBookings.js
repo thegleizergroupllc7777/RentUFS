@@ -499,17 +499,17 @@ const MyBookings = () => {
 
   const canStartReservation = (booking) => {
     // Can start if: confirmed, paid, pickup inspection not done, and within the
-    // start window (no earlier than 30 minutes before the booked pickup time).
+    // start window (no earlier than 15 minutes before the booked pickup time).
     // Mirrors the server-side guard in /start-inspection.
     const isConfirmed = booking.status === 'confirmed';
     const isPaid = booking.paymentStatus === 'paid';
     const inspectionNotDone = !booking.pickupInspection || !booking.pickupInspection.completed;
 
-    // Build the booked pickup date + time, then allow starting 30 minutes early.
+    // Build the booked pickup date + time, then allow starting 15 minutes early.
     const pickupDateTime = toLocalDate(booking.startDate);
     const [pickupHour, pickupMinute] = (booking.pickupTime || '10:00').split(':').map(Number);
     pickupDateTime.setHours(pickupHour || 0, pickupMinute || 0, 0, 0);
-    const earliestStart = new Date(pickupDateTime.getTime() - 30 * 60 * 1000);
+    const earliestStart = new Date(pickupDateTime.getTime() - 15 * 60 * 1000);
     const isStartTimeReached = new Date() >= earliestStart;
 
     const result = isConfirmed && isPaid && inspectionNotDone && isStartTimeReached;
@@ -1187,14 +1187,14 @@ const MyBookings = () => {
                           </button>
                         )}
 
-                        {/* Show info when booking is confirmed+paid but the 30-min start window hasn't opened yet */}
+                        {/* Show info when booking is confirmed+paid but the 15-min start window hasn't opened yet */}
                         {booking.status === 'confirmed' && booking.paymentStatus === 'paid' &&
                          !booking.pickupInspection?.completed &&
                          !canStartReservation(booking) && (() => {
                           const pickupDateTime = toLocalDate(booking.startDate);
                           const [ph, pm] = (booking.pickupTime || '10:00').split(':').map(Number);
                           pickupDateTime.setHours(ph || 0, pm || 0, 0, 0);
-                          const earliestStart = new Date(pickupDateTime.getTime() - 30 * 60 * 1000);
+                          const earliestStart = new Date(pickupDateTime.getTime() - 15 * 60 * 1000);
                           const label = earliestStart.toLocaleString('en-US', {
                             month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
                           });
