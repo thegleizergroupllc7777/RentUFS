@@ -903,12 +903,16 @@ router.get('/stats', adminAuth, async (req, res) => {
       User.countDocuments({ userType: { $in: ['host', 'both'] } }),
       Vehicle.countDocuments({}),
       Vehicle.countDocuments({ availability: true }),
-      // Booking counts exclude cancelled and never-completed-checkout bookings so
-      // metrics reflect real bookings, not abandoned/cancelled ones.
-      Booking.countDocuments({ status: { $nin: ['cancelled', 'awaiting_payment'] } }),
-      Booking.countDocuments({ createdAt: { $gte: startOfDay }, status: { $nin: ['cancelled', 'awaiting_payment'] } }),
-      Booking.countDocuments({ createdAt: { $gte: startOfWeek }, status: { $nin: ['cancelled', 'awaiting_payment'] } }),
-      Booking.countDocuments({ createdAt: { $gte: startOfMonth }, status: { $nin: ['cancelled', 'awaiting_payment'] } }),
+      // Booking counts include ONLY bookings that reached a real, paid state
+      // (confirmed / active / completed). This excludes abandoned carts — both
+      // 'pending' and 'awaiting_payment' (never-paid) — and 'cancelled', so the
+      // metrics reflect bookings someone actually paid for, not carts that were
+      // started and never completed. Refunded-but-completed trips still count
+      // because they genuinely happened (status stays 'completed').
+      Booking.countDocuments({ status: { $in: ['confirmed', 'active', 'completed'] } }),
+      Booking.countDocuments({ createdAt: { $gte: startOfDay }, status: { $in: ['confirmed', 'active', 'completed'] } }),
+      Booking.countDocuments({ createdAt: { $gte: startOfWeek }, status: { $in: ['confirmed', 'active', 'completed'] } }),
+      Booking.countDocuments({ createdAt: { $gte: startOfMonth }, status: { $in: ['confirmed', 'active', 'completed'] } }),
       Booking.countDocuments({ status: 'active' }),
       Booking.countDocuments({ status: 'pending' }),
       Booking.aggregate([
