@@ -257,16 +257,20 @@ const AdminBroadcast = () => {
               <label style={label}>Email design</label>
               <select style={input} value={design} onChange={(e) => setDesign(e.target.value)}>
                 <option value="">Standard message (write your own)</option>
-                <option value="grab_keys">🔑 Grab the Keys — invite drivers to book a car (pre-designed)</option>
-                <option value="become_host">Become a Host — pitch email (pre-designed)</option>
-                <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
-                <option value="host_video">🎥 How to Host — YouTube video included (email + SMS)</option>
-                <option value="july_fourth">4th of July — holiday greeting (pre-designed)</option>
-                <option value="happy_holidays">🎄 Happy Holidays — Christmas + Hanukkah (pre-designed)</option>
-                <option value="thanksgiving">🦃 Thanksgiving (pre-designed)</option>
-                <option value="new_years">🎆 New Year's (pre-designed)</option>
-                <option value="memorial_day">🗽 Memorial Day (pre-designed)</option>
-                <option value="labor_day">☀️ Labor Day (pre-designed)</option>
+                <optgroup label="──────── Business & Host Outreach ────────">
+                  <option value="grab_keys">🔑 Grab the Keys — invite drivers to book a car (pre-designed)</option>
+                  <option value="become_host">Become a Host — pitch email (pre-designed)</option>
+                  <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
+                  <option value="host_video">🎥 How to Host — YouTube video included (email + SMS)</option>
+                </optgroup>
+                <optgroup label="──────── Holiday Greetings (festive only) ────────">
+                  <option value="july_fourth">🎆 4th of July — holiday greeting (pre-designed)</option>
+                  <option value="happy_holidays">🎄 Happy Holidays — Christmas + Hanukkah (pre-designed)</option>
+                  <option value="thanksgiving">🦃 Thanksgiving (pre-designed)</option>
+                  <option value="new_years">🎉 New Year's (pre-designed)</option>
+                  <option value="memorial_day">🗽 Memorial Day (pre-designed)</option>
+                  <option value="labor_day">☀️ Labor Day (pre-designed)</option>
+                </optgroup>
               </select>
               {isGrabKeys && (
                 <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>
