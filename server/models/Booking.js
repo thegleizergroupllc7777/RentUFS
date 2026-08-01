@@ -351,6 +351,21 @@ const bookingSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // ── Repeating overdue nudges ──
+  // Once a booking is past its return time and still not returned/extended, the
+  // scheduler keeps nudging the renter: a TEXT every 3 hours (around the clock —
+  // people return cars at any hour) and an EMAIL once a day. These timestamps
+  // track when the last of each went out so the cadence is honored. Both reset
+  // when the booking is extended (return date changes), re-arming the nudges for
+  // the new deadline. Stops automatically once returned/extended.
+  overdueTextAt: {
+    type: Date,
+    default: null
+  },
+  overdueEmailAt: {
+    type: Date,
+    default: null
+  },
   // ── Automatic late-return fee tracking ──
   // Only ever populated for bookings that agreed to the Automatic Late Return Fee
   // clause (see server/utils/lateReturn.js isBookingEligible). Every field is
@@ -429,6 +444,8 @@ bookingSchema.pre('save', async function(next) {
     this.returnReminderSentAt = null;
     this.reminder30mSent = false;
     this.smsReturnReminderSent = false;
+    this.overdueTextAt = null;   // re-arm the repeating overdue nudges
+    this.overdueEmailAt = null;
     if (this.lateFee) {
       this.lateFee.warn1hSent = false;
       this.lateFee.warn30mSent = false;
