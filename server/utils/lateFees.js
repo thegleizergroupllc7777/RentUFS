@@ -145,9 +145,14 @@ const processLateReturns = async () => {
               .catch(err => console.error(`📱 Late warning SMS (${stage}) error:`, err.message));
           }
         };
-        if (minsUntil <= 120 && minsUntil > 60 && !booking.lateFee.warn2hSent) { warn('2h'); booking.lateFee.warn2hSent = true; dirty = true; }
-        else if (minsUntil <= 60 && minsUntil > 30 && !booking.lateFee.warn1hSent) { warn('1h'); booking.lateFee.warn1hSent = true; dirty = true; }
-        else if (minsUntil <= 30 && minsUntil >= 0 && !booking.lateFee.warn30mSent) { warn('30m'); booking.lateFee.warn30mSent = true; dirty = true; }
+        // Same cadence as the standard return reminder — ~1 hour and ~30 minutes
+        // before return (then overdue) — so the reminder SCHEDULE is identical
+        // whether the late-fee toggle is ON or OFF. The only difference when it's
+        // ON: these mention the $5 late fee (and the fee is charged). Windows
+        // match scheduler.js checkAndSendReturnReminders exactly. (No 2-hour
+        // stage — dropped so both toggle states line up.)
+        if (minsUntil <= 90 && minsUntil > 40 && !booking.lateFee.warn1hSent) { warn('1h'); booking.lateFee.warn1hSent = true; dirty = true; }
+        else if (minsUntil <= 40 && minsUntil >= 0 && !booking.lateFee.warn30mSent) { warn('30m'); booking.lateFee.warn30mSent = true; dirty = true; }
 
         if (dirty) { booking.lateFee.lastActionAt = now; await booking.save(); }
         continue;                                // not late yet → no charge/escalation this pass
