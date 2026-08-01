@@ -115,11 +115,16 @@ const checkAndSendOverdueSMS = async () => {
   try {
     const now = new Date();
 
-    // Find active bookings that are potentially overdue and haven't had an overdue SMS sent
-    const activeBookings = await Booking.find({
-      status: 'active',
-      smsReturnReminderSent: { $ne: true }
-    })
+    // Repeating overdue nudges, around the clock (people return cars at any hour,
+    // so no overnight pause): a TEXT every 3 hours and an EMAIL once a day, until
+    // the renter returns/extends (the endDate change re-arms these via the
+    // Booking pre-save hook). The 10-minute scheduler cadence honors these
+    // intervals via the per-booking timestamps below.
+    const TEXT_EVERY_MS = 3 * 60 * 60 * 1000;    // text every 3 hours
+    const EMAIL_EVERY_MS = 24 * 60 * 60 * 1000;  // email once a day
+
+    // Every active booking — overdue status AND cadence are checked per booking.
+    const activeBookings = await Booking.find({ status: 'active' })
       .populate('vehicle')
       .populate('driver', 'firstName lastName email phone')
       .populate('host', 'firstName lastName email phone');
@@ -130,56 +135,53 @@ const checkAndSendOverdueSMS = async () => {
       // The real return moment, resolved in the VEHICLE's local timezone — so a
       // Pacific drop-off isn't read on the server clock and fired hours early.
       const endDate = returnMomentForBooking(booking);
+      if (now <= endDate) continue;   // not overdue yet
 
-      // Check if booking is overdue (past return time)
-      if (now > endDate) {
-        // Calculate how overdue
-        const diffMs = now - endDate;
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffHours / 24);
-        const overdueInfo = diffDays >= 1
-          ? `${diffDays} day${diffDays > 1 ? 's' : ''}`
-          : `${Math.max(1, diffHours)} hour${diffHours !== 1 ? 's' : ''}`;
+      // How overdue (for the message wording).
+      const diffMs = now - endDate;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+      const overdueInfo = diffDays >= 1
+        ? `${diffDays} day${diffDays > 1 ? 's' : ''}`
+        : `${Math.max(1, diffHours)} hour${diffHours !== 1 ? 's' : ''}`;
 
-        console.log(`🚨 Sending overdue reminder for booking ${booking.reservationId} (${overdueInfo} overdue)`);
+      let dirty = false;
 
-        // Email the renter (works even with no phone on file)…
-        let emailOk = false;
+      // ── TEXT: every 3 hours, around the clock (only if a phone is on file). ──
+      const lastText = booking.overdueTextAt ? booking.overdueTextAt.getTime() : 0;
+      if (booking.driver?.phone && (now.getTime() - lastText) >= TEXT_EVERY_MS) {
         try {
-          const emailResult = await sendOverdueReminderEmail(
-            booking.driver,
-            booking,
-            booking.vehicle,
-            overdueInfo,
-            booking.host
-          );
-          emailOk = !!emailResult?.success;
+          const smsResult = await sendOverdueReminderSMS(booking.driver, booking, booking.vehicle, overdueInfo);
+          if (smsResult?.success) {
+            booking.overdueTextAt = now;
+            booking.smsReturnReminderSent = true;   // keep the legacy flag in sync
+            dirty = true;
+            smsSent++;
+            console.log(`📱 Overdue nudge text sent for ${booking.reservationId} (${overdueInfo} overdue)`);
+          } else {
+            console.error(`📱 Overdue nudge text failed for ${booking.reservationId}: ${smsResult?.error}`);
+          }
         } catch (e) {
-          console.error(`📧 Overdue email error for ${booking.reservationId}:`, e.message);
-        }
-
-        // …and text them (only if we have a phone number).
-        let smsOk = false;
-        if (booking.driver?.phone) {
-          const smsResult = await sendOverdueReminderSMS(
-            booking.driver,
-            booking,
-            booking.vehicle,
-            overdueInfo
-          );
-          smsOk = !!smsResult?.success;
-          if (smsOk) console.log(`📱 Overdue SMS sent for booking ${booking.reservationId}`);
-          else console.error(`📱 Failed to send overdue SMS for booking ${booking.reservationId}: ${smsResult.error}`);
-        }
-
-        // Mark sent if EITHER channel went out, so we don't re-blast every 10 min.
-        if (emailOk || smsOk) {
-          booking.smsReturnReminderSent = true;
-          await booking.save();
-          smsSent++;
-          console.log(`✅ Overdue reminder sent for booking ${booking.reservationId} (email: ${emailOk ? 'ok' : 'fail'}, sms: ${smsOk ? 'ok' : (booking.driver?.phone ? 'fail' : 'no phone')})`);
+          console.error(`📱 Overdue nudge text error for ${booking.reservationId}:`, e.message);
         }
       }
+
+      // ── EMAIL: once a day (works even with no phone on file). ──
+      const lastEmail = booking.overdueEmailAt ? booking.overdueEmailAt.getTime() : 0;
+      if ((now.getTime() - lastEmail) >= EMAIL_EVERY_MS) {
+        try {
+          const emailResult = await sendOverdueReminderEmail(booking.driver, booking, booking.vehicle, overdueInfo, booking.host);
+          if (emailResult?.success) {
+            booking.overdueEmailAt = now;
+            dirty = true;
+            console.log(`📧 Overdue nudge email sent for ${booking.reservationId} (${overdueInfo} overdue)`);
+          }
+        } catch (e) {
+          console.error(`📧 Overdue nudge email error for ${booking.reservationId}:`, e.message);
+        }
+      }
+
+      if (dirty) await booking.save();
     }
 
     if (smsSent > 0) {
