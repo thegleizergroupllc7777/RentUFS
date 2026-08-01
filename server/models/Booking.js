@@ -354,7 +354,7 @@ const bookingSchema = new mongoose.Schema({
   // ── Repeating overdue nudges ──
   // Once a booking is past its return time and still not returned/extended, the
   // scheduler keeps nudging the renter: a TEXT every 3 hours (around the clock —
-  // people return cars at any hour) and an EMAIL once a day. These timestamps
+  // people return cars at any hour) and an EMAIL every 12 hours. These timestamps
   // track when the last of each went out so the cadence is honored. Both reset
   // when the booking is extended (return date changes), re-arming the nudges for
   // the new deadline. Stops automatically once returned/extended.

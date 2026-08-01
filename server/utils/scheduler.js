@@ -121,7 +121,7 @@ const checkAndSendOverdueSMS = async () => {
     // Booking pre-save hook). The 10-minute scheduler cadence honors these
     // intervals via the per-booking timestamps below.
     const TEXT_EVERY_MS = 3 * 60 * 60 * 1000;    // text every 3 hours
-    const EMAIL_EVERY_MS = 24 * 60 * 60 * 1000;  // email once a day
+    const EMAIL_EVERY_MS = 12 * 60 * 60 * 1000;  // email every 12 hours (twice a day)
 
     // Every active booking — overdue status AND cadence are checked per booking.
     const activeBookings = await Booking.find({ status: 'active' })
