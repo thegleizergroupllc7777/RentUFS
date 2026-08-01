@@ -413,6 +413,29 @@ const bookingSchema = new mongoose.Schema({
 // Update timestamp on every save
 bookingSchema.pre('save', async function(next) {
   this.updatedAt = Date.now();
+
+  // Re-arm ALL return reminders + late warnings whenever the return date moves —
+  // via ANY path (renter payment extension, admin extend, or a date edit). Each
+  // reminder flips an "already sent" flag so it doesn't spam; extending is meant
+  // to flip those back so the reminders fire again for the new deadline. Only one
+  // extension route was doing that reset, so bookings extended through the others
+  // got permanently benched — one reminder, then silence, even while running late
+  // (affected both text AND email, since they fire together). Centralizing it
+  // here covers every path. Fires ONLY when endDate actually changes, so the
+  // scheduler saving a freshly-set flag never wipes it. Touches only notification
+  // flags — nothing about money, insurance coverage, charges, or booking status.
+  if (!this.isNew && this.isModified('endDate')) {
+    this.returnReminderSent = false;
+    this.returnReminderSentAt = null;
+    this.reminder30mSent = false;
+    this.smsReturnReminderSent = false;
+    if (this.lateFee) {
+      this.lateFee.warn1hSent = false;
+      this.lateFee.warn30mSent = false;
+      this.lateFee.warn2hSent = false;
+    }
+  }
+
   next();
 });
 
