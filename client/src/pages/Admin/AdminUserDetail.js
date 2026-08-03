@@ -325,7 +325,9 @@ const AdminUserDetail = () => {
       {loading && <div className="admin-empty">Loading...</div>}
       {user && (
         <>
-          <button className="admin-btn" onClick={() => navigate('/admin/users')} style={{ marginBottom: '1rem' }}>← Back to users</button>
+          {/* Go back to the exact filtered/scrolled list you came from. Fall
+              back to a plain Users list if this page was opened directly. */}
+          <button className="admin-btn" onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/admin/users'); }} style={{ marginBottom: '1rem' }}>← Back to users</button>
 
           {/* Profile + quick actions */}
           <div className="admin-table-wrap" style={{ marginBottom: '1.5rem' }}>
