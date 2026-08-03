@@ -151,7 +151,7 @@ const AdminBookingDetail = () => {
 
       {booking && (
         <>
-          <button className="admin-btn" onClick={() => navigate('/admin/bookings')} style={{ marginBottom: '1rem' }}>← Back to bookings</button>
+          <button className="admin-btn" onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/admin/bookings'); }} style={{ marginBottom: '1rem' }}>← Back</button>
 
           {/* Header tile */}
           <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
