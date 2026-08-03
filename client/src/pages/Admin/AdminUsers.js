@@ -181,6 +181,9 @@ const AdminUsers = () => {
               return (
               <tr key={u._id} style={{ cursor: 'pointer' }} onClick={(e) => {
                 if (e.target.closest('button')) return;
+                // If you've highlighted text (to copy an email, LLC, etc.), don't
+                // open the profile — let the selection stand.
+                if (window.getSelection && String(window.getSelection())) return;
                 openUser(u._id);
               }}>
                 <td>

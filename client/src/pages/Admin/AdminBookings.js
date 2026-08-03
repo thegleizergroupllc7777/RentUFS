@@ -132,6 +132,9 @@ const AdminBookings = () => {
             {bookings.map((b) => (
               <tr key={b._id} style={{ cursor: 'pointer' }} onClick={(e) => {
                 if (e.target.closest('button')) return;
+                // If you've highlighted text (to copy a reservation ID, name,
+                // etc.), don't open the booking — let the selection stand.
+                if (window.getSelection && String(window.getSelection())) return;
                 openBooking(b._id);
               }}>
                 <td>
