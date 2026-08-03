@@ -795,6 +795,20 @@ const RefundModal = ({ booking, onClose, onSaved }) => {
   const [localError, setLocalError] = useState('');
 
   const submit = async () => {
+    // Final "are you sure?" before any money moves. Spells out the exact amount
+    // and that it goes back to the driver's card and can't be undone. Clicking
+    // Cancel here stops everything — no request is sent, nothing changes.
+    const isFull = !(amount && Number(amount) > 0);
+    const refundAmount = isFull ? booking.totalPrice : Number(amount);
+    const driverName = booking.driver
+      ? `${booking.driver.firstName || ''} ${booking.driver.lastName || ''}`.trim()
+      : 'the driver';
+    const ok = window.confirm(
+      `Issue a ${isFull ? 'FULL ' : ''}refund of ${formatCurrency(refundAmount)} to ${driverName || 'the driver'}?\n\n` +
+      `This sends the money back to their card through Stripe and cannot be undone.`
+    );
+    if (!ok) return;
+
     setBusy(true);
     setLocalError('');
     try {
