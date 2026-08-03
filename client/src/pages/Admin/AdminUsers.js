@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
@@ -27,20 +27,26 @@ const AdminUsers = () => {
   const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  // Pre-filter from the URL, e.g. /admin/users?type=driver (from the dashboard
-  // Drivers/Hosts cards). Only accept a known user type.
-  const [searchParams] = useSearchParams();
+  // All the filters below are seeded from the URL so that when you open a
+  // profile and press Back, the list comes back exactly how you left it —
+  // same filter, same page — instead of resetting to "All types". This is what
+  // keeps you from losing your place. (e.g. /admin/users?type=host&page=2)
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialType = USER_TYPES.includes(searchParams.get('type')) ? searchParams.get('type') : '';
+  const initialRole = ROLES.includes(searchParams.get('role')) ? searchParams.get('role') : '';
+  const initialStatus = ['active', 'deactivated'].includes(searchParams.get('status')) ? searchParams.get('status') : '';
+  const [page, setPage] = useState(Math.max(1, parseInt(searchParams.get('page'), 10) || 1));
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [userType, setUserType] = useState(initialType);
-  const [role, setRole] = useState('');
-  const [accountStatus, setAccountStatus] = useState('');
+  const [role, setRole] = useState(initialRole);
+  const [accountStatus, setAccountStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editUser, setEditUser] = useState(null);
   const navigate = useNavigate();
   const limit = 25;
+  // Only restore the saved scroll position once per visit to this list.
+  const scrollRestored = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,6 +67,42 @@ const AdminUsers = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Keep the web address in step with the current filters/page (quietly, with
+  // `replace` so it doesn't spam the Back button). When you later press Back
+  // from a profile, the browser returns to this same address and the filters
+  // come right back — that's the fix for "the filter resets and I lose my spot".
+  useEffect(() => {
+    const params = {};
+    if (search) params.search = search;
+    if (userType) params.type = userType;
+    if (role) params.role = role;
+    if (accountStatus) params.status = accountStatus;
+    if (page > 1) params.page = String(page);
+    setSearchParams(params, { replace: true });
+  }, [search, userType, role, accountStatus, page, setSearchParams]);
+
+  // After the list finishes loading, scroll back to roughly where you were when
+  // you clicked into a profile. Runs once per visit, then forgets, so normal
+  // refreshes/pagination don't yank the page around.
+  useEffect(() => {
+    // Wait until the rows are actually on screen — otherwise the page is still
+    // short and the scroll can't reach where you were.
+    if (loading || scrollRestored.current || users.length === 0) return;
+    const saved = sessionStorage.getItem('adminUsersScroll');
+    if (saved != null) {
+      scrollRestored.current = true;
+      const y = parseInt(saved, 10) || 0;
+      sessionStorage.removeItem('adminUsersScroll');
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+  }, [loading, users.length]);
+
+  // Remember how far down the list you'd scrolled, then open the profile.
+  const openUser = (userId) => {
+    sessionStorage.setItem('adminUsersScroll', String(window.scrollY));
+    navigate(`/admin/users/${userId}`);
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -130,7 +172,7 @@ const AdminUsers = () => {
               return (
               <tr key={u._id} style={{ cursor: 'pointer' }} onClick={(e) => {
                 if (e.target.closest('button')) return;
-                navigate(`/admin/users/${u._id}`);
+                openUser(u._id);
               }}>
                 <td>
                   <strong>{u.firstName} {u.lastName}</strong>
