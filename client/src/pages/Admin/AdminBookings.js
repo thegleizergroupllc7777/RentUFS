@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
@@ -16,20 +16,24 @@ const formatCurrency = (n) =>
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  // Pre-filter from the URL, e.g. /admin/bookings?status=active (from the dashboard
-  // "Currently Active" card). Only accept a known status value.
-  const [searchParams] = useSearchParams();
+  // Filters/page are seeded from the URL and kept in sync, so opening a booking
+  // and pressing Back returns you to the same filtered/scrolled list instead of
+  // resetting to "All statuses". (e.g. /admin/bookings?status=active&page=2)
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialStatus = STATUS_OPTIONS.includes(searchParams.get('status')) ? searchParams.get('status') : '';
+  const initialPayment = PAYMENT_OPTIONS.includes(searchParams.get('payment')) ? searchParams.get('payment') : '';
+  const [page, setPage] = useState(Math.max(1, parseInt(searchParams.get('page'), 10) || 1));
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [status, setStatus] = useState(initialStatus);
-  const [paymentStatus, setPaymentStatus] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState(initialPayment);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editBooking, setEditBooking] = useState(null);
   const [refundBooking, setRefundBooking] = useState(null);
   const navigate = useNavigate();
   const limit = 25;
+  // Only restore the saved scroll position once per visit to this list.
+  const scrollRestored = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +54,37 @@ const AdminBookings = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Keep the web address in step with the current filters/page (quietly, with
+  // `replace`). When you press Back from a booking, the browser returns to this
+  // same address and the filters come right back.
+  useEffect(() => {
+    const params = {};
+    if (search) params.search = search;
+    if (status) params.status = status;
+    if (paymentStatus) params.payment = paymentStatus;
+    if (page > 1) params.page = String(page);
+    setSearchParams(params, { replace: true });
+  }, [search, status, paymentStatus, page, setSearchParams]);
+
+  // After the list finishes loading, scroll back to roughly where you were when
+  // you opened a booking. Runs once per visit, then forgets.
+  useEffect(() => {
+    if (loading || scrollRestored.current || bookings.length === 0) return;
+    const saved = sessionStorage.getItem('adminBookingsScroll');
+    if (saved != null) {
+      scrollRestored.current = true;
+      const y = parseInt(saved, 10) || 0;
+      sessionStorage.removeItem('adminBookingsScroll');
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+  }, [loading, bookings.length]);
+
+  // Remember how far down the list you'd scrolled, then open the booking.
+  const openBooking = (bookingId) => {
+    sessionStorage.setItem('adminBookingsScroll', String(window.scrollY));
+    navigate(`/admin/bookings/${bookingId}`);
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -97,7 +132,7 @@ const AdminBookings = () => {
             {bookings.map((b) => (
               <tr key={b._id} style={{ cursor: 'pointer' }} onClick={(e) => {
                 if (e.target.closest('button')) return;
-                navigate(`/admin/bookings/${b._id}`);
+                openBooking(b._id);
               }}>
                 <td>
                   <strong>{b.reservationId || b._id.slice(-6)}</strong>
