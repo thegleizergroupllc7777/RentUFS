@@ -23,6 +23,14 @@ const formatAddress = (u) => {
   return [addr.street, addr.apt, addr.city, addr.state, addr.zipCode].filter(Boolean).join(', ');
 };
 
+// The host's business identity to show under their name, so an LLC can be
+// eyeballed without opening the profile. Prefers the business/LLC name, then a
+// DBA. Returns '' for hosts who never entered one (and for plain drivers).
+const formatBusiness = (u) => {
+  const hi = u.hostInfo || {};
+  return hi.businessName || hi.dba || '';
+};
+
 const AdminUsers = () => {
   const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
@@ -129,7 +137,7 @@ const AdminUsers = () => {
       <div className="admin-toolbar">
         <input
           type="search"
-          placeholder="Search by name, email, or phone..."
+          placeholder="Search by name, business, email, or phone..."
           value={search}
           onChange={(e) => { setPage(1); setSearch(e.target.value); }}
         />
@@ -169,6 +177,7 @@ const AdminUsers = () => {
             )}
             {users.map((u) => {
               const address = formatAddress(u);
+              const business = formatBusiness(u);
               return (
               <tr key={u._id} style={{ cursor: 'pointer' }} onClick={(e) => {
                 if (e.target.closest('button')) return;
@@ -176,6 +185,9 @@ const AdminUsers = () => {
               }}>
                 <td>
                   <strong>{u.firstName} {u.lastName}</strong>
+                  {business && (
+                    <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem', fontWeight: 600 }}>{business}</div>
+                  )}
                   {address && (
                     <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>{address}</div>
                   )}

@@ -1426,11 +1426,18 @@ router.get('/users', adminAuth, async (req, res) => {
     if (role) filter.role = role;
     if (accountStatus) filter.accountStatus = accountStatus;
     if (search) {
+      // Match a person's own name/email/phone AND their business identity — the
+      // LLC/business name, DBA, and legal name a host entered — so typing an LLC
+      // like "Safe Wheels Transport" finds the person behind it.
       filter.$or = [
         { email: { $regex: search, $options: 'i' } },
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { phone: { $regex: search, $options: 'i' } },
+        { 'hostInfo.businessName': { $regex: search, $options: 'i' } },
+        { 'hostInfo.dba': { $regex: search, $options: 'i' } },
+        { 'hostInfo.legalFirstName': { $regex: search, $options: 'i' } },
+        { 'hostInfo.legalLastName': { $regex: search, $options: 'i' } }
       ];
     }
 
