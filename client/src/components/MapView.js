@@ -147,7 +147,15 @@ const MapView = ({
     setPopup({ vehicleId: vehicle._id, left, top, placement: placeBelow ? 'below' : 'above' });
   }, [latLngToPixel]);
 
+  // A CLICK "locks" the card open. While locked, hovering a neighbouring pin
+  // can't swap the card and moving the mouse away can't close it — so when
+  // pins overlap (a cluster) you can calmly reach "View Details" without the
+  // card flipping to the car behind. Locking clears on ×, map-click, drag, or
+  // clicking a different pin. Plain hover (no click) is unchanged.
+  const pinnedRef = useRef(false);
+
   const closePopup = useCallback(() => {
+    pinnedRef.current = false;
     setActiveMarker(null);
     setPopup(null);
   }, []);
@@ -157,10 +165,12 @@ const MapView = ({
   // to click "View Details", but it no longer stays stuck when you move away.
   const closeTimer = useRef(null);
   const cancelClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; } };
-  const scheduleClose = () => { cancelClose(); closeTimer.current = setTimeout(closePopup, 180); };
+  const scheduleClose = () => { if (pinnedRef.current) return; cancelClose(); closeTimer.current = setTimeout(closePopup, 180); };
   useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
   const handleMarkerClick = (vehicle, pos) => {
+    pinnedRef.current = true;
+    cancelClose();
     openPopup(vehicle, pos);
     if (onVehicleSelect) {
       onVehicleSelect(vehicle._id);
@@ -265,6 +275,9 @@ const MapView = ({
                   icon={isSelected ? MARKER_ICON_SELECTED : MARKER_ICON_DEFAULT}
                   onClick={() => handleMarkerClick(vehicle, pos)}
                   onMouseOver={() => {
+                    // While a card is locked open by a click, don't let hovering
+                    // a neighbouring pin swap it — that's the cluster fix.
+                    if (pinnedRef.current) { cancelClose(); return; }
                     // Highlight the pin and open our own card. The map NEVER
                     // moves on hover — the card is positioned in pixels and
                     // flips downward for high pins, so it's always fully visible.
@@ -273,6 +286,7 @@ const MapView = ({
                     openPopup(vehicle, pos);
                   }}
                   onMouseOut={() => {
+                    if (pinnedRef.current) return; // keep a locked card put
                     setHoveredVehicle(null);
                     scheduleClose(); // closes shortly unless the mouse lands on the card
                   }}
