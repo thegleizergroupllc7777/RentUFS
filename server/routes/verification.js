@@ -66,10 +66,23 @@ router.post('/start', auth, async (req, res) => {
       birth_date: user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().slice(0, 10) : undefined,
       external_id: user._id.toString()
     });
-    if (!created.success) {
+    // Resolve which applicant to verify. Normally we just created them. But if
+    // this driver was already set up on a prior attempt, ClearDrive rejects the
+    // duplicate with "already exists" — in that case reuse their EXISTING
+    // applicant (looked up by the same external_id) and hand them a fresh link,
+    // instead of dead-ending them on the error.
+    let applicant_id;
+    if (created.success) {
+      applicant_id = created.applicant?.id;
+    } else if (/already exists/i.test(created.error || '')) {
+      const existing = await clearDrive.getLatestVerification({ external_id: user._id.toString() });
+      applicant_id = existing.success ? existing.applicant?.id : null;
+    } else {
       return res.status(400).json({ message: created.error || 'Could not start verification', code: created.code });
     }
-    const applicant_id = created.applicant?.id;
+    if (!applicant_id) {
+      return res.status(400).json({ message: 'Could not start verification. Please contact support.' });
+    }
     const urlRes = await clearDrive.createVerificationUrl({ applicant_id, flow: 'PERSONAL' });
     if (!urlRes.success) {
       return res.status(400).json({ message: urlRes.error || 'Could not create verification link', code: urlRes.code });
