@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from '../../config/axios';
 import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
+import LastActiveBadge from '../../components/LastActiveBadge';
 import { useAuth } from '../../context/AuthContext';
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
@@ -328,6 +329,9 @@ const AdminUserDetail = () => {
           {/* Go back to the exact filtered/scrolled list you came from. Fall
               back to a plain Users list if this page was opened directly. */}
           <button className="admin-btn" onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/admin/users'); }} style={{ marginBottom: '1rem' }}>← Back to users</button>
+
+          {/* Last active — admin-only glance at whether this person is around. */}
+          <div style={{ marginBottom: '1rem' }}><LastActiveBadge date={user.lastActiveAt} /></div>
 
           {/* Profile + quick actions */}
           <div className="admin-table-wrap" style={{ marginBottom: '1.5rem' }}>

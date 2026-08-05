@@ -27,6 +27,17 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // While logged in, send a lightweight "still here" heartbeat so admins can see
+  // when a user was last active. Fire-and-forget: any failure is ignored and
+  // never affects the user (booking/checkout/etc. are completely untouched).
+  useEffect(() => {
+    if (!user?._id) return;
+    const ping = () => { axios.post(`${API_URL}/api/users/heartbeat`).catch(() => {}); };
+    ping(); // stamp immediately on login / return to the site
+    const id = setInterval(ping, 60000); // and once a minute while open
+    return () => clearInterval(id);
+  }, [user?._id]);
+
   const fetchUser = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/auth/me`);

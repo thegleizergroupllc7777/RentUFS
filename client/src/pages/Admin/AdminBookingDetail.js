@@ -5,6 +5,7 @@ import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
 import AdminLayout from './AdminLayout';
 import RentalAgreement from '../../components/RentalAgreement';
+import LastActiveBadge from '../../components/LastActiveBadge';
 import { formatTime } from '../../utils/formatTime';
 import { formatTimeWithZone } from '../../utils/timezones';
 import { useAuth } from '../../context/AuthContext';
@@ -575,6 +576,8 @@ const PartyCard = ({ label, person, navigate }) => (
         </div>
         <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>{person.email}</div>
         <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>{person.phone || '—'}</div>
+        {/* Admin-only glance: is this party still around right now? */}
+        <div style={{ marginTop: '0.5rem' }}><LastActiveBadge date={person.lastActiveAt} /></div>
         <button className="admin-btn" style={{ marginTop: '0.75rem' }} onClick={() => navigate(`/admin/users/${person._id}`)}>View profile →</button>
       </>
     ) : <div className="muted">—</div>}
