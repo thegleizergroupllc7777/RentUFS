@@ -86,6 +86,12 @@ const userSchema = new mongoose.Schema({
   deactivatedAt: {
     type: Date
   },
+  // Last time this user was active on the site (set by a lightweight heartbeat
+  // ping while they're logged in). Admin-only display so staff can see who's
+  // around. Purely informational — nothing reads this to gate any flow.
+  lastActiveAt: {
+    type: Date
+  },
   driverLicense: {
     licenseNumber: {
       type: String,

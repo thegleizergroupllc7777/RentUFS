@@ -1136,6 +1136,20 @@ router.put('/integrations/tollspot/signed-up', auth, async (req, res) => {
   }
 });
 
+// Lightweight "still here" heartbeat. The client pings this every minute while
+// a logged-in user has the site open; it stamps ONE field (lastActiveAt) so
+// admins can see when someone was last active. It writes nothing else and reads
+// nothing critical — booking, payment, insurance, and toll flows are untouched.
+// Fail-safe: any error is swallowed so a hiccup here never affects the user.
+router.post('/heartbeat', auth, async (req, res) => {
+  try {
+    await User.updateOne({ _id: req.user._id }, { $set: { lastActiveAt: new Date() } });
+    res.json({ ok: true });
+  } catch (e) {
+    res.json({ ok: false });
+  }
+});
+
 // Get user profile by ID — MUST be last: /:id is a catch-all that would shadow
 // named GET routes like /host-tax-info, /driver-license, /payment-methods
 router.get('/:id', async (req, res) => {
