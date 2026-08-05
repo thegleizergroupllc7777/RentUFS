@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
+import LastActiveBadge from '../../components/LastActiveBadge';
 import { useAuth } from '../../context/AuthContext';
 
 const USER_TYPES = ['driver', 'host', 'both'];
@@ -187,7 +188,11 @@ const AdminUsers = () => {
                 openUser(u._id);
               }}>
                 <td>
-                  <strong>{u.firstName} {u.lastName}</strong>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Tiny "last active" dot — hover shows the exact time. Admin-only. */}
+                    <LastActiveBadge date={u.lastActiveAt} compact />
+                    <strong>{u.firstName} {u.lastName}</strong>
+                  </span>
                   {business && (
                     <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem', fontWeight: 600 }}>{business}</div>
                   )}

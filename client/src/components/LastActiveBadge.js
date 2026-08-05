@@ -18,8 +18,19 @@ export function formatLastActive(input) {
   return { text: `Last seen ${days} day${days === 1 ? '' : 's'} ago`, color: '#9ca3af' };
 }
 
-const LastActiveBadge = ({ date, style }) => {
+const LastActiveBadge = ({ date, style, compact }) => {
   const { text, color } = formatLastActive(date);
+  // Compact: just the small dot, with the exact time shown on hover — keeps the
+  // Users list uncluttered. (Used in the big table.)
+  if (compact) {
+    return (
+      <span
+        title={text}
+        aria-label={text}
+        style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, display: 'inline-block', flex: 'none', ...style }}
+      />
+    );
+  }
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color, ...style }}>
       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, display: 'inline-block', flex: 'none' }} />
