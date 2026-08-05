@@ -805,11 +805,24 @@ const DriverProfile = () => {
 
   const startClearDrive = async () => {
     setCdBusy(true); setCdError('');
+    // Open a blank tab SYNCHRONOUSLY inside the tap. Phones only allow a new tab
+    // at the instant of the tap, so we can't wait for the server first — that's
+    // why the link "didn't open". We grab the tab now, then point it at the link
+    // once we have it. If the browser still blocks it, fall back to opening in
+    // the same tab so the driver always reaches the verification.
+    const win = window.open('', '_blank');
     try {
       const token = localStorage.getItem('token');
       const { data } = await axios.post(`${API_URL}/api/verification/start`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      if (data.url) window.open(data.url, '_blank', 'noopener');
+      if (data.url) {
+        if (win) win.location = data.url;
+        else window.location.assign(data.url);
+      } else {
+        if (win) win.close();
+        setCdError('Could not start verification. Please try again.');
+      }
     } catch (e) {
+      if (win) win.close();
       setCdError(e.response?.data?.message || 'Could not start verification. Please try again.');
     } finally { setCdBusy(false); }
   };
