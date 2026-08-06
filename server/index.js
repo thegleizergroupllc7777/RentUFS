@@ -57,6 +57,7 @@ app.use('/api/charges', chargeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/claims', require('./routes/claims'));
 
 // Validate critical environment variables
 if (!process.env.MONGODB_URI) {

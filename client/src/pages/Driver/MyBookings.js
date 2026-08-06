@@ -11,6 +11,7 @@ import PullToRefresh from '../../components/PullToRefresh';
 import VehicleInspection from '../../components/VehicleInspection';
 import ChatBox from '../../components/ChatBox';
 import TollCharges from '../../components/TollCharges';
+import FileClaimModal from '../../components/FileClaimModal';
 import { useAuth } from '../../context/AuthContext';
 import API_URL from '../../config/api';
 import getImageUrl from '../../config/imageUrl';
@@ -247,6 +248,7 @@ const MyBookings = () => {
   const [reconciling, setReconciling] = useState({});
   const [registrationModal, setRegistrationModal] = useState({ open: false, booking: null });
   const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
+  const [claimModal, setClaimModal] = useState({ open: false, booking: null });
   const [tollChargesBookingId, setTollChargesBookingId] = useState(null);
   const [outstandingChargesByBooking, setOutstandingChargesByBooking] = useState({});
   const [openChatBookingId, setOpenChatBookingId] = useState(null);
@@ -1255,6 +1257,16 @@ const MyBookings = () => {
                           </button>
                         )}
 
+                        {booking.status === 'completed' && (
+                          <button
+                            onClick={() => setClaimModal({ open: true, booking })}
+                            className="btn btn-secondary"
+                            style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                          >
+                            ⚠️ File a Claim
+                          </button>
+                        )}
+
                         {canExtend(booking) && (
                           <button
                             onClick={() => openExtendModal(booking)}
@@ -1761,6 +1773,14 @@ const MyBookings = () => {
               booking: { ...prev.booking, teqMobility: updatedTeqMobility }
             }));
           }}
+        />
+      )}
+
+      {/* File a Claim Modal */}
+      {claimModal.open && claimModal.booking && (
+        <FileClaimModal
+          booking={claimModal.booking}
+          onClose={() => setClaimModal({ open: false, booking: null })}
         />
       )}
 
