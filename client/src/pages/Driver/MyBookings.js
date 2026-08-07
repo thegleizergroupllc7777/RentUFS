@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -236,7 +236,13 @@ const MyBookings = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('current');
+  // Remember the tab (and scroll spot) in the URL so opening a reservation and
+  // pressing Back returns you to the same tab/place instead of resetting to
+  // "Current". (e.g. /my-bookings?tab=past)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = ['current', 'upcoming', 'past'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'current';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const scrollRestored = React.useRef(false);
   const [extendModal, setExtendModal] = useState({ open: false, booking: null });
   const [extensionDays, setExtensionDays] = useState(1);
   const [extensionRentalType, setExtensionRentalType] = useState('daily');
@@ -592,8 +598,32 @@ const MyBookings = () => {
   const upcomingUnread = getTabUnreadCount(upcoming);
   const pastUnread = getTabUnreadCount(past);
 
-  // Auto-switch to tab with unread messages on first load
-  const [hasAutoSwitched, setHasAutoSwitched] = useState(false);
+  // Auto-switch to tab with unread messages on first load — but NOT if the URL
+  // already told us which tab to show (e.g. you pressed Back from a reservation),
+  // so your remembered tab always wins.
+  const [hasAutoSwitched, setHasAutoSwitched] = useState(!!searchParams.get('tab'));
+
+  // Keep the active tab in the URL (quietly, with replace) so Back restores it.
+  useEffect(() => {
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      if (activeTab === 'current') p.delete('tab'); else p.set('tab', activeTab);
+      return p;
+    }, { replace: true });
+  }, [activeTab, setSearchParams]);
+
+  // After the list loads, scroll back to roughly where you were when you opened
+  // a reservation. Runs once per visit, then forgets.
+  useEffect(() => {
+    if (loading || scrollRestored.current || bookings.length === 0) return;
+    const saved = sessionStorage.getItem('myBookingsScroll');
+    if (saved != null) {
+      scrollRestored.current = true;
+      const y = parseInt(saved, 10) || 0;
+      sessionStorage.removeItem('myBookingsScroll');
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+  }, [loading, bookings.length]);
   useEffect(() => {
     if (hasAutoSwitched || Object.keys(unreadCounts).length === 0) return;
     if (currentUnread > 0) {
@@ -1163,7 +1193,7 @@ const MyBookings = () => {
                       )}
 
                       <div className="booking-actions">
-                        <Link to={`/reservation/${booking._id}`}>
+                        <Link to={`/reservation/${booking._id}`} onClick={() => sessionStorage.setItem('myBookingsScroll', String(window.scrollY))}>
                           <button className="btn btn-secondary">View Vehicle</button>
                         </Link>
 
