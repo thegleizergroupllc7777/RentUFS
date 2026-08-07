@@ -6,6 +6,7 @@ import PullToRefresh from '../../components/PullToRefresh';
 import ChatBox from '../../components/ChatBox';
 import TollCharges from '../../components/TollCharges';
 import AddChargeModal from '../../components/AddChargeModal';
+import FileClaimModal from '../../components/FileClaimModal';
 import { useAuth } from '../../context/AuthContext';
 import { formatTime } from '../../utils/formatTime';
 import { formatTimeWithZone } from '../../utils/timezones';
@@ -159,6 +160,7 @@ const HostBookings = () => {
 
   // Insurance card modal state
   const [insuranceCardModal, setInsuranceCardModal] = useState({ open: false, booking: null });
+  const [claimModal, setClaimModal] = useState({ open: false, booking: null });
   const [tollChargesBookingId, setTollChargesBookingId] = useState(null);
   const [addChargeBookingId, setAddChargeBookingId] = useState(null);
 
@@ -1374,6 +1376,16 @@ const HostBookings = () => {
                       Tolls & Charges
                     </button>
 
+                    {booking.status === 'completed' && (
+                      <button
+                        onClick={() => setClaimModal({ open: true, booking })}
+                        className="btn btn-secondary"
+                        style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                      >
+                        ⚠️ File a Claim
+                      </button>
+                    )}
+
                     {booking.status === 'active' && (
                       <>
                         {booking.insurance?.type && booking.insurance.type !== 'none' && (
@@ -1490,6 +1502,14 @@ const HostBookings = () => {
               booking: { ...prev.booking, teqMobility: updatedTeqMobility }
             }));
           }}
+        />
+      )}
+
+      {/* File a Claim Modal */}
+      {claimModal.open && claimModal.booking && (
+        <FileClaimModal
+          booking={claimModal.booking}
+          onClose={() => setClaimModal({ open: false, booking: null })}
         />
       )}
 

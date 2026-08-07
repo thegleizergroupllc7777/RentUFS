@@ -285,7 +285,7 @@ const ReservationDetail = () => {
       <div className="page">
         <div className="container">
           <button
-            onClick={() => navigate('/my-bookings')}
+            onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/my-bookings'); }}
             style={{
               background: 'none',
               border: 'none',
