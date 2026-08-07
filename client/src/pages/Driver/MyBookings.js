@@ -1057,6 +1057,16 @@ const MyBookings = () => {
                                   {getStatusLabel(booking.status)}
                                 </div>
                               )}
+                              {/* Small, low-key "File a Claim" chip by the status — active/completed only.
+                                  Deliberately subtle so it doesn't nudge people toward filing. */}
+                              {['active', 'completed'].includes(booking.status) && (
+                                <button
+                                  onClick={() => setClaimModal({ open: true, booking })}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 700, color: '#f97316', border: '1px solid rgba(249,115,22,0.6)', background: 'rgba(249,115,22,0.08)', borderRadius: '8px', padding: '4px 9px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                >
+                                  ⚠️ File a Claim
+                                </button>
+                              )}
                               {booking.paymentStatus === 'paid' && (
                                 <div style={{
                                   fontSize: '0.7rem',
@@ -1284,16 +1294,6 @@ const MyBookings = () => {
                             style={{ background: '#6366f1', color: 'white', border: 'none' }}
                           >
                             Tolls & Charges
-                          </button>
-                        )}
-
-                        {booking.status === 'completed' && (
-                          <button
-                            onClick={() => setClaimModal({ open: true, booking })}
-                            className="btn btn-secondary"
-                            style={{ background: '#dc2626', color: 'white', border: 'none' }}
-                          >
-                            ⚠️ File a Claim
                           </button>
                         )}
 
