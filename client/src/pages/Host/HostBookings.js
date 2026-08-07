@@ -1277,11 +1277,23 @@ const HostBookings = () => {
                         Email: {booking.driver?.email} | Phone: {formatPhone(booking.driver?.phone)}
                       </p>
                     </div>
-                    <div
-                      className="booking-status"
-                      style={{ backgroundColor: getStatusColor(booking.status) }}
-                    >
-                      {booking.status}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* Small, low-key "File a Claim" chip by the status — active/completed
+                          only. Kept subtle so it doesn't nudge hosts toward filing. */}
+                      {['active', 'completed'].includes(booking.status) && (
+                        <button
+                          onClick={() => setClaimModal({ open: true, booking })}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 700, color: '#f97316', border: '1px solid rgba(249,115,22,0.6)', background: 'rgba(249,115,22,0.08)', borderRadius: '8px', padding: '4px 9px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                          ⚠️ File a Claim
+                        </button>
+                      )}
+                      <div
+                        className="booking-status"
+                        style={{ backgroundColor: getStatusColor(booking.status) }}
+                      >
+                        {booking.status}
+                      </div>
                     </div>
                   </div>
 
