@@ -1297,6 +1297,16 @@ const MyBookings = () => {
                           </button>
                         )}
 
+                        {booking.status === 'completed' && (
+                          <button
+                            onClick={() => setClaimModal({ open: true, booking })}
+                            className="btn btn-secondary"
+                            style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                          >
+                            ⚠️ File a Claim
+                          </button>
+                        )}
+
                         {canExtend(booking) && (
                           <button
                             onClick={() => openExtendModal(booking)}
