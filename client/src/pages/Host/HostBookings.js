@@ -1388,16 +1388,6 @@ const HostBookings = () => {
                       Tolls & Charges
                     </button>
 
-                    {booking.status === 'completed' && (
-                      <button
-                        onClick={() => setClaimModal({ open: true, booking })}
-                        className="btn btn-secondary"
-                        style={{ background: '#dc2626', color: 'white', border: 'none' }}
-                      >
-                        ⚠️ File a Claim
-                      </button>
-                    )}
-
                     {booking.status === 'active' && (
                       <>
                         {booking.insurance?.type && booking.insurance.type !== 'none' && (
