@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import API_URL from '../config/api';
 import ImageUpload from './ImageUpload';
+import getImageUrl from '../config/imageUrl';
 
 // Report-an-accident / file-a-claim form. Submits to POST /api/claims, which
 // only emails the claims inbox — it does not touch bookings, payments,
@@ -11,7 +12,8 @@ const FileClaimModal = ({ booking, onClose }) => {
   const [description, setDescription] = useState('');
   const [incidentDate, setIncidentDate] = useState('');
   const [location, setLocation] = useState('');
-  const [photos, setPhotos] = useState(['', '', '']);
+  const [photos, setPhotos] = useState([]);
+  const [uploaderKey, setUploaderKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -21,7 +23,10 @@ const FileClaimModal = ({ booking, onClose }) => {
     'this vehicle';
   const resId = booking?.reservationId || '';
 
-  const setPhoto = (i, url) => setPhotos((p) => { const n = [...p]; n[i] = url; return n; });
+  // Add one photo at a time: when the uploader returns a URL, store it and remount
+  // the uploader (via key) so only ONE set of options ever shows — not a grid of them.
+  const addPhoto = (url) => { if (url) { setPhotos((p) => [...p, url]); setUploaderKey((k) => k + 1); } };
+  const removePhoto = (i) => setPhotos((p) => p.filter((_, j) => j !== i));
 
   const submit = async () => {
     if (!description.trim()) { setError('Please describe what happened.'); return; }
@@ -103,11 +108,20 @@ const FileClaimModal = ({ booking, onClose }) => {
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.35rem' }}>
                 Photos of the damage (optional — but they really help)
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-                {[0, 1, 2].map((i) => (
-                  <ImageUpload key={i} label="" value={photos[i]} onChange={(url) => setPhoto(i, url)} />
-                ))}
-              </div>
+              {photos.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+                  {photos.map((p, i) => (
+                    <div key={i} style={{ position: 'relative' }}>
+                      <img src={getImageUrl(p)} alt={`Photo ${i + 1}`} style={{ width: '70px', height: '54px', objectFit: 'cover', borderRadius: '6px', display: 'block' }} />
+                      <button type="button" onClick={() => removePhoto(i)} aria-label="Remove photo"
+                        style={{ position: 'absolute', top: '-7px', right: '-7px', width: '20px', height: '20px', borderRadius: '50%', border: 'none', background: '#dc2626', color: '#fff', fontSize: '13px', lineHeight: '18px', cursor: 'pointer', padding: 0 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {photos.length < 5 && (
+                <ImageUpload key={uploaderKey} label="" value="" onChange={addPhoto} />
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '0.6rem' }}>
