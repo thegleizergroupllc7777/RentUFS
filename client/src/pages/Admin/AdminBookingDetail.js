@@ -593,7 +593,15 @@ const ExtendModal = ({ booking, onClose, onSaved, onError }) => {
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState('');
 
-  const estimatedCost = (days || 0) * (booking.pricePerDay || 0);
+  // Preview at the SAME down-only rate the server will actually charge: the lower
+  // of the agreed rate and the host's current price. Falls back to the agreed
+  // rate if the live price isn't available, so the estimate never misleads.
+  const effectiveRate = (() => {
+    const agreed = Number(booking.pricePerDay) || 0;
+    const current = Number(booking.vehicle?.pricePerDay);
+    return (!Number.isFinite(current) || current <= 0) ? agreed : Math.min(agreed, current);
+  })();
+  const estimatedCost = (days || 0) * effectiveRate;
 
   const submit = async () => {
     setBusy(true);
