@@ -37,6 +37,17 @@ const toLocalDate = (dateVal) => {
 const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
+// Mirror of the server's down-only extension rate: the lower of the rate the
+// renter agreed to and the host's current price. If the host lowered their
+// price mid-trip, this shows the reduced rate the renter will actually pay on a
+// new extension. Display only — the charge itself is computed on the server.
+const effectiveDailyRate = (booking) => {
+  const agreed = Number(booking?.pricePerDay) || 0;
+  const current = Number(booking?.vehicle?.pricePerDay);
+  if (!Number.isFinite(current) || current <= 0) return agreed;
+  return Math.min(agreed, current);
+};
+
 // Extension Payment Form Component
 const ExtensionPaymentForm = ({ bookingId, extensionDays, extensionCost, rentalType, onSuccess, onCancel }) => {
   const stripe = useStripe();
@@ -1474,7 +1485,10 @@ const MyBookings = () => {
                 Current return: {toLocalDate(extendModal.booking.endDate).toLocaleDateString()}
               </p>
               <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
-                Daily rate: ${Number(extendModal.booking.pricePerDay).toFixed(2)}
+                Daily rate: ${effectiveDailyRate(extendModal.booking).toFixed(2)}
+                {effectiveDailyRate(extendModal.booking) < Number(extendModal.booking.pricePerDay) && (
+                  <span style={{ color: '#059669', fontWeight: 700 }}> ↓ your host lowered this from ${Number(extendModal.booking.pricePerDay).toFixed(2)}</span>
+                )}
                 {extendModal.booking.vehicle?.pricePerWeek ? ` · Weekly: $${Number(extendModal.booking.vehicle.pricePerWeek).toFixed(2)}` : ''}
                 {extendModal.booking.vehicle?.pricePerMonth ? ` · Monthly: $${Number(extendModal.booking.vehicle.pricePerMonth).toFixed(2)}` : ''}
               </p>
