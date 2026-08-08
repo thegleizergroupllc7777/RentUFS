@@ -669,6 +669,25 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// Read-only: does this vehicle have a live rental right now? Used only to decide
+// whether to show the host the "price change affects the current trip" notice on
+// the edit page. Touches nothing — just a count. Owner (or admin) only.
+router.get('/:id/active-trip', auth, async (req, res) => {
+  try {
+    // Owner-only: this is the host's own edit page. Not their car → no notice.
+    const vehicle = await Vehicle.findOne({ _id: req.params.id, host: req.user._id }).select('_id');
+    if (!vehicle) return res.json({ active: false });
+    const active = await Booking.exists({
+      vehicle: req.params.id,
+      status: { $in: ['active', 'confirmed'] }
+    });
+    res.json({ active: !!active });
+  } catch (err) {
+    // Fail safe: if we can't tell, just say "no notice" — never blocks editing.
+    res.json({ active: false });
+  }
+});
+
 // Update vehicle
 router.put('/:id', auth, async (req, res) => {
   try {

@@ -12,6 +12,7 @@ const { isHostInsuranceReady } = require('../utils/hostReadiness');
 const { captureCardImage, captureCardToCloudinary, uploadCardBufferToCloudinary } = require('../utils/screenshotCard');
 const { isConfigured: tollspotConfigured, monitorCharges } = require('../utils/tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('../utils/tollSettlement');
+const { extensionDailyRate } = require('../utils/extensionPricing');
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { calculateProcessingFee } = require('../utils/stripeFee');
@@ -1043,7 +1044,8 @@ router.post('/:id/extend', auth, async (req, res) => {
     } else if (effectiveRentalType === 'monthly' && booking.vehicle.pricePerMonth) {
       rentalCost = booking.vehicle.pricePerMonth;
     } else {
-      rentalCost = extensionDays * booking.pricePerDay;
+      // Down-only: never above the agreed rate; follows the host down if lowered.
+      rentalCost = extensionDays * extensionDailyRate(booking);
     }
     const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
@@ -1066,7 +1068,7 @@ router.post('/:id/extend', auth, async (req, res) => {
       newEndDate,
       extensionDays,
       rentalType: effectiveRentalType,
-      pricePerDay: booking.pricePerDay,
+      pricePerDay: extensionDailyRate(booking),
       extensionCost,
       extensionBreakdown: {
         rental: rentalCost,
@@ -1120,7 +1122,8 @@ router.post('/:id/confirm-extension', auth, async (req, res) => {
     } else if (effectiveRentalType === 'monthly' && booking.vehicle?.pricePerMonth) {
       extensionRental = booking.vehicle.pricePerMonth;
     } else {
-      extensionRental = extensionDays * booking.pricePerDay;
+      // Down-only: never above the agreed rate; follows the host down if lowered.
+      extensionRental = extensionDays * extensionDailyRate(booking);
     }
     const extensionPlatformFee = extensionDays * (booking.platformFeePerDay || 1.50);
     const extensionInsurance = extensionDays * (booking.insurance?.costPerDay || 0);
