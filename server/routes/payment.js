@@ -9,6 +9,7 @@ const { sendNewBookingNotificationSMS, sendBookingConfirmedSMS } = require('../u
 const { calculateProcessingFee } = require('../utils/stripeFee');
 const { isConfigured: tollspotConfigured } = require('../utils/tollspot');
 const { getOutstandingTolls, recordTollSettlement, transferTollsToHost } = require('../utils/tollSettlement');
+const { extensionDailyRate } = require('../utils/extensionPricing');
 
 const router = express.Router();
 
@@ -322,7 +323,8 @@ router.post('/create-extension-payment', auth, async (req, res) => {
     } else if (effectiveRentalType === 'monthly' && booking.vehicle.pricePerMonth) {
       rentalCost = booking.vehicle.pricePerMonth;
     } else {
-      rentalCost = extensionDays * booking.pricePerDay;
+      // Down-only: never above the agreed rate; follows the host down if lowered.
+      rentalCost = extensionDays * extensionDailyRate(booking);
     }
     const platformFeePerDay = booking.platformFeePerDay || 1.50;
     const platformFee = extensionDays * platformFeePerDay;
@@ -435,7 +437,8 @@ router.post('/confirm-extension-payment', auth, async (req, res) => {
       } else if (effectiveRentalType === 'monthly' && booking.vehicle.pricePerMonth) {
         rentalCost = booking.vehicle.pricePerMonth;
       } else {
-        rentalCost = extensionDays * booking.pricePerDay;
+        // Down-only: never above the agreed rate; follows the host down if lowered.
+        rentalCost = extensionDays * extensionDailyRate(booking);
       }
       const platformFeePerDay = booking.platformFeePerDay || 1.50;
       const extensionPlatformFee = extensionDays * platformFeePerDay;

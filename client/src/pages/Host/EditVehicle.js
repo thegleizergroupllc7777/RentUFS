@@ -70,6 +70,9 @@ const EditVehicle = () => {
   const [zipLoading, setZipLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [originalVin, setOriginalVin] = useState('');
+  // Whether this car is on a live trip right now — drives the price-change notice.
+  const [hasActiveTrip, setHasActiveTrip] = useState(false);
+  const [originalPrice, setOriginalPrice] = useState('');
 
   const handleZipLookup = async (zip) => {
     if (!/^\d{5}$/.test(zip)) return;
@@ -146,6 +149,17 @@ const EditVehicle = () => {
       }
 
       setOriginalVin(vehicle.vin || '');
+      setOriginalPrice(vehicle.pricePerDay);
+      // Read-only check: is this car on a live trip? Only used to show the notice.
+      try {
+        const token = localStorage.getItem('token');
+        const at = await axios.get(`${API_URL}/api/vehicles/${id}/active-trip`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setHasActiveTrip(!!at.data?.active);
+      } catch (_) {
+        setHasActiveTrip(false); // fail safe: no notice, never blocks editing
+      }
       setFormData({
         make: vehicle.make,
         model: vehicle.model,
@@ -1019,8 +1033,33 @@ const EditVehicle = () => {
                   />
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.25rem' }}>
                     $1 - $500 per day
+                    {hasActiveTrip && originalPrice !== '' && String(formData.pricePerDay) !== String(originalPrice) && (
+                      <span style={{ color: '#059669', fontWeight: 700 }}> · changed from ${originalPrice}</span>
+                    )}
                   </p>
                 </div>
+
+                {/* Active-trip price notice — shown only when this car is on a live
+                    trip. Purely informational; changing the price never touches
+                    anything already paid, and extensions can only go DOWN. */}
+                {hasActiveTrip && (
+                  <div style={{
+                    background: '#fdeceb', border: '1.5px solid #f5b5b0', borderRadius: 11,
+                    padding: '15px 17px', margin: '0 0 1rem'
+                  }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#b42318', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      ⚠️ This car is on an active trip
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      <li style={{ fontSize: '0.9rem', color: '#b42318', margin: '6px 0', lineHeight: 1.45 }}>
+                        <b>Lowering</b> = your current renter's future extensions drop too.
+                      </li>
+                      <li style={{ fontSize: '0.9rem', color: '#b42318', margin: '6px 0', lineHeight: 1.45 }}>
+                        <b>Raising</b> = new bookings only — this trip is capped at the initial agreed price.
+                      </li>
+                    </ul>
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label className="form-label">Price Per Week ($)</label>

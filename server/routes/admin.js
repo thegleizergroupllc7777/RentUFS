@@ -38,6 +38,7 @@ const EmailSuppression = require('../models/EmailSuppression');
 const SystemState = require('../models/SystemState');
 const { isSuperAdmin } = require('../utils/superAdmin');
 const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobility');
+const { extensionDailyRate } = require('../utils/extensionPricing');
 const { previewHostPayout, processWeeklyPayouts } = require('../utils/scheduler');
 const clearDrive = require('../utils/clearDrive');
 
@@ -1196,7 +1197,8 @@ router.post('/bookings/:id/extend', adminAuth, async (req, res) => {
     const newEndDate = new Date(booking.endDate);
     newEndDate.setDate(newEndDate.getDate() + days);
 
-    const rentalCost = days * booking.pricePerDay;
+    // Down-only: never above the agreed rate; follows the host down if lowered.
+    const rentalCost = days * extensionDailyRate(booking);
     const platformFee = days * (booking.platformFeePerDay || 1.50);
     const insurance = days * (booking.insurance?.costPerDay || 0);
     const baseTotal = rentalCost + platformFee + insurance;
