@@ -444,7 +444,7 @@ const AdminBookingDetail = () => {
             <>
               <h3 style={{ color: '#374151' }}>Extensions ({booking.extensions.length})</h3>
               {/* Long extension lists scroll inside a fixed box so the page stays short. */}
-              <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', ...(booking.extensions.length > 8 ? { maxHeight: 380, overflowY: 'auto' } : {}) }}>
+              <div className="admin-table-wrap" style={{ marginBottom: '1.5rem', ...(booking.extensions.length > 12 ? { maxHeight: 780, overflowY: 'auto' } : {}) }}>
                 <table className="admin-table">
                   <thead>
                     <tr><th>Date</th><th>Days</th><th>Cost</th><th>New end</th><th>Payment</th></tr>
@@ -468,7 +468,7 @@ const AdminBookingDetail = () => {
           {/* Activity log */}
           <h3 style={{ color: '#374151' }}>Admin activity log ({(booking.adminActions || []).length})</h3>
           {/* Long logs scroll inside a fixed box so the page stays short. */}
-          <div className="admin-table-wrap" style={(booking.adminActions && booking.adminActions.length > 8) ? { maxHeight: 380, overflowY: 'auto' } : undefined}>
+          <div className="admin-table-wrap" style={(booking.adminActions && booking.adminActions.length > 12) ? { maxHeight: 780, overflowY: 'auto' } : undefined}>
             {(!booking.adminActions || booking.adminActions.length === 0) ? (
               <div className="admin-empty">No admin actions recorded yet.</div>
             ) : (
