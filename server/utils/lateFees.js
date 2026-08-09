@@ -115,7 +115,7 @@ const processLateReturns = async () => {
     if (!chargingOn) return { success: true, charged: 0, skipped: 'charging_off' };
 
     const activeBookings = await Booking.find({ status: 'active', paymentStatus: 'paid' })
-      .populate('vehicle', 'make model year')
+      .populate('vehicle', 'make model year location')
       .populate('driver', 'firstName lastName email phone stripeCustomerId paymentMethods smsConsent')
       .populate('host', 'firstName lastName email hostInfo');
 
