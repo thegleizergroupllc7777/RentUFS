@@ -294,6 +294,46 @@ router.post('/hosts/:id/waive-penalty', adminAuth, async (req, res) => {
   }
 });
 
+// ── Withhold from a host's payout (OWNER-ONLY) ──────────────────────────────
+// Adds an amount to the host's held balance — REUSES cancellationPenaltyBalance,
+// the exact field the live payout and payout-preview already deduct. So this
+// touches NO payout/money-sending code. Writes ONLY that one field; NO money
+// moves here (it's netted at payout time) and it's fully reversible with the
+// existing "Give back" control. Master admin only.
+router.post('/hosts/:id/withhold', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const host = await User.findById(req.params.id);
+    if (!host) return res.status(404).json({ message: 'Host not found' });
+
+    const amount = Number(req.body.amount);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ message: 'Enter a valid dollar amount to withhold.' });
+    }
+    const add = Math.round(amount * 100) / 100;
+    const current = host.cancellationPenaltyBalance || 0;
+    const newBalance = Math.round((current + add) * 100) / 100;
+
+    host.cancellationPenaltyBalance = newBalance;
+    await host.save();
+
+    console.log(`🔒 Withhold added by ${req.user.email} for host ${host._id}: +$${add.toFixed(2)} (was $${current.toFixed(2)}, now $${newBalance.toFixed(2)})`);
+
+    res.json({
+      success: true,
+      added: add,
+      previousBalance: current,
+      newBalance,
+      message: `Withheld $${add.toFixed(2)}. Total held from next payout: $${newBalance.toFixed(2)}.`
+    });
+  } catch (error) {
+    console.error('Withhold error:', error.message);
+    res.status(500).json({ message: 'Failed to withhold', error: error.message });
+  }
+});
+
 // ── Automatic late-fee charging switch (OWNER-ONLY) ─────────────────────────
 // The master kill switch for automatic late-return charging. Stored in
 // SystemState so it flips instantly with no redeploy. Default OFF (safe).
@@ -454,7 +494,7 @@ router.get('/late-returns', adminAuth, async (req, res) => {
     const { getLateInfo, isBookingEligible } = require('../utils/lateReturn');
     const now = new Date();
     const bookings = await Booking.find({ status: 'active', paymentStatus: 'paid' })
-      .populate('vehicle', 'make model year')
+      .populate('vehicle', 'make model year location')
       .populate('driver', 'firstName lastName phone')
       .populate('host', 'firstName lastName phone');
 
@@ -931,7 +971,7 @@ router.get('/stats', adminAuth, async (req, res) => {
     let overdueCount = 0;
     try {
       const { getLateInfo } = require('../utils/lateReturn');
-      const activeForLate = await Booking.find({ status: 'active', paymentStatus: 'paid' });
+      const activeForLate = await Booking.find({ status: 'active', paymentStatus: 'paid' }).populate('vehicle', 'location');
       const nowLate = new Date();
       overdueCount = activeForLate.filter((b) => getLateInfo(b, nowLate).isLate).length;
     } catch (e) { overdueCount = 0; }

@@ -100,6 +100,8 @@ const AdminUserDetail = () => {
   const [payoutMsg, setPayoutMsg] = useState('');
   const [waiveAmount, setWaiveAmount] = useState('');
   const [waiving, setWaiving] = useState(false);
+  const [withholdAmount, setWithholdAmount] = useState('');
+  const [withholding, setWithholding] = useState(false);
   const [salespeople, setSalespeople] = useState([]);
   const [savingReferredBy, setSavingReferredBy] = useState(false);
   const [referredByInfo, setReferredByInfo] = useState('');
@@ -211,8 +213,8 @@ const AdminUserDetail = () => {
       return;
     }
     const confirmText = raw === ''
-      ? `Give ${payout.hostName || 'this host'} back the ENTIRE ${formatCurrency(payout.penaltyDeducted)} penalty?\n\nThis only forgives the penalty — no money is transferred.`
-      : `Give ${payout.hostName || 'this host'} back ${formatCurrency(amt)} of their penalty?\n\nThis only forgives the penalty — no money is transferred.`;
+      ? `Release the ENTIRE ${formatCurrency(payout.penaltyDeducted)} held from ${payout.hostName || 'this host'}?\n\nThis only releases the held amount — no money is transferred.`
+      : `Release ${formatCurrency(amt)} of the amount held from ${payout.hostName || 'this host'}?\n\nThis only releases the held amount — no money is transferred.`;
     if (!window.confirm(confirmText)) return;
     setWaiving(true);
     setPayoutMsg('');
@@ -226,6 +228,32 @@ const AdminUserDetail = () => {
       setError(err.response?.data?.message || 'Failed to waive penalty');
     } finally {
       setWaiving(false);
+    }
+  };
+
+  // Owner-only: hold an amount from this host's next payout. Adds to the same
+  // "held" balance the payout already deducts — no money moves here, and it's
+  // fully reversible with "Give back". Refreshes the preview so "owed" updates.
+  const handleWithhold = async () => {
+    if (!payout) return;
+    const amt = Number((withholdAmount || '').trim());
+    if (isNaN(amt) || amt <= 0) {
+      setError('Enter a valid dollar amount to withhold.');
+      return;
+    }
+    if (!window.confirm(`Withhold ${formatCurrency(amt)} from ${payout.hostName || 'this host'}'s next payout?\n\nNo money moves now — it's held from their payout and can be released anytime with "Give back".`)) return;
+    setWithholding(true);
+    setPayoutMsg('');
+    setError('');
+    try {
+      const { data } = await axios.post(`/api/admin/hosts/${id}/withhold`, { amount: amt });
+      setPayoutMsg(data.message || 'Amount withheld.');
+      setWithholdAmount('');
+      await loadPayoutPreview();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to withhold');
+    } finally {
+      setWithholding(false);
     }
   };
 
@@ -546,7 +574,7 @@ const AdminUserDetail = () => {
                         <div style={{ fontSize: '0.9rem', color: '#111827', marginBottom: '0.5rem' }}>
                           Currently owed: <strong>{formatCurrency(payout.net)}</strong>
                           {payout.penaltyDeducted > 0 && (
-                            <span style={{ color: '#6b7280' }}> (gross {formatCurrency(payout.gross)} − {formatCurrency(payout.penaltyDeducted)} penalty)</span>
+                            <span style={{ color: '#6b7280' }}> (gross {formatCurrency(payout.gross)} − {formatCurrency(payout.penaltyDeducted)} held)</span>
                           )}
                         </div>
                         {/* Waive-penalty control — forgive some/all of the host's
@@ -568,10 +596,32 @@ const AdminUserDetail = () => {
                               </button>
                             </div>
                             <div style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: '0.3rem' }}>
-                              Leave blank to give the host back the full penalty, or enter an amount (e.g. 1.50) to give part back. Forgives the penalty only — no money moves.
+                              Leave blank to release the full held amount, or enter an amount (e.g. 1.50) to release part. Releases held funds only — no money moves.
                             </div>
                           </div>
                         )}
+                        {/* Withhold control — hold an amount from this host's next
+                            payout. Always available. Reuses the same held balance
+                            the payout already deducts; reversible with "Give back".
+                            No money moves — netted at payout time. */}
+                        <div style={{ margin: '0 0 0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.82rem', color: '#374151' }}>Withhold from host&nbsp;$</span>
+                            <input
+                              type="number" step="0.01" min="0"
+                              placeholder="e.g. 31"
+                              value={withholdAmount}
+                              onChange={(e) => setWithholdAmount(e.target.value)}
+                              style={{ width: '120px', padding: '0.35rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.85rem' }}
+                            />
+                            <button className="admin-btn" onClick={handleWithhold} disabled={withholding}>
+                              {withholding ? 'Withholding…' : 'Withhold'}
+                            </button>
+                          </div>
+                          <div style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: '0.3rem' }}>
+                            Holds this amount from their next payout. Not shown to the host. Release anytime with "Give back".
+                          </div>
+                        </div>
                         {payout.lineItems && payout.lineItems.length > 0 ? (
                           <div style={{ fontSize: '0.82rem', color: '#374151', marginBottom: '0.75rem' }}>
                             {payout.lineItems.map((li, i) => (

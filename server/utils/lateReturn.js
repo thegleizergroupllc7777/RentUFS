@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SystemState = require('../models/SystemState');
+const { returnMomentForBooking } = require('./vehicleTimezone');
 
 // Legacy fixed Eastern offset (kept for backward-compatible export only). The
 // return-moment math below no longer uses it — it computes the true Eastern time
@@ -38,19 +39,11 @@ const easternOffsetMinutes = (instant) => {
 // The drop-off clock time is the renter's REAL Eastern time, so we resolve it to
 // UTC using the actual Eastern offset for that date (daylight-saving accurate) —
 // no fixed 5-hour assumption, so summer returns aren't given a hidden extra hour.
-const getReturnMoment = (booking) => {
-  const base = new Date(booking.endDate);
-  const [h, m] = String(booking.dropoffTime || '10:00').split(':').map(Number);
-  const hours = Number.isFinite(h) ? h : 10;
-  const mins = Number.isFinite(m) ? m : 0;
-  const y = base.getUTCFullYear(), mo = base.getUTCMonth(), d = base.getUTCDate();
-  // Treat the wall-clock as UTC first, then shift by the true Eastern offset.
-  const guess = Date.UTC(y, mo, d, hours, mins, 0);
-  let result = guess - easternOffsetMinutes(new Date(guess)) * 60000;
-  // One re-check pins it down across the rare DST-transition boundary.
-  result = guess - easternOffsetMinutes(new Date(result)) * 60000;
-  return new Date(result);
-};
+// Delegates to the shared vehicle-timezone resolver (the SAME one the return
+// reminders/overdue scheduler uses) so a California drop-off is read in Pacific,
+// not Eastern. Falls back to Eastern inside that helper when the vehicle's state
+// is unknown — i.e. exactly the previous behavior — so it can never regress.
+const getReturnMoment = (booking) => returnMomentForBooking(booking);
 
 // Given a booking, return how late it is right now. Only 'active' bookings can
 // be late — a completed/cancelled trip is never late no matter the clock.
