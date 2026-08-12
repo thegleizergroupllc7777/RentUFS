@@ -67,6 +67,25 @@ const AdminBookingDetail = () => {
   const [statusOpen, setStatusOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [agreementOpen, setAgreementOpen] = useState(false);
+  // Download-agreement-as-PDF flow (for insurance claims): expand the full
+  // contract, let it (and its images) render, then trigger the browser's
+  // print/save dialog. The print-only CSS further below scopes the output so
+  // ONLY the signed agreement + inspection photos come out — no admin chrome.
+  // Purely additive: nothing here touches booking/payment/insurance data.
+  const [pdfPending, setPdfPending] = useState(false);
+  const handleDownloadPdf = useCallback(() => {
+    setAgreementOpen(true);
+    setPdfPending(true);
+  }, []);
+  useEffect(() => {
+    if (!pdfPending || !agreementOpen) return;
+    // Give the agreement fetch + images a moment to load before printing.
+    const t = setTimeout(() => {
+      window.print();
+      setPdfPending(false);
+    }, 900);
+    return () => clearTimeout(t);
+  }, [pdfPending, agreementOpen]);
   const [cardUploading, setCardUploading] = useState(false);
   const [coverageIdInput, setCoverageIdInput] = useState('');
   const [savingCoverageId, setSavingCoverageId] = useState(false);
@@ -276,15 +295,41 @@ const AdminBookingDetail = () => {
               Read-only: the agreement data is already saved on the booking.
               The "View" button expands the full living contract (same read-only
               document the host sees) — admins can review every term, always current. */}
+          {/* Everything from here to the end of Inspection photos is the
+              "claim packet" that the Download PDF button exports. On screen this
+              wrapper is an invisible full-width block (no visual change); it only
+              matters inside the @media print rules below. */}
+          <div className="agreement-print-region">
+          <style>{`
+            @media print {
+              /* Collapse the whole app so ONLY the agreement + photos print. */
+              body * { visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: 0 !important; }
+              .agreement-print-region, .agreement-print-region * { visibility: visible !important; height: auto !important; background: #fff !important; color: #000 !important; box-shadow: none !important; }
+              .agreement-print-region { width: 100% !important; padding: 0 !important; }
+              .agreement-print-region .no-print { display: none !important; }
+              .agreement-print-region img { page-break-inside: avoid; max-width: 100% !important; }
+              .agreement-print-region .agreement-party-section,
+              .agreement-print-region .agreement-field { page-break-inside: avoid; }
+            }
+          `}</style>
           <h3 style={{ color: '#374151' }}>Rental agreement</h3>
           <div className="admin-table-wrap" style={{ marginBottom: agreementOpen ? '0.75rem' : '1.5rem', padding: '1.25rem', position: 'relative' }}>
-            <button
-              className="admin-btn"
-              onClick={() => setAgreementOpen((o) => !o)}
-              style={{ position: 'absolute', top: '1rem', right: '1rem' }}
-            >
-              {agreementOpen ? 'Hide' : 'View'}
-            </button>
+            <div className="no-print" style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
+              <button
+                className="admin-btn"
+                onClick={handleDownloadPdf}
+                title="Download the signed agreement + inspection photos as a clean PDF"
+                style={{ borderColor: '#10b981', color: '#065f46', background: '#ecfdf5', fontWeight: 700 }}
+              >
+                {pdfPending ? 'Preparing…' : '⬇ Download PDF'}
+              </button>
+              <button
+                className="admin-btn"
+                onClick={() => setAgreementOpen((o) => !o)}
+              >
+                {agreementOpen ? 'Hide' : 'View'}
+              </button>
+            </div>
             {booking.agreement?.signed ? (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
@@ -324,6 +369,7 @@ const AdminBookingDetail = () => {
             <InspectionPhotos label="Pickup inspection" inspection={booking.pickupInspection} />
             <InspectionPhotos label="Return inspection" inspection={booking.returnInspection} />
           </div>
+          </div>{/* /agreement-print-region — end of the Download PDF claim packet */}
 
           {/* Insurance card */}
           {booking.insurance?.type && booking.insurance.type !== 'none' && (
