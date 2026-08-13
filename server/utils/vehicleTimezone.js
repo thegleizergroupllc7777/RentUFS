@@ -66,4 +66,24 @@ function returnMomentForBooking(booking) {
   return new Date(result);
 }
 
-module.exports = { zoneForState, returnMomentForBooking };
+/**
+ * The real UTC instant a booking is PICKED UP, resolved in the vehicle's local
+ * timezone — the pickup-side twin of returnMomentForBooking. startDate is
+ * midnight-UTC of the pickup day; pickupTime is the wall clock in that local
+ * zone. Falls back to Eastern if the state is unknown. Read-only / presentation
+ * math: nothing here charges, books, or calls an external API.
+ */
+function startMomentForBooking(booking) {
+  const tz = zoneForState(booking?.vehicle?.location?.state);
+  const base = new Date(booking.startDate);
+  const [h, m] = String(booking.pickupTime || '10:00').split(':').map(Number);
+  const hours = Number.isFinite(h) ? h : 10;
+  const mins = Number.isFinite(m) ? m : 0;
+  const y = base.getUTCFullYear(), mo = base.getUTCMonth(), d = base.getUTCDate();
+  const guess = Date.UTC(y, mo, d, hours, mins, 0);
+  let result = guess - offsetMinutes(new Date(guess), tz) * 60000;
+  result = guess - offsetMinutes(new Date(result), tz) * 60000;
+  return new Date(result);
+}
+
+module.exports = { zoneForState, returnMomentForBooking, startMomentForBooking };
