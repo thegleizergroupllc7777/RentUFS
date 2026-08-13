@@ -13,6 +13,7 @@ const { captureCardImage, captureCardToCloudinary, uploadCardBufferToCloudinary 
 const { isConfigured: tollspotConfigured, monitorCharges } = require('../utils/tollspot');
 const { getOutstandingTolls, chargeDriverForTolls, transferTollsToHost, recordTollSettlement } = require('../utils/tollSettlement');
 const { extensionDailyRate } = require('../utils/extensionPricing');
+const { returnMomentForBooking, startMomentForBooking } = require('../utils/vehicleTimezone');
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { calculateProcessingFee } = require('../utils/stripeFee');
@@ -264,23 +265,45 @@ router.post('/', auth, async (req, res) => {
     }
 
     // Vehicle-level conflict guard (the lock that prevents double-booking).
-    // Refuse if THIS vehicle is already reserved for overlapping dates by ANY
-    // driver. Previously a double-booking was only prevented by hiding rented
-    // cars from the marketplace; this guard enforces it at the source, so the
-    // car can safely stay visible with a "Rented" badge. Read-only: it only
-    // reads existing bookings to decide whether to block this new one — it never
-    // touches them. Statuses match the marketplace's availability filter
-    // (awaiting_payment carts are excluded so abandoned checkouts can't block).
-    const vehicleConflict = await Booking.findOne({
+    // TIME-AWARE: two rentals on this car conflict only if their REAL
+    // pickup→return windows overlap once a short turnaround buffer is applied —
+    // resolved in the vehicle's own timezone (same DST-safe helper the overdue
+    // scheduler uses). This lets a car returned at 5pm go back out at 6pm
+    // (same-day turnover is fine), while still blocking a pickup that lands
+    // BEFORE the prior return (the old date-only check missed that, because it
+    // compared calendar days and never looked at the clock — e.g. a 10:30am
+    // pickup on a car that isn't due back until 8pm the same day slipped through).
+    // Read-only: it only reads existing bookings to decide whether to block this
+    // new one — it never touches them. awaiting_payment carts are still excluded
+    // so abandoned checkouts can't block a car.
+    const TURNAROUND_MS = 60 * 60 * 1000; // 1-hour clean/inspect buffer between renters
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    // The requested booking's real pickup + return instants. Prefer the
+    // timezone-aware ISO the client already sent for pickup; fall back to the
+    // vehicle-local resolver. Return is resolved the same way as everywhere else.
+    const requestedPickup = pickupDateTime; // computed above (client ISO or start+pickupTime)
+    const requestedReturn = returnMomentForBooking({ endDate: end, dropoffTime, vehicle });
+    // Candidates: same car, live statuses, within ±1 day of the requested window
+    // (±1 day so a buffer that crosses midnight is still considered), then
+    // filtered precisely by real time below.
+    const candidateBookings = await Booking.find({
       vehicle: vehicle._id,
       status: { $in: ['pending', 'confirmed', 'active'] },
-      startDate: { $lt: end },
-      endDate: { $gt: start }
+      startDate: { $lte: new Date(end.getTime() + DAY_MS) },
+      endDate: { $gte: new Date(start.getTime() - DAY_MS) }
+    }).select('startDate endDate pickupTime dropoffTime').lean();
+    const vehicleConflict = candidateBookings.some((b) => {
+      const exPickup = startMomentForBooking({ startDate: b.startDate, pickupTime: b.pickupTime, vehicle });
+      const exReturn = returnMomentForBooking({ endDate: b.endDate, dropoffTime: b.dropoffTime, vehicle });
+      // Buffered overlap: new pickup lands before the existing return + buffer,
+      // AND the existing pickup lands before the new return + buffer.
+      return requestedPickup.getTime() < exReturn.getTime() + TURNAROUND_MS
+          && exPickup.getTime() < requestedReturn.getTime() + TURNAROUND_MS;
     });
 
     if (vehicleConflict) {
       return res.status(400).json({
-        message: 'Sorry, this vehicle is already booked for the dates you selected. Please choose different dates.'
+        message: 'Sorry, this vehicle is already booked around the time you selected. Please choose a different time or date.'
       });
     }
 
