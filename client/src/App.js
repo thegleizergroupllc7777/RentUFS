@@ -58,6 +58,7 @@ import AdminInsurance from './pages/Admin/AdminInsurance';
 import AdminCommissions from './pages/Admin/AdminCommissions';
 import AdminLateReturns from './pages/Admin/AdminLateReturns';
 import AdminClearDrive from './pages/Admin/AdminClearDrive';
+import AdminFleetValue from './pages/Admin/AdminFleetValue';
 
 import './App.css';
 
@@ -272,6 +273,10 @@ function App() {
             <Route
               path="/admin/cleardrive"
               element={<AdminRoute><AdminClearDrive /></AdminRoute>}
+            />
+            <Route
+              path="/admin/fleet-value"
+              element={<AdminRoute><AdminFleetValue /></AdminRoute>}
             />
 
             <Route path="*" element={<Navigate to="/marketplace" />} />
