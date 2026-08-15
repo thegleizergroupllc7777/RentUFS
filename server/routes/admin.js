@@ -2528,4 +2528,67 @@ router.delete('/broadcast/templates/:id', adminAuth, async (req, res) => {
   }
 });
 
+// ── Fleet market value (owner-only) ─────────────────────────────────────────
+// READ-ONLY aggregation of the host-entered `vehicleValue` for the self-insurance
+// analysis. It only reads and sums an existing field — it writes nothing and
+// touches no bookings, payments, coverage, tolls, or payouts.
+//
+// "Max exposure" = the most WE would pay on a single total loss, i.e. the car's
+// value minus the host's deductible (the host eats the first $HOST_DEDUCTIBLE).
+// Per band we report the worst case = priciest car in that band − deductible.
+const FLEET_HOST_DEDUCTIBLE = 3500;
+router.get('/fleet-value', adminAuth, async (req, res) => {
+  if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+  try {
+    const vehicles = await Vehicle.find({}, 'make model year vehicleValue').lean();
+    const withValue = vehicles.filter((v) => Number(v.vehicleValue) > 0);
+    const values = withValue.map((v) => Number(v.vehicleValue));
+    const count = values.length;
+    const totalValue = values.reduce((a, b) => a + b, 0);
+    const avg = count ? Math.round(totalValue / count) : 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const median = !count ? 0
+      : (count % 2 ? sorted[(count - 1) / 2]
+        : Math.round((sorted[count / 2 - 1] + sorted[count / 2]) / 2));
+    const carLabel = (v) => (v ? `${v.year || ''} ${v.make || ''} ${v.model || ''}`.trim() : '—');
+    let highest = null, lowest = null;
+    for (const v of withValue) {
+      const val = Number(v.vehicleValue);
+      if (!highest || val > Number(highest.vehicleValue)) highest = v;
+      if (!lowest || val < Number(lowest.vehicleValue)) lowest = v;
+    }
+    const BANDS = [
+      { label: 'Under $10,000', min: 0, max: 10000 },
+      { label: '$10,000 – $15,000', min: 10000, max: 15000 },
+      { label: '$15,000 – $20,000', min: 15000, max: 20000 },
+      { label: '$20,000+', min: 20000, max: Infinity }
+    ];
+    const bands = BANDS.map((b) => {
+      const inBand = withValue.filter((v) => {
+        const val = Number(v.vehicleValue);
+        return val >= b.min && val < b.max;
+      });
+      const bandTotal = inBand.reduce((a, v) => a + Number(v.vehicleValue), 0);
+      const maxCarValue = inBand.reduce((mx, v) => Math.max(mx, Number(v.vehicleValue)), 0);
+      const maxExposure = maxCarValue ? Math.max(0, maxCarValue - FLEET_HOST_DEDUCTIBLE) : 0;
+      return { label: b.label, count: inBand.length, totalValue: bandTotal, maxExposure };
+    });
+    res.json({
+      count,
+      totalVehicles: vehicles.length,
+      missingValueCount: vehicles.length - count,
+      totalValue,
+      avg,
+      median,
+      deductible: FLEET_HOST_DEDUCTIBLE,
+      highest: highest ? { value: Number(highest.vehicleValue), label: carLabel(highest) } : null,
+      lowest: lowest ? { value: Number(lowest.vehicleValue), label: carLabel(lowest) } : null,
+      bands
+    });
+  } catch (err) {
+    console.error('❌ fleet-value error:', err.message);
+    res.status(500).json({ message: 'Failed to load fleet value', error: err.message });
+  }
+});
+
 module.exports = router;
