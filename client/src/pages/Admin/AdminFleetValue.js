@@ -15,6 +15,8 @@ const AdminFleetValue = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [openBand, setOpenBand] = useState(null); // which band row is expanded
+  const [showMissing, setShowMissing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,7 +57,12 @@ const AdminFleetValue = () => {
             <div style={{ ...card, background: '#0b1220', border: '1px solid #0b1220' }}>
               <p style={{ ...lbl, color: '#93c5a9' }}>Total Fleet Value</p>
               <div style={{ ...big, color: '#fff' }}>{formatCurrency(data.totalValue)}</div>
-              <div style={{ ...hint, color: '#9aa4b2' }}>{data.count} vehicle{data.count === 1 ? '' : 's'}{data.missingValueCount ? ` · ${data.missingValueCount} missing a value` : ''}</div>
+              <div style={{ ...hint, color: '#9aa4b2' }}>
+                {data.count} vehicle{data.count === 1 ? '' : 's'}
+                {data.missingValueCount ? (
+                  <> · <span onClick={() => setShowMissing((s) => !s)} style={{ cursor: 'pointer', textDecoration: 'underline', color: '#fbbf24' }}>{data.missingValueCount} missing a value {showMissing ? '▾' : '▸'}</span></>
+                ) : ''}
+              </div>
             </div>
             <div style={card}>
               <p style={lbl}>Average per Car</p>
@@ -93,14 +100,29 @@ const AdminFleetValue = () => {
                     const amber = i >= 2; // first two bands = safer/green, top two = pricier/amber
                     const barColor = amber ? '#f59e0b' : '#10b981';
                     const w = Math.round((b.maxExposure / maxBandExposure) * 160);
+                    const open = openBand === i;
                     return (
-                      <tr key={b.label}>
-                        <td style={{ ...tdStyle, color: amber ? '#b45309' : '#065f46', fontWeight: 700 }}>{b.label}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>{b.count}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>{formatCurrency(b.totalValue)}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>{b.count ? `up to ${formatCurrency(b.maxExposure)}` : '—'}</td>
-                        <td style={tdStyle}><span style={{ display: 'inline-block', height: '8px', borderRadius: '4px', background: barColor, width: `${w}px`, verticalAlign: 'middle' }} /></td>
-                      </tr>
+                      <React.Fragment key={b.label}>
+                        <tr onClick={() => b.count && setOpenBand(open ? null : i)} style={{ cursor: b.count ? 'pointer' : 'default' }}>
+                          <td style={{ ...tdStyle, color: amber ? '#b45309' : '#065f46', fontWeight: 700 }}>{b.count ? (open ? '▾ ' : '▸ ') : ''}{b.label}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{b.count}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{formatCurrency(b.totalValue)}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{b.count ? `up to ${formatCurrency(b.maxExposure)}` : '—'}</td>
+                          <td style={tdStyle}><span style={{ display: 'inline-block', height: '8px', borderRadius: '4px', background: barColor, width: `${w}px`, verticalAlign: 'middle' }} /></td>
+                        </tr>
+                        {open && b.cars && b.cars.length > 0 && (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '4px 8px 14px', background: '#f9fafb' }}>
+                              {b.cars.map((c, ci) => (
+                                <div key={ci} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 6px', borderBottom: '1px solid #eef2f7', fontSize: '13.5px' }}>
+                                  <span>{c.label} <span style={{ color: '#9ca3af', fontSize: '12px' }}>· {c.host} · {c.provider}</span></span>
+                                  <span style={{ fontWeight: 600 }}>{formatCurrency(c.value)}</span>
+                                </div>
+                              ))}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -121,6 +143,19 @@ const AdminFleetValue = () => {
               &nbsp;•&nbsp; <b style={{ color: '#b45309' }}>Amber</b> = pricier cars, maybe keep with Nick.
             </p>
           </div>
+
+          {showMissing && data.missingCars && data.missingCars.length > 0 && (
+            <div style={{ ...card, padding: '18px 22px', marginTop: '16px' }}>
+              <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: '#374151' }}>Cars missing a value ({data.missingCars.length})</h3>
+              <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 12px' }}>Not counted in the totals above. Add a value to include them.</p>
+              {data.missingCars.map((c, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 6px', borderBottom: '1px solid #eef2f7', fontSize: '13.5px' }}>
+                  <span>{c.label} <span style={{ color: '#9ca3af', fontSize: '12px' }}>· {c.host}</span></span>
+                  <span style={{ fontWeight: 700, color: c.provider === 'Wheelbase' ? '#b45309' : '#6b7280' }}>{c.provider}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </AdminLayout>

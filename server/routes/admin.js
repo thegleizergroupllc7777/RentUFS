@@ -2540,7 +2540,9 @@ const FLEET_HOST_DEDUCTIBLE = 3500;
 router.get('/fleet-value', adminAuth, async (req, res) => {
   if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
   try {
-    const vehicles = await Vehicle.find({}, 'make model year vehicleValue').lean();
+    const vehicles = await Vehicle.find({}, 'make model year vehicleValue host bookingProvider')
+      .populate('host', 'firstName lastName')
+      .lean();
     const withValue = vehicles.filter((v) => Number(v.vehicleValue) > 0);
     const values = withValue.map((v) => Number(v.vehicleValue));
     const count = values.length;
@@ -2551,6 +2553,8 @@ router.get('/fleet-value', adminAuth, async (req, res) => {
       : (count % 2 ? sorted[(count - 1) / 2]
         : Math.round((sorted[count / 2 - 1] + sorted[count / 2]) / 2));
     const carLabel = (v) => (v ? `${v.year || ''} ${v.make || ''} ${v.model || ''}`.trim() : '—');
+    const hostName = (v) => (v && v.host ? `${v.host.firstName || ''} ${v.host.lastName || ''}`.trim() || '—' : '—');
+    const providerOf = (v) => (v && v.bookingProvider === 'wheelbase' ? 'Wheelbase' : 'RentUFS');
     let highest = null, lowest = null;
     for (const v of withValue) {
       const val = Number(v.vehicleValue);
@@ -2571,8 +2575,14 @@ router.get('/fleet-value', adminAuth, async (req, res) => {
       const bandTotal = inBand.reduce((a, v) => a + Number(v.vehicleValue), 0);
       const maxCarValue = inBand.reduce((mx, v) => Math.max(mx, Number(v.vehicleValue)), 0);
       const maxExposure = maxCarValue ? Math.max(0, maxCarValue - FLEET_HOST_DEDUCTIBLE) : 0;
-      return { label: b.label, count: inBand.length, totalValue: bandTotal, maxExposure };
+      const cars = [...inBand]
+        .sort((a, c) => Number(c.vehicleValue) - Number(a.vehicleValue))
+        .map((v) => ({ label: carLabel(v), value: Number(v.vehicleValue), host: hostName(v), provider: providerOf(v) }));
+      return { label: b.label, count: inBand.length, totalValue: bandTotal, maxExposure, cars };
     });
+    const missingCars = vehicles
+      .filter((v) => !(Number(v.vehicleValue) > 0))
+      .map((v) => ({ label: carLabel(v), host: hostName(v), provider: providerOf(v) }));
     res.json({
       count,
       totalVehicles: vehicles.length,
@@ -2583,7 +2593,8 @@ router.get('/fleet-value', adminAuth, async (req, res) => {
       deductible: FLEET_HOST_DEDUCTIBLE,
       highest: highest ? { value: Number(highest.vehicleValue), label: carLabel(highest) } : null,
       lowest: lowest ? { value: Number(lowest.vehicleValue), label: carLabel(lowest) } : null,
-      bands
+      bands,
+      missingCars
     });
   } catch (err) {
     console.error('❌ fleet-value error:', err.message);
