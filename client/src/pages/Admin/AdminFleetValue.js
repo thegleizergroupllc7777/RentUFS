@@ -17,6 +17,10 @@ const AdminFleetValue = () => {
   const [error, setError] = useState('');
   const [openBand, setOpenBand] = useState(null); // which band row is expanded
   const [showMissing, setShowMissing] = useState(false);
+  // Self-insurance calculator (collision only) — all client-side math on assumptions.
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [calcIn, setCalcIn] = useState({ cars: 20, days: 22, perDay: 20, ded: 3500, freq: 6, cost: 4000 });
+  useEffect(() => { if (data && data.count) setCalcIn((s) => ({ ...s, cars: data.count })); }, [data]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,6 +45,17 @@ const AdminFleetValue = () => {
   const hint = { fontSize: '12px', color: '#6b7280', marginTop: '8px' };
 
   const maxBandExposure = data ? Math.max(1, ...data.bands.map((b) => b.maxExposure)) : 1;
+
+  // Self-insurance calculator: derived numbers (collision only) + card styles.
+  const ocL = { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '.04em', color: '#6b7280', fontWeight: 700, marginBottom: '6px' };
+  const ocN = { fontSize: '1.5rem', fontWeight: 800, color: '#111827', lineHeight: 1 };
+  const keptMonth = calcIn.cars * calcIn.days * calcIn.perDay;
+  const keptYear = keptMonth * 12;
+  const claimsYear = calcIn.freq * calcIn.cost;
+  const netYear = keptYear - claimsYear;
+  const badMonth = keptMonth - 2 * calcIn.cost;
+  const breakEven = calcIn.cost > 0 ? Math.round(keptYear / calcIn.cost) : 0;
+  const reserve = Math.max(15000, calcIn.cost * 4);
 
   return (
     <AdminLayout title="Fleet Market Value" subtitle="Total collision exposure across your fleet, from host-entered vehicle values.">
@@ -156,6 +171,57 @@ const AdminFleetValue = () => {
                   <span style={{ fontWeight: 700, color: c.provider === 'Wheelbase' ? '#b45309' : '#6b7280' }}>{c.provider}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Self-insurance calculator — button expands the client-side tool. */}
+          <div style={{ marginTop: '16px' }}>
+            <button className="admin-btn" onClick={() => setCalcOpen((o) => !o)} style={{ borderColor: '#10b981', color: '#065f46', background: '#ecfdf5', fontWeight: 700 }}>
+              🧮 Self-Insurance Calculator {calcOpen ? '▾' : '▸'}
+            </button>
+          </div>
+          {calcOpen && (
+            <div style={{ ...card, padding: '22px 24px', marginTop: '12px' }}>
+              <h3 style={{ margin: '0 0 2px', fontSize: '1.15rem', color: '#111827' }}>Self-Insurance Calculator</h3>
+              <p style={{ color: '#6b7280', fontSize: '13px', margin: '0 0 18px' }}>Collision only — liability stays insured. Pre-loaded from your fleet; adjust to test scenarios.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '26px' }}>
+                <div>
+                  {[
+                    { key: 'cars', label: 'Active cars', min: 1, max: 200, step: 1, fmt: (v) => v },
+                    { key: 'days', label: 'Days rented / month (per car)', min: 1, max: 30, step: 1, fmt: (v) => v },
+                    { key: 'perDay', label: '$ kept per rental-day', min: 1, max: 40, step: 1, fmt: (v) => `$${v}` },
+                    { key: 'ded', label: 'Host deductible', min: 0, max: 7500, step: 250, fmt: (v) => formatCurrency(v) },
+                    { key: 'freq', label: 'Claims / year (over deductible)', min: 0, max: 40, step: 1, fmt: (v) => v },
+                    { key: 'cost', label: 'Avg cost to you per claim', min: 1000, max: 15000, step: 250, fmt: (v) => formatCurrency(v) }
+                  ].map((s) => (
+                    <div key={s.key} style={{ marginBottom: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.04em', color: '#6b7280', fontWeight: 700, marginBottom: '5px' }}>{s.label}</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input type="range" min={s.min} max={s.max} step={s.step} value={calcIn[s.key]} onChange={(e) => setCalcIn((st) => ({ ...st, [s.key]: Number(e.target.value) }))} style={{ flex: 1, accentColor: '#10b981' }} />
+                        <span style={{ minWidth: '72px', textAlign: 'right', fontWeight: 700, fontSize: '14px' }}>{s.fmt(calcIn[s.key])}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div style={{ gridColumn: '1 / -1', background: '#0b1220', borderRadius: '12px', padding: '14px 16px' }}>
+                      <div style={{ ...ocL, color: '#93c5a9' }}>Net profit / year</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatCurrency(netYear)}</div>
+                    </div>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px' }}><div style={ocL}>Premium kept / year</div><div style={{ ...ocN, color: '#065f46' }}>{formatCurrency(keptYear)}</div></div>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px' }}><div style={ocL}>Claims cost / year</div><div style={{ ...ocN, color: '#b45309' }}>{formatCurrency(claimsYear)}</div></div>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px' }}><div style={ocL}>Worst single month</div><div style={ocN}>{badMonth >= 0 ? '+' : '−'}{formatCurrency(Math.abs(badMonth))}</div></div>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px' }}><div style={ocL}>Break-even claims/yr</div><div style={ocN}>{breakEven}</div></div>
+                  </div>
+                  <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '10px', fontSize: '13.5px', fontWeight: 600, ...(netYear > 50000 ? { background: '#ecfdf5', color: '#065f46' } : netYear > 0 ? { background: '#fffbeb', color: '#92400e' } : { background: '#fef2f2', color: '#b91c1c' }) }}>
+                    {netYear > 50000 ? 'Strong: profitable well beyond any realistic claim rate.' : netYear > 0 ? 'Positive, but thinner — watch your claim rate and hold a solid reserve.' : 'Losing money at this claim rate — self-insurance not worth it here.'}
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '14px', lineHeight: 1.6 }}>
+                    Suggested reserve: <b>~{formatCurrency(reserve)}</b> to absorb a bad cluster of claims. Liability stays with your carrier — this is collision only. Estimates only, not financial advice.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </>
