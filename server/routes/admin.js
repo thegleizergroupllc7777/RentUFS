@@ -2540,7 +2540,7 @@ const FLEET_HOST_DEDUCTIBLE = 3500;
 router.get('/fleet-value', adminAuth, async (req, res) => {
   if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
   try {
-    const vehicles = await Vehicle.find({}, 'make model year vehicleValue host bookingProvider')
+    const vehicles = await Vehicle.find({}, 'make model year vehicleValue odometer host bookingProvider')
       .populate('host', 'firstName lastName')
       .lean();
     const withValue = vehicles.filter((v) => Number(v.vehicleValue) > 0);
@@ -2577,7 +2577,7 @@ router.get('/fleet-value', adminAuth, async (req, res) => {
       const maxExposure = maxCarValue ? Math.max(0, maxCarValue - FLEET_HOST_DEDUCTIBLE) : 0;
       const cars = [...inBand]
         .sort((a, c) => Number(c.vehicleValue) - Number(a.vehicleValue))
-        .map((v) => ({ label: carLabel(v), value: Number(v.vehicleValue), host: hostName(v), provider: providerOf(v) }));
+        .map((v) => ({ label: carLabel(v), value: Number(v.vehicleValue), odometer: (v.odometer != null ? Number(v.odometer) : null), host: hostName(v), provider: providerOf(v) }));
       return { label: b.label, count: inBand.length, totalValue: bandTotal, maxExposure, cars };
     });
     const missingCars = vehicles
