@@ -187,19 +187,19 @@ const AdminFleetValue = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '26px' }}>
                 <div>
                   {[
-                    { key: 'cars', label: 'Active cars', min: 1, max: 200, step: 1, fmt: (v) => v },
-                    { key: 'days', label: 'Days rented / month (per car)', min: 1, max: 30, step: 1, fmt: (v) => v },
-                    { key: 'perDay', label: '$ kept per rental-day', min: 1, max: 40, step: 1, fmt: (v) => `$${v}` },
+                    { key: 'cars', label: 'Active cars', min: 1, max: 200, step: 1, fmt: (v) => `${v} cars` },
+                    { key: 'days', label: 'Days rented / month (per car)', min: 1, max: 30, step: 1, fmt: (v) => `${v} days` },
+                    { key: 'perDay', label: '$ kept per rental-day', min: 1, max: 40, step: 1, fmt: (v) => `$${v}/day` },
                     { key: 'ded', label: 'Host deductible', min: 0, max: 7500, step: 250, fmt: (v) => formatCurrency(v) },
-                    { key: 'freq', label: 'Claims / year (over deductible)', min: 0, max: 40, step: 1, fmt: (v) => v },
+                    { key: 'freq', label: 'Claims / year (over deductible)', min: 0, max: 40, step: 1, fmt: (v) => `${v} / yr` },
                     { key: 'cost', label: 'Avg cost to you per claim', min: 1000, max: 15000, step: 250, fmt: (v) => formatCurrency(v) }
                   ].map((s) => (
                     <div key={s.key} style={{ marginBottom: '14px' }}>
-                      <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.04em', color: '#6b7280', fontWeight: 700, marginBottom: '5px' }}>{s.label}</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input type="range" min={s.min} max={s.max} step={s.step} value={calcIn[s.key]} onChange={(e) => setCalcIn((st) => ({ ...st, [s.key]: Number(e.target.value) }))} style={{ flex: 1, accentColor: '#10b981' }} />
-                        <span style={{ minWidth: '72px', textAlign: 'right', fontWeight: 700, fontSize: '14px' }}>{s.fmt(calcIn[s.key])}</span>
-                      </div>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '.04em', color: '#6b7280', fontWeight: 700, marginBottom: '6px' }}>
+                        <span>{s.label}</span>
+                        <span style={{ color: '#111827', fontSize: '15px', fontWeight: 800, textTransform: 'none', letterSpacing: 0 }}>{s.fmt(calcIn[s.key])}</span>
+                      </label>
+                      <input type="range" min={s.min} max={s.max} step={s.step} value={calcIn[s.key]} onChange={(e) => setCalcIn((st) => ({ ...st, [s.key]: Number(e.target.value) }))} style={{ width: '100%', accentColor: '#10b981' }} />
                     </div>
                   ))}
                 </div>
