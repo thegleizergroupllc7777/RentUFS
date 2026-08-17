@@ -113,12 +113,14 @@ const AdminFleetValue = () => {
                         {open && b.cars && b.cars.length > 0 && (
                           <tr>
                             <td colSpan={5} style={{ padding: '4px 8px 14px', background: '#f9fafb' }}>
+                              <div style={b.cars.length > 8 ? { maxHeight: '340px', overflowY: 'auto' } : undefined}>
                               {b.cars.map((c, ci) => (
                                 <div key={ci} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 6px', borderBottom: '1px solid #eef2f7', fontSize: '13.5px' }}>
                                   <span style={{ color: '#111827', fontWeight: 600 }}>{c.label}{c.odometer != null && <span style={{ color: '#9ca3af', fontSize: '11px', fontWeight: 400 }}> · {c.odometer.toLocaleString()} mi</span>}</span>
                                   <span style={{ fontWeight: 700, color: '#111827' }}>{formatCurrency(c.value)}</span>
                                 </div>
                               ))}
+                              </div>
                             </td>
                           </tr>
                         )}
