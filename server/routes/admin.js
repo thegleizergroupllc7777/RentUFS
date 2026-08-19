@@ -1039,8 +1039,15 @@ router.get('/bookings', adminAuth, async (req, res) => {
     // Active rentals are ordered by soonest-to-return (endDate ascending) so the
     // cars coming back next sit at the top. Because an extension pushes a
     // booking's endDate later, extended trips automatically fall back into their
-    // correct chronological spot. Every other view keeps newest-booked-first.
-    const sortSpec = status === 'active' ? { endDate: 1 } : { createdAt: -1 };
+    // correct chronological spot. Completed rentals are ordered by most-recently
+    // closed first (completionInfo.at desc) so the last reservation closed out
+    // sits at the top; older completed ones lacking that stamp fall back to
+    // newest-booked. Every other view keeps newest-booked-first.
+    const sortSpec = status === 'active'
+      ? { endDate: 1 }
+      : status === 'completed'
+        ? { 'completionInfo.at': -1, createdAt: -1 }
+        : { createdAt: -1 };
     const [bookings, total] = await Promise.all([
       query
         .populate('vehicle', 'make model year images')
