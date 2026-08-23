@@ -377,7 +377,7 @@ router.get('/pending-payouts', auth, async (req, res) => {
       host: user._id,
       status: 'completed',
       paymentStatus: 'paid',
-      payoutStatus: { $in: ['pending', 'eligible'] }
+      payoutStatus: { $in: ['pending', 'eligible', 'partial'] }
     }).populate('vehicle', 'make model year nickname')
       .populate('driver', 'firstName lastName')
       .sort({ endDate: -1 });
@@ -918,7 +918,7 @@ router.get('/payouts-summary', auth, async (req, res) => {
         host: user._id,
         status: 'completed',
         paymentStatus: 'paid',
-        payoutStatus: { $in: ['pending', 'eligible'] }
+        payoutStatus: { $in: ['pending', 'eligible', 'partial'] }
       }).select(bookingFields)
         .populate('vehicle', 'make model year nickname')
         .populate('driver', 'firstName lastName')
