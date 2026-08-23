@@ -910,7 +910,7 @@ router.get('/payouts-summary', auth, async (req, res) => {
     }
 
     // --- Run DB queries and Stripe balance in parallel (select only needed fields) ---
-    const bookingFields = 'reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity payoutStatus payoutEligibleDate hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
+    const bookingFields = 'reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity rentalSubtotal payoutStatus payoutEligibleDate hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
 
     const [completedBookings, activeBookings, paidBookingsAgg, balanceData] = await Promise.all([
       // Pending payouts: completed bookings
