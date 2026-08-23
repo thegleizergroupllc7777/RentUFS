@@ -157,7 +157,7 @@ router.get('/hosts/:id/portal-payout-view', adminAuth, async (req, res) => {
     if (!host) return res.status(404).json({ message: 'Host not found' });
 
     const now = new Date();
-    const fields = 'reservationId startDate endDate totalDays rentalType pricePerDay hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
+    const fields = 'reservationId startDate endDate totalDays rentalType pricePerDay pricePerUnit quantity rentalSubtotal hostPlatformFeePerDay hostProcessingFee partialPayoutDaysPaid partialPayoutTotal extensions';
     const [completedBookings, activeBookings] = await Promise.all([
       Booking.find({ host: host._id, status: 'completed', paymentStatus: 'paid', payoutStatus: { $in: ['pending', 'eligible', 'partial'] } })
         .select(fields).populate('vehicle', 'make model year').lean(),
