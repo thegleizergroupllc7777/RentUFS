@@ -52,6 +52,70 @@ const describeAction = (a) => {
   }
 };
 
+// Cost cell in the Extensions table. Hovering the amount shows a read-only
+// pop-up breaking down what the customer paid for that extension (rental,
+// insurance, platform fee, processing). Every value is pulled straight from
+// fields already saved on the extension — nothing is computed or changed here,
+// and it touches no booking/payment/insurance/toll logic. The pop-up is
+// position:fixed (anchored to the hovered cell) so it floats above the
+// scrolling table box instead of being clipped inside it.
+const ExtCostRow = ({ label, value }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, padding: '4px 0', color: '#d1d5db' }}>
+    <span>{label}</span><b style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(value)}</b>
+  </div>
+);
+
+const ExtCostCell = ({ ext }) => {
+  const [pos, setPos] = useState(null);
+  const rental = ext.rental;
+  const insurance = ext.insurance;
+  const platformFee = ext.platformFee;
+  const processingFee = ext.processingFee;
+  // Only show the breakdown if this extension actually recorded its parts.
+  // Older extensions saved before these fields existed just show the total.
+  const hasBreakdown = [rental, insurance, platformFee, processingFee].some(
+    (v) => v !== undefined && v !== null
+  );
+
+  const show = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const width = 250;
+    // Keep it on-screen if the cell is near the right edge.
+    const left = Math.min(r.left, window.innerWidth - width - 12);
+    setPos({ left: Math.max(12, left), top: r.bottom + 8 });
+  };
+  const hide = () => setPos(null);
+
+  if (!hasBreakdown) {
+    return <td>{formatCurrency(ext.cost)}</td>;
+  }
+
+  return (
+    <td style={{ position: 'relative' }}>
+      <span
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#059669', borderBottom: '1px dashed #a7f3d0', cursor: 'pointer', paddingBottom: 1 }}
+      >
+        {formatCurrency(ext.cost)}
+        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>&#9432;</span>
+      </span>
+      {pos && (
+        <div style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 1000, width: 250, background: '#0b1220', color: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 12px 30px rgba(0,0,0,0.28)', pointerEvents: 'none' }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: '#93c5a9', fontWeight: 800, marginBottom: 10 }}>Extension breakdown</div>
+          <ExtCostRow label="Rental" value={rental} />
+          <ExtCostRow label="Insurance" value={insurance} />
+          <ExtCostRow label="Platform fee" value={platformFee} />
+          <ExtCostRow label="Processing" value={processingFee} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 9, paddingTop: 9, borderTop: '1px solid #1f2a3a', fontSize: 15, fontWeight: 800 }}>
+            <span>Total</span><span style={{ color: '#10b981' }}>{formatCurrency(ext.cost)}</span>
+          </div>
+        </div>
+      )}
+    </td>
+  );
+};
+
 const AdminBookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -500,7 +564,7 @@ const AdminBookingDetail = () => {
                       <tr key={i}>
                         <td>{formatDate(e.extendedAt)}</td>
                         <td>+{e.days}</td>
-                        <td>{formatCurrency(e.cost)}</td>
+                        <ExtCostCell ext={e} />
                         <td>{formatDateOnly(e.newEndDate)}</td>
                         <td className="muted">{e.paymentId || '—'}</td>
                       </tr>
