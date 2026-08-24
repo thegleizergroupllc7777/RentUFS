@@ -345,7 +345,16 @@ router.get('/account-status', auth, async (req, res) => {
   }
 });
 
-// Generate login link for Connect dashboard
+// Generate login link for Connect dashboard.
+//
+// createLoginLink only works for Express CONNECTED accounts. It fails when the
+// account already has full/Express Dashboard access — most notably the
+// platform's own account (the owner). Previously this endpoint always called
+// createLoginLink, so the owner's "Open Stripe Dashboard" button errored with
+// "Unable to create edit link ... when the account has access to the Express
+// Dashboard". This resolves each case to a URL that actually opens. It only
+// affects which dashboard URL the button opens — no payments, payouts,
+// bookings, insurance, or tolls are touched.
 router.post('/dashboard-link', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -354,9 +363,28 @@ router.post('/dashboard-link', auth, async (req, res) => {
       return res.status(400).json({ message: 'No payout account found' });
     }
 
-    const loginLink = await stripe.accounts.createLoginLink(user.stripeConnectAccountId);
+    // Platform owner → full Stripe Dashboard directly (createLoginLink is invalid
+    // for the platform's own account). This is the same URL the owner button
+    // already uses elsewhere, so it's a proven-working path.
+    const platId = await getPlatformAccountId();
+    if (platId && user.stripeConnectAccountId === platId) {
+      return res.json({ url: 'https://dashboard.stripe.com' });
+    }
 
-    res.json({ url: loginLink.url });
+    try {
+      const loginLink = await stripe.accounts.createLoginLink(user.stripeConnectAccountId);
+      return res.json({ url: loginLink.url });
+    } catch (linkErr) {
+      // Some Express accounts already have their own Express Dashboard access, so
+      // Stripe won't mint a login link for them. Fall back to the Express
+      // Dashboard login page so the host can still reach their account (they sign
+      // in with their payout email). Purely a navigation fallback.
+      if (linkErr && linkErr.type === 'StripeInvalidRequestError') {
+        console.warn(`ℹ️ createLoginLink rejected for ${user.stripeConnectAccountId}; using Express login fallback. (${linkErr.message})`);
+        return res.json({ url: 'https://connect.stripe.com/express_login' });
+      }
+      throw linkErr;
+    }
   } catch (error) {
     console.error('Error creating dashboard link:', error);
     res.status(500).json({ message: 'Failed to create dashboard link', error: error.message });
