@@ -274,11 +274,24 @@ const PayoutsContent = () => {
   };
 
   const handleOpenDashboard = async () => {
+    // Open a blank tab SYNCHRONOUSLY inside the tap. Phones only allow a new tab
+    // at the instant of the tap, so we can't wait for the server first — that's
+    // why the button "didn't open" on mobile. We grab the tab now, then point it
+    // at the Stripe link once we have it. If the browser still blocks the tab,
+    // fall back to opening in the same tab so the host always reaches Stripe.
+    const win = window.open('', '_blank');
     try {
       setProcessing(true);
       const linkRes = await axiosInstance.post('/api/connect/dashboard-link');
-      window.open(linkRes.data.url, '_blank');
+      if (linkRes.data.url) {
+        if (win) win.location = linkRes.data.url;
+        else window.location.assign(linkRes.data.url);
+      } else {
+        if (win) win.close();
+        setError('Failed to open dashboard');
+      }
     } catch (err) {
+      if (win) win.close();
       console.error('Error getting dashboard link:', err);
       setError(err.response?.data?.message || 'Failed to open dashboard');
     } finally {
