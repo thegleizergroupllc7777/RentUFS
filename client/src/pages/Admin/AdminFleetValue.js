@@ -17,6 +17,7 @@ const AdminFleetValue = () => {
   const [error, setError] = useState('');
   const [openBand, setOpenBand] = useState(null); // which band row is expanded
   const [showMissing, setShowMissing] = useState(false);
+  const [vinBusy, setVinBusy] = useState(false); // building the VIN schedule PDF
   // Self-insurance calculator (collision only) — all client-side math on assumptions.
   const [calcOpen, setCalcOpen] = useState(false);
   const [calcIn, setCalcIn] = useState({ cars: 20, days: 22, perDay: 20, ded: 3500, freq: 6, cost: 4000 });
@@ -38,6 +39,57 @@ const AdminFleetValue = () => {
   useEffect(() => {
     if (me?.isSuperAdmin) load();
   }, [load, me]);
+
+  // Build a printable Vehicle Schedule (VIN, plate, location, mileage, value)
+  // for insurance submissions. READ-ONLY: fetches from /fleet-vin-report and
+  // renders a clean printable page the owner saves as PDF. Opens the window
+  // synchronously (inside the click) so pop-up blockers don't stop it.
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const openVinReport = async () => {
+    setVinBusy(true);
+    const win = window.open('', '_blank');
+    try {
+      const { data: rep } = await axios.get('/api/admin/fleet-vin-report');
+      const vehicles = rep.vehicles || [];
+      const rows = vehicles.map((v, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${esc([v.year, v.make, v.model].filter(Boolean).join(' ')) || '—'}</td>
+          <td>${esc(v.vin) || '—'}</td>
+          <td>${esc(v.plate) || '—'}</td>
+          <td>${esc([v.city, v.state].filter(Boolean).join(', ')) || '—'}</td>
+          <td class="r">${v.odometer != null ? v.odometer.toLocaleString() + ' mi' : '—'}</td>
+          <td class="r">${v.value != null ? '$' + v.value.toLocaleString() : '—'}</td>
+        </tr>`).join('');
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>UFS Vehicle Schedule</title>
+        <style>
+          body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#111;padding:28px;}
+          h1{font-size:20px;margin:0 0 2px;}
+          .sub{color:#555;font-size:12px;margin:0 0 16px;}
+          table{width:100%;border-collapse:collapse;font-size:12px;}
+          th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top;}
+          th{background:#f3f4f6;text-transform:uppercase;font-size:10px;letter-spacing:.04em;}
+          td.r,th.r{text-align:right;}
+          .btn{margin-bottom:14px;padding:8px 14px;font-size:14px;cursor:pointer;border:1px solid #10b981;background:#ecfdf5;color:#065f46;border-radius:8px;font-weight:700;}
+          @media print{ .btn{display:none;} body{padding:0;} }
+        </style></head><body>
+        <h1>United Fleet Services &mdash; Vehicle Schedule</h1>
+        <p class="sub">${rep.count} vehicle${rep.count === 1 ? '' : 's'}</p>
+        <button class="btn" onclick="window.print()">Save as PDF / Print</button>
+        <table><thead><tr>
+          <th>#</th><th>Vehicle</th><th>VIN</th><th>Plate</th><th>Location</th>
+          <th class="r">Mileage</th><th class="r">Value</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+        </body></html>`;
+      if (win) { win.document.write(html); win.document.close(); }
+      else { setError('Please allow pop-ups to open the vehicle schedule.'); }
+    } catch (err) {
+      if (win) win.close();
+      setError(err.response?.data?.message || 'Failed to build vehicle schedule');
+    } finally {
+      setVinBusy(false);
+    }
+  };
 
   const card = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 22px' };
   const lbl = { fontSize: '12px', letterSpacing: '.04em', textTransform: 'uppercase', color: '#6b7280', margin: '0 0 8px' };
@@ -174,10 +226,15 @@ const AdminFleetValue = () => {
             </div>
           )}
 
-          {/* Self-insurance calculator — button expands the client-side tool. */}
-          <div style={{ marginTop: '16px' }}>
+          {/* Self-insurance calculator — button expands the client-side tool.
+              Next to it: a one-click Vehicle Schedule PDF (VIN list) for
+              insurance submissions. */}
+          <div style={{ marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button className="admin-btn" onClick={() => setCalcOpen((o) => !o)} style={{ borderColor: '#10b981', color: '#065f46', background: '#ecfdf5', fontWeight: 700 }}>
               🧮 Self-Insurance Calculator {calcOpen ? '▾' : '▸'}
+            </button>
+            <button className="admin-btn" onClick={openVinReport} disabled={vinBusy} style={{ borderColor: '#0b1220', color: '#0b1220', fontWeight: 700 }}>
+              {vinBusy ? 'Building…' : '📄 Vehicle & VIN List (PDF)'}
             </button>
           </div>
           {calcOpen && (

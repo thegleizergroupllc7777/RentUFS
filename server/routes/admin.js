@@ -2609,4 +2609,32 @@ router.get('/fleet-value', adminAuth, async (req, res) => {
   }
 });
 
+// Full vehicle schedule for insurance submissions (OWNER-ONLY, READ-ONLY).
+// Returns every vehicle with the identifying + valuation fields an underwriter
+// asks for (VIN, plate, location, mileage, value, platform). It ONLY reads
+// Vehicle records — it never touches bookings, payments, coverage, or tolls.
+router.get('/fleet-vin-report', adminAuth, async (req, res) => {
+  if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+  try {
+    const vehicles = await Vehicle.find({}, 'make model year vin licensePlate odometer vehicleValue location')
+      .sort({ 'location.state': 1, make: 1, model: 1 })
+      .lean();
+    const rows = vehicles.map((v) => ({
+      year: v.year || '',
+      make: v.make || '',
+      model: v.model || '',
+      vin: v.vin || '',
+      plate: v.licensePlate || '',
+      city: (v.location && v.location.city) || '',
+      state: (v.location && v.location.state) || '',
+      odometer: (v.odometer != null ? Number(v.odometer) : null),
+      value: (Number(v.vehicleValue) > 0 ? Number(v.vehicleValue) : null)
+    }));
+    res.json({ count: rows.length, vehicles: rows });
+  } catch (err) {
+    console.error('❌ fleet-vin-report error:', err.message);
+    res.status(500).json({ message: 'Failed to build vehicle schedule', error: err.message });
+  }
+});
+
 module.exports = router;
