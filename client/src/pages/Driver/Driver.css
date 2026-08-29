@@ -600,6 +600,9 @@
   padding: 0.45rem 2rem;
   background: #1a1a1a;
   border-bottom: 1px solid #333333;
+  position: sticky;
+  top: 140px;
+  z-index: 99;
 }
 
 .results-text {
