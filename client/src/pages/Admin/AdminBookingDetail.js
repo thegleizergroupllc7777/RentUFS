@@ -365,6 +365,26 @@ const AdminBookingDetail = () => {
               </div>
             )}
 
+            {/* Host charges summary — shown ONLY when this booking has host-added
+                charges (parking tickets, cleaning, etc.). Read-only, from the
+                server aggregate: what the driver paid, what the host received,
+                and the platform's $0.85-per-charge. */}
+            {booking.hostChargeSummary?.count > 0 && (
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#374151', marginBottom: '0.6rem' }}>
+                  Host charges ({booking.hostChargeSummary.count})
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                  <Field label="Driver paid (charges)" value={formatCurrency(booking.hostChargeSummary.driverPaid)} />
+                  <Field label="Host received" value={formatCurrency(booking.hostChargeSummary.hostReceived)} />
+                  <Field label="Platform earned (charges)" value={formatCurrency(booking.hostChargeSummary.platformEarned)} />
+                </div>
+                <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                  Platform earned = {booking.hostChargeSummary.count} charge{booking.hostChargeSummary.count === 1 ? '' : 's'} × $0.85 = {formatCurrency(booking.hostChargeSummary.platformEarned)}
+                </div>
+              </div>
+            )}
+
             {/* Refund line — shown only for cancelled/refunded bookings: the amount
                 sent back to the driver. Read-only, derived from booking values. */}
             {(booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') && (
