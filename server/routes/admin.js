@@ -1074,7 +1074,39 @@ router.get('/bookings/:id', adminAuth, async (req, res) => {
       .populate('driver', '-password')
       .populate('host', '-password');
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
-    res.json(booking);
+
+    // Read-only host-charge summary for the admin Pricing view. Aggregates the
+    // separate host-added Charge records using the SAME computeBreakdown the
+    // settlement uses, so the shown totals match what's actually charged. Fully
+    // isolated: only READS Charge amounts, never touches bookings, tolls,
+    // insurance, Stripe, or payouts. Wrapped so a failure just omits the summary.
+    let hostChargeSummary = null;
+    try {
+      const Charge = require('../models/Charge');
+      const { computeBreakdown } = require('../utils/chargeSettlement');
+      const charges = await Charge.find({ booking: booking._id, status: { $ne: 'waived' } }).select('amount').lean();
+      if (charges.length > 0) {
+        let driverPaid = 0, hostReceived = 0, platformEarned = 0;
+        for (const c of charges) {
+          const b = computeBreakdown(c.amount);
+          driverPaid += b.gross;
+          hostReceived += b.hostPayout;
+          platformEarned += b.platformProfit;
+        }
+        hostChargeSummary = {
+          count: charges.length,
+          driverPaid: parseFloat(driverPaid.toFixed(2)),
+          hostReceived: parseFloat(hostReceived.toFixed(2)),
+          platformEarned: parseFloat(platformEarned.toFixed(2))
+        };
+      }
+    } catch (e) {
+      console.warn('Host charge summary skipped:', e.message);
+    }
+
+    const out = booking.toObject();
+    out.hostChargeSummary = hostChargeSummary;
+    res.json(out);
   } catch (err) {
     res.status(500).json({ message: 'Failed to load booking', error: err.message });
   }
