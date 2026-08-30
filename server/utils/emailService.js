@@ -2405,7 +2405,8 @@ const sendChargeAddedToDriver = async (driver, host, booking, vehicle, charge) =
     }
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const typeLabel = CHARGE_TYPE_LABELS[charge.chargeType] || charge.chargeType;
-    const total = (charge.amount + 0.50).toFixed(2);
+    const { grossUpForFullFee } = require('./stripeFee');
+    const total = grossUpForFullFee(charge.amount + 0.50).toFixed(2);
     const autoChargeDate = new Date(charge.scheduledChargeAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const hostName = `${host.firstName || ''} ${host.lastName || ''}`.trim() || 'Your host';
     const vehicleLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your rental vehicle';
@@ -2474,7 +2475,8 @@ const sendChargePaymentFailedToDriver = async (driver, booking, charge, attempts
     }
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const typeLabel = CHARGE_TYPE_LABELS[charge.chargeType] || charge.chargeType;
-    const total = (charge.amount + 0.50).toFixed(2);
+    const { grossUpForFullFee } = require('./stripeFee');
+    const total = grossUpForFullFee(charge.amount + 0.50).toFixed(2);
     const isFinal = attempts >= maxAttempts;
 
     return await sendEmail({
