@@ -346,6 +346,25 @@ const AdminBookingDetail = () => {
               </div>
             )}
 
+            {/* Tolls summary — shown ONLY when this booking has tolls. Read-only,
+                straight from the stored tollAccounting totals: what the driver
+                paid, what went to the host, and the platform's $0.50-per-toll. */}
+            {booking.tollAccounting?.totalTolls > 0 && (
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#374151', marginBottom: '0.6rem' }}>
+                  Tolls ({booking.tollAccounting.totalTolls})
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                  <Field label="Driver paid (tolls)" value={formatCurrency(booking.tollAccounting.driverTollTotal)} />
+                  <Field label="Toll amount → host" value={formatCurrency(booking.tollAccounting.originalTollAmount)} />
+                  <Field label="Platform earned (tolls)" value={formatCurrency(booking.tollAccounting.platformTollFees)} />
+                </div>
+                <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                  Platform earned = {booking.tollAccounting.totalTolls} toll{booking.tollAccounting.totalTolls === 1 ? '' : 's'} × $0.50 = {formatCurrency(booking.tollAccounting.platformTollFees)}
+                </div>
+              </div>
+            )}
+
             {/* Refund line — shown only for cancelled/refunded bookings: the amount
                 sent back to the driver. Read-only, derived from booking values. */}
             {(booking.paymentStatus === 'refunded' || booking.paymentStatus === 'partial_refund') && (
