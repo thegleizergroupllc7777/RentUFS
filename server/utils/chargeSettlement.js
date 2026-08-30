@@ -3,6 +3,7 @@ const Charge = require('../models/Charge');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const { sendChargePaymentFailedToDriver } = require('./emailService');
+const { grossUpForFullFee } = require('./stripeFee');
 
 // Per-charge fees on top of the host-entered amount.
 // Renter pays SERVICE_FEE on top of the charge amount; the host's payout is
@@ -21,17 +22,21 @@ const estimateStripeFee = (gross) => {
 };
 
 /**
- * Compute the fee breakdown for a charge.
- *   gross = host-entered amount + $0.50 service fee  (renter pays)
- *   stripeFee = 2.9% + $0.30 on gross
- *   platformProfit = $0.50 + $0.35 = $0.85
- *   hostPayout = gross - stripeFee - platformProfit
+ * Compute the fee breakdown for a charge. The DRIVER covers the full Stripe fee
+ * (they caused the charge), so the host receives the full charge minus only the
+ * platform fee — never a Stripe deduction.
+ *   net           = host-entered amount + $0.50 service fee   (must remain after Stripe)
+ *   gross         = net grossed up so the driver covers Stripe (what the driver pays)
+ *   stripeFee     = gross - net
+ *   platformProfit= $0.50 + $0.35 = $0.85
+ *   hostPayout    = amount - $0.35 host fee   (no Stripe taken from the host)
  */
 const computeBreakdown = (chargeAmount) => {
-  const gross = parseFloat((chargeAmount + SERVICE_FEE).toFixed(2));
-  const stripeFee = estimateStripeFee(gross);
+  const net = parseFloat((chargeAmount + SERVICE_FEE).toFixed(2));
+  const gross = grossUpForFullFee(net);
+  const stripeFee = parseFloat((gross - net).toFixed(2));
   const platformProfit = parseFloat((SERVICE_FEE + HOST_PLATFORM_FEE).toFixed(2));
-  const hostPayout = parseFloat((gross - stripeFee - platformProfit).toFixed(2));
+  const hostPayout = parseFloat((chargeAmount - HOST_PLATFORM_FEE).toFixed(2));
   return {
     chargeAmount,
     serviceFee: SERVICE_FEE,
