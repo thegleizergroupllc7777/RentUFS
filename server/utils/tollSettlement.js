@@ -1,5 +1,6 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const { isConfigured, getTollCharges } = require('./tollspot');
+const { calculateProcessingFee } = require('./stripeFee');
 
 const PLATFORM_TOLL_FEE = 0.50;
 
@@ -78,9 +79,18 @@ const chargeDriverForTolls = async (booking, driver, tollInfo, trigger) => {
     return { success: false, error: 'No Stripe customer ID' };
   }
 
+  // The driver incurred the toll, so the driver also covers the Stripe
+  // processing on this standalone settlement — the same way an extension already
+  // makes the driver cover processing. This keeps the platform's full $0.50/toll
+  // and lets the host receive the full toll amount, instead of the platform
+  // eating the Stripe fee. (Tolls collected inside an extension are unaffected —
+  // this only runs on standalone return/post-trip settlements.)
+  const tollProcessingFee = calculateProcessingFee(tollInfo.driverTotal).stripeFee;
+  const driverCharge = parseFloat((tollInfo.driverTotal + tollProcessingFee).toFixed(2));
+
   try {
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(tollInfo.driverTotal * 100),
+      amount: Math.round(driverCharge * 100),
       currency: 'usd',
       customer: driver.stripeCustomerId,
       payment_method: defaultPM.stripePaymentMethodId,
@@ -97,12 +107,13 @@ const chargeDriverForTolls = async (booking, driver, tollInfo, trigger) => {
         trigger,
         tollCount: tollInfo.count.toString(),
         originalTollAmount: tollInfo.originalAmount.toString(),
-        platformTollFee: tollInfo.platformFees.toString()
+        platformTollFee: tollInfo.platformFees.toString(),
+        processingFee: tollProcessingFee.toString()
       },
       description: `Toll charges for ${booking.reservationId || booking._id} (${tollInfo.count} toll${tollInfo.count !== 1 ? 's' : ''})`
     });
 
-    console.log(`🛣️ Toll settlement: Charged driver $${tollInfo.driverTotal} for ${tollInfo.count} toll(s) on booking ${booking._id} [${trigger}]`);
+    console.log(`🛣️ Toll settlement: Charged driver $${driverCharge} (tolls $${tollInfo.driverTotal} + processing $${tollProcessingFee}) for ${tollInfo.count} toll(s) on booking ${booking._id} [${trigger}]`);
 
     return {
       success: paymentIntent.status === 'succeeded',
