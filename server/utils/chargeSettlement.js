@@ -8,7 +8,7 @@ const { sendChargePaymentFailedToDriver } = require('./emailService');
 // Renter pays SERVICE_FEE on top of the charge amount; the host's payout is
 // reduced by HOST_PLATFORM_FEE plus the actual Stripe processing fee.
 const SERVICE_FEE = 0.50;          // added to renter's bill, kept by platform
-const HOST_PLATFORM_FEE = 0.75;    // deducted from host's payout, kept by platform
+const HOST_PLATFORM_FEE = 0.35;    // deducted from host's payout, kept by platform
 
 // Retry schedule (days after the previous attempt). Once exhausted the charge
 // stays in 'failed' state and triggers the new-booking lockout.
@@ -24,7 +24,7 @@ const estimateStripeFee = (gross) => {
  * Compute the fee breakdown for a charge.
  *   gross = host-entered amount + $0.50 service fee  (renter pays)
  *   stripeFee = 2.9% + $0.30 on gross
- *   platformProfit = $0.50 + $0.75 = $1.25
+ *   platformProfit = $0.50 + $0.35 = $0.85
  *   hostPayout = gross - stripeFee - platformProfit
  */
 const computeBreakdown = (chargeAmount) => {

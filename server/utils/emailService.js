@@ -2430,7 +2430,7 @@ const sendChargeAddedToDriver = async (driver, host, booking, vehicle, charge) =
             <div style="background: white; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 16px 0;">
               <p style="margin: 0;"><strong>${typeLabel}</strong></p>
               <p style="margin: 6px 0; color: #6b7280; font-size: 0.9rem;">${charge.description}</p>
-              <p style="margin: 6px 0; font-size: 1.05rem;"><strong>Amount: $${charge.amount.toFixed(2)}</strong> + $0.50 service fee = <strong>$${total}</strong></p>
+              <p style="margin: 6px 0; font-size: 1.05rem;"><strong>Amount: $${total}</strong></p>
               ${charge.proofImage ? `<p style="margin: 8px 0 0;"><a href="${charge.proofImage}" style="color: #10b981;">View proof →</a></p>` : ''}
             </div>
             <p>If no action is taken, this charge will be automatically billed to your saved card on <strong>${autoChargeDate}</strong>. You can pay now, or contact support if you believe the charge is incorrect.</p>
@@ -2451,7 +2451,7 @@ ${hostName} added a new charge to your reservation of the ${vehicleLabel}.
 
 ${typeLabel}
 ${charge.description}
-Amount: $${charge.amount.toFixed(2)} + $0.50 service fee = $${total}
+Amount: $${total}
 
 If no action is taken, this charge will be auto-billed to your saved card on ${autoChargeDate}.
 
