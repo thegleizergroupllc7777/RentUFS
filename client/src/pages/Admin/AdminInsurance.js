@@ -45,13 +45,25 @@ const reconcileTeq = (text, pageRows, yourTotal) => {
   const driverCol = findCol(['driver']);
   const daysCol = findCol(['days']);
   const vehicleCol = findCol(['vehicle']);
+  const startCol = findCol(['start']); // "Start date" — used to pair up repeat trips
   if (driverCol < 0 || daysCol < 0) {
     throw new Error("Couldn't find a 'Driver' and 'Days' column in that file. Is it the TeqMobility invoice CSV?");
   }
 
-  // Aggregate TeqMobility days by driver (and by driver+vehicle for tighter matching).
-  const byDriver = new Map();
-  const byDriverVeh = new Map();
+  // Parse the date out of a "MM/DD/YYYY - 8:42 PM" cell (drops the time suffix).
+  // Splits only on a space-dash-space so date strings that use internal dashes
+  // (e.g. YYYY-MM-DD) survive. Returns epoch ms, or null if unparseable.
+  const parseStart = (raw) => {
+    const s = String(raw || '').split(/\s[-–—]\s/)[0].trim();
+    const t = Date.parse(s);
+    return Number.isNaN(t) ? null : t;
+  };
+
+  // Keep every TeqMobility line SEPARATE (do NOT aggregate). A driver who rented
+  // the same car twice keeps one line per trip, and each line is consumed at most
+  // once during matching — so two trips on the same car no longer collide into a
+  // single inflated total.
+  const teqLines = [];
   let teqTotal = 0;
   for (let i = 1; i < grid.length; i++) {
     const cols = grid[i];
@@ -59,28 +71,53 @@ const reconcileTeq = (text, pageRows, yourTotal) => {
     if (!driver) continue;
     const days = parseInt(String(cols[daysCol] || '').replace(/[^0-9-]/g, ''), 10) || 0;
     const veh = vehicleCol >= 0 ? norm(cols[vehicleCol]) : '';
+    const start = startCol >= 0 ? parseStart(cols[startCol]) : null;
     teqTotal += days;
-    byDriver.set(driver, (byDriver.get(driver) || 0) + days);
-    const key = `${driver}|${veh}`;
-    byDriverVeh.set(key, (byDriverVeh.get(key) || 0) + days);
+    teqLines.push({ driver, veh, days, start, used: false });
   }
 
-  // Compare each of your rows to the TeqMobility totals.
-  const pageDrivers = new Set(pageRows.map((r) => norm(r.driver)));
+  // Match each of your rows to ONE unused TeqMobility line. Prefer the same
+  // driver + vehicle; among those, the line whose start date is closest to your
+  // trip's start (so two trips on the same car pair up correctly). Falls back to
+  // same-driver-any-vehicle, then leaves the row unmatched ("missing").
+  const pickLine = (dn, vn, startMs) => {
+    const pool = (matchVeh) => teqLines
+      .map((l, idx) => ({ l, idx }))
+      .filter(({ l }) => !l.used && l.driver === dn && (matchVeh ? l.veh === vn : true));
+    let candidates = pool(true);
+    if (candidates.length === 0) candidates = pool(false);
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => {
+      const da = (startMs != null && a.l.start != null) ? Math.abs(a.l.start - startMs) : Number.MAX_SAFE_INTEGER;
+      const db = (startMs != null && b.l.start != null) ? Math.abs(b.l.start - startMs) : Number.MAX_SAFE_INTEGER;
+      if (da !== db) return da - db;
+      return a.idx - b.idx; // stable: earliest line first when dates are equal/absent
+    });
+    return candidates[0].idx;
+  };
+
   const recon = pageRows.map((r) => {
     const dn = norm(r.driver);
-    const vk = `${dn}|${norm(r.vehicle)}`;
-    const teqDays = byDriverVeh.has(vk) ? byDriverVeh.get(vk) : (byDriver.has(dn) ? byDriver.get(dn) : null);
+    const vn = norm(r.vehicle);
+    const startMs = r.startDate ? Date.parse(r.startDate) : null;
+    const idx = pickLine(dn, vn, startMs);
     const yourDays = Number(r.days) || 0;
-    let status, diff = null;
-    if (teqDays == null) { status = 'missing'; }
-    else { diff = yourDays - teqDays; status = diff === 0 ? 'match' : (diff > 0 ? 'ahead' : 'short'); }
+    let status, diff = null, teqDays = null;
+    if (idx == null) { status = 'missing'; }
+    else {
+      teqLines[idx].used = true; // consume this line so no other row can reuse it
+      teqDays = teqLines[idx].days;
+      diff = yourDays - teqDays;
+      status = diff === 0 ? 'match' : (diff > 0 ? 'ahead' : 'short');
+    }
     return { ...r, yourDays, teqDays, diff, status };
   });
 
-  // TeqMobility drivers that don't appear anywhere in your rows.
+  // TeqMobility lines that never matched any of your rows, summed per driver.
+  const extraByDriver = new Map();
+  teqLines.forEach((l) => { if (!l.used) extraByDriver.set(l.driver, (extraByDriver.get(l.driver) || 0) + l.days); });
   const extra = [];
-  byDriver.forEach((days, driver) => { if (!pageDrivers.has(driver)) extra.push({ driver, days }); });
+  extraByDriver.forEach((days, driver) => extra.push({ driver, days }));
 
   const counts = { match: 0, ahead: 0, short: 0, missing: 0 };
   recon.forEach((r) => { counts[r.status] = (counts[r.status] || 0) + 1; });
