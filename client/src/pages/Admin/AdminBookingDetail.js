@@ -371,8 +371,19 @@ const AdminBookingDetail = () => {
                 and the platform's $0.85-per-charge. */}
             {booking.hostChargeSummary?.count > 0 && (
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#374151', marginBottom: '0.6rem' }}>
-                  Host charges ({booking.hostChargeSummary.count})
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#374151' }}>
+                    Host charges ({booking.hostChargeSummary.count})
+                  </span>
+                  {booking.hostChargeSummary.statuses?.charged > 0 && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: '#065f46', background: '#d1fae5' }}>✓ {booking.hostChargeSummary.statuses.charged} paid</span>
+                  )}
+                  {booking.hostChargeSummary.statuses?.pending > 0 && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: '#92400e', background: '#fef3c7' }}>⏳ {booking.hostChargeSummary.statuses.pending} pending</span>
+                  )}
+                  {booking.hostChargeSummary.statuses?.failed > 0 && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: '#991b1b', background: '#fee2e2' }}>✗ {booking.hostChargeSummary.statuses.failed} failed</span>
+                  )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
                   <Field label="Driver paid (charges)" value={formatCurrency(booking.hostChargeSummary.driverPaid)} />

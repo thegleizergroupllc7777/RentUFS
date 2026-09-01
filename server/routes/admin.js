@@ -1084,20 +1084,27 @@ router.get('/bookings/:id', adminAuth, async (req, res) => {
     try {
       const Charge = require('../models/Charge');
       const { computeBreakdown } = require('../utils/chargeSettlement');
-      const charges = await Charge.find({ booking: booking._id, status: { $ne: 'waived' } }).select('amount').lean();
+      const charges = await Charge.find({ booking: booking._id, status: { $ne: 'waived' } }).select('amount status').lean();
       if (charges.length > 0) {
         let driverPaid = 0, hostReceived = 0, platformEarned = 0;
+        // Tally collection status so the admin can tell at a glance whether the
+        // driver actually paid, vs. a charge still pending or one that failed.
+        const statuses = { charged: 0, pending: 0, failed: 0 };
         for (const c of charges) {
           const b = computeBreakdown(c.amount);
           driverPaid += b.gross;
           hostReceived += b.hostPayout;
           platformEarned += b.platformProfit;
+          if (c.status === 'charged') statuses.charged += 1;
+          else if (c.status === 'failed') statuses.failed += 1;
+          else statuses.pending += 1; // 'pending' or any not-yet-charged state
         }
         hostChargeSummary = {
           count: charges.length,
           driverPaid: parseFloat(driverPaid.toFixed(2)),
           hostReceived: parseFloat(hostReceived.toFixed(2)),
-          platformEarned: parseFloat(platformEarned.toFixed(2))
+          platformEarned: parseFloat(platformEarned.toFixed(2)),
+          statuses
         };
       }
     } catch (e) {
