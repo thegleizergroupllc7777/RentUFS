@@ -327,16 +327,16 @@ const AdminInsurance = () => {
           Read-only: compares the invoice's days to your coverage days on screen. */}
       {teq && (
         <div style={{ margin: '0 0 1.5rem' }}>
-          <h2 style={{ fontSize: '1.05rem', margin: '0 0 2px', color: '#fff' }}>
+          <h2 style={{ fontSize: '1.05rem', margin: '0 0 2px', color: '#111827' }}>
             🧾 TeqMobility Bill reconciliation
           </h2>
-          <div style={{ color: '#9aa1ac', fontSize: '0.82rem', margin: '0 0 12px' }}>
-            {teqFile ? <>Uploaded: <strong style={{ color: '#cbd2da' }}>{teqFile}</strong> · </> : null}
+          <div style={{ color: '#374151', fontSize: '0.82rem', margin: '0 0 12px' }}>
+            {teqFile ? <>Uploaded: <strong style={{ color: '#111827' }}>{teqFile}</strong> · </> : null}
             matched by driver &amp; vehicle ·{' '}
-            <span style={{ color: '#10b981', fontWeight: 700 }}>{teq.counts.match} match</span> ·{' '}
-            <span style={{ color: '#3aa0ff', fontWeight: 700 }}>{teq.counts.ahead} ahead</span> ·{' '}
-            <span style={{ color: '#f87171', fontWeight: 700 }}>{teq.counts.short} short</span>
-            {teq.counts.missing ? <> · <span style={{ color: '#fbbf24', fontWeight: 700 }}>{teq.counts.missing} not on bill</span></> : null}
+            <span style={{ color: '#059669', fontWeight: 700 }}>{teq.counts.match} match</span> ·{' '}
+            <span style={{ color: '#2563eb', fontWeight: 700 }}>{teq.counts.ahead} ahead</span> ·{' '}
+            <span style={{ color: '#dc2626', fontWeight: 700 }}>{teq.counts.short} short</span>
+            {teq.counts.missing ? <> · <span style={{ color: '#b45309', fontWeight: 700 }}>{teq.counts.missing} not on bill</span></> : null}
           </div>
 
           <div className="admin-table-wrap">
@@ -405,7 +405,7 @@ const AdminInsurance = () => {
             </div>
           )}
 
-          <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#777' }}>
+          <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#4b5563' }}>
             Read-only comparison — your file is never uploaded or saved, and nothing here touches a booking, payment, coverage, or toll.
           </div>
         </div>
