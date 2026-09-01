@@ -172,6 +172,21 @@ const buildMonths = () => {
 // otherwise a browser east of UTC shows the previous day (matches the bookings view).
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—');
 
+// Remember an uploaded TeqMobility bill per month in the browser so it survives
+// navigating between admin tabs. Stored locally only (localStorage) — never sent
+// anywhere, exactly like the in-memory reconciliation. Every access is wrapped so
+// private mode / full storage just falls back to "not remembered".
+const teqStoreKey = (m) => `rentufs.teqBill.${m}`;
+const saveTeqBill = (m, name, text) => {
+  try { localStorage.setItem(teqStoreKey(m), JSON.stringify({ name, text })); } catch (e) { /* ignore */ }
+};
+const readTeqBill = (m) => {
+  try { const raw = localStorage.getItem(teqStoreKey(m)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+};
+const clearTeqBill = (m) => {
+  try { localStorage.removeItem(teqStoreKey(m)); } catch (e) { /* ignore */ }
+};
+
 // Owner-only page: monthly TeqMobility insurance reconciliation. Shows total
 // COVERAGE DAYS (split Basic vs Premium) plus the line-by-line list so the owner
 // can match the provider's invoice. Read-only — no rates, no dollars, no edits.
@@ -215,10 +230,12 @@ const AdminInsurance = () => {
     setTeqError('');
     const reader = new FileReader();
     reader.onload = () => {
+      const text = String(reader.result || '');
       try {
-        const result = reconcileTeq(String(reader.result || ''), data?.rows || [], data?.totalDays || 0);
+        const result = reconcileTeq(text, data?.rows || [], data?.totalDays || 0);
         setTeq(result);
         setTeqFile(file.name);
+        saveTeqBill(month, file.name, text); // remember it for this month
       } catch (err) {
         setTeq(null);
         setTeqFile('');
@@ -229,9 +246,37 @@ const AdminInsurance = () => {
     reader.readAsText(file);
   };
 
-  // Any change of month invalidates a loaded reconciliation (different invoice).
+  // Re-apply a remembered bill whenever the coverage data (re)loads or the month
+  // changes — this is what makes an uploaded bill survive leaving and returning to
+  // the Insurance tab. Guarded on data.month === month so it never compares a bill
+  // against the wrong month's rows mid-reload. Same read-only comparison as upload.
+  useEffect(() => {
+    if (!data || data.month !== month) return;
+    const saved = readTeqBill(month);
+    if (!saved || !saved.text) return;
+    try {
+      const result = reconcileTeq(saved.text, data.rows || [], data.totalDays || 0);
+      setTeq(result);
+      setTeqFile(saved.name || 'Saved bill');
+      setTeqError('');
+    } catch (e) {
+      setTeq(null);
+      setTeqFile('');
+    }
+  }, [data, month]);
+
+  // Any change of month clears the on-screen reconciliation; the effect above then
+  // restores that month's remembered bill (if any) once its data has loaded.
   const changeMonth = (value) => {
     setMonth(value);
+    setTeq(null);
+    setTeqFile('');
+    setTeqError('');
+  };
+
+  // Forget the remembered bill for this month (the "Remove" control).
+  const clearTeq = () => {
+    clearTeqBill(month);
     setTeq(null);
     setTeqFile('');
     setTeqError('');
@@ -331,12 +376,14 @@ const AdminInsurance = () => {
             🧾 TeqMobility Bill reconciliation
           </h2>
           <div style={{ color: '#374151', fontSize: '0.82rem', margin: '0 0 12px' }}>
-            {teqFile ? <>Uploaded: <strong style={{ color: '#111827' }}>{teqFile}</strong> · </> : null}
+            {teqFile ? <>Uploaded: <strong style={{ color: '#111827' }}>{teqFile}</strong>{' '}
+              <button type="button" onClick={clearTeq} style={{ background: 'none', border: 'none', padding: 0, margin: '0 1px', color: '#dc2626', font: 'inherit', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>Remove</button> · </> : null}
             matched by driver &amp; vehicle ·{' '}
             <span style={{ color: '#059669', fontWeight: 700 }}>{teq.counts.match} match</span> ·{' '}
             <span style={{ color: '#2563eb', fontWeight: 700 }}>{teq.counts.ahead} ahead</span> ·{' '}
             <span style={{ color: '#dc2626', fontWeight: 700 }}>{teq.counts.short} short</span>
             {teq.counts.missing ? <> · <span style={{ color: '#b45309', fontWeight: 700 }}>{teq.counts.missing} not on bill</span></> : null}
+            {' '}· <span style={{ color: '#059669', fontWeight: 600 }}>saved on this device</span>
           </div>
 
           <div className="admin-table-wrap">
