@@ -193,7 +193,27 @@ const AdminLateReturns = () => {
                 {tally && tally.rows.map((r) => (
                   <tr key={r.hostId}>
                     <td><strong>{r.host}</strong>{r.hostPhone ? <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{r.hostPhone}</div> : null}</td>
-                    <td>{r.lateReservations}</td>
+                    <td>
+                      <span title={(r.trips || []).map((t) => `${t.reservationId || '(no id)'} — ${t.overstayDays} day${t.overstayDays === 1 ? '' : 's'}`).join('\n')}>
+                        {r.lateReservations}
+                      </span>
+                      {/* Each late reservation: hover shows its overstay days + return;
+                          click opens the booking so the owner can look back. */}
+                      {(r.trips || []).length > 0 && (
+                        <div style={{ marginTop: '0.3rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {r.trips.map((t) => (
+                            <span
+                              key={t.id}
+                              onClick={() => navigate(`/admin/bookings/${t.id}`)}
+                              title={`${t.vehicle} · ${t.overstayDays} overstay day${t.overstayDays === 1 ? '' : 's'} · returned ${fmtDue(t.actualReturn)}`}
+                              style={{ cursor: 'pointer', fontSize: '0.75rem', color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.1rem 0.45rem', borderRadius: '0.4rem', whiteSpace: 'nowrap' }}
+                            >
+                              {t.reservationId || '(no id)'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td><strong style={{ color: '#dc2626' }}>{r.overstayDays}</strong></td>
                   </tr>
                 ))}
