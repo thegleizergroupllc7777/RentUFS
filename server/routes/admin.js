@@ -528,6 +528,107 @@ router.get('/late-returns', adminAuth, async (req, res) => {
   }
 });
 
+// ── Monthly late-return tally by host (OWNER-ONLY) ──────────────────────────
+// A READ-ONLY report: for a given month, every COMPLETED reservation that was
+// returned AFTER its paid return time, tallied per host — i.e. "how many overstay
+// insurance days did each host's trips clip this month." Pure read: it never
+// charges, writes, or touches Stripe / tolls / insurance coverage. It reuses the
+// SAME lateness math as the charging engine (getReturnMoment + "1 day the moment
+// they're late, +1 per additional full 24h, zero grace") so the counts always
+// agree with what the engine would charge. Bucketed by the ACTUAL return month.
+router.get('/late-return-tally', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const { getReturnMoment } = require('../utils/lateReturn');
+
+    // Month window, Eastern-anchored (same convention as the tax export). The
+    // query is ?month=YYYY-MM; default is the current month.
+    const EST_OFFSET = 5;
+    const now = new Date();
+    let year = now.getUTCFullYear();
+    let monthIdx = now.getUTCMonth(); // 0-based
+    const m = /^(\d{4})-(\d{2})$/.exec(String(req.query.month || ''));
+    if (m) { year = parseInt(m[1], 10); monthIdx = parseInt(m[2], 10) - 1; }
+    const monthStart = new Date(Date.UTC(year, monthIdx, 1, EST_OFFSET, 0, 0, 0));
+    const monthEnd = new Date(Date.UTC(year, monthIdx + 1, 1, EST_OFFSET, 0, 0, 0) - 1);
+
+    // Completed bookings whose recorded return timestamp lands in this month.
+    // The $or is just an index-friendly prefilter; we re-check the exact return
+    // instant in JS below so bucketing is always correct.
+    const bookings = await Booking.find({
+      status: 'completed',
+      $or: [
+        { 'returnInspection.completedAt': { $gte: monthStart, $lte: monthEnd } },
+        { 'completionInfo.at': { $gte: monthStart, $lte: monthEnd } }
+      ]
+    })
+      .populate('vehicle', 'make model year location')
+      .populate('host', 'firstName lastName phone');
+
+    const byHost = {};
+    let skippedNoReturn = 0;
+    for (const b of bookings) {
+      // Ground truth for when the car actually came back: the return-inspection
+      // completion stamp, else the completion audit stamp. Without one we cannot
+      // measure lateness, so we skip (and count it so the owner knows).
+      const actualReturnRaw = b.returnInspection?.completedAt || b.completionInfo?.at;
+      if (!actualReturnRaw) { skippedNoReturn++; continue; }
+      const actualReturn = new Date(actualReturnRaw);
+      if (actualReturn < monthStart || actualReturn > monthEnd) continue; // not this month
+
+      const returnMoment = getReturnMoment(b); // paid/scheduled due (reflects extensions)
+      if (!returnMoment) continue;
+
+      const msLate = actualReturn.getTime() - returnMoment.getTime();
+      if (msLate <= 0) continue; // returned on time → no clipping
+
+      // SAME model as server/utils/lateFees.js chargesOwed(): one day the moment
+      // they're late, then +1 for every additional full 24h the vehicle stayed out.
+      const daysLate = Math.floor(msLate / (24 * 3600000));
+      const overstayDays = 1 + daysLate;
+
+      const hid = b.host ? String(b.host._id) : 'unknown';
+      if (!byHost[hid]) {
+        byHost[hid] = {
+          hostId: hid,
+          host: b.host ? `${b.host.firstName || ''} ${b.host.lastName || ''}`.trim() || 'Host' : 'Unknown host',
+          hostPhone: b.host?.phone || '',
+          lateReservations: 0,
+          overstayDays: 0,
+          trips: []
+        };
+      }
+      byHost[hid].lateReservations += 1;
+      byHost[hid].overstayDays += overstayDays;
+      byHost[hid].trips.push({
+        id: b._id,
+        reservationId: b.reservationId || '',
+        vehicle: b.vehicle ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : 'Vehicle',
+        overstayDays,
+        returnMoment,
+        actualReturn
+      });
+    }
+
+    const rows = Object.values(byHost).sort((a, b) => b.overstayDays - a.overstayDays);
+    const totalOverstayDays = rows.reduce((s, r) => s + r.overstayDays, 0);
+    const totalLateReservations = rows.reduce((s, r) => s + r.lateReservations, 0);
+
+    res.json({
+      month: `${year}-${String(monthIdx + 1).padStart(2, '0')}`,
+      rows,
+      totalOverstayDays,
+      totalLateReservations,
+      skippedNoReturn
+    });
+  } catch (error) {
+    console.error('Late-return tally error:', error.message);
+    res.status(500).json({ message: 'Failed to load late-return tally', error: error.message });
+  }
+});
+
 // ── Tax / 1099 export (OWNER-ONLY) ──────────────────────────────────────────
 // Returns every host's tax info + yearly NET earnings for 1099 filing.
 // Restricted to super admins (the platform owner) — enforced here on the server
