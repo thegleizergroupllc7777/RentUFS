@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Car rental marketplace like Turo - connecting vehicle owners (hosts) with renters (drivers)",
   "main": "server/index.js",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "server": "node server/index.js",
     "client": "cd client && npm start",
