@@ -33,6 +33,13 @@ const Checkout = () => {
   const [payingWithSaved, setPayingWithSaved] = useState(false);
   const [agreementSigned, setAgreementSigned] = useState(false);
 
+  // Promo code (WELCOME20 first-rental discount). The box only appears when the
+  // owner has the promo toggled ON. The discount itself lives on booking.discount.
+  const [promoEnabled, setPromoEnabled] = useState(false);
+  const [promoInput, setPromoInput] = useState('');
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoError, setPromoError] = useState('');
+
   useEffect(() => {
     if (!bookingId) {
       setError('No booking ID provided');
@@ -56,6 +63,13 @@ const Checkout = () => {
 
       setClientSecret(response.data.clientSecret);
       setBooking(response.data.booking);
+
+      // Is the WELCOME20 promo box turned on? (non-blocking — hidden if off/unknown)
+      try {
+        const statusRes = await axios.get(`${API_URL}/api/payment/promo-status`,
+          { headers: { Authorization: `Bearer ${token}` }});
+        setPromoEnabled(!!statusRes.data.welcomeEnabled);
+      } catch (e) { /* leave the box hidden */ }
 
       // Check if agreement is already signed
       if (response.data.booking?.agreement?.signed) {
@@ -151,6 +165,69 @@ const Checkout = () => {
       }
     } catch (err) {
       console.error('Error refreshing payment intent:', err);
+    }
+  };
+
+  // Re-issue the Stripe payment intent so it charges the current stored total
+  // (after a promo is applied or removed). Mirrors handleInsuranceChange.
+  const refreshPaymentIntent = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/payment/create-payment-intent`,
+        { bookingId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      setClientSecret(response.data.clientSecret);
+      if (response.data.savedCards) setSavedCards(response.data.savedCards);
+    } catch (err) {
+      console.error('Error refreshing payment intent:', err);
+    }
+  };
+
+  const handleApplyPromo = async () => {
+    setPromoError('');
+    const code = promoInput.trim();
+    if (!code) { setPromoError('Enter a promo code.'); return; }
+    setPromoBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.post(`${API_URL}/api/payment/apply-promo`,
+        { bookingId, code },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      setBooking(prev => ({
+        ...prev,
+        discount: data.discount,
+        totalPrice: data.totalPrice
+      }));
+      setPromoInput('');
+      await refreshPaymentIntent();
+    } catch (err) {
+      setPromoError(err.response?.data?.message || 'Could not apply that code.');
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  const handleRemovePromo = async () => {
+    setPromoError('');
+    setPromoBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.post(`${API_URL}/api/payment/remove-promo`,
+        { bookingId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      setBooking(prev => ({
+        ...prev,
+        discount: { code: null, amount: 0 },
+        totalPrice: data.totalPrice
+      }));
+      await refreshPaymentIntent();
+    } catch (err) {
+      setPromoError(err.response?.data?.message || 'Could not remove the code.');
+    } finally {
+      setPromoBusy(false);
     }
   };
 
@@ -312,11 +389,69 @@ const Checkout = () => {
                 </div>
               )}
 
+              {booking.discount && booking.discount.amount > 0 && (
+                <div className="summary-item">
+                  <span className="label" style={{ color: '#10b981' }}>Promo ({booking.discount.code}):</span>
+                  <span className="value" style={{ color: '#10b981' }}>−${booking.discount.amount.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="summary-item total">
                 <span className="label">Total Amount:</span>
                 <span className="value">${booking.totalPrice.toFixed(2)}</span>
               </div>
             </div>
+
+            {/* Promo code box — only shown while the owner has the promo turned on. */}
+            {promoEnabled && booking.paymentStatus !== 'paid' && (
+              <div style={{
+                background: 'rgba(16,185,129,0.05)',
+                border: '1px solid rgba(16,185,129,0.3)',
+                borderRadius: '8px',
+                padding: '1rem 1.25rem',
+                marginBottom: '1.5rem'
+              }}>
+                {booking.discount && booking.discount.amount > 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#10b981', fontWeight: 600 }}>
+                      ✓ Code {booking.discount.code} applied — ${booking.discount.amount.toFixed(2)} off
+                    </span>
+                    <button
+                      onClick={handleRemovePromo}
+                      disabled={promoBusy}
+                      style={{ background: 'transparent', border: '1px solid #333', color: '#9ca3af', borderRadius: '6px', padding: '0.4rem 0.8rem', cursor: promoBusy ? 'default' : 'pointer', fontSize: '0.8rem' }}
+                    >
+                      {promoBusy ? '…' : 'Remove'}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <label style={{ display: 'block', color: '#e5e7eb', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                      Have a promo code?
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        value={promoInput}
+                        onChange={(e) => setPromoInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleApplyPromo(); }}
+                        placeholder="Enter code"
+                        style={{ flex: 1, minWidth: '140px', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1px solid #333', background: '#111', color: '#e5e7eb', fontSize: '0.9rem', textTransform: 'uppercase' }}
+                      />
+                      <button
+                        onClick={handleApplyPromo}
+                        disabled={promoBusy}
+                        className="btn btn-primary"
+                        style={{ padding: '0.6rem 1.2rem', opacity: promoBusy ? 0.6 : 1 }}
+                      >
+                        {promoBusy ? 'Applying…' : 'Apply'}
+                      </button>
+                    </div>
+                  </>
+                )}
+                {promoError && <div style={{ color: '#f87171', fontSize: '0.82rem', marginTop: '0.5rem' }}>{promoError}</div>}
+              </div>
+            )}
 
             {/* Insurance Selection */}
             <InsuranceSelection

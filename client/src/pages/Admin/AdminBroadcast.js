@@ -91,6 +91,32 @@ const AdminBroadcast = () => {
     finally { setHolidaySaving(false); }
   };
 
+  // WELCOME20 first-rental discount master switch (owner only)
+  const [welcomePromo, setWelcomePromo] = useState(false);
+  const [welcomePromoLoaded, setWelcomePromoLoaded] = useState(false);
+  const [welcomePromoSaving, setWelcomePromoSaving] = useState(false);
+
+  const loadWelcomePromo = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/admin/welcome-discount-setting');
+      setWelcomePromo(!!data.enabled);
+      setWelcomePromoLoaded(true);
+    } catch (e) { /* non-blocking */ }
+  }, []);
+
+  const toggleWelcomePromo = async () => {
+    const next = !welcomePromo;
+    if (next && !window.confirm(
+      'Turn ON the $20 WELCOME20 discount?\n\nA promo box will appear at checkout. A FIRST-TIME renter who enters WELCOME20 gets $20 off their first trip.\n\n• One-time per account — the code can\'t be reused.\n• The host still gets their FULL payout — the $20 comes out of RentUFS revenue only.\n• Nothing else changes (insurance, tolls, Stripe all unaffected).\n\nYou can turn this off anytime.'
+    )) return;
+    setWelcomePromoSaving(true);
+    try {
+      const { data } = await axios.put('/api/admin/welcome-discount-setting', { enabled: next });
+      setWelcomePromo(!!data.enabled);
+    } catch (e) { /* non-blocking */ }
+    finally { setWelcomePromoSaving(false); }
+  };
+
   // Send-a-test-email tool
   const [testTemplate, setTestTemplate] = useState('cancellation');
   const [testEmail, setTestEmail] = useState('');
@@ -133,6 +159,7 @@ const AdminBroadcast = () => {
   useEffect(() => { if (channel === 'sms') setDesign(''); }, [channel]);
   useEffect(() => { if (me?.isSuperAdmin) loadInsVehicles(); }, [me, loadInsVehicles]);
   useEffect(() => { if (me?.isSuperAdmin) loadHolidayAuto(); }, [me, loadHolidayAuto]);
+  useEffect(() => { if (me?.isSuperAdmin) loadWelcomePromo(); }, [me, loadWelcomePromo]);
 
   const doEmail = channel === 'email' || channel === 'both';
   const doSms = channel === 'sms' || channel === 'both';
@@ -389,6 +416,33 @@ const AdminBroadcast = () => {
                 }}
               >
                 {holidaySaving ? 'Saving…' : holidayAuto ? '✅ ON — auto-sending' : 'OFF — turn on'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* $20 WELCOME20 first-rental discount switch — owner only */}
+        {me?.isSuperAdmin && (
+          <div style={{ ...card, borderColor: welcomePromo ? '#bbf7d0' : '#e5e7eb', background: welcomePromo ? '#f0fdf4' : '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, marginBottom: 4, color: '#065f46' }}>🎟️ $20 first-rental discount (WELCOME20)</div>
+                <div style={{ color: '#6b7280', fontSize: '0.85rem', maxWidth: 520, lineHeight: 1.6 }}>
+                  When ON, a promo box appears at checkout. A <strong>first-time renter</strong> who enters <strong>WELCOME20</strong> gets <strong>$20 off their first trip</strong>. It's <strong>one-time per account</strong> — the code can't be reused. The <strong>host still receives their full payout</strong>; the $20 comes out of <strong>RentUFS revenue only</strong>. Insurance, tolls and Stripe are unaffected. Defaults <strong>OFF</strong> — turn on/off anytime.
+                </div>
+              </div>
+              <button
+                onClick={toggleWelcomePromo}
+                disabled={welcomePromoSaving || !welcomePromoLoaded}
+                style={{
+                  ...pill(welcomePromo),
+                  padding: '10px 20px',
+                  whiteSpace: 'nowrap',
+                  opacity: (welcomePromoSaving || !welcomePromoLoaded) ? 0.6 : 1,
+                  cursor: (welcomePromoSaving || !welcomePromoLoaded) ? 'default' : 'pointer'
+                }}
+              >
+                {welcomePromoSaving ? 'Saving…' : welcomePromo ? '✅ ON — box live at checkout' : 'OFF — turn on'}
               </button>
             </div>
           </div>

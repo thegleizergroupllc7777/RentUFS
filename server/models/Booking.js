@@ -97,6 +97,13 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Promotional discount applied to the renter's total (e.g. the WELCOME20
+  // first-rental credit). This comes 100% out of RentUFS platform revenue —
+  // hostEarnings is NEVER touched, so the host always gets their full payout.
+  discount: {
+    code: { type: String, default: null },
+    amount: { type: Number, default: 0 }
+  },
   // Stripe processing fee split 50/50 between driver and host
   stripeFee: {
     type: Number,
