@@ -240,6 +240,14 @@ router.post('/add-to-booking', auth, async (req, res) => {
     const previousInsuranceCost = booking.insurance?.totalCost || 0;
     const priceDifference = insuranceCost - previousInsuranceCost;
 
+    // If a promo discount is applied, peel it off first so ALL the pricing math
+    // below (processing fee, host earnings, revenue) runs on the true,
+    // undiscounted total. We re-apply the exact discount at the very end. This
+    // keeps the discount exactly $X and fully decoupled from fees and the host's
+    // payout — a later insurance change never changes what the host gets.
+    const promoAmount = booking.discount?.amount || 0;
+    if (promoAmount > 0) booking.totalPrice = booking.totalPrice + promoAmount;
+
     // Update booking with insurance
     // Actual coverage is activated via TeqMobility when pickup inspection is completed
     booking.insurance = {
@@ -269,6 +277,13 @@ router.post('/add-to-booking', auth, async (req, res) => {
 
     // Update revenue split: RentUFS keeps driverFee + hostFee + insurance
     booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + hostPlatformFee + insuranceCost;
+
+    // Re-apply the promo discount: it comes out of the renter's total and our
+    // platform revenue only — hostEarnings (computed above) is left untouched.
+    if (promoAmount > 0) {
+      booking.totalPrice = Math.max(0, booking.totalPrice - promoAmount);
+      booking.platformRevenue = booking.platformRevenue - promoAmount;
+    }
 
     await booking.save();
 
@@ -315,6 +330,12 @@ router.post('/remove-from-booking', auth, async (req, res) => {
       return res.status(400).json({ message: 'Cannot modify insurance after payment' });
     }
 
+    // Peel off any promo discount first so the fee/earnings math runs on the
+    // true undiscounted total; we re-apply it at the end (same pattern as
+    // add-to-booking). Keeps the host's payout independent of the discount.
+    const promoAmount = booking.discount?.amount || 0;
+    if (promoAmount > 0) booking.totalPrice = booking.totalPrice + promoAmount;
+
     // Remove insurance cost and old processing fee from total
     const insuranceCost = booking.insurance?.totalCost || 0;
     const oldDriverProcessingFee = booking.driverProcessingFee || 0;
@@ -334,6 +355,12 @@ router.post('/remove-from-booking', auth, async (req, res) => {
 
     // Update revenue split: RentUFS keeps driverFee + hostFee when no insurance
     booking.platformRevenue = (booking.platformFee || (booking.platformFeePerDay || 1.50) * booking.totalDays) + hostPlatformFee;
+
+    // Re-apply the promo discount (renter total + our revenue only).
+    if (promoAmount > 0) {
+      booking.totalPrice = Math.max(0, booking.totalPrice - promoAmount);
+      booking.platformRevenue = booking.platformRevenue - promoAmount;
+    }
 
     // Reset insurance to none
     booking.insurance = {

@@ -10,6 +10,7 @@ const { calculateProcessingFee } = require('../utils/stripeFee');
 const { isConfigured: tollspotConfigured } = require('../utils/tollspot');
 const { getOutstandingTolls, recordTollSettlement, transferTollsToHost } = require('../utils/tollSettlement');
 const { extensionDailyRate } = require('../utils/extensionPricing');
+const { validateWelcomeDiscount, isWelcomeEnabled } = require('../utils/welcomeDiscount');
 
 const router = express.Router();
 
@@ -113,6 +114,112 @@ router.post('/create-payment-intent', auth, async (req, res) => {
   } catch (error) {
     console.error('Payment intent creation error:', error);
     res.status(500).json({ message: 'Failed to create payment intent', error: error.message });
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Promo code (WELCOME20 first-rental discount)
+//
+// These two endpoints are the ONLY place a renter's discount is applied or
+// removed. They adjust the booking's stored totalPrice and the platformRevenue
+// reporting field — and nothing else. hostEarnings is never touched (the host
+// always gets their full payout), and the Stripe charge code is never touched
+// (create-payment-intent simply reads the new, lower totalPrice).
+//
+// Idempotent by design: the discount lives in booking.discount, so applying
+// twice is a no-op and removing restores the exact amount. The renter can't
+// reuse the code (first-timer enforced server-side).
+// ───────────────────────────────────────────────────────────────────────────
+
+// Tell the checkout page whether the promo box should be shown at all.
+router.get('/promo-status', auth, async (req, res) => {
+  try {
+    res.json({ welcomeEnabled: await isWelcomeEnabled() });
+  } catch (error) {
+    // Fail safe: if we can't read the toggle, just hide the box.
+    res.json({ welcomeEnabled: false });
+  }
+});
+
+// Apply a promo code to a booking (before payment).
+router.post('/apply-promo', auth, async (req, res) => {
+  try {
+    const { bookingId, code } = req.body;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    if (booking.driver.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    if (booking.paymentStatus === 'paid') {
+      return res.status(400).json({ message: 'Cannot change a promo code after payment.' });
+    }
+
+    const check = await validateWelcomeDiscount(code, booking);
+    if (!check.ok) {
+      return res.status(400).json({ message: check.reason });
+    }
+
+    // Already applied? Idempotent — don't discount twice.
+    if ((booking.discount?.amount || 0) > 0) {
+      return res.json({
+        success: true,
+        alreadyApplied: true,
+        discount: booking.discount,
+        totalPrice: booking.totalPrice
+      });
+    }
+
+    // Apply: the $20 comes out of the renter's total and out of our own
+    // platform revenue. hostEarnings is deliberately untouched.
+    booking.discount = { code: check.code, amount: check.amount };
+    booking.totalPrice = Math.max(0, booking.totalPrice - check.amount);
+    booking.platformRevenue = (booking.platformRevenue || 0) - check.amount;
+    await booking.save();
+
+    console.log(`🎟️ ${check.code} applied (−$${check.amount}) to booking ${booking.reservationId || booking._id} for driver ${req.user.email}`);
+
+    res.json({
+      success: true,
+      discount: booking.discount,
+      totalPrice: booking.totalPrice
+    });
+  } catch (error) {
+    console.error('Apply promo error:', error.message);
+    res.status(500).json({ message: 'Failed to apply promo code', error: error.message });
+  }
+});
+
+// Remove a previously applied promo code (restores the full total).
+router.post('/remove-promo', auth, async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    if (booking.driver.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    if (booking.paymentStatus === 'paid') {
+      return res.status(400).json({ message: 'Cannot change a promo code after payment.' });
+    }
+
+    const applied = booking.discount?.amount || 0;
+    if (applied > 0) {
+      booking.totalPrice = booking.totalPrice + applied;
+      booking.platformRevenue = (booking.platformRevenue || 0) + applied;
+      booking.discount = { code: null, amount: 0 };
+      await booking.save();
+    }
+
+    res.json({ success: true, totalPrice: booking.totalPrice });
+  } catch (error) {
+    console.error('Remove promo error:', error.message);
+    res.status(500).json({ message: 'Failed to remove promo code', error: error.message });
   }
 });
 

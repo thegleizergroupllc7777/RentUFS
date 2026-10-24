@@ -482,6 +482,44 @@ router.put('/two-option-insurance-setting', adminAuth, async (req, res) => {
   }
 });
 
+// ── WELCOME20 first-rental discount switch (OWNER-ONLY) ─────────────────────
+// Master ON/OFF for the $20-off-first-rental promo box at checkout. Defaults
+// OFF — until the owner flips it on, the promo box never appears and the code
+// is "not available", so checkout, pricing, insurance and Stripe are unchanged.
+// The $20 comes out of RentUFS revenue only; the host's payout is never reduced.
+router.get('/welcome-discount-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const doc = await SystemState.findOne({ key: 'welcomeDiscount' });
+    const enabled = !!(doc && String(doc.value).toLowerCase() === 'on');
+    res.json({ enabled });
+  } catch (error) {
+    console.error('Welcome-discount setting read error:', error.message);
+    res.status(500).json({ message: 'Failed to load setting', error: error.message });
+  }
+});
+
+router.put('/welcome-discount-setting', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const value = req.body.enabled === true || String(req.body.enabled).toLowerCase() === 'on' ? 'on' : 'off';
+    await SystemState.findOneAndUpdate(
+      { key: 'welcomeDiscount' },
+      { value, updatedAt: new Date() },
+      { upsert: true }
+    );
+    console.log(`🎟️ WELCOME20 first-rental discount switched ${value.toUpperCase()} by ${req.user.email}`);
+    res.json({ success: true, enabled: value === 'on' });
+  } catch (error) {
+    console.error('Welcome-discount setting update error:', error.message);
+    res.status(500).json({ message: 'Failed to update setting', error: error.message });
+  }
+});
+
 // ── Live late-returns list (OWNER-ONLY) ─────────────────────────────────────
 // Every currently-overdue active rental across the platform, for the owner's
 // Late Returns command center. Read-only. Uses the same lateness math as the
