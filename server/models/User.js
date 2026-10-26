@@ -301,6 +301,15 @@ const userSchema = new mongoose.Schema({
       active: { type: Boolean, default: false },
       connectedAt: { type: Date, default: null },
       signedUp: { type: Boolean, default: false }
+    },
+    // GPS Leaders is a referral partner, not a live integration. We only record
+    // when a host clicks through to their partner page, so the owner can see
+    // interest. This stores nothing from GPS Leaders and shares nothing with them.
+    gpsLeaders: {
+      clicked: { type: Boolean, default: false },
+      firstClickedAt: { type: Date, default: null },
+      lastClickedAt: { type: Date, default: null },
+      clickCount: { type: Number, default: 0 }
     }
   },
   // SMS messaging consent for TCPA compliance and Twilio toll-free verification.

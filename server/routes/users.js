@@ -1136,6 +1136,37 @@ router.put('/integrations/tollspot/signed-up', auth, async (req, res) => {
   }
 });
 
+// Record a GPS Leaders click (fire-and-forget from the Integrations toggle).
+// Purely an interest tally for the owner — it does not connect to GPS Leaders,
+// send them anything, or touch bookings/insurance/tolls/Stripe.
+router.post('/integrations/gps-leaders-click', auth, async (req, res) => {
+  try {
+    const now = new Date();
+    // Aggregation-pipeline update: set first-click only if not already set,
+    // bump the count, and stamp the latest click — all in one atomic write.
+    await User.updateOne(
+      { _id: req.user._id },
+      [
+        { $set: {
+          'integrations.gpsLeaders.clicked': true,
+          'integrations.gpsLeaders.lastClickedAt': now,
+          'integrations.gpsLeaders.firstClickedAt': {
+            $ifNull: ['$integrations.gpsLeaders.firstClickedAt', now]
+          },
+          'integrations.gpsLeaders.clickCount': {
+            $add: [{ $ifNull: ['$integrations.gpsLeaders.clickCount', 0] }, 1]
+          }
+        } }
+      ]
+    );
+    res.json({ recorded: true });
+  } catch (error) {
+    // Non-blocking: a tracking failure must never affect the host's experience.
+    console.error('GPS Leaders click record error:', error.message);
+    res.json({ recorded: false });
+  }
+});
+
 // Lightweight "still here" heartbeat. The client pings this every minute while
 // a logged-in user has the site open; it stamps ONE field (lastActiveAt) so
 // admins can see when someone was last active. It writes nothing else and reads
