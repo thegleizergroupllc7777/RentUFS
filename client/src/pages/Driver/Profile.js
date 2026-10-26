@@ -401,7 +401,16 @@ const DriverProfile = () => {
     const turningOn = !gpsLeadersOn;
     setGpsLeadersOn(turningOn);
     if (turningOn) {
-      window.open('https://gpsleaders.com/partners/rentufs', '_blank', 'noopener,noreferrer');
+      // Reliably open in a NEW tab across all browsers/devices (so the host
+      // stays on RentUFS). A temporary anchor is more dependable than
+      // window.open, which some browsers redirect into the same tab.
+      const a = document.createElement('a');
+      a.href = 'https://gpsleaders.com/partners/rentufs';
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
   };
 
@@ -2890,7 +2899,7 @@ const DriverProfile = () => {
                           <img
                             src="https://gpsleaders.com/brand/gps-leaders-logo.png"
                             alt="GPS Leaders"
-                            style={{ height: '26px', width: 'auto', maxWidth: '150px', objectFit: 'contain' }}
+                            style={{ height: '44px', width: 'auto', maxWidth: '200px', objectFit: 'contain' }}
                             onError={(e) => { e.target.style.display = 'none'; }}
                           />
                           <h3 style={{ color: '#fff', margin: 0, fontSize: '1.1rem' }}>GPS Leaders</h3>
