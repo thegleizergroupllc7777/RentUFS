@@ -2891,8 +2891,15 @@ const DriverProfile = () => {
                       partner page in a new tab. It cannot affect bookings,
                       insurance, tolls, Stripe, or any integration. */}
                   <div style={{
-                    background: '#111',
-                    border: gpsLeadersOn ? '1px solid #10b981' : '1px solid #333',
+                    // GPS-Leaders-branded look: dark navy base, faint map grid,
+                    // and a soft amber glow (their brand accent). Cosmetic only.
+                    background: [
+                      'repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 28px)',
+                      'repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 28px)',
+                      'radial-gradient(120% 140% at 88% -15%, rgba(251,191,36,0.14) 0%, rgba(251,191,36,0) 42%)',
+                      'linear-gradient(135deg, #0c1322 0%, #0a0e16 55%, #0a0a0a 100%)'
+                    ].join(','),
+                    border: gpsLeadersOn ? '1px solid #10b981' : '1px solid rgba(251,191,36,0.28)',
                     borderRadius: '0.75rem',
                     padding: '1.5rem',
                     marginTop: '1rem',
@@ -2907,7 +2914,7 @@ const DriverProfile = () => {
                             style={{ height: '44px', width: 'auto', maxWidth: '200px', objectFit: 'contain' }}
                             onError={(e) => { e.target.style.display = 'none'; }}
                           />
-                          <h3 style={{ color: '#fff', margin: 0, fontSize: '1.1rem' }}>GPS Leaders</h3>
+                          <h3 style={{ color: '#fff', margin: 0, fontSize: '1.25rem', fontFamily: "'Poppins', -apple-system, sans-serif", fontWeight: 800, letterSpacing: '0.3px' }}>GPS Leaders</h3>
                           <span style={{
                             background: 'rgba(16,185,129,0.15)',
                             color: '#10b981',
