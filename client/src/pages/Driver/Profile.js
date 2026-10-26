@@ -256,6 +256,9 @@ const DriverProfile = () => {
   // Stripe Connect (payouts) onboarding status — for the Payouts sidebar badge
   const [payoutsReady, setPayoutsReady] = useState(true);
   const [tollspotSignupUrl, setTollspotSignupUrl] = useState(null);
+  // GPS Leaders is a partner/referral card, not a live integration. This visual
+  // toggle only launches their partner page — it has no backend and stores nothing.
+  const [gpsLeadersOn, setGpsLeadersOn] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -389,6 +392,17 @@ const DriverProfile = () => {
     setActiveTab(tab);
     setSearchParams({ tab });
     if (tab === 'payouts') setPayoutsOpened(true);
+  };
+
+  // GPS Leaders toggle — purely a launcher. Flipping it on opens GPS Leaders'
+  // partner page in a new tab; it makes NO API call and changes nothing in
+  // RentUFS (bookings, insurance, tolls, Stripe are all untouched).
+  const handleGpsLeadersToggle = () => {
+    const turningOn = !gpsLeadersOn;
+    setGpsLeadersOn(turningOn);
+    if (turningOn) {
+      window.open('https://gpsleaders.com/partners/rentufs', '_blank', 'noopener,noreferrer');
+    }
   };
 
   // === Profile functions ===
@@ -2856,18 +2870,19 @@ const DriverProfile = () => {
                     </div>
                   </div>
 
-                  {/* GPS Leaders — partner/referral card (informational only).
-                      This is NOT a live API integration like TollSpot. There is
-                      no toggle, no backend call, and no stored state: the button
-                      simply opens GPS Leaders' partner page in a new tab so the
-                      host can buy a tracker directly from them. It cannot affect
-                      bookings, insurance, tolls, Stripe, or any integration. */}
+                  {/* GPS Leaders — partner/referral card. Styled with a toggle
+                      to match TollSpot for a consistent look, but it is NOT a
+                      live API integration: there is no backend call and nothing
+                      is stored. Flipping the toggle simply opens GPS Leaders'
+                      partner page in a new tab. It cannot affect bookings,
+                      insurance, tolls, Stripe, or any integration. */}
                   <div style={{
                     background: '#111',
-                    border: '1px solid #333',
+                    border: gpsLeadersOn ? '1px solid #10b981' : '1px solid #333',
                     borderRadius: '0.75rem',
                     padding: '1.5rem',
-                    marginTop: '1rem'
+                    marginTop: '1rem',
+                    transition: 'border-color 0.2s'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -2890,27 +2905,45 @@ const DriverProfile = () => {
                             letterSpacing: '0.5px'
                           }}>Partner</span>
                         </div>
-                        <p style={{ color: '#9ca3af', margin: '0 0 0.75rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                        <p style={{ color: '#9ca3af', margin: '0 0 0.5rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
                           Hardwired GPS tracking for your rentals — <strong style={{ color: '#d1d5db' }}>$119 per car with five years of service and no monthly fee</strong>. Out-of-state and impound-lot alerts, an optional starter interrupt, and a live link for your recovery driver. GPS Leaders handles setup and support.
                         </p>
-                        <a
-                          href="https://gpsleaders.com/partners/rentufs"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-block',
-                            background: '#10b981',
-                            color: '#fff',
-                            textDecoration: 'none',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.85rem',
-                            fontWeight: '600'
-                          }}
-                        >
-                          Get GPS Tracking →
-                        </a>
+                        <p style={{ color: gpsLeadersOn ? '#10b981' : '#6b7280', margin: 0, fontSize: '0.8rem' }}>
+                          {gpsLeadersOn
+                            ? '✓ Opening GPS Leaders — finish your order on their site.'
+                            : 'Flip the switch to get started with GPS Leaders.'}
+                        </p>
                       </div>
+
+                      {/* Toggle — launches GPS Leaders' partner page in a new tab. */}
+                      <button
+                        onClick={handleGpsLeadersToggle}
+                        style={{
+                          position: 'relative',
+                          width: '50px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          border: 'none',
+                          background: gpsLeadersOn ? '#10b981' : '#333',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s',
+                          flexShrink: 0,
+                          marginTop: '2px'
+                        }}
+                        aria-label={gpsLeadersOn ? 'GPS Leaders opened' : 'Get GPS Leaders'}
+                      >
+                        <span style={{
+                          position: 'absolute',
+                          top: '3px',
+                          left: gpsLeadersOn ? '25px' : '3px',
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                        }} />
+                      </button>
                     </div>
                   </div>
                 </div>
