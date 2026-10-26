@@ -148,15 +148,15 @@ const AdminCommissions = () => {
           <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0 0 0.75rem' }}>
             Hosts who clicked through to the GPS Leaders partner page from their Integrations tab — interest only. GPS Leaders receives none of your data.
           </p>
-          <div className="admin-table-wrap">
+          {/* Cap the height so a long list scrolls inside the card instead of
+              stretching the whole page. Header stays pinned while you scroll. */}
+          <div className="admin-table-wrap" style={{ maxHeight: '340px', overflowY: 'auto' }}>
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Host</th>
-                  <th>Contact</th>
-                  <th>Clicks</th>
-                  <th>First clicked</th>
-                  <th>Last clicked</th>
+                  {['Host', 'Contact', 'Clicks', 'First clicked', 'Last clicked'].map((h) => (
+                    <th key={h} style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1 }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
