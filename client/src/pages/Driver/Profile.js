@@ -2855,6 +2855,64 @@ const DriverProfile = () => {
                       </button>
                     </div>
                   </div>
+
+                  {/* GPS Leaders — partner/referral card (informational only).
+                      This is NOT a live API integration like TollSpot. There is
+                      no toggle, no backend call, and no stored state: the button
+                      simply opens GPS Leaders' partner page in a new tab so the
+                      host can buy a tracker directly from them. It cannot affect
+                      bookings, insurance, tolls, Stripe, or any integration. */}
+                  <div style={{
+                    background: '#111',
+                    border: '1px solid #333',
+                    borderRadius: '0.75rem',
+                    padding: '1.5rem',
+                    marginTop: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                          <img
+                            src="https://gpsleaders.com/brand/gps-leaders-logo.png"
+                            alt="GPS Leaders"
+                            style={{ height: '26px', width: 'auto', maxWidth: '150px', objectFit: 'contain' }}
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                          <h3 style={{ color: '#fff', margin: 0, fontSize: '1.1rem' }}>GPS Leaders</h3>
+                          <span style={{
+                            background: 'rgba(16,185,129,0.15)',
+                            color: '#10b981',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            padding: '2px 8px',
+                            borderRadius: '9999px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>Partner</span>
+                        </div>
+                        <p style={{ color: '#9ca3af', margin: '0 0 0.75rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                          Hardwired GPS tracking for your rentals — <strong style={{ color: '#d1d5db' }}>$119 per car with five years of service and no monthly fee</strong>. Out-of-state and impound-lot alerts, an optional starter interrupt, and a live link for your recovery driver. GPS Leaders handles setup and support.
+                        </p>
+                        <a
+                          href="https://gpsleaders.com/partners/rentufs"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-block',
+                            background: '#10b981',
+                            color: '#fff',
+                            textDecoration: 'none',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.85rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Get GPS Tracking →
+                        </a>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               {activeTab === 'payment' && renderPaymentTab()}
