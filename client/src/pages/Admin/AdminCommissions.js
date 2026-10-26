@@ -45,6 +45,9 @@ const AdminCommissions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // GPS Leaders host-interest tally (owner only). Read-only partner metric.
+  const [gps, setGps] = useState(null);
+
   const load = useCallback(async () => {
     if (!month) return;
     setLoading(true);
@@ -59,9 +62,20 @@ const AdminCommissions = () => {
     }
   }, [month]);
 
+  const loadGps = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/admin/gps-leaders-interest');
+      setGps(data);
+    } catch (err) { /* non-blocking partner metric */ }
+  }, []);
+
   useEffect(() => {
     if (me) load();
   }, [load, me]);
+
+  useEffect(() => {
+    if (me?.isSuperAdmin) loadGps();
+  }, [loadGps, me]);
 
   const downloadCsv = () => {
     if (!data) return;
@@ -116,6 +130,53 @@ const AdminCommissions = () => {
           ? 'you and your salesperson agree on the per-day rate; multiply it by the days below when you pay.'
           : 'your per-day rate is arranged with the owner. This just tracks your days so there are no surprises at month-end.'}
       </div>
+
+      {/* GPS Leaders — host interest (owner only). Read-only partner metric:
+          hosts who clicked through to GPS Leaders from the Integrations tab.
+          Separate from commissions; GPS Leaders receives none of your data. */}
+      {isOwner && (
+        <div style={{ margin: '0 0 1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', margin: '0 0 0.4rem' }}>
+            <h3 style={{ color: '#374151', margin: 0 }}>
+              🛰️ GPS Leaders — host interest{' '}
+              {gps && gps.totalHosts > 0 && (
+                <span style={{ color: '#10b981' }}>({gps.totalHosts} host{gps.totalHosts === 1 ? '' : 's'} · {gps.totalClicks} click{gps.totalClicks === 1 ? '' : 's'})</span>
+              )}
+            </h3>
+            <button className="admin-btn" onClick={loadGps}>Refresh</button>
+          </div>
+          <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0 0 0.75rem' }}>
+            Hosts who clicked through to the GPS Leaders partner page from their Integrations tab — interest only. GPS Leaders receives none of your data.
+          </p>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Host</th>
+                  <th>Contact</th>
+                  <th>Clicks</th>
+                  <th>First clicked</th>
+                  <th>Last clicked</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!gps || gps.rows.length === 0) && (
+                  <tr><td colSpan="5"><div className="admin-empty">No hosts have clicked GPS Leaders yet.</div></td></tr>
+                )}
+                {gps && gps.rows.map((r) => (
+                  <tr key={r.id}>
+                    <td><strong>{r.name}</strong></td>
+                    <td>{r.email}{r.phone ? <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{r.phone}</div> : null}</td>
+                    <td><strong>{r.clickCount}</strong></td>
+                    <td>{r.firstClickedAt ? new Date(r.firstClickedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
+                    <td>{r.lastClickedAt ? new Date(r.lastClickedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Summary — total days per salesperson + grand total */}
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', margin: '0 0 1.25rem' }}>

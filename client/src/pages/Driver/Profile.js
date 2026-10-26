@@ -411,6 +411,11 @@ const DriverProfile = () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      // Record the click so the owner can see host interest (fire-and-forget —
+      // never blocks or affects the host if it fails).
+      axios.post(`${API_URL}/api/users/integrations/gps-leaders-click`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).catch(() => {});
     }
   };
 

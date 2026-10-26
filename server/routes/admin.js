@@ -520,6 +520,41 @@ router.put('/welcome-discount-setting', adminAuth, async (req, res) => {
   }
 });
 
+// ── GPS Leaders host-interest tally (OWNER-ONLY) ────────────────────────────
+// Read-only: lists the hosts who have clicked through to the GPS Leaders partner
+// page from the Integrations tab, so the owner can gauge interest. Nothing here
+// touches bookings, insurance, tolls, Stripe, or GPS Leaders itself.
+router.get('/gps-leaders-interest', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const users = await User.find({ 'integrations.gpsLeaders.clicked': true })
+      .select('firstName lastName email phone integrations.gpsLeaders')
+      .sort({ 'integrations.gpsLeaders.lastClickedAt': -1 })
+      .lean();
+
+    const rows = users.map((u) => ({
+      id: u._id,
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+      email: u.email,
+      phone: u.phone || null,
+      clickCount: u.integrations?.gpsLeaders?.clickCount || 0,
+      firstClickedAt: u.integrations?.gpsLeaders?.firstClickedAt || null,
+      lastClickedAt: u.integrations?.gpsLeaders?.lastClickedAt || null
+    }));
+
+    res.json({
+      totalHosts: rows.length,
+      totalClicks: rows.reduce((s, r) => s + (r.clickCount || 0), 0),
+      rows
+    });
+  } catch (error) {
+    console.error('GPS Leaders interest read error:', error.message);
+    res.status(500).json({ message: 'Failed to load GPS Leaders interest', error: error.message });
+  }
+});
+
 // ── Live late-returns list (OWNER-ONLY) ─────────────────────────────────────
 // Every currently-overdue active rental across the platform, for the owner's
 // Late Returns command center. Read-only. Uses the same lateness math as the
