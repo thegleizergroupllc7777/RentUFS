@@ -12,6 +12,22 @@ import { useAuth } from '../../context/AuthContext';
 
 const STATUS_OPTIONS = ['awaiting_payment', 'pending', 'confirmed', 'active', 'completed', 'cancelled'];
 
+// Pickup-time options in 30-minute increments, matching the marketplace booking
+// picker (value "HH:MM" 24-hour, label "h:MM AM/PM"). Used for the Edit-dates
+// modal so the admin time field is consistent and not a confusing 1-minute input.
+const TIME_SLOTS_30MIN = (() => {
+  const slots = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const value = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      slots.push({ value, label: `${h12}:${String(m).padStart(2, '0')} ${ampm}` });
+    }
+  }
+  return slots;
+})();
+
 const formatDate = (d) => (d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
 // Trip dates (pickup/return) are stored as midnight UTC of the selected day, so
 // format them in UTC — otherwise a browser east of UTC shows the previous day.
@@ -899,7 +915,11 @@ const DatesModal = ({ booking, onClose, onSaved }) => {
         </div>
         <div className="field">
           <label>Pickup time</label>
-          <input type="time" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} />
+          <select value={pickupTime} onChange={(e) => setPickupTime(e.target.value)}>
+            {TIME_SLOTS_30MIN.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
           <p className="muted" style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.25rem' }}>
             Return time matches pickup time (24-hour rentals).
           </p>
