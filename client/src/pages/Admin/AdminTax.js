@@ -24,6 +24,15 @@ const AdminTax = () => {
   const [error, setError] = useState('');
   const [revealed, setRevealed] = useState({}); // host id -> true
 
+  // Owner-only tax-ID correction modal.
+  const [editHost, setEditHost] = useState(null);
+  const [newTaxId, setNewTaxId] = useState('');
+  const [editReason, setEditReason] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState('');
+  const [editMsg, setEditMsg] = useState('');
+
   // Label for the upcoming Monday payout run (today if it's Monday, else the
   // next Monday). Payouts run weekly on Monday. Display only.
   const nextMondayLabel = (() => {
@@ -89,6 +98,27 @@ const AdminTax = () => {
     URL.revokeObjectURL(url);
   };
 
+  const openEdit = (h) => {
+    setEditHost(h); setNewTaxId(''); setEditReason(''); setConfirming(false); setEditErr('');
+  };
+  const closeEdit = () => { setEditHost(null); setConfirming(false); setEditErr(''); };
+
+  const submitEdit = async () => {
+    setEditErr(''); setEditBusy(true);
+    try {
+      const { data } = await axios.patch(`/api/admin/hosts/${editHost.id}/tax-id`, {
+        taxId: newTaxId, reason: editReason
+      });
+      setEditMsg(`✅ ${editHost.name}'s tax ID updated (now ending ${data.taxIdLast4}). Previous value saved to history.`);
+      closeEdit();
+      load();
+    } catch (err) {
+      setEditErr(err.response?.data?.message || 'Failed to update tax ID.');
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
   // Belt-and-suspenders: the nav link and the server already gate this, but
   // guard the page too so a regular admin who guesses the URL sees nothing.
   if (!me?.isSuperAdmin) {
@@ -102,6 +132,12 @@ const AdminTax = () => {
   return (
     <AdminLayout title="Tax / 1099" subtitle="Host tax info & yearly earnings for 1099 filing — owner only" onRefresh={load}>
       {error && <div className="admin-error">{error}</div>}
+      {editMsg && (
+        <div style={{ background: '#ecfdf5', border: '1px solid #10b981', color: '#065f46', borderRadius: 8, padding: '10px 14px', margin: '0 0 1rem', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+          <span>{editMsg}</span>
+          <button onClick={() => setEditMsg('')} style={{ background: 'transparent', border: 'none', color: '#065f46', cursor: 'pointer', fontWeight: 700 }}>×</button>
+        </div>
+      )}
 
       <div className="admin-toolbar">
         <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
@@ -172,6 +208,7 @@ const AdminTax = () => {
                       {revealed[h.id] ? 'Hide' : 'Reveal'}
                     </button>
                   )}
+                  <button className="admin-btn" style={{ marginLeft: 8 }} onClick={() => openEdit(h)}>Edit</button>
                   <div style={{ fontSize: '0.75rem', color: '#888' }}>{h.taxIdType}</div>
                 </td>
                 <td>{formatCurrency(h.gross)}</td>
@@ -194,6 +231,49 @@ const AdminTax = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Owner-only tax-ID correction modal: enter new value + required reason,
+          then a confirmation gate. Previous value is archived server-side. */}
+      {editHost && (
+        <div onClick={closeEdit} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 480, width: '100%', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+            {!confirming ? (
+              <>
+                <h3 style={{ margin: '0 0 4px' }}>Change tax ID — {editHost.name}</h3>
+                <p style={{ color: '#6b7280', fontSize: '0.84rem', margin: '0 0 16px', lineHeight: 1.5 }}>
+                  Owner-only. The previous value is saved to history, and the host stays locked (they still can't change it themselves).
+                </p>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 4 }}>New SSN / EIN (9 digits)</label>
+                <input value={newTaxId} onChange={(e) => setNewTaxId(e.target.value)} placeholder="XXXXXXXXX" style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontFamily: 'monospace', marginBottom: 14, boxSizing: 'border-box' }} />
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 4 }}>Documentation / reason <span style={{ color: '#dc2626' }}>(required)</span></label>
+                <textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} placeholder="e.g. Host emailed SS card + license on 11/1, verified." style={{ width: '100%', minHeight: 70, padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontFamily: 'inherit', resize: 'vertical', marginBottom: 6, boxSizing: 'border-box' }} />
+                {editErr && <div style={{ color: '#b91c1c', fontSize: '0.85rem', margin: '4px 0' }}>{editErr}</div>}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                  <button className="admin-btn" onClick={closeEdit}>Cancel</button>
+                  <button className="admin-btn primary" onClick={() => {
+                    setEditErr('');
+                    if (newTaxId.replace(/\D/g, '').length !== 9) { setEditErr('Tax ID must be exactly 9 digits.'); return; }
+                    if (!editReason.trim()) { setEditErr('A documentation reason is required.'); return; }
+                    setConfirming(true);
+                  }}>Continue</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 style={{ margin: '0 0 8px', color: '#b45309' }}>⚠️ Confirm tax-ID change</h3>
+                <p style={{ color: '#374151', fontSize: '0.9rem', lineHeight: 1.5, margin: '0 0 16px' }}>
+                  You're changing <strong>{editHost.name}</strong>'s tax ID to one ending in <strong>{newTaxId.replace(/\D/g, '').slice(-4)}</strong>. Confirm you've verified their documentation. This change is logged and the old value is saved to history.
+                </p>
+                {editErr && <div style={{ color: '#b91c1c', fontSize: '0.85rem', margin: '4px 0' }}>{editErr}</div>}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="admin-btn" onClick={() => setConfirming(false)} disabled={editBusy}>Back</button>
+                  <button className="admin-btn primary" onClick={submitEdit} disabled={editBusy}>{editBusy ? 'Saving…' : 'Yes, change it'}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };

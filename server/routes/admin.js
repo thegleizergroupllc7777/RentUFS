@@ -804,6 +804,58 @@ router.get('/tax-export', adminAuth, async (req, res) => {
   }
 });
 
+// ── Correct a host's tax ID (SSN/EIN) — OWNER ONLY ──────────────────────────
+// For support cases where a host typo'd their (locked) SSN/EIN. Owner-only,
+// requires a documentation reason, and archives the previous value to history
+// so a change is never lost. Touches ONLY the tax-ID fields — nothing in
+// bookings, payouts, insurance, tolls, or Stripe. The host stays locked after.
+router.patch('/hosts/:id/tax-id', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const { taxId, reason } = req.body;
+    const digits = String(taxId || '').replace(/\D/g, '');
+    if (digits.length !== 9) {
+      return res.status(400).json({ message: 'Tax ID must be exactly 9 digits (SSN or EIN).' });
+    }
+    if (!reason || !String(reason).trim()) {
+      return res.status(400).json({ message: 'A documentation reason is required to change a tax ID.' });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user || !['host', 'both'].includes(user.userType)) {
+      return res.status(404).json({ message: 'Host not found.' });
+    }
+    if (!user.hostInfo) user.hostInfo = {};
+
+    // Archive the current value (if any) before overwriting it.
+    const prev = user.hostInfo.taxId;
+    if (prev) {
+      if (!Array.isArray(user.hostInfo.taxIdHistory)) user.hostInfo.taxIdHistory = [];
+      user.hostInfo.taxIdHistory.push({
+        taxId: prev,
+        last4: user.hostInfo.taxIdLast4 || prev.replace(/\D/g, '').slice(-4),
+        changedAt: new Date(),
+        changedBy: req.user.email,
+        reason: String(reason).trim()
+      });
+    }
+
+    user.set('hostInfo.taxId', digits);
+    user.set('hostInfo.taxIdLast4', digits.slice(-4));
+    user.set('hostInfo.taxIdLocked', true); // stays locked — host still can't self-edit
+    await user.save();
+
+    // Audit log — never logs the full SSN/EIN.
+    console.log(`🔑 Tax ID corrected by owner ${req.user.email} for host ${user.email}: now ••••${digits.slice(-4)} (reason: ${String(reason).trim().slice(0, 120)})`);
+
+    res.json({ success: true, taxIdLast4: digits.slice(-4), historyCount: (user.hostInfo.taxIdHistory || []).length });
+  } catch (error) {
+    console.error('Tax ID update error:', error.message);
+    res.status(500).json({ message: 'Failed to update tax ID', error: error.message });
+  }
+});
+
 // ── Insurance Billing (OWNER-ONLY) ──────────────────────────────────────────
 // Read-only monthly reconciliation against the TeqMobility insurance invoice.
 // For a given month it lists every reservation that had coverage and rolls up
