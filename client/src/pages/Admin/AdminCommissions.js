@@ -178,20 +178,14 @@ const AdminCommissions = () => {
         </div>
       )}
 
-      {/* Summary — grand total leads, then each salesperson (both highlighted). */}
+      {/* Summary — grand total only. Each salesperson's own card heads their
+          detail section below. */}
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', margin: '0 0 1.25rem' }}>
-        <div style={{ flex: '1 1 200px', background: '#10b981', borderRadius: 10, padding: '16px 18px' }}>
+        <div style={{ flex: '1 1 240px', maxWidth: 420, background: '#10b981', borderRadius: 10, padding: '16px 18px' }}>
           <div style={{ fontSize: '0.8rem', color: '#04331f', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 800 }}>Total</div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#04331f', lineHeight: 1.1, marginTop: 4 }}>{data?.totalDays || 0}</div>
           <div style={{ fontSize: '0.8rem', color: '#04331f' }}>commission days</div>
         </div>
-        {salespeople.map((sp) => (
-          <div key={sp.salespersonId} style={{ flex: '1 1 200px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 10, padding: '16px 18px' }}>
-            <div style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 800 }}>{sp.salesperson}</div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#065f46', lineHeight: 1.1, marginTop: 4 }}>{sp.days}</div>
-            <div style={{ fontSize: '0.8rem', color: '#059669' }}>commission days · {sp.rentals} {sp.rentals === 1 ? 'rental' : 'rentals'}</div>
-          </div>
-        ))}
       </div>
 
       {salespeople.length === 0 && !loading && (
@@ -201,7 +195,12 @@ const AdminCommissions = () => {
       {/* Detail per salesperson — the proof behind each total */}
       {salespeople.map((sp) => (
         <div key={sp.salespersonId} style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ color: '#374151', marginBottom: '0.5rem' }}>{sp.salesperson} — {sp.days} day{sp.days === 1 ? '' : 's'}</h3>
+          {/* Salesperson card (original dark style) heads their detail table. */}
+          <div style={{ background: '#111', border: '1px solid #333', borderRadius: 10, padding: '16px 18px', marginBottom: '0.75rem', display: 'inline-block', minWidth: 220 }}>
+            <div style={{ fontSize: '0.8rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>{sp.salesperson}</div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.1, marginTop: 4 }}>{sp.days}</div>
+            <div style={{ fontSize: '0.8rem', color: '#888' }}>commission days · {sp.rentals} {sp.rentals === 1 ? 'rental' : 'rentals'}</div>
+          </div>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
