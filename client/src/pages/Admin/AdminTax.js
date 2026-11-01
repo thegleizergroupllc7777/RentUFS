@@ -32,6 +32,8 @@ const AdminTax = () => {
   const [editBusy, setEditBusy] = useState(false);
   const [editErr, setEditErr] = useState('');
   const [editMsg, setEditMsg] = useState('');
+  const [editHistory, setEditHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Label for the upcoming Monday payout run (today if it's Monday, else the
   // next Monday). Payouts run weekly on Monday. Display only.
@@ -98,8 +100,14 @@ const AdminTax = () => {
     URL.revokeObjectURL(url);
   };
 
-  const openEdit = (h) => {
+  const openEdit = async (h) => {
     setEditHost(h); setNewTaxId(''); setEditReason(''); setConfirming(false); setEditErr('');
+    setEditHistory([]); setHistoryLoading(true);
+    try {
+      const { data } = await axios.get(`/api/admin/hosts/${h.id}/tax-id-history`);
+      setEditHistory(data.history || []);
+    } catch (e) { /* non-blocking — the edit form still works without history */ }
+    finally { setHistoryLoading(false); }
   };
   const closeEdit = () => { setEditHost(null); setConfirming(false); setEditErr(''); };
 
@@ -256,6 +264,22 @@ const AdminTax = () => {
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 4 }}>Documentation / reason <span style={{ color: '#dc2626' }}>(required)</span></label>
                 <textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} placeholder="e.g. Host emailed SS card + license on 11/1, verified." style={{ width: '100%', minHeight: 70, padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontFamily: 'inherit', resize: 'vertical', marginBottom: 6, boxSizing: 'border-box' }} />
                 {editErr && <div style={{ color: '#b91c1c', fontSize: '0.85rem', margin: '4px 0' }}>{editErr}</div>}
+                {/* This host's prior tax-ID changes (newest first). */}
+                {historyLoading && <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: 10 }}>Loading history…</div>}
+                {!historyLoading && editHistory.length > 0 && (
+                  <div style={{ marginTop: 14, borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>Previous changes ({editHistory.length})</div>
+                    <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {editHistory.map((e, i) => (
+                        <div key={i} style={{ fontSize: '0.8rem', color: '#4b5563', borderLeft: '3px solid #e5e7eb', paddingLeft: 10 }}>
+                          <div>Was ending <strong style={{ fontFamily: 'monospace' }}>••••{e.last4 || '----'}</strong>{e.changedAt ? ` · ${new Date(e.changedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</div>
+                          {e.changedBy && <div style={{ color: '#9ca3af' }}>by {e.changedBy}</div>}
+                          {e.reason && <div style={{ color: '#6b7280', fontStyle: 'italic' }}>&quot;{e.reason}&quot;</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
                   <button className="admin-btn" onClick={closeEdit}>Cancel</button>
                   <button className="admin-btn primary" onClick={() => {
