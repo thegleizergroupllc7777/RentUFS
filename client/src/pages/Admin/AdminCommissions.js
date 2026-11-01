@@ -192,25 +192,23 @@ const AdminCommissions = () => {
         <div className="admin-table-wrap"><div className="admin-empty">No commission days for {monthLabel}. (Tag a host with a referring salesperson on their profile to start tracking.)</div></div>
       )}
 
-      {/* Detail per salesperson — the proof behind each total */}
+      {/* Detail per salesperson — the proof behind each total. One cohesive box:
+          dark name/commission header on top, their scrollable detail table below
+          (so a long list scrolls inside the box instead of stretching the page). */}
       {salespeople.map((sp) => (
-        <div key={sp.salespersonId} style={{ marginBottom: '1.5rem' }}>
-          {/* Salesperson card (original dark style) heads their detail table. */}
-          <div style={{ background: '#111', border: '1px solid #333', borderRadius: 10, padding: '16px 18px', marginBottom: '0.75rem', display: 'inline-block', minWidth: 220 }}>
+        <div key={sp.salespersonId} style={{ marginBottom: '1.5rem', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+          <div style={{ background: '#111', padding: '16px 18px' }}>
             <div style={{ fontSize: '0.8rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>{sp.salesperson}</div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.1, marginTop: 4 }}>{sp.days}</div>
             <div style={{ fontSize: '0.8rem', color: '#888' }}>commission days · {sp.rentals} {sp.rentals === 1 ? 'rental' : 'rentals'}</div>
           </div>
-          <div className="admin-table-wrap">
+          <div className="admin-table-wrap" style={{ maxHeight: 360, overflowY: 'auto', border: 'none', borderRadius: 0, boxShadow: 'none' }}>
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Host</th>
-                  <th>Reservation</th>
-                  <th>Vehicle</th>
-                  <th>Days</th>
-                  <th>Trip</th>
-                  <th>Status</th>
+                  {['Host', 'Reservation', 'Vehicle', 'Days', 'Trip', 'Status'].map((h) => (
+                    <th key={h} style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1 }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
