@@ -856,6 +856,30 @@ router.patch('/hosts/:id/tax-id', adminAuth, async (req, res) => {
   }
 });
 
+// Read-only: a host's tax-ID change history (previous values, masked to last 4),
+// newest first — who changed it, when, and why. OWNER ONLY.
+router.get('/hosts/:id/tax-id-history', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) {
+      return res.status(403).json({ message: 'Owner access required.' });
+    }
+    const user = await User.findById(req.params.id).select('hostInfo.taxIdHistory').lean();
+    if (!user) return res.status(404).json({ message: 'Host not found.' });
+    const history = (user.hostInfo?.taxIdHistory || [])
+      .map((h) => ({
+        last4: h.last4 || (h.taxId ? String(h.taxId).replace(/\D/g, '').slice(-4) : ''),
+        changedAt: h.changedAt || null,
+        changedBy: h.changedBy || '',
+        reason: h.reason || ''
+      }))
+      .reverse(); // newest first
+    res.json({ history });
+  } catch (error) {
+    console.error('Tax ID history error:', error.message);
+    res.status(500).json({ message: 'Failed to load tax ID history', error: error.message });
+  }
+});
+
 // ── Insurance Billing (OWNER-ONLY) ──────────────────────────────────────────
 // Read-only monthly reconciliation against the TeqMobility insurance invoice.
 // For a given month it lists every reservation that had coverage and rolls up
