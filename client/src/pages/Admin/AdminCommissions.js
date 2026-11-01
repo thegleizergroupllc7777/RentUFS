@@ -178,20 +178,20 @@ const AdminCommissions = () => {
         </div>
       )}
 
-      {/* Summary — total days per salesperson + grand total */}
+      {/* Summary — grand total leads, then each salesperson (both highlighted). */}
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', margin: '0 0 1.25rem' }}>
-        {salespeople.map((sp) => (
-          <div key={sp.salespersonId} style={{ flex: '1 1 200px', background: '#111', border: '1px solid #333', borderRadius: 10, padding: '16px 18px' }}>
-            <div style={{ fontSize: '0.8rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>{sp.salesperson}</div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.1, marginTop: 4 }}>{sp.days}</div>
-            <div style={{ fontSize: '0.8rem', color: '#888' }}>commission days · {sp.rentals} {sp.rentals === 1 ? 'rental' : 'rentals'}</div>
-          </div>
-        ))}
         <div style={{ flex: '1 1 200px', background: '#10b981', borderRadius: 10, padding: '16px 18px' }}>
-          <div style={{ fontSize: '0.8rem', color: '#04331f', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>Total</div>
+          <div style={{ fontSize: '0.8rem', color: '#04331f', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 800 }}>Total</div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#04331f', lineHeight: 1.1, marginTop: 4 }}>{data?.totalDays || 0}</div>
           <div style={{ fontSize: '0.8rem', color: '#04331f' }}>commission days</div>
         </div>
+        {salespeople.map((sp) => (
+          <div key={sp.salespersonId} style={{ flex: '1 1 200px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 10, padding: '16px 18px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 800 }}>{sp.salesperson}</div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#065f46', lineHeight: 1.1, marginTop: 4 }}>{sp.days}</div>
+            <div style={{ fontSize: '0.8rem', color: '#059669' }}>commission days · {sp.rentals} {sp.rentals === 1 ? 'rental' : 'rentals'}</div>
+          </div>
+        ))}
       </div>
 
       {salespeople.length === 0 && !loading && (
