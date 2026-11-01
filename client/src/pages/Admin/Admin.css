@@ -166,6 +166,21 @@
   font-size: 0.8rem;
 }
 
+/* Tax/1099 has 9 columns — compact it (smaller text + tighter padding, no forced
+   min-width) so it fits on desktop without a horizontal scrollbar. The wrapper
+   keeps overflow-x:auto, so very narrow phones can still swipe if ever needed. */
+.admin-table.tax-compact {
+  min-width: 0;
+  font-size: 0.8rem;
+}
+.admin-table.tax-compact th,
+.admin-table.tax-compact td {
+  padding: 0.5rem 0.5rem;
+}
+.admin-table.tax-compact th {
+  font-size: 0.68rem;
+}
+
 /* Status badges */
 .badge {
   display: inline-block;
