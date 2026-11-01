@@ -199,17 +199,25 @@ const AdminTax = () => {
                   <span style={{ fontFamily: 'monospace' }}>
                     {revealed[h.id] ? (h.taxIdFull || '—') : maskTaxId(h)}
                   </span>
-                  {h.taxIdFull && (
+                  {/* Reveal + Edit side by side; Edit is red to stand out. */}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                    {h.taxIdFull && (
+                      <button
+                        className="admin-btn"
+                        onClick={() => setRevealed((r) => ({ ...r, [h.id]: !r[h.id] }))}
+                      >
+                        {revealed[h.id] ? 'Hide' : 'Reveal'}
+                      </button>
+                    )}
                     <button
                       className="admin-btn"
-                      style={{ marginLeft: 8 }}
-                      onClick={() => setRevealed((r) => ({ ...r, [h.id]: !r[h.id] }))}
+                      style={{ color: '#b91c1c', borderColor: '#fca5a5', fontWeight: 600 }}
+                      onClick={() => openEdit(h)}
                     >
-                      {revealed[h.id] ? 'Hide' : 'Reveal'}
+                      Edit
                     </button>
-                  )}
-                  <button className="admin-btn" style={{ marginLeft: 8 }} onClick={() => openEdit(h)}>Edit</button>
-                  <div style={{ fontSize: '0.75rem', color: '#888' }}>{h.taxIdType}</div>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#888', marginTop: 4 }}>{h.taxIdType}</div>
                 </td>
                 <td>{formatCurrency(h.gross)}</td>
                 <td>{formatCurrency(h.platformFees)}</td>
