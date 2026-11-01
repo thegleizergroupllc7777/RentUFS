@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
 import { useAuth } from '../../context/AuthContext';
@@ -127,7 +128,10 @@ const AdminTax = () => {
             {hosts.map((h) => (
               <tr key={h.id}>
                 <td>
-                  <strong>{h.name}</strong>
+                  {/* Clickable: opens the host's admin profile. */}
+                  <Link to={`/admin/users/${h.id}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>
+                    {h.name}
+                  </Link>
                   {h.businessName && <div style={{ fontSize: '0.8rem', color: '#888' }}>{h.businessName}</div>}
                   <div style={{ fontSize: '0.8rem', color: '#888' }}>{h.email}</div>
                   {(h.street || h.city) && (
