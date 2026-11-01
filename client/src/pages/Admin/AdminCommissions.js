@@ -195,12 +195,25 @@ const AdminCommissions = () => {
       {/* Detail per salesperson — the proof behind each total. One cohesive box:
           dark name/commission header on top, their scrollable detail table below
           (so a long list scrolls inside the box instead of stretching the page). */}
-      {salespeople.map((sp) => (
+      {salespeople.map((sp) => {
+        // Sort each salesperson's trips: active at the top, completed at the
+        // bottom (anything else in between), keeping original order within a group.
+        const statusRank = (s) => {
+          const v = String(s || '').toLowerCase();
+          if (v === 'active') return 0;
+          if (v === 'completed') return 2;
+          return 1;
+        };
+        const sortedRows = [...(sp.rows || [])].sort((a, b) => statusRank(a.status) - statusRank(b.status));
+        return (
         <div key={sp.salespersonId} style={{ marginBottom: '1.5rem', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-          <div style={{ background: '#111', padding: '16px 18px' }}>
-            <div style={{ fontSize: '0.8rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>{sp.salesperson}</div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.1, marginTop: 4 }}>{sp.days}</div>
-            <div style={{ fontSize: '0.8rem', color: '#888' }}>commission days · {sp.rentals} {sp.rentals === 1 ? 'rental' : 'rentals'}</div>
+          {/* Compact header: name on the left, commission total to the right. */}
+          <div style={{ background: '#111', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.95rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>{sp.salesperson}</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{sp.days}</span>
+              <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>commission days · {sp.rentals} {sp.rentals === 1 ? 'rental' : 'rentals'}</span>
+            </div>
           </div>
           <div className="admin-table-wrap" style={{ maxHeight: 360, overflowY: 'auto', border: 'none', borderRadius: 0, boxShadow: 'none' }}>
             <table className="admin-table">
@@ -212,7 +225,7 @@ const AdminCommissions = () => {
                 </tr>
               </thead>
               <tbody>
-                {sp.rows.map((r, i) => (
+                {sortedRows.map((r, i) => (
                   <tr key={`${sp.salespersonId}-${i}`}>
                     <td>{r.host}</td>
                     <td><strong>{r.reservationId}</strong></td>
@@ -226,7 +239,8 @@ const AdminCommissions = () => {
             </table>
           </div>
         </div>
-      ))}
+        );
+      })}
     </AdminLayout>
   );
 };
