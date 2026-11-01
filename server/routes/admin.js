@@ -780,10 +780,24 @@ router.get('/tax-export', adminAuth, async (req, res) => {
       };
     });
 
+    // Live "currently owed" per host — the upcoming (next-Monday) payout. This is
+    // a READ-ONLY mirror of the Owner Payout Control's preview; previewHostPayout
+    // moves no money, it only totals what's due. Done in parallel so adding it
+    // doesn't serialize one request per host.
+    await Promise.all(rows.map(async (r) => {
+      try {
+        const pv = await previewHostPayout(r.id);
+        r.owed = (pv && !pv.error && typeof pv.net === 'number') ? round2(pv.net) : 0;
+      } catch (e) {
+        r.owed = 0;
+      }
+    }));
+    const totalUpcomingPayout = round2(rows.reduce((s, r) => s + (r.owed || 0), 0));
+
     // Biggest earners first (most relevant for 1099 thresholds).
     rows.sort((a, b) => b.netEarnings - a.netEarnings);
 
-    res.json({ year, hosts: rows });
+    res.json({ year, hosts: rows, totalUpcomingPayout });
   } catch (error) {
     console.error('Tax export error:', error);
     res.status(500).json({ message: 'Failed to build tax export', error: error.message });

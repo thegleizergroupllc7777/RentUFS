@@ -19,9 +19,20 @@ const AdminTax = () => {
   const { user: me } = useAuth();
   const [year, setYear] = useState(currentYear);
   const [hosts, setHosts] = useState([]);
+  const [totalUpcomingPayout, setTotalUpcomingPayout] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [revealed, setRevealed] = useState({}); // host id -> true
+
+  // Label for the upcoming Monday payout run (today if it's Monday, else the
+  // next Monday). Payouts run weekly on Monday. Display only.
+  const nextMondayLabel = (() => {
+    const d = new Date();
+    const daysUntilMon = (1 - d.getDay() + 7) % 7; // 0 if today is Monday
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + daysUntilMon);
+    return mon.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  })();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -30,6 +41,7 @@ const AdminTax = () => {
     try {
       const { data } = await axios.get('/api/admin/tax-export', { params: { year } });
       setHosts(data.hosts || []);
+      setTotalUpcomingPayout(data.totalUpcomingPayout || 0);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load tax data');
     } finally {
@@ -51,7 +63,7 @@ const AdminTax = () => {
       'Host Name', 'Business Name', 'Tax ID Type', 'Tax ID (full)',
       'Street', 'City', 'State', 'Zip', 'Email',
       'Gross Rental', 'Platform Fees', 'Stripe Fees', 'Net Earnings',
-      'Paid Bookings', 'Account Status'
+      'Paid Bookings', 'Upcoming Payout', 'Account Status'
     ];
     const esc = (v) => {
       const s = String(v == null ? '' : v);
@@ -63,7 +75,7 @@ const AdminTax = () => {
         h.name, h.businessName, h.taxIdType, h.taxIdFull,
         h.street, h.city, h.state, h.zip, h.email,
         h.gross, h.platformFees, h.stripeFees, h.netEarnings,
-        h.bookingCount, h.accountStatus
+        h.bookingCount, h.owed || 0, h.accountStatus
       ].map(esc).join(','));
     });
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -97,6 +109,12 @@ const AdminTax = () => {
         </select>
         <button className="admin-btn" onClick={load} disabled={loading}>{loading ? 'Loading...' : 'Refresh'}</button>
         <button className="admin-btn primary" onClick={downloadCsv} disabled={loading || hosts.length === 0}>⬇ Download CSV</button>
+        {/* Next-Monday payout total — live, read-only sum of all hosts' owed. */}
+        <div style={{ marginLeft: 'auto', background: '#10b981', borderRadius: 12, padding: '10px 18px', minWidth: 220, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontSize: '0.72rem', letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 800, color: '#04331f' }}>🗓️ Next Monday Payout</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#04331f', lineHeight: 1.1, marginTop: 2 }}>{formatCurrency(totalUpcomingPayout)}</div>
+          <div style={{ fontSize: '0.74rem', color: '#065f46', marginTop: 2 }}>{nextMondayLabel} · total owed to all hosts</div>
+        </div>
       </div>
 
       <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: '10px 14px', margin: '0 0 1rem', fontSize: '0.85rem', color: '#bbb' }}>
@@ -118,12 +136,13 @@ const AdminTax = () => {
               <th>Stripe Fee</th>
               <th>Net Earnings</th>
               <th>Bookings</th>
+              <th>Upcoming Payout</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {hosts.length === 0 && !loading && (
-              <tr><td colSpan="8"><div className="admin-empty">No hosts found for {year}.</div></td></tr>
+              <tr><td colSpan="9"><div className="admin-empty">No hosts found for {year}.</div></td></tr>
             )}
             {hosts.map((h) => (
               <tr key={h.id}>
@@ -160,6 +179,11 @@ const AdminTax = () => {
                 <td>{formatCurrency(h.stripeFees)}</td>
                 <td><strong>{formatCurrency(h.netEarnings)}</strong></td>
                 <td>{h.bookingCount}</td>
+                <td>
+                  {(h.owed || 0) > 0
+                    ? <strong style={{ color: '#047857' }}>{formatCurrency(h.owed)}</strong>
+                    : <span style={{ color: '#9ca3af' }}>{formatCurrency(0)}</span>}
+                </td>
                 <td>
                   <span className={`badge ${h.accountStatus === 'active' ? 'active-acct' : 'deactivated'}`}>
                     {h.accountStatus}
