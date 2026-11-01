@@ -181,6 +181,16 @@ const userSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    // Audit trail of prior tax IDs. Each time the owner corrects a host's
+    // SSN/EIN, the previous value is saved here with who changed it, when, and
+    // the documentation reason — so a change is never lost and is traceable.
+    taxIdHistory: [{
+      taxId: { type: String, trim: true },
+      last4: { type: String, trim: true },
+      changedAt: { type: Date, default: Date.now },
+      changedBy: { type: String, trim: true },
+      reason: { type: String, trim: true }
+    }],
     businessName: {
       type: String,
       trim: true
