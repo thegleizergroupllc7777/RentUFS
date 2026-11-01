@@ -129,7 +129,7 @@ const AdminTax = () => {
               <tr key={h.id}>
                 <td>
                   {/* Clickable: opens the host's admin profile. */}
-                  <Link to={`/admin/users/${h.id}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>
+                  <Link to={`/admin/users/${h.id}`} style={{ color: '#111827', fontWeight: 700, textDecoration: 'none' }}>
                     {h.name}
                   </Link>
                   {h.businessName && <div style={{ fontSize: '0.8rem', color: '#888' }}>{h.businessName}</div>}
