@@ -170,7 +170,7 @@ const AdminTax = () => {
       </div>
 
       <div className="admin-table-wrap">
-        <table className="admin-table">
+        <table className="admin-table tax-compact">
           <thead>
             <tr>
               <th>Host</th>
