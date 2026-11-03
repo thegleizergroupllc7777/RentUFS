@@ -2864,8 +2864,157 @@ const sendLateReturnCompanyAlert = async ({ booking, vehicle, driver, host, hour
   }
 };
 
+// ───────────────────────────────────────────────────────────────────────────
+// Host integration intro emails (RentUFS × GPS Leaders / RentUFS × TollSpot)
+//
+// These are "host perk" emails that introduce the two partner integrations.
+// They are PURELY promotional/informational: they send an email and nothing
+// more. They never touch bookings, insurance, tolls, Stripe or any API. The
+// same HTML builders power both the manual Broadcast tool and the automatic
+// post-first-listing sequence, so there is a single source of truth.
+//
+// Each button deep-links to the host's Integrations tab and focuses the matching
+// card (see Profile.js `focus` handling): ...&focus=gps / ...&focus=tollspot.
+// ───────────────────────────────────────────────────────────────────────────
+function hostIntegrationEmailHtml(opts, firstName, unsubscribeUrl) {
+  const clientUrl = process.env.CLIENT_URL || 'https://app.rentufs.com';
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
+  const unsub = unsubscribeUrl
+    ? `<br><a href="${unsubscribeUrl}" style="color:#065f46;text-decoration:underline;">Unsubscribe</a>`
+    : '';
+  const featureRows = opts.features.map((f) => `
+    <div style="padding:9px 0;border-bottom:1px solid #eef0f2;">${f}</div>`).join('');
+  const buttonHref = `${clientUrl}/profile?tab=integrations&focus=${opts.focus}`;
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#e9ecee;font-family:Arial,Helvetica,sans-serif;color:#333;line-height:1.6;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+      <div style="border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;background:#ffffff;">
+        <!-- accent stripe -->
+        <div style="height:5px;background:${opts.accent};line-height:5px;font-size:0;">&nbsp;</div>
+        <!-- header -->
+        <div style="background:#000000;padding:26px 24px 28px;text-align:center;border-left:3px solid #00FF66;border-right:3px solid #00FF66;">
+          <div style="font-size:2rem;font-weight:bold;letter-spacing:0.12em;color:#00FF66;">RentUFS</div>
+          <div style="font-size:1.2rem;font-weight:800;color:#ffffff;opacity:0.75;margin:4px 0;">X</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:0.04em;">${opts.partner}</div>
+          <div style="font-size:1.4rem;font-weight:bold;color:#ffffff;margin-top:16px;">${opts.headline}</div>
+        </div>
+        <!-- body -->
+        <div style="background:#f9fafb;padding:26px 26px 8px;">
+          <h2 style="margin:0 0 8px;color:#111;font-size:1.25rem;">${greeting}</h2>
+          <div style="display:inline-block;background:#00FF66;color:#000000;padding:5px 15px;border-radius:20px;font-size:0.85rem;font-weight:bold;margin:2px 0 14px;">★ RentUFS Host Perk</div>
+          <p style="margin:0 0 4px;">${opts.intro}</p>
+          <div style="background:#ffffff;padding:16px 20px;border-radius:8px;margin:18px 0;border-left:4px solid #00FF66;">
+            <h3 style="margin:0 0 4px;color:#111;font-size:1.05rem;">${opts.featuresTitle}</h3>
+            ${featureRows}
+          </div>
+          <p style="margin:0 0 4px;">${opts.closing}</p>
+          <div style="text-align:center;margin:22px 0 4px;">
+            <a href="${buttonHref}" style="background:#000000;color:#00FF66;border:2px solid #00FF66;padding:14px 34px;text-decoration:none;border-radius:7px;display:inline-block;font-weight:800;font-size:1rem;">${opts.button} &rarr;</a>
+            <p style="font-size:0.84rem;color:#6b7280;margin-top:10px;">Takes you straight to your Integrations tab &mdash; just flip the switch.</p>
+          </div>
+        </div>
+        <!-- footer -->
+        <div style="background:#00FF66;text-align:center;color:#000000;padding:18px;font-size:0.85rem;line-height:1.6;">
+          Offered through <strong>RentUFS</strong> &middot; United Fleet Services<br>
+          You're receiving this as a RentUFS host.${unsub}
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
+function buildGpsLeadersEmailHtml(firstName, unsubscribeUrl) {
+  return hostIntegrationEmailHtml({
+    accent: '#F59E0B',
+    partner: 'GPS <span style="color:#F59E0B;">LEADERS</span>',
+    headline: 'Protect your car',
+    focus: 'gps',
+    intro: 'As a RentUFS host, you get access to our partner <strong>GPS Leaders</strong> — hardwired GPS tracking built for rental cars.',
+    featuresTitle: 'What you get',
+    features: [
+      '📍 <strong>Live tracking</strong> on your vehicle, 24/7',
+      '🚨 <strong>Out-of-state &amp; impound-lot alerts</strong> — always know where your car is',
+      '🔑 <strong>Optional starter interrupt</strong> + a live link for your recovery driver',
+      '💵 <span style="color:#b06f00;font-weight:bold;">$119 per car, 5 years of service, no monthly fee</span>'
+    ],
+    closing: 'One of the easiest ways to protect your investment and recover a car fast if something ever goes wrong. GPS Leaders handles setup and support.',
+    button: 'See GPS Leaders'
+  }, firstName, unsubscribeUrl);
+}
+
+function buildTollspotEmailHtml(firstName, unsubscribeUrl) {
+  return hostIntegrationEmailHtml({
+    accent: '#0C5BD6',
+    partner: 'Toll<span style="color:#39A0ED;">Spot</span>',
+    headline: 'Stop paying for tolls',
+    focus: 'tollspot',
+    intro: 'Quick one that can save you real money: as a RentUFS host you can turn on <strong>TollSpot</strong> — automated toll management for your fleet.',
+    featuresTitle: 'Why hosts love it',
+    features: [
+      '🛣️ <strong>Tolls are tracked automatically</strong> while your car is on a trip',
+      '💳 <strong>The charge goes to the renter, not you</strong> — no more eating toll fees',
+      '🙌 <strong>No chasing anyone down</strong> — it\'s handled for you',
+      '⚡ <strong>One switch to turn it on</strong> — that\'s it'
+    ],
+    closing: 'If you\'ve ever been surprised by a toll bill weeks after a trip, this is the fix.',
+    button: 'Turn on TollSpot'
+  }, firstName, unsubscribeUrl);
+}
+
+// Build the API-hosted unsubscribe link for a given user id (host perk emails are
+// promotional, so CAN-SPAM requires an unsubscribe link on every send).
+function hostPerkUnsubscribeUrl(userId) {
+  const apiBase = process.env.SERVER_PUBLIC_URL || 'https://api.rentufs.com';
+  return `${apiBase}/api/users/unsubscribe/${userId}`;
+}
+
+// Send the GPS Leaders intro to a single host. Respects emailOptOut. Safe no-op
+// in dev (no email configured). Never throws into the caller's flow.
+const sendGpsLeadersIntroEmail = async (user) => {
+  try {
+    if (!user || !user.email || user.emailOptOut) return { success: false, skipped: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] GPS Leaders intro to: ${user.email}`);
+      return { success: true, dev: true };
+    }
+    await sendEmail({
+      to: user.email,
+      subject: '🛰️ Protect your car — GPS Leaders, $119 with no monthly fee',
+      html: buildGpsLeadersEmailHtml(user.firstName, hostPerkUnsubscribeUrl(user._id))
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('📧 GPS Leaders intro failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+// Send the TollSpot intro to a single host. Respects emailOptOut.
+const sendTollspotIntroEmail = async (user) => {
+  try {
+    if (!user || !user.email || user.emailOptOut) return { success: false, skipped: true };
+    if (!isEmailConfigured()) {
+      console.log(`📧 [DEV] TollSpot intro to: ${user.email}`);
+      return { success: true, dev: true };
+    }
+    await sendEmail({
+      to: user.email,
+      subject: '🛣️ Stop paying for your renters\' tolls',
+      html: buildTollspotEmailHtml(user.firstName, hostPerkUnsubscribeUrl(user._id))
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('📧 TollSpot intro failed:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
 module.exports = {
   sendEmail,
+  buildGpsLeadersEmailHtml,
+  buildTollspotEmailHtml,
+  sendGpsLeadersIntroEmail,
+  sendTollspotIntroEmail,
   sendLateFeeChargedToRenter,
   sendLateFeeOwnerCopy,
   sendLateFeeDeclineAlert,

@@ -11,6 +11,7 @@ const { checkAndSettleScheduledCharges } = require('./chargeSettlement');
 const { processLateReturns } = require('./lateFees');
 const { isBookingEligible, isChargingEnabled } = require('./lateReturn');
 const { returnMomentForBooking } = require('./vehicleTimezone');
+const { checkAndSendTollspotIntros } = require('./hostIntegrationIntro');
 
 // Check for bookings ending soon and send reminder emails (1 hour before return)
 const checkAndSendReturnReminders = async () => {
@@ -946,6 +947,7 @@ let weeklyPayoutInterval = null;
 let chargeSettlementInterval = null;
 let lateReturnInterval = null;
 let holidayBroadcastInterval = null;
+let hostIntroInterval = null;
 
 const startReturnReminderScheduler = (intervalMinutes = 10) => {
   // Run email reminders immediately on startup
@@ -984,6 +986,15 @@ const startReturnReminderScheduler = (intervalMinutes = 10) => {
     pauseExpiredRegistrations();
   }, oneDayMs);
   console.log('⏱️  Registration expiration scheduler running every 24 hours');
+
+  // Host integration intro: send the TollSpot "host perk" email ~3 days after a
+  // host listed their first car (the GPS one goes out on first listing). Checked
+  // once a day. Purely promotional email — never touches bookings/insurance/
+  // tolls/payments, and each host is emailed at most once.
+  console.log('🚀 Starting host integration intro scheduler...');
+  checkAndSendTollspotIntros();
+  hostIntroInterval = setInterval(checkAndSendTollspotIntros, oneDayMs);
+  console.log('⏱️  Host integration intro scheduler running every 24 hours');
 
   // TollSpot status sync: check every 30 minutes for pre_registered vehicles to promote
   const thirtyMinMs = 30 * 60 * 1000;

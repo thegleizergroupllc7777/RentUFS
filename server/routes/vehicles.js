@@ -659,6 +659,20 @@ router.post('/', auth, async (req, res) => {
       }
     ).catch(err => console.error('Failed to send vehicle listing email:', err));
 
+    // Host integration intro sequence — only when this is the host's FIRST car.
+    // Fire-and-forget and fully additive: it just kicks off the GPS Leaders intro
+    // email (TollSpot follows in ~3 days via the scheduler). Never blocks or
+    // affects listing creation. Existing hosts (who already have cars) won't
+    // trigger this, since their vehicle count is already > 1.
+    Vehicle.countDocuments({ host: req.user._id })
+      .then((vehicleCount) => {
+        if (vehicleCount === 1) {
+          const { startHostIntegrationIntro } = require('../utils/hostIntegrationIntro');
+          return startHostIntegrationIntro(req.user._id);
+        }
+      })
+      .catch(err => console.error('Host integration intro (non-blocking):', err.message));
+
     res.status(201).json(vehicle);
   } catch (error) {
     console.error('❌ Create vehicle error:', error.message);

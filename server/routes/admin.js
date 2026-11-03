@@ -28,7 +28,9 @@ const {
   sendVehiclePausedEmail,
   sendEmailVerificationCode,
   sendRegistrationOtp,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  buildGpsLeadersEmailHtml,
+  buildTollspotEmailHtml
 } = require('../utils/emailService');
 const { sendSMS } = require('../utils/smsService');
 const { HOLIDAY_TEMPLATES, holidayEmailHtml } = require('../utils/holidayEmails');
@@ -2407,14 +2409,18 @@ router.post('/broadcast', adminAuth, async (req, res) => {
     const isJulyFourth = design === 'july_fourth';
     const isHostVideo = design === 'host_video';
     const isGrabKeys = design === 'grab_keys';
+    const isGpsLeaders = design === 'gps_leaders';
+    const isTollspot = design === 'tollspot';
     const holiday = HOLIDAY_TEMPLATES[design] || null;
-    const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isGrabKeys || !!holiday;
+    const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isGrabKeys || isGpsLeaders || isTollspot || !!holiday;
     const preDesignedHtml = (fn, unsub) =>
       holiday ? holidayEmailHtml(holiday, fn, unsub)
       : isJulyFourth ? julyFourthEmailHtml(fn, unsub)
       : isListCar ? listYourCarEmailHtml(fn, unsub)
       : isHostVideo ? hostVideoEmailHtml(fn, unsub)
       : isGrabKeys ? grabTheKeysEmailHtml(fn, unsub)
+      : isGpsLeaders ? buildGpsLeadersEmailHtml(fn, unsub)
+      : isTollspot ? buildTollspotEmailHtml(fn, unsub)
       : becomeHostEmailHtml(fn, unsub);
     // The "How to Host" video template is the only pre-designed email that also
     // sends by SMS — a short text with the video link.
@@ -2437,6 +2443,8 @@ router.post('/broadcast', adminAuth, async (req, res) => {
         : isListCar ? 'Get your car out of the driveway and earning 🚗💸'
         : isHostVideo ? '🎥 How to host your car on RentUFS (2-min guide)'
         : isGrabKeys ? '🔑 Grab the keys — your next ride is waiting 🚗💨'
+        : isGpsLeaders ? '🛰️ Protect your car — GPS Leaders, $119 with no monthly fee'
+        : isTollspot ? '🛣️ Stop paying for your renters\' tolls'
         : holiday ? holiday.subject
         : isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗'
         : 'A message from RentUFS');
