@@ -293,8 +293,8 @@ const AdminBroadcast = () => {
                   <option value="host_video">🎥 How to Host — YouTube video included (email + SMS)</option>
                 </optgroup>
                 <optgroup label="──────── Host Integrations ────────">
-                  <option value="gps_leaders">🛰️ GPS Leaders — host intro (pre-designed)</option>
                   <option value="tollspot">🛣️ TollSpot — host intro (pre-designed)</option>
+                  <option value="gps_leaders">🛰️ GPS Leaders — host intro (pre-designed)</option>
                 </optgroup>
                 <optgroup label="──────── Holiday Greetings (festive only) ────────">
                   <option value="july_fourth">🎆 4th of July — holiday greeting (pre-designed)</option>
