@@ -259,6 +259,27 @@ const DriverProfile = () => {
   // GPS Leaders is a partner/referral card, not a live integration. This visual
   // toggle only launches their partner page — it has no backend and stores nothing.
   const [gpsLeadersOn, setGpsLeadersOn] = useState(false);
+  // Option B deep-link: when a host arrives from the GPS/TollSpot "host perk"
+  // email, the URL carries ?focus=gps or ?focus=tollspot. We scroll to that card
+  // and briefly ring it in green so it's unmistakable. Purely visual.
+  const [focusedIntegration, setFocusedIntegration] = useState(null);
+  const focusHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (activeTab !== 'integrations' || focusHandledRef.current) return;
+    const focus = searchParams.get('focus');
+    if (focus !== 'gps' && focus !== 'tollspot') return;
+    focusHandledRef.current = true;
+    setFocusedIntegration(focus);
+    // Wait a tick for the cards to render, then scroll the right one into view.
+    const scrollTimer = setTimeout(() => {
+      const el = document.getElementById(focus === 'gps' ? 'integration-gps' : 'integration-tollspot');
+      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    // Fade the highlight after a few seconds.
+    const clearTimer = setTimeout(() => setFocusedIntegration(null), 4500);
+    return () => { clearTimeout(scrollTimer); clearTimeout(clearTimer); };
+  }, [activeTab, searchParams]);
 
   useEffect(() => {
     if (user) {
@@ -2780,12 +2801,13 @@ const DriverProfile = () => {
                   </p>
 
                   {/* TollSpot Integration Card */}
-                  <div style={{
+                  <div id="integration-tollspot" style={{
                     background: '#111',
-                    border: tollspotActive ? '1px solid #10b981' : tollspotPending ? '1px solid #f59e0b' : '1px solid #333',
+                    border: focusedIntegration === 'tollspot' ? '1px solid #10b981' : tollspotActive ? '1px solid #10b981' : tollspotPending ? '1px solid #f59e0b' : '1px solid #333',
                     borderRadius: '0.75rem',
                     padding: '1.5rem',
-                    transition: 'border-color 0.2s'
+                    boxShadow: focusedIntegration === 'tollspot' ? '0 0 0 3px rgba(16,185,129,0.55), 0 0 30px rgba(16,185,129,0.4)' : 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.3s'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                       <div style={{ flex: 1 }}>
@@ -2890,7 +2912,7 @@ const DriverProfile = () => {
                       is stored. Flipping the toggle simply opens GPS Leaders'
                       partner page in a new tab. It cannot affect bookings,
                       insurance, tolls, Stripe, or any integration. */}
-                  <div style={{
+                  <div id="integration-gps" style={{
                     // GPS-Leaders-branded look: dark navy base, faint map grid,
                     // and a soft amber glow (their brand accent). Cosmetic only.
                     background: [
@@ -2899,11 +2921,12 @@ const DriverProfile = () => {
                       'radial-gradient(120% 140% at 88% -15%, rgba(251,191,36,0.14) 0%, rgba(251,191,36,0) 42%)',
                       'linear-gradient(135deg, #0c1322 0%, #0a0e16 55%, #0a0a0a 100%)'
                     ].join(','),
-                    border: gpsLeadersOn ? '1px solid #10b981' : '1px solid rgba(251,191,36,0.28)',
+                    border: (focusedIntegration === 'gps' || gpsLeadersOn) ? '1px solid #10b981' : '1px solid rgba(251,191,36,0.28)',
                     borderRadius: '0.75rem',
                     padding: '1.5rem',
                     marginTop: '1rem',
-                    transition: 'border-color 0.2s'
+                    boxShadow: focusedIntegration === 'gps' ? '0 0 0 3px rgba(16,185,129,0.55), 0 0 30px rgba(16,185,129,0.4)' : 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.3s'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>

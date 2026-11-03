@@ -322,6 +322,18 @@ const userSchema = new mongoose.Schema({
       clickCount: { type: Number, default: 0 }
     }
   },
+  // Tracks the automatic "host integration intro" email sequence. Purely a
+  // bookkeeping record so each host gets each intro email at most once, and so
+  // the TollSpot intro can fire a few days after the GPS one. Touches nothing in
+  // bookings/insurance/tolls/payments — it only prevents duplicate emails.
+  //   firstVehicleAt  — when the host listed their FIRST car (sequence anchor)
+  //   gpsSentAt       — when the GPS Leaders intro was sent (null = not yet)
+  //   tollspotSentAt  — when the TollSpot intro was sent (null = not yet)
+  hostIntroEmails: {
+    firstVehicleAt: { type: Date, default: null },
+    gpsSentAt: { type: Date, default: null },
+    tollspotSentAt: { type: Date, default: null }
+  },
   // SMS messaging consent for TCPA compliance and Twilio toll-free verification.
   // Granted only when the user explicitly checks the opt-in box at registration.
   // If granted is false, do not send transactional or notification SMS to this user.

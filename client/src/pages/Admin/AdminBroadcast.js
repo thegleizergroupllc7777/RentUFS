@@ -169,8 +169,10 @@ const AdminBroadcast = () => {
   const isJulyFourth = design === 'july_fourth';
   const isHostVideo = design === 'host_video';
   const isGrabKeys = design === 'grab_keys';
+  const isGpsLeaders = design === 'gps_leaders';
+  const isTollspot = design === 'tollspot';
   const isHoliday = ['happy_holidays', 'thanksgiving', 'new_years', 'memorial_day', 'labor_day'].includes(design);
-  const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isGrabKeys || isHoliday;
+  const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isGrabKeys || isGpsLeaders || isTollspot || isHoliday;
 
   const handleSend = async () => {
     setError('');
@@ -289,6 +291,10 @@ const AdminBroadcast = () => {
                   <option value="become_host">Become a Host — pitch email (pre-designed)</option>
                   <option value="list_car">List Your Car — reminder for signed-up hosts (pre-designed)</option>
                   <option value="host_video">🎥 How to Host — YouTube video included (email + SMS)</option>
+                </optgroup>
+                <optgroup label="──────── Host Integrations ────────">
+                  <option value="gps_leaders">🛰️ GPS Leaders — host intro (pre-designed)</option>
+                  <option value="tollspot">🛣️ TollSpot — host intro (pre-designed)</option>
                 </optgroup>
                 <optgroup label="──────── Holiday Greetings (festive only) ────────">
                   <option value="july_fourth">🎆 4th of July — holiday greeting (pre-designed)</option>
