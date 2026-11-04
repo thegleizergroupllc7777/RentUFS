@@ -8,6 +8,7 @@ const auth = require('../middleware/auth');
 const { sendBookingExtensionEmail, sendBookingCancellationEmail } = require('../utils/emailService');
 const { sendExtensionReminderSMS, sendBookingConfirmedSMS, sendBookingActiveSMS, sendBookingCompletedSMS, sendBookingCancelledSMS, sendDriverCancelledNotificationSMS } = require('../utils/smsService');
 const { startRentalCoverage, stopRentalCoverage, fetchCoverageCardUrl } = require('../utils/teqmobility');
+const coverageService = require('../utils/coverageService');
 const { isHostInsuranceReady } = require('../utils/hostReadiness');
 const { captureCardImage, captureCardToCloudinary, uploadCardBufferToCloudinary } = require('../utils/screenshotCard');
 const { isConfigured: tollspotConfigured, monitorCharges } = require('../utils/tollspot');
@@ -551,6 +552,26 @@ router.get('/:id/insurance-card', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
+    // Rentid (Vishal) carrier — the card is a base64 PDF from proof-of-insurance.
+    // Serve it directly (only available while the policy is active).
+    if (booking.insuranceCarrier === 'rentid') {
+      const card = await coverageService.getCoverageCard(booking);
+      if (!card.success || !card.documentBase64) {
+        return res.status(404).json({ message: 'Insurance card not available' });
+      }
+      const mime = card.mimeType || 'application/pdf';
+      if (req.query.format === 'raw') {
+        res.set('Content-Type', mime);
+        res.set('Content-Disposition', 'inline; filename="insurance-card.pdf"');
+        return res.send(Buffer.from(card.documentBase64, 'base64'));
+      }
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Insurance Card</title>` +
+        `<style>*{margin:0;padding:0}body,html{height:100%}embed{width:100%;height:100vh}</style></head>` +
+        `<body><embed src="data:${mime};base64,${card.documentBase64}" type="${mime}"></body></html>`;
+      res.set('Content-Type', 'text/html');
+      return res.send(html);
+    }
+
     const isRaw = req.query.format === 'raw';
 
     // If a local file exists, verify on disk then serve
@@ -842,6 +863,20 @@ router.post('/:id/retry-insurance', auth, async (req, res) => {
 
     if (booking.status !== 'active') {
       return res.status(400).json({ message: 'Insurance card is only available for active bookings' });
+    }
+
+    // Rentid (Vishal) carrier — no TeqMobility retry. The card is fetched live
+    // from proof-of-insurance by the card endpoint each time, so just report
+    // whether it's available now.
+    if (booking.insuranceCarrier === 'rentid') {
+      const card = await coverageService.getCoverageCard(booking);
+      return res.json({
+        success: !!card.success,
+        message: card.success
+          ? 'Insurance card is available.'
+          : 'Coverage is not active yet or the card is not available. Please try again shortly.',
+        rentid: booking.rentid
+      });
     }
 
     if (!booking.insurance?.type || booking.insurance.type === 'none') {
@@ -1374,11 +1409,35 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
         .catch(err => console.error('🛣️ TollSpot: Monitor error (non-blocking):', err.message));
     }
 
-    // TeqMobility Dynamic Insurance - Start on-rent coverage (fire-and-forget)
-    // Runs in background after response is sent so booking isn't delayed
-    startRentalCoverage(booking.host, driver, booking.vehicle, booking)
+    // Dynamic Insurance - Start on-rent coverage (fire-and-forget). Runs in the
+    // background after the response is sent so the booking isn't delayed. Routes
+    // to the right carrier by state via the coverage service; with carrier
+    // routing OFF (the default) this is byte-for-byte the TeqMobility path below.
+    const rentidWebhookUrl = `${req.headers['x-forwarded-proto'] || req.protocol}://${req.headers['x-forwarded-host'] || req.get('host')}/api/webhooks/rentid`;
+    coverageService.startCoverage(booking.host, driver, booking.vehicle, booking, { webhookUrl: rentidWebhookUrl })
       .then(async (coverageResult) => {
         try {
+          // ── Rentid (Vishal) carrier ──
+          if (coverageResult.carrier === 'rentid') {
+            const rentidData = {
+              driverId: coverageResult.driverId || null,
+              policyId: coverageResult.policyId || coverageResult.coverageId || null,
+              status: coverageResult.success ? coverageResult.status : 'failed',
+              cardUrl: null,            // the renter card is fetched on demand (proof-of-insurance)
+              cardCloudinaryUrl: null,
+              startedAt: coverageResult.success ? new Date() : null,
+              error: coverageResult.success ? null : (coverageResult.error || coverageResult.reason)
+            };
+            await Booking.findByIdAndUpdate(booking._id, { rentid: rentidData, insuranceCarrier: 'rentid' });
+            if (coverageResult.success) {
+              console.log(`🛡️ Rentid: Coverage ${coverageResult.status} for booking ${booking._id}`);
+            } else {
+              console.error(`🛡️ Rentid: Coverage failed for booking ${booking._id}:`, rentidData.error);
+            }
+            return;
+          }
+
+          // ── TeqMobility carrier (default / today's behavior, unchanged) ──
           const teqData = {
             coverageId: coverageResult.coverageId || null,
             ownerId: coverageResult.ownerId || null,
@@ -1404,16 +1463,16 @@ router.post('/:id/start-inspection', auth, async (req, res) => {
             }
           }
 
-          await Booking.findByIdAndUpdate(booking._id, { teqMobility: teqData });
+          await Booking.findByIdAndUpdate(booking._id, { teqMobility: teqData, insuranceCarrier: 'teqmobility' });
           if (coverageResult.success) {
             console.log(`🛡️ TeqMobility: Coverage activated for booking ${booking._id}`);
           }
         } catch (dbErr) {
-          console.error('🛡️ TeqMobility: Failed to save coverage result:', dbErr.message);
+          console.error('🛡️ Insurance: Failed to save coverage result:', dbErr.message);
         }
       })
       .catch((err) => {
-        console.error('🛡️ TeqMobility: Background coverage error:', err.message);
+        console.error('🛡️ Insurance: Background coverage error:', err.message);
       });
     return; // Prevent outer catch from trying to send response
   } catch (error) {
@@ -1477,8 +1536,21 @@ router.post('/:id/return-inspection', auth, async (req, res) => {
     booking.payoutStatus = 'eligible';
     booking.payoutEligibleDate = new Date();
 
-    // TeqMobility Dynamic Insurance - Stop on-rent coverage
-    if (booking.teqMobility?.coverageId || booking.vehicle?.vin) {
+    // Dynamic Insurance - Stop on-rent coverage (routes to the booking's carrier).
+    if (booking.insuranceCarrier === 'rentid') {
+      try {
+        const stop = await coverageService.stopCoverage(booking);
+        booking.rentid = booking.rentid || {};
+        booking.rentid.stoppedAt = new Date();
+        if (stop.success) booking.rentid.status = stop.status || 'ended';
+        else {
+          console.error(`🛡️ Rentid: ❌ Stop coverage failed for booking ${booking._id}:`, stop.error);
+          booking.rentid.error = stop.error || 'Failed to stop coverage';
+        }
+      } catch (e) {
+        console.error(`🛡️ Rentid: Stop coverage error for booking ${booking._id}:`, e.message);
+      }
+    } else if (booking.teqMobility?.coverageId || booking.vehicle?.vin) {
       const stopResult = await stopRentalCoverage({
         coverageId: booking.teqMobility?.coverageId,
         vin: booking.vehicle?.vin
@@ -1843,8 +1915,17 @@ router.post('/:id/host-cancel', auth, async (req, res) => {
     booking.cancelledBy = 'host';
     booking.cancelledAt = new Date();
 
-    // TeqMobility: Stop coverage on host cancellation
-    if (booking.teqMobility?.coverageId || booking.vehicle?.vin) {
+    // Stop coverage on host cancellation (routes to the booking's carrier).
+    if (booking.insuranceCarrier === 'rentid') {
+      try {
+        const stop = await coverageService.stopCoverage(booking);
+        booking.rentid = booking.rentid || {};
+        booking.rentid.stoppedAt = new Date();
+        if (stop.success) booking.rentid.status = stop.status || 'cancelled';
+      } catch (e) {
+        console.error(`🛡️ Rentid: Stop coverage error (host cancel) for booking ${booking._id}:`, e.message);
+      }
+    } else if (booking.teqMobility?.coverageId || booking.vehicle?.vin) {
       const stopResult = await stopRentalCoverage({
         coverageId: booking.teqMobility?.coverageId,
         vin: booking.vehicle?.vin
@@ -2032,8 +2113,17 @@ router.patch('/:id/status', auth, async (req, res) => {
       await Vehicle.findByIdAndUpdate(booking.vehicle, { availability: false });
     }
 
-    // TeqMobility: Stop coverage when booking is completed or cancelled
-    if (['completed', 'cancelled'].includes(status) && (booking.teqMobility?.coverageId || booking.vehicle?.vin)) {
+    // Stop coverage when booking is completed or cancelled (routes to carrier).
+    if (['completed', 'cancelled'].includes(status) && booking.insuranceCarrier === 'rentid') {
+      try {
+        const stop = await coverageService.stopCoverage(booking);
+        booking.rentid = booking.rentid || {};
+        booking.rentid.stoppedAt = new Date();
+        if (stop.success) booking.rentid.status = stop.status || (status === 'completed' ? 'ended' : 'cancelled');
+      } catch (e) {
+        console.error(`🛡️ Rentid: Stop coverage error (status change) for booking ${booking._id}:`, e.message);
+      }
+    } else if (['completed', 'cancelled'].includes(status) && (booking.teqMobility?.coverageId || booking.vehicle?.vin)) {
       const stopResult = await stopRentalCoverage({
         coverageId: booking.teqMobility?.coverageId,
         vin: booking.vehicle?.vin

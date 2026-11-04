@@ -43,6 +43,8 @@ const { startRentalCoverage, stopRentalCoverage } = require('../utils/teqmobilit
 const { extensionDailyRate } = require('../utils/extensionPricing');
 const { previewHostPayout, processWeeklyPayouts } = require('../utils/scheduler');
 const clearDrive = require('../utils/clearDrive');
+const carrierRouting = require('../utils/carrierRouting');
+const rentid = require('../utils/rentid');
 
 // Append an admin action entry to a booking's audit log. Save before
 // returning so the entry is persisted even if a later step fails.
@@ -369,6 +371,141 @@ router.put('/late-fee-setting', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Late-fee setting update error:', error.message);
     res.status(500).json({ message: 'Failed to update setting', error: error.message });
+  }
+});
+
+// ── Insurance carrier routing (OWNER-ONLY) ──────────────────────────────────
+// Controls which carrier (TeqMobility or Rentid/Vishal) insures a rental, by the
+// vehicle's state. Default is OFF — everything stays on TeqMobility, exactly like
+// today. See utils/carrierRouting.js for the decision logic.
+router.get('/carrier-routing', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+    const settings = await carrierRouting.getCarrierRoutingSettings();
+    res.json({ settings, rentidConfigured: rentid.isConfigured() });
+  } catch (error) {
+    console.error('Carrier-routing read error:', error.message);
+    res.status(500).json({ message: 'Failed to load carrier routing', error: error.message });
+  }
+});
+
+router.put('/carrier-routing', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+    const saved = await carrierRouting.saveCarrierRoutingSettings(req.body || {});
+    console.log(`🛡️ Carrier routing updated by ${req.user.email}: enabled=${saved.enabled} mode=${saved.mode} teqStates=${saved.teqStates.length} vishalStates=${saved.vishalStates.length}`);
+    res.json({ success: true, settings: saved });
+  } catch (error) {
+    console.error('Carrier-routing update error:', error.message);
+    res.status(500).json({ message: 'Failed to update carrier routing', error: error.message });
+  }
+});
+
+// List Rentid plans + each plan's coverage areas (owner-only). A successful
+// response also confirms the Rentid connection (the sandbox key works). GET +
+// coverage-areas are never billed.
+router.get('/rentid/plans', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+    if (!rentid.isConfigured()) return res.json({ configured: false, plans: [] });
+    const r = await rentid.listPlans();
+    if (!r.ok) return res.status(502).json({ configured: true, ok: false, error: r.message });
+    const list = (r.data && r.data.data) || [];
+    const plans = [];
+    for (const p of list) {
+      const ca = await rentid.listCoverageAreas(p.id);
+      plans.push({
+        id: p.id,
+        name: p.name,
+        usage_types: p.usage_types,
+        min_driver_age: p.min_driver_age,
+        coverage_areas: (ca.ok && ca.data && ca.data.coverage_areas) || []
+      });
+    }
+    res.json({ configured: true, ok: true, plans });
+  } catch (error) {
+    console.error('Rentid plans error:', error.message);
+    res.status(500).json({ message: 'Failed to load Rentid plans', error: error.message });
+  }
+});
+
+// Sync Vishal's real covered states from Rentid into the routing settings
+// (owner-only). Pulls the chosen plan's coverage areas so the router uses the
+// true list, not a guess.
+router.post('/carrier-routing/sync-vishal-states', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+    if (!rentid.isConfigured()) return res.status(400).json({ message: 'Rentid is not configured.' });
+    const settings = await carrierRouting.getCarrierRoutingSettings();
+    const planId = (req.body && req.body.planId) || settings.vishalPlanId;
+    if (!planId) return res.status(400).json({ message: 'No Rentid plan selected.' });
+    const ca = await rentid.listCoverageAreas(planId);
+    if (!ca.ok) return res.status(502).json({ message: ca.message });
+    const vishalStates = (ca.data && ca.data.coverage_areas) || [];
+    const saved = await carrierRouting.saveCarrierRoutingSettings({ ...settings, vishalPlanId: planId, vishalStates });
+    res.json({ success: true, settings: saved });
+  } catch (error) {
+    console.error('Sync Vishal states error:', error.message);
+    res.status(500).json({ message: 'Failed to sync states', error: error.message });
+  }
+});
+
+// Owner-only: run a full Rentid SANDBOX coverage cycle end-to-end (create driver
+// → create policy → fetch the card → clean up). No real booking, dummy driver,
+// nothing stored on any reservation — lets the owner confirm Rentid works.
+router.post('/rentid/test-coverage', adminAuth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Owner access required.' });
+    if (!rentid.isConfigured()) return res.status(400).json({ message: 'Rentid is not configured (RENTID_API_KEY not set).' });
+    const { zoneForState } = require('../utils/vehicleTimezone');
+    const settings = await carrierRouting.getCarrierRoutingSettings();
+    const planId = (req.body && req.body.planId) || settings.vishalPlanId;
+    if (!planId) return res.status(400).json({ message: 'No Rentid plan selected.' });
+    const state = String((req.body && req.body.state) || settings.vishalStates[0] || 'CA').toUpperCase();
+    const vin = String((req.body && req.body.vin) || '1HGCM82633A004352').toUpperCase();
+    const steps = [];
+
+    // 1) Create a dummy test driver (not a real person; not saved anywhere).
+    const dres = await rentid.createDriver({
+      first_name: 'Insurance', last_name: 'Test', date_of_birth: '1990-01-01',
+      license: { number: 'TEST123456', state },
+      phone: '+13475550100', email: 'insurance-test@rentufs.com',
+      address: { line1: '597 West Side Ave', city: 'Jersey City', state: 'NJ', postal_code: '07304' },
+      reference_id: 'test-' + Date.now()
+    });
+    steps.push({ step: 'Create driver', ok: dres.ok, detail: dres.ok ? dres.data.id : (dres.errorCode || dres.message) });
+    if (!dres.ok) return res.json({ ok: false, steps, state, planId });
+
+    // 2) Create a policy = start coverage now.
+    const pres = await rentid.createPolicy({
+      plan_id: planId, driver_id: dres.data.id,
+      vehicle: { vin, year: 2022, make: 'Honda', model: 'Accord' },
+      coverage_state: state, timezone: zoneForState(state),
+      starts_at: new Date().toISOString(), usage_type: 'personal',
+      reference_id: 'test-' + Date.now()
+    });
+    const policyId = pres.data && pres.data.id;
+    const policyStatus = pres.data && pres.data.status;
+    steps.push({ step: 'Create policy (start coverage)', ok: pres.ok, detail: pres.ok ? `${policyId} · ${policyStatus}` : (pres.errorCode || pres.message) });
+
+    // 3) Proof of insurance (the renter card) — only while active.
+    if (pres.ok && policyId && policyStatus === 'active') {
+      const card = await rentid.getProofOfInsurance(policyId);
+      steps.push({ step: 'Fetch insurance card', ok: card.ok, detail: card.ok ? `${card.data.mime_type} (${(card.data.content_base64 || '').length} chars)` : card.message });
+    }
+
+    // 4) Clean up so nothing lingers in sandbox.
+    if (policyId) {
+      const clean = policyStatus === 'scheduled' ? await rentid.cancelPolicy(policyId) : await rentid.endPolicy(policyId, {});
+      steps.push({ step: policyStatus === 'scheduled' ? 'Cancel policy (cleanup)' : 'End policy (cleanup)', ok: clean.ok, detail: clean.ok ? 'done' : clean.message });
+    }
+
+    const allOk = steps.every((s) => s.ok);
+    console.log(`🧪 Rentid sandbox test by ${req.user.email}: ok=${allOk} state=${state} plan=${planId}`);
+    res.json({ ok: allOk, steps, state, planId });
+  } catch (error) {
+    console.error('Rentid test-coverage error:', error.message);
+    res.status(500).json({ message: 'Rentid test failed', error: error.message });
   }
 });
 

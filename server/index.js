@@ -34,6 +34,8 @@ app.use(cors());
 // Stripe webhook needs raw body - must be before express.json()
 app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
 app.use('/api/connect/webhook', express.raw({ type: 'application/json' }));
+// Rentid (Vishal) insurance webhooks also need the raw body for signature checks.
+app.use('/api/webhooks/rentid', express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -58,6 +60,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/claims', require('./routes/claims'));
+app.use('/api/webhooks', require('./routes/webhooks'));
 
 // Validate critical environment variables
 if (!process.env.MONGODB_URI) {
