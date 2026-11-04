@@ -278,6 +278,23 @@ const bookingSchema = new mongoose.Schema({
     stoppedAt: { type: Date, default: null },
     error: { type: String, default: null }
   },
+  // Which carrier insured THIS reservation: 'teqmobility' | 'rentid' | null.
+  // Set by the coverage service when coverage starts, so stop/card requests go
+  // to the right carrier. Null (the default) means TeqMobility, matching all
+  // existing bookings — so adding this changes nothing for anything already out.
+  insuranceCarrier: { type: String, default: null },
+  // Rentid (Vishal) Protection — the mirror of teqMobility above, for rentals
+  // this carrier insured. Populated only when insuranceCarrier === 'rentid'.
+  rentid: {
+    driverId: { type: String, default: null },   // drv_… (Rentid driver id)
+    policyId: { type: String, default: null },   // pol_… (Rentid policy id)
+    status: { type: String, default: null },     // scheduled|active|ended|cancelled|failed
+    cardUrl: { type: String, default: null },
+    cardCloudinaryUrl: { type: String, default: null },
+    startedAt: { type: Date, default: null },
+    stoppedAt: { type: Date, default: null },
+    error: { type: String, default: null }
+  },
   // Rental Agreement
   agreement: {
     signed: { type: Boolean, default: false },
