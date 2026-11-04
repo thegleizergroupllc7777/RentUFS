@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from '../../config/axios';
 import AdminLayout from './AdminLayout';
+import CarrierRoutingPanel from './CarrierRoutingPanel';
 import { useAuth } from '../../context/AuthContext';
 
 // ── TeqMobility bill reconciliation (100% client-side) ──────────────────────
@@ -344,6 +345,9 @@ const AdminInsurance = () => {
       </div>
 
       {teqError && <div className="admin-error" style={{ marginBottom: '1rem' }}>{teqError}</div>}
+
+      {/* Owner-only control: which carrier (TeqMobility / Vishal) insures by state. */}
+      <CarrierRoutingPanel />
 
       <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: '10px 14px', margin: '0 0 1rem', fontSize: '0.85rem', color: '#bbb' }}>
         💰 <strong>Coverage days for {monthLabel}.</strong> This is exactly what you owe the insurance provider — the big total below should match their invoice.
