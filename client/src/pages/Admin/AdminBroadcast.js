@@ -171,7 +171,7 @@ const AdminBroadcast = () => {
   const isGrabKeys = design === 'grab_keys';
   const isGpsLeaders = design === 'gps_leaders';
   const isTollspot = design === 'tollspot';
-  const isHoliday = ['happy_holidays', 'thanksgiving', 'new_years', 'memorial_day', 'labor_day'].includes(design);
+  const isHoliday = ['happy_holidays', 'thanksgiving', 'new_years', 'memorial_day', 'labor_day', 'veterans_day'].includes(design);
   const isPreDesigned = isHostPitch || isListCar || isJulyFourth || isHostVideo || isGrabKeys || isGpsLeaders || isTollspot || isHoliday;
 
   const handleSend = async () => {
@@ -303,6 +303,7 @@ const AdminBroadcast = () => {
                   <option value="new_years">🎉 New Year's (pre-designed)</option>
                   <option value="memorial_day">🗽 Memorial Day (pre-designed)</option>
                   <option value="labor_day">☀️ Labor Day (pre-designed)</option>
+                  <option value="veterans_day">🇺🇸 Veterans Day (pre-designed)</option>
                 </optgroup>
               </select>
               {isGrabKeys && (
@@ -527,6 +528,7 @@ const AdminBroadcast = () => {
                 <option value="new_years">🎆 New Year's</option>
                 <option value="memorial_day">🇺🇸 Memorial Day</option>
                 <option value="labor_day">☀️ Labor Day</option>
+                <option value="veterans_day">🇺🇸 Veterans Day</option>
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
