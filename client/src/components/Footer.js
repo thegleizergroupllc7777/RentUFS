@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="footer-content">
         <div className="footer-main">
           <div className="footer-brand">
-            <a href="https://rentufs.com" className="footer-logo">UFS</a>
+            <a href="https://rentufs.com" className="footer-logo"><img src="/rentufs-logo-white.svg" alt="RentUFS" style={{ height: '4rem', width: 'auto', display: 'block' }} /></a>
             <div className="footer-social">
               <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="footer-social-link" aria-label="X (Twitter)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">

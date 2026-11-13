@@ -134,7 +134,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="container navbar-content">
         <a href="https://rentufs.com" className="navbar-logo">
-          RentUFS
+          <img src="/rentufs-logo-white.svg" alt="RentUFS" style={{ height: '4rem', width: 'auto', display: 'block' }} />
         </a>
 
         <div className="navbar-links">
