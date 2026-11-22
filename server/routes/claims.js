@@ -54,7 +54,7 @@ router.post('/', auth, async (req, res) => {
 
     const html = `
       <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;max-width:640px">
-        <h2 style="color:#dc2626;margin:0 0 4px">🚨 New Accident / Claim Report</h2>
+        <h2 style="color:#dc2626;margin:0 0 4px">🚨 New Accident / Claim Report 🚨</h2>
         <p style="color:#6b7280;margin:0 0 16px">Filed from RentUFS by the ${esc(reporterRole)} on this trip.</p>
 
         <h3 style="margin:16px 0 6px">Reported by</h3>
@@ -79,7 +79,7 @@ router.post('/', auth, async (req, res) => {
 
     await sendEmail({
       to: CLAIMS_EMAIL,
-      subject: `🚨 Accident/Claim — ${vehicleName} (${resId})`,
+      subject: `🚨 Accident/Claim — ${vehicleName} (${resId}) 🚨`,
       html
     });
 
