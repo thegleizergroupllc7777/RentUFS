@@ -45,7 +45,7 @@ function holidayEmailHtml(cfg, firstName, unsubscribeUrl) {
   <body style="margin:0;padding:0;background:#dfe7f2;font-family:Arial,Helvetica,sans-serif;">
     <div style="max-width:600px;margin:0 auto;padding:20px;">
       <div style="border:3px solid #00FF66;border-radius:10px;overflow:hidden;">
-        <div style="background:#000;padding:22px 20px 6px;text-align:center;"><span style="font-size:28px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span></div>
+        <div style="background:#000;padding:22px 20px 6px;text-align:center;"><span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span></div>
         <div style="background:#000;padding:0 20px 16px;text-align:center;"><span style="display:inline-block;background:${cfg.badgeBg};color:#fff;font-weight:bold;font-size:13px;letter-spacing:1px;padding:6px 16px;border-radius:20px;">${cfg.badge}</span></div>
         ${imgTag}
         <div style="background:${cfg.panel};padding:26px 28px 24px;color:${cfg.text};font-size:15px;line-height:1.7;text-align:center;">
@@ -85,7 +85,7 @@ function driverHolidayEmailHtml(key, firstName, unsubscribeUrl) {
           <div style="padding:10px 24px 26px;background:#050d09;">
             <div style="white-space:nowrap;">
               <span style="font-size:24px;vertical-align:middle;">🚗</span>
-              <span style="font-size:28px;font-weight:bold;letter-spacing:5px;color:#00FF66;vertical-align:middle;">&nbsp;RENTUFS&nbsp;</span>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:6px 14px;vertical-align:middle;margin:0 8px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="34" style="height:34px;width:auto;display:block;border:0;"></span>
               <span style="font-size:24px;vertical-align:middle;">🚗</span>
             </div>
             <div style="display:inline-block;background:${badgeBg};color:#ffffff;font-weight:bold;font-size:12px;letter-spacing:1px;padding:6px 16px;border-radius:999px;margin-top:14px;">${badge}</div>
