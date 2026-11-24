@@ -2580,7 +2580,7 @@ router.post('/broadcast', adminAuth, async (req, res) => {
         : isListCar ? 'Get your car out of the driveway and earning 🚗💸'
         : isHostVideo ? '🎥 How to host your car on RentUFS (2-min guide)'
         : isGrabKeys ? '🔑 Grab the keys — your next ride is waiting 🚗💨'
-        : isGpsLeaders ? '🛰️ Protect your car — GPS Leaders, $119 with no monthly fee'
+        : isGpsLeaders ? '🛰️ Protect your car — GPS Leaders, $129 with no monthly fee'
         : isTollspot ? '🛣️ Stop paying for your renters\' tolls'
         : holiday ? holiday.subject
         : isHostPitch ? 'List your car on RentUFS — keep 100% of your earnings 🚗'

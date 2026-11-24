@@ -2950,7 +2950,7 @@ const DriverProfile = () => {
                           }}>Partner</span>
                         </div>
                         <p style={{ color: '#9ca3af', margin: '0 0 0.5rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                          Hardwired GPS tracking for your rentals — <strong style={{ color: '#d1d5db' }}>$119 per car with five years of service and no monthly fee</strong>. Out-of-state and impound-lot alerts, an optional starter interrupt, and a live link for your recovery driver. GPS Leaders handles setup and support.
+                          Hardwired GPS tracking for your rentals — <strong style={{ color: '#d1d5db' }}>$129 per car with five years of service and no monthly fee</strong>. Out-of-state and impound-lot alerts, an optional starter interrupt, and a live link for your recovery driver. GPS Leaders handles setup and support.
                         </p>
                         <p style={{ color: gpsLeadersOn ? '#10b981' : '#6b7280', margin: 0, fontSize: '0.8rem' }}>
                           {gpsLeadersOn
