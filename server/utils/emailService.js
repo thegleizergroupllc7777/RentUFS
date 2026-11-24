@@ -2892,8 +2892,8 @@ function hostIntegrationEmailHtml(opts, firstName, unsubscribeUrl) {
         <!-- accent stripe -->
         <div style="height:5px;background:${opts.accent};line-height:5px;font-size:0;">&nbsp;</div>
         <!-- header -->
-        <div style="background:#000000;padding:26px 24px 28px;text-align:center;border-left:3px solid #00FF66;border-right:3px solid #00FF66;">
-          <div style="font-size:2rem;font-weight:bold;letter-spacing:0.12em;color:#00FF66;">RentUFS</div>
+        <div style="background:#000000;padding:26px 24px 28px;text-align:center;border:3px solid #00FF66;">
+          <img src="${clientUrl}/rentufs-logo-white.png" alt="RentUFS" height="48" style="height:48px;width:auto;display:inline-block;border:0;">
           <div style="font-size:1.2rem;font-weight:800;color:#ffffff;opacity:0.75;margin:4px 0;">X</div>
           <div style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:0.04em;">${opts.partner}</div>
           <div style="font-size:1.4rem;font-weight:bold;color:#ffffff;margin-top:16px;">${opts.headline}</div>
