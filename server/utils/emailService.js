@@ -2901,7 +2901,7 @@ function hostIntegrationEmailHtml(opts, firstName, unsubscribeUrl) {
         <!-- body -->
         <div style="background:#f9fafb;padding:26px 26px 8px;">
           <h2 style="margin:0 0 8px;color:#111;font-size:1.25rem;">${greeting}</h2>
-          <div style="display:inline-block;background:#00FF66;color:#000000;padding:5px 15px;border-radius:20px;font-size:0.85rem;font-weight:bold;margin:2px 0 14px;">★ RentUFS Host Perk</div>
+          <div style="text-align:center;margin:2px 0 14px;"><span style="display:inline-block;background:#00FF66;color:#000000;padding:5px 15px;border-radius:20px;font-size:0.85rem;font-weight:bold;">★ RentUFS Host Perk ★</span></div>
           <p style="margin:0 0 4px;">${opts.intro}</p>
           <div style="background:#ffffff;padding:16px 20px;border-radius:8px;margin:18px 0;border-left:4px solid #00FF66;">
             <h3 style="margin:0 0 4px;color:#111;font-size:1.05rem;">${opts.featuresTitle}</h3>
@@ -2935,7 +2935,7 @@ function buildGpsLeadersEmailHtml(firstName, unsubscribeUrl) {
       '📍 <strong>Live tracking</strong> on your vehicle, 24/7',
       '🚨 <strong>Out-of-state &amp; impound-lot alerts</strong> — always know where your car is',
       '🔑 <strong>Optional starter interrupt</strong> + a live link for your recovery driver',
-      '💵 <span style="color:#b06f00;font-weight:bold;">$119 per car, 5 years of service, no monthly fee</span>'
+      '💵 <span style="color:#b06f00;font-weight:bold;">$129 per car, 5 years of service, no monthly fee</span>'
     ],
     closing: 'One of the easiest ways to protect your investment and recover a car fast if something ever goes wrong. GPS Leaders handles setup and support.',
     button: 'See GPS Leaders'
@@ -2979,7 +2979,7 @@ const sendGpsLeadersIntroEmail = async (user) => {
     }
     await sendEmail({
       to: user.email,
-      subject: '🛰️ Protect your car — GPS Leaders, $119 with no monthly fee',
+      subject: '🛰️ Protect your car — GPS Leaders, $129 with no monthly fee',
       html: buildGpsLeadersEmailHtml(user.firstName, hostPerkUnsubscribeUrl(user._id))
     });
     return { success: true };
