@@ -2252,7 +2252,7 @@ function broadcastEmailHtml(messageText, unsubscribeUrl) {
     <div style="max-width:600px;margin:0 auto;padding:20px;">
       <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
         <div style="background:#000000;padding:26px 20px;text-align:center;">
-          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+          <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
         </div>
         <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">${safe}</div>
         <div style="background:#00FF66;text-align:center;color:#000000;padding:20px;font-size:12px;line-height:1.6;">
@@ -2277,7 +2277,7 @@ function becomeHostEmailHtml(firstName, unsubscribeUrl) {
     <div style="max-width:600px;margin:0 auto;padding:20px;">
       <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
         <div style="background:#000000;padding:26px 20px;text-align:center;">
-          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+          <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
         </div>
         <div style="background:#f9fafb;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
           <p style="margin:0 0 14px;font-size:1.25rem;font-weight:bold;color:#111827;">Turn your car into income — and keep 100% of it. 🚗</p>
@@ -2319,7 +2319,7 @@ function listYourCarEmailHtml(firstName, unsubscribeUrl) {
     <div style="max-width:600px;margin:0 auto;padding:20px;">
       <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
         <div style="background:#000000;padding:26px 20px 10px;text-align:center;">
-          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+          <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
         </div>
         <div style="background:#000000;padding:0 20px 22px;text-align:center;">
           <span style="display:inline-block;background:#00FF66;color:#000000;font-weight:800;font-size:17px;letter-spacing:1px;padding:12px 28px;border-radius:26px;">🚗 YOUR CAR IS READY TO EARN</span>
@@ -2375,7 +2375,7 @@ function hostVideoEmailHtml(firstName, unsubscribeUrl) {
     <div style="max-width:600px;margin:0 auto;padding:20px;">
       <div style="border:3px solid #00FF66;border-radius:8px;overflow:hidden;">
         <div style="background:#000000;padding:26px 20px 10px;text-align:center;">
-          <span style="font-size:30px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+          <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
         </div>
         <div style="background:#000000;padding:0 20px 22px;text-align:center;">
           <span style="display:inline-block;background:#00FF66;color:#000000;font-weight:bold;font-size:13px;letter-spacing:1px;padding:6px 16px;border-radius:20px;">🎥 WATCH: HOW TO HOST</span>
@@ -2428,7 +2428,7 @@ function julyFourthEmailHtml(firstName, unsubscribeUrl) {
     <div style="max-width:600px;margin:0 auto;padding:20px;">
       <div style="border-radius:10px;overflow:hidden;border:1px solid #d1d5db;">
         <div style="background:#000000;padding:22px 20px;text-align:center;">
-          <span style="font-size:28px;font-weight:bold;letter-spacing:4px;color:#00FF66;">RENTUFS</span>
+          <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
         </div>
         <div style="background:#3C3B6E;padding:30px 20px;text-align:center;">
           <div style="font-size:40px;line-height:1;margin-bottom:8px;">🇺🇸 🎆</div>
@@ -2480,7 +2480,7 @@ function grabTheKeysEmailHtml(firstName, unsubscribeUrl) {
           <div style="padding:8px 24px 28px;background:#050d09;">
             <div style="white-space:nowrap;">
               <span style="font-size:26px;vertical-align:middle;">🚗</span>
-              <span style="font-size:30px;font-weight:bold;letter-spacing:5px;color:#00FF66;vertical-align:middle;">&nbsp;RENTUFS&nbsp;</span>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:6px 14px;vertical-align:middle;margin:0 8px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="34" style="height:34px;width:auto;display:block;border:0;"></span>
               <span style="font-size:26px;vertical-align:middle;">🚗</span>
             </div>
             <div style="font-size:1.9rem;font-weight:900;color:#ffffff;line-height:1.15;margin-top:14px;">Grab the keys. <span style="color:#00FF66;">Go somewhere.</span> 🔑</div>

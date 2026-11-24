@@ -245,7 +245,7 @@ const sendWelcomeEmail = async (user) => {
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 20px; color: white;">Welcome Aboard!</h1>
             </div>
 
@@ -352,7 +352,7 @@ const sendVehicleListedEmail = async (user, vehicle) => {
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 20px; color: #00FF66;">Vehicle Listed Successfully!</h1>
             </div>
 
@@ -472,7 +472,7 @@ const sendBookingConfirmationToDriver = async (driver, booking, vehicle, host) =
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 20px; color: #00FF66;">Booking Confirmed!</h1>
               <p style="margin: 0; color: #ffffff; opacity: 0.85;">Your payment was successful</p>
             </div>
@@ -637,7 +637,7 @@ const sendBookingNotificationToHost = async (host, booking, vehicle, driver) => 
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 20px; color: #00FF66;">New Booking!</h1>
               <p style="margin: 0; color: #ffffff; opacity: 0.85;">Payment has been processed</p>
             </div>
@@ -802,7 +802,7 @@ const sendReturnReminderEmail = async (driver, booking, vehicle, host) => {
           <div class="container">
             <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+                <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               </div>
               <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
                 <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">⏰ Rental Ending Soon!</h1>
@@ -992,7 +992,7 @@ const sendOverdueReminderEmail = async (driver, booking, vehicle, overdueInfo, h
           <div class="container">
             <div style="padding: 0; border: 3px solid #dc2626; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+                <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               </div>
               <div style="background: #dc2626; padding: 18px 20px; text-align: center;">
                 <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">🚨 Rental Past Due</h1>
@@ -1204,7 +1204,7 @@ Updated Booking Details:
           <div class="container">
             <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+                <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               </div>
               <div style="background: #3b82f6; padding: 18px 20px; text-align: center;">
                 <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Booking Extended!</h1>
@@ -1262,7 +1262,7 @@ Updated Booking Details:
           <div class="container">
             <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+                <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               </div>
               <div style="background: #3b82f6; padding: 18px 20px; text-align: center;">
                 <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Booking Extended!</h1>
@@ -1368,7 +1368,7 @@ const sendBookingCancellationEmail = async (driver, host, booking, vehicle, reas
           <div class="container">
             <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+                <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               </div>
               <div style="background: #ef4444; padding: 18px 20px; text-align: center;">
                 <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Reservation Cancelled</h1>
@@ -1485,7 +1485,7 @@ const sendEmailVerificationCode = async (toEmail, firstName, code) => {
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 20px; color: white;">Email Verification</h1>
             </div>
             <div class="content">
@@ -1538,7 +1538,7 @@ const sendRegistrationOtp = async (toEmail, code) => {
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 20px; color: white;">Verify Your Email</h1>
             </div>
             <div class="content">
@@ -1585,7 +1585,7 @@ const sendRegistrationExpirationReminder = async (host, vehicle) => {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; border-radius: 12px; overflow: hidden; border: 3px solid #00FF66;">
         <div style="background: #000000; padding: 24px 20px 14px; text-align: center;">
-          <h1 style="margin: 0; font-size: 26px; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</h1>
+          <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
         </div>
         <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
           <h2 style="margin: 0; color: #ffffff; font-size: 1.4rem;">Registration Expiring Soon</h2>
@@ -1660,7 +1660,7 @@ const sendVehiclePausedEmail = async (host, vehicle) => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
           <div style="border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
             <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-              <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
             </div>
             <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
               <h2 style="margin: 0; color: #ffffff;">Vehicle Paused — Registration Expired</h2>
@@ -1731,7 +1731,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 20px; color: #00FF66;">Password Reset</h1>
             </div>
 
@@ -1830,7 +1830,7 @@ const sendPayoutNotificationEmail = async (host, payoutDetails) => {
         <body>
           <div class="container">
             <div class="header" style="border: 3px solid #00FF66; border-bottom: none;">
-              <div class="logo">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               <h1 style="margin-top: 15px; color: #00FF66;">Payout On The Way!</h1>
               <p style="margin: 0; opacity: 0.9;">Your earnings have been transferred</p>
             </div>
@@ -2123,7 +2123,7 @@ const sendTollChargeToDriver = async (driver, booking, vehicle, tollCharge, toll
           <div class="container">
             <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+                <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               </div>
               <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
                 <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">Toll Charge Detected</h1>
@@ -2279,7 +2279,7 @@ const sendTollNotificationToHost = async (host, booking, vehicle, driver, tollSu
           <div class="container">
             <div class="header" style="padding: 0; border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
               <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-                <div style="color: #00FF66; font-size: 2rem; font-weight: bold; letter-spacing: 0.15em;">RentUFS</div>
+                <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
               </div>
               <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
                 <h1 style="margin: 0; color: #ffffff; font-size: 1.5rem;">New Toll Recorded</h1>
@@ -2418,7 +2418,7 @@ const sendChargeAddedToDriver = async (driver, host, booking, vehicle, charge) =
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
           <div style="border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
             <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-              <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
             </div>
             <div style="background: #f59e0b; padding: 18px 20px; text-align: center;">
               <h2 style="margin: 0; color: #ffffff;">New Charge on Your Reservation</h2>
@@ -2488,7 +2488,7 @@ const sendChargePaymentFailedToDriver = async (driver, booking, charge, attempts
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
           <div style="border: 3px solid #00FF66; border-bottom: none; border-radius: 8px 8px 0 0; overflow: hidden;">
             <div style="background: #000000; padding: 22px 20px 16px; text-align: center;">
-              <div style="font-size: 1.6rem; font-weight: bold; letter-spacing: 0.15em; color: #00FF66;">RentUFS</div>
+              <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:7px 16px;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
             </div>
             <div style="background: ${isFinal ? '#dc2626' : '#f59e0b'}; padding: 18px 20px; text-align: center;">
               <h2 style="margin: 0; color: #ffffff;">${isFinal ? 'Final Payment Notice' : 'Payment Failed'}</h2>
@@ -2893,7 +2893,7 @@ function hostIntegrationEmailHtml(opts, firstName, unsubscribeUrl) {
         <div style="height:5px;background:${opts.accent};line-height:5px;font-size:0;">&nbsp;</div>
         <!-- header -->
         <div style="background:#000000;padding:26px 24px 28px;text-align:center;border:3px solid #00FF66;">
-          <img src="${clientUrl}/rentufs-logo-white.png" alt="RentUFS" height="48" style="height:48px;width:auto;display:inline-block;border:0;">
+          <span style="display:inline-block;border:2px solid #00FF66;border-radius:12px;padding:8px 18px;"><img src="${clientUrl}/rentufs-logo-white.png" alt="RentUFS" height="40" style="height:40px;width:auto;display:block;border:0;"></span>
           <div style="font-size:1.2rem;font-weight:800;color:#ffffff;opacity:0.75;margin:4px 0;">X</div>
           <div style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:0.04em;">${opts.partner}</div>
           <div style="font-size:1.4rem;font-weight:bold;color:#ffffff;margin-top:16px;">${opts.headline}</div>
