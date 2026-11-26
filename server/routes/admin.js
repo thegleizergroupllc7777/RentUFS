@@ -2426,26 +2426,47 @@ function julyFourthEmailHtml(firstName, unsubscribeUrl) {
   return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
   <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
     <div style="max-width:600px;margin:0 auto;padding:20px;">
-      <div style="border-radius:10px;overflow:hidden;border:1px solid #d1d5db;">
+      <div style="border-radius:10px;overflow:hidden;border:3px solid #00FF66;">
+        <!-- RentUFS logo header (black) -->
         <div style="background:#000000;padding:22px 20px;text-align:center;">
-          <span style="display:inline-block;"><img src="https://app.rentufs.com/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
+          <span style="display:inline-block;"><img src="${clientUrl}/rentufs-logo-white.png" alt="RentUFS" height="36" style="height:36px;width:auto;display:block;border:0;"></span>
         </div>
-        <div style="background:#3C3B6E;padding:30px 20px;text-align:center;">
-          <div style="font-size:40px;line-height:1;margin-bottom:8px;">🇺🇸 🎆</div>
-          <div style="color:#ffffff;font-size:1.7rem;font-weight:bold;">Happy 4th of July!</div>
+        <!-- flag motif: navy star canton + red/white stripes -->
+        <div style="background:#0A3161;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="42%" style="height:128px;text-align:center;vertical-align:middle;color:#ffffff;font-size:17px;letter-spacing:4px;line-height:1.5;">&#9733; &#9733; &#9733;<br>&#9733; &#9733;<br>&#9733; &#9733; &#9733;<br>&#9733; &#9733;</td>
+              <td width="58%" style="padding:0;">
+                <div style="height:21px;background:#BF0A30;"></div>
+                <div style="height:21px;background:#ffffff;"></div>
+                <div style="height:22px;background:#BF0A30;"></div>
+                <div style="height:21px;background:#ffffff;"></div>
+                <div style="height:21px;background:#BF0A30;"></div>
+                <div style="height:22px;background:#ffffff;"></div>
+              </td>
+            </tr>
+          </table>
         </div>
-        <div style="height:6px;background:#B22234;"></div>
-        <div style="background:#ffffff;padding:30px 28px;color:#333333;font-size:15px;line-height:1.7;">
-          <p style="margin:0 0 14px;">${greeting}</p>
-          <p style="margin:0 0 14px;">From all of us at <strong>RentUFS</strong>, we're wishing you a happy, safe, and fun Fourth of July! 🎉</p>
-          <p style="margin:0 0 14px;">The Fourth is one of the busiest travel weekends of the year — so many of us hitting the road to see family and friends. Wherever the holiday takes you, <strong>RentUFS is here for the journey.</strong> 🚗</p>
-          <p style="margin:0 0 20px;">Thank you for being part of the RentUFS community. Have a safe and happy holiday! 🇺🇸</p>
+        <div style="height:4px;background:#ffffff;line-height:4px;font-size:0;">&nbsp;</div>
+        <!-- fireworks headline banner (hosted image; dark-red fallback if images are off) -->
+        <div style="background:#6d0620;text-align:center;line-height:0;">
+          <img src="${clientUrl}/holiday/july4-fireworks.png" width="600" alt="Happy Independence Day — Land of the Free, Road Trip Ready" style="display:block;width:100%;height:auto;border:0;">
+        </div>
+        <div style="height:3px;background:#0A3161;line-height:3px;font-size:0;">&nbsp;</div>
+        <!-- body -->
+        <div style="background:#ffffff;padding:32px 30px;color:#333333;font-size:15px;line-height:1.75;">
+          <p style="margin:0 0 16px;">${greeting}</p>
+          <p style="margin:0 0 16px;">As the fireworks light up the sky tonight, all of us at RentUFS just want to pause and say thank you.</p>
+          <p style="margin:0 0 16px;">The Fourth of July is so much more than a day off. It's a celebration of freedom, of the people and sacrifices that made it possible, and of the simple moments we get to share with the ones we love &mdash; backyard barbecues, long drives to family, and the kind of memories that stick with us for a lifetime.</p>
+          <p style="margin:0 0 16px;">This weekend, as so many of us hit the open road to be with family and friends, we're honored to play a small part in getting you there safely. Wherever the journey takes you, RentUFS is proud to be along for the ride. 🚗</p>
+          <p style="margin:0 0 22px;">From our family to yours &mdash; thank you for being part of the RentUFS community. Have a safe, happy, and meaningful Independence Day.</p>
           <p style="text-align:center;margin:4px 0 22px;">
-            <a href="${clientUrl}/marketplace" style="display:inline-block;background:#B22234;color:#ffffff;padding:13px 32px;text-decoration:none;border-radius:6px;font-weight:bold;">Find Your Ride &rarr;</a>
+            <a href="${clientUrl}/marketplace" style="display:inline-block;background:#BF0A30;color:#ffffff;border:3px solid #0A3161;padding:13px 32px;text-decoration:none;border-radius:6px;font-weight:bold;">&#9733; Find Your Ride &rarr;</a>
           </p>
-          <p style="margin:0;">Have a wonderful holiday,<br><strong>The RentUFS Team</strong></p>
+          <p style="margin:0;">With gratitude,<br>The RentUFS Team</p>
         </div>
-        <div style="background:#3C3B6E;text-align:center;color:#ffffff;padding:18px;font-size:12px;line-height:1.6;">
+        <!-- RentUFS footer (black) -->
+        <div style="background:#000000;text-align:center;color:#ffffff;padding:18px;font-size:12px;line-height:1.6;">
           &copy; ${new Date().getFullYear()} RentUFS. All rights reserved.<br>
           597 West Side Ave PMB 194, Jersey City, NJ 07304${unsub}
         </div>
