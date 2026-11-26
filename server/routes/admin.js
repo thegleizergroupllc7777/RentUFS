@@ -2473,7 +2473,7 @@ function grabTheKeysEmailHtml(firstName, unsubscribeUrl) {
   return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
   <body style="margin:0;padding:0;background:#eef0f2;font-family:Arial,Helvetica,sans-serif;">
     <div style="max-width:600px;margin:0 auto;padding:20px;">
-      <div style="border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
+      <div style="border-radius:14px;overflow:hidden;border:3px solid #00FF66;">
         <!-- HERO -->
         <div style="background:#050d09;text-align:center;">
           <img src="${clientUrl}/holiday/grab-keys-skyline.png" width="600" alt="" style="display:block;width:100%;height:auto;border:0;">
